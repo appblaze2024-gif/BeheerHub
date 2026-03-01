@@ -88,7 +88,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
   const initialViewState = {
     longitude: longitude || 5.2913,
     latitude: latitude || 52.1326,
-    zoom: longitude && latitude ? 15 : 7,
+    zoom: longitude && latitude ? 18 : 7,
   };
   
   React.useEffect(() => {
@@ -113,7 +113,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         console.error("Error fitting bounds:", e);
       }
     } else if (longitude && latitude) {
-      map.flyTo({ center: [longitude, latitude], zoom: 15});
+      map.flyTo({ center: [longitude, latitude], zoom: 18});
     } else if (!longitude && !latitude) {
         // Reset to default view if no polygons and no specific coords
          map.flyTo({

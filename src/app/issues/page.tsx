@@ -320,7 +320,7 @@ export default function IssuesPage() {
                                 </CardContent>
                             </Card>
                             <div className="rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl min-h-[450px]">
-                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
+                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} interactive={false} />
                             </div>
                         </div>
                     </TabsContent>
@@ -352,7 +352,7 @@ export default function IssuesPage() {
                                 </CardContent>
                             </Card>
                             <div className="rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl min-h-[450px]">
-                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
+                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} interactive={false} />
                             </div>
                         </div>
                     </TabsContent>
