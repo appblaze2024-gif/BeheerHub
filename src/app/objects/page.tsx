@@ -63,8 +63,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle as AlertCircleIcon } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
@@ -338,7 +337,7 @@ export default function ObjectsPage() {
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1">Filters</DropdownMenuLabel>
               <ScrollArea className="max-h-60">
-                {customFilters.map(filter => (
+                {customFilters.filter(f => !!f).map(filter => (
                   <div key={filter} className="flex items-center group px-1">
                     <DropdownMenuItem onClick={() => setTypeFilter(filter)} className="flex-1 rounded-lg h-9 text-xs font-semibold">
                       {filter}
@@ -385,7 +384,10 @@ export default function ObjectsPage() {
             <Input placeholder="Snelzoeken..." className="pl-9 h-9 text-xs font-medium rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!typeFilter} />
           </div>
           <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
-            <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg"><Upload className="h-4 w-4 mr-2" /> Import</Button>
+            <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg">
+              <Upload className="h-4 w-4 mr-2" /> 
+              Import
+            </Button>
           </ObjectImportDialog>
           <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
         </div>
@@ -441,15 +443,13 @@ export default function ObjectsPage() {
                         <TooltipProvider>
                           <Tooltip>
                             <AlertDialogTrigger asChild>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-9 w-9 rounded-xl text-red-400 border-slate-200 hover:text-red-600 hover:bg-red-50"
-                                >
-                                  {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                </Button>
-                              </TooltipTrigger>
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-9 w-9 rounded-xl text-red-400 border-slate-200 hover:text-red-600 hover:bg-red-50"
+                              >
+                                {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                              </Button>
                             </AlertDialogTrigger>
                             <TooltipContent>Alle objecten in deze filter wissen</TooltipContent>
                           </Tooltip>
