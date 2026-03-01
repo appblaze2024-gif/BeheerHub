@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ForwardExternalDialog } from '@/components/forward-external-dialog';
+import { AcceptAssignDialog } from '@/components/accept-assign-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -38,6 +39,7 @@ export default function MeldingenportaalPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
 
   const [isForwardDialogOpen, setIsForwardDialogOpen] = React.useState(false);
+  const [isAcceptDialogOpen, setIsAcceptDialogOpen] = React.useState(false);
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
 
   const portalQuery = useMemoFirebase(() => {
@@ -101,6 +103,16 @@ export default function MeldingenportaalPage() {
     }
   };
 
+  const handleOpenAccept = (melding: Melding) => {
+    setSelectedMelding(melding);
+    setIsAcceptDialogOpen(true);
+  };
+
+  const handleOpenForward = (melding: Melding) => {
+    setSelectedMelding(melding);
+    setIsForwardDialogOpen(true);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] overflow-hidden bg-background">
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
@@ -147,7 +159,7 @@ export default function MeldingenportaalPage() {
                                 <TableCell className='text-xs font-medium' onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.melder || '-'}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-green-600 rounded-full" onClick={() => handleStatusChange(melding, 'In behandeling')}>
+                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-green-600 rounded-full" onClick={() => handleOpenAccept(melding)}>
                                             <CheckCircle2 className="h-5 w-5" />
                                         </Button>
                                         <DropdownMenu>
@@ -157,8 +169,8 @@ export default function MeldingenportaalPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-56 rounded-2xl shadow-xl p-2 border-slate-100">
-                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')} className="font-bold rounded-xl h-11 cursor-pointer">Accepteren</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { setSelectedMelding(melding); setIsForwardDialogOpen(true); }} className="font-bold rounded-xl h-11 cursor-pointer"><Mail className="mr-2 h-4 w-4 text-primary" />Extern doorzetten</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleOpenAccept(melding)} className="font-bold rounded-xl h-11 cursor-pointer">Accepteren</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleOpenForward(melding)} className="font-bold rounded-xl h-11 cursor-pointer"><Mail className="mr-2 h-4 w-4 text-primary" />Extern doorzetten</DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Geweigerd')} className="font-bold rounded-xl h-11 text-red-600 cursor-pointer"><XCircle className="mr-2 h-4 w-4" />Weigeren</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -173,6 +185,7 @@ export default function MeldingenportaalPage() {
       </div>
 
       <ForwardExternalDialog open={isForwardDialogOpen} onOpenChange={setIsForwardDialogOpen} melding={selectedMelding} onSuccess={() => {}} />
+      <AcceptAssignDialog open={isAcceptDialogOpen} onOpenChange={setIsAcceptDialogOpen} melding={selectedMelding} onSuccess={() => {}} />
     </div>
   );
 }
