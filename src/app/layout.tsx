@@ -4,6 +4,7 @@ import './globals.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Suspense, useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Script from 'next/script';
 import { cn } from '@/lib/utils';
 import {
   FirebaseClientProvider,
@@ -20,9 +21,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Menu, 
   LogOut as LogOutIcon,
-  User as UserIcon,
   Info,
-  Bell,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,6 +31,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { NotificationCenter } from '@/components/notification-center';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AppInfoDialog } from '@/components/app-info-dialog';
+import { LanguageSelector } from '@/components/language-selector';
 
 function ProcessingOverlay() {
   const { isProcessing } = useGlobalLoading();
@@ -82,9 +82,7 @@ function Header() {
 
       <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm p-1 rounded-full shadow-sm border border-slate-100">
         <div className="flex items-center gap-0.5 md:gap-1 md:pr-4 md:border-r border-slate-100">
-          <Button variant="ghost" size="icon" className="hidden sm:flex h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50">
-            <UserIcon className="h-4 w-4" />
-          </Button>
+          <LanguageSelector />
           <div className="relative">
             <NotificationCenter />
           </div>
@@ -152,6 +150,25 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <Toaster />
+      <div id="google_translate_element" style={{ display: 'none' }} />
+      <Script
+        id="google-translate-init"
+        strategy="afterInteractive"
+      >
+        {`
+          function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+              pageLanguage: 'nl',
+              includedLanguages: 'nl,en,pl,uk,de,hu',
+              autoDisplay: false
+            }, 'google_translate_element');
+          }
+        `}
+      </Script>
+      <Script
+        src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+        strategy="afterInteractive"
+      />
     </div>
   );
 }

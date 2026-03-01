@@ -92,3 +92,37 @@ body[style*="pointer-events: none"] {
 .sidebar-blue {
   background-color: #3498db;
 }
+
+/* Google Translate Hide Banner and UI */
+.goog-te-banner-frame.skiptranslate, 
+.goog-te-gadget-icon,
+.goog-te-gadget-simple img,
+.goog-te-menu-value span {
+    display: none !important;
+}
+
+body {
+    top: 0px !important;
+}
+
+.goog-te-gadget {
+    display: none !important;
+}
+
+#google_translate_element {
+    display: none !important;
+}
+
+.goog-tooltip {
+    display: none !important;
+}
+
+.goog-tooltip:hover {
+    display: none !important;
+}
+
+.goog-text-highlight {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
