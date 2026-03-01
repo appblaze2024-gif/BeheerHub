@@ -375,15 +375,6 @@ export default function ObjectsPage() {
           <Button variant={viewMode === 'map' ? 'secondary' : 'ghost'} size="sm" className="h-9 font-bold rounded-lg" onClick={() => setViewMode('map')} disabled={!typeFilter}>
             <MapIcon className="h-4 w-4 mr-2" /> Kaart
           </Button>
-          
-          <Separator orientation="vertical" className="h-6 mx-1" />
-          
-          <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
-            <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-primary/20 text-primary hover:bg-primary/5">
-              <Upload className="h-4 w-4 mr-2" /> 
-              Import
-            </Button>
-          </ObjectImportDialog>
         </div>
 
         <div className="flex items-center gap-2">
@@ -391,6 +382,14 @@ export default function ObjectsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input placeholder="Snelzoeken..." className="pl-9 h-9 text-xs font-medium rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!typeFilter} />
           </div>
+          
+          <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
+            <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-primary/20 text-primary hover:bg-primary/5">
+              <Upload className="h-4 w-4 mr-2" /> 
+              Import
+            </Button>
+          </ObjectImportDialog>
+
           <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
         </div>
       </header>
