@@ -31,7 +31,8 @@ import {
   Mail,
   Target,
   ArrowLeft,
-  Plus
+  Plus,
+  MoreHorizontal
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -86,6 +87,12 @@ import {
   DialogTrigger,
   DialogClose
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
@@ -183,7 +190,7 @@ const FormRow = ({ label, children, onAdd }: { label: React.ReactNode; children:
     </div>
 );
 
-function SmartPasteDialog({ onParsed, instructions }: { onParsed: (data: any) => void, instructions: string }) {
+function SmartPasteDialog({ onParsed, instructions, trigger }: { onParsed: (data: any) => void, instructions: string, trigger?: React.ReactNode }) {
     const [text, setText] = React.useState('');
     const [isProcessing, setIsProcessing] = React.useState(false);
     const { toast } = useToast();
@@ -207,10 +214,12 @@ function SmartPasteDialog({ onParsed, instructions }: { onParsed: (data: any) =>
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold">
-                    <ClipboardPaste className="mr-2 h-3.5 w-3.5" />
-                    Smart Paste
-                </Button>
+                {trigger || (
+                    <Button variant="outline" size="sm" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold">
+                        <ClipboardPaste className="mr-2 h-3.5 w-3.5" />
+                        Smart Paste
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
@@ -230,7 +239,7 @@ function SmartPasteDialog({ onParsed, instructions }: { onParsed: (data: any) =>
     );
 }
 
-function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { instructions: string, onSave: (val: string, pdfUrl?: string) => void, isSaving: boolean, samplePdfUrl?: string }) {
+function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl, trigger }: { instructions: string, onSave: (val: string, pdfUrl?: string) => void, isSaving: boolean, samplePdfUrl?: string, trigger?: React.ReactNode }) {
   const [fieldInstructions, setFieldInstructions] = React.useState<Record<string, string>>({});
   const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl);
   const [isUploadingSample, setIsUploadingSample] = React.useState(false);
@@ -268,7 +277,11 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
   return (
       <Dialog>
           <DialogTrigger asChild>
-              <Button variant="outline" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold"><Settings2 className="mr-2 h-4 w-4" /> AI Training</Button>
+              {trigger || (
+                  <Button variant="outline" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold">
+                      <Settings2 className="mr-2 h-4 w-4" /> AI Training
+                  </Button>
+              )}
           </DialogTrigger>
           <DialogContent className="sm:max-w-[1100px] h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
               <DialogHeader className="p-6 border-b shrink-0 bg-white">
@@ -340,6 +353,9 @@ export default function NewIssuePage() {
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   
+  // Dialog states for dropdown actions
+  const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
+
   // Container suggestions state
   const [containerSuggestions, setContainerSuggestions] = React.useState<MapObject[]>([]);
 
@@ -557,6 +573,13 @@ export default function NewIssuePage() {
     toast({ variant: 'destructive', title: 'Validatie mislukt', description: firstError?.message || 'Vul alle verplichte velden in.' });
   };
 
+  const handleSaveAIConfig = async (v: string, url?: string) => {
+    if (!aiConfigRef) return;
+    setIsSavingConfig(true);
+    await setDocumentNonBlocking(aiConfigRef, { instructions: v, samplePdfUrl: url }, { merge: true });
+    setIsSavingConfig(false);
+  };
+
   const currentHoofdcategorie = form.watch('hoofdcategorie');
   const subcategorieen = subcategorieenMap[currentHoofdcategorie] || ["Overig"];
 
@@ -580,16 +603,46 @@ export default function NewIssuePage() {
             <div className="flex items-center gap-2">
                 {!isReadOnly && (
                     <>
-                        <IssueImportDialog open={false} onOpenChange={() => {}} onSuccess={() => {}}>
-                            <Button variant="outline" size="sm" className="h-9 font-bold text-green-600 border-green-100"><FileSpreadsheet className="mr-2 h-3.5 w-3.5" /> EXCEL</Button>
-                        </IssueImportDialog>
-                        <SmartPasteDialog onParsed={(d) => form.reset({ ...form.getValues(), ...d })} instructions={aiConfig?.instructions || ''} />
-                        <AIConfigDialog instructions={aiConfig?.instructions || ''} samplePdfUrl={aiConfig?.samplePdfUrl} onSave={async (v, url) => {
-                            if (!aiConfigRef) return;
-                            setIsSavingConfig(true);
-                            await setDocumentNonBlocking(aiConfigRef, { instructions: v, samplePdfUrl: url }, { merge: true });
-                            setIsSavingConfig(false);
-                        }} isSaving={isSavingConfig} />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="icon" className="h-9 w-9 border-slate-200 hover:bg-slate-50">
+                                    <MoreHorizontal className="h-4 w-4 text-slate-600" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-lg h-10 cursor-pointer font-bold text-green-600">
+                                    <IssueImportDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen} onSuccess={() => setIsImportDialogOpen(false)}>
+                                        <div className="flex items-center w-full">
+                                            <FileSpreadsheet className="mr-2 h-4 w-4" /> EXCEL Import
+                                        </div>
+                                    </IssueImportDialog>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-lg h-10 cursor-pointer font-bold text-slate-600">
+                                    <SmartPasteDialog 
+                                        onParsed={(d) => form.reset({ ...form.getValues(), ...d })} 
+                                        instructions={aiConfig?.instructions || ''} 
+                                        trigger={
+                                            <div className="flex items-center w-full">
+                                                <ClipboardPaste className="mr-2 h-4 w-4" /> Smart Paste
+                                            </div>
+                                        }
+                                    />
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-lg h-10 cursor-pointer font-bold text-slate-600">
+                                    <AIConfigDialog 
+                                        instructions={aiConfig?.instructions || ''} 
+                                        samplePdfUrl={aiConfig?.samplePdfUrl} 
+                                        onSave={handleSaveAIConfig} 
+                                        isSaving={isSavingConfig}
+                                        trigger={
+                                            <div className="flex items-center w-full">
+                                                <Settings2 className="mr-2 h-4 w-4" /> AI Training
+                                            </div>
+                                        }
+                                    />
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Separator orientation="vertical" className="h-5 mx-1" />
                         <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-8 shadow-lg shadow-primary/20">
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} OPSLAAN
