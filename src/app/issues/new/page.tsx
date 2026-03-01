@@ -887,7 +887,7 @@ export default function NewIssuePage() {
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
                 </div>
 
-                <div className="h-[60%] flex flex-col min-h-0 bg-white p-5 border-t">
+                <div className="h-[40%] flex flex-col min-h-0 bg-white p-5 border-t">
                     <div className="flex items-center justify-between border-b pb-3 mb-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                             BIJLAGEN ({uploadedFiles.length + uploadedPhotos.length})
