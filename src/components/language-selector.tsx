@@ -29,10 +29,14 @@ export function LanguageSelector() {
     setCurrentLang(langCode);
     
     // Set the cookie that Google Translate uses for persistence
-    // Format: /sourceLang/targetLang
     const cookieValue = `/nl/${langCode}`;
     document.cookie = `googtrans=${cookieValue}; path=/`;
     document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}`;
+    
+    // Fallback for cases where the cookie needs a leading dot for subdomains
+    if (window.location.hostname.includes('.')) {
+        document.cookie = `googtrans=${cookieValue}; path=/; domain=.${window.location.hostname}`;
+    }
     
     // Trigger the actual translation via the hidden Google combo box
     const select = document.querySelector('.goog-te-combo') as HTMLSelectElement;
@@ -40,8 +44,8 @@ export function LanguageSelector() {
       select.value = langCode;
       select.dispatchEvent(new Event('change'));
     } else {
-      console.warn('Vertaalmodule wordt geladen...');
-      // If the element isn't there yet, the cookie will handle it upon widget initialization
+      // If the selector is not there, we force a reload to let the cookie take effect
+      window.location.reload();
     }
   };
 

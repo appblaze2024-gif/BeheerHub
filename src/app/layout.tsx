@@ -137,14 +137,21 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   // Re-trigger translation when navigation occurs
   useEffect(() => {
     const triggerTranslation = () => {
-      const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
-      if (combo && combo.value !== 'nl') {
-        combo.dispatchEvent(new Event('change'));
+      const select = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+      if (select) {
+        // Read cookie to see what language we should be in
+        const match = document.cookie.match(/googtrans=\/nl\/([^;]+)/);
+        const targetLang = match ? match[1] : 'nl';
+        
+        if (select.value !== targetLang) {
+          select.value = targetLang;
+          select.dispatchEvent(new Event('change'));
+        }
       }
     };
     
     // Small delay to ensure React has rendered new components
-    const timer = setTimeout(triggerTranslation, 500);
+    const timer = setTimeout(triggerTranslation, 1000);
     return () => clearTimeout(timer);
   }, [pathname]);
 
@@ -165,7 +172,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <Toaster />
-      <div id="google_translate_element" style={{ display: 'none' }} />
+      <div id="google_translate_element" style={{ position: 'fixed', top: '-10000px', left: '-10000px' }} />
       <Script
         id="google-translate-init"
         strategy="afterInteractive"
@@ -175,7 +182,8 @@ function MainLayout({ children }: { children: React.ReactNode }) {
             new google.translate.TranslateElement({
               pageLanguage: 'nl',
               includedLanguages: 'nl,en,pl,uk,de,hu',
-              autoDisplay: false
+              autoDisplay: false,
+              layout: google.translate.TranslateElement.InlineLayout.SIMPLE
             }, 'google_translate_element');
           }
         `}
