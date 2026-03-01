@@ -20,6 +20,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { Info, Loader2, Save, Sparkles, History } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface AppInfo {
   version: string;
