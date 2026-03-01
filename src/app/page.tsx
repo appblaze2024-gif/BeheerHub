@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -42,18 +41,6 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
-      {/* Background Graphic Illustration */}
-      <div className="absolute top-0 right-0 w-[800px] h-[600px] opacity-[0.3] pointer-events-none transition-all duration-1000 overflow-hidden">
-        <Image 
-          src="https://i.ibb.co/5W313N9x/defocused-map-with-pinpoints.jpg" 
-          alt="Map Illustration" 
-          fill
-          className="object-cover object-right-top"
-          data-ai-hint="map pinpoints"
-          priority
-        />
-      </div>
-
       {/* Dynamic Banner Section */}
       {banner?.active && !activeModule && (
         <section className="relative h-40 w-full rounded-2xl overflow-hidden shadow-xl animate-in fade-in zoom-in duration-700 shrink-0">
