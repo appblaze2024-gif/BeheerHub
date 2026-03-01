@@ -134,7 +134,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const { isLoading: isProfileLoading } = useProfile();
   const pathname = usePathname();
 
-  // Re-trigger translation when navigation occurs
+  // Re-trigger translation when navigation occurs or cookie changes
   useEffect(() => {
     const triggerTranslation = () => {
       const select = document.querySelector('.goog-te-combo') as HTMLSelectElement;

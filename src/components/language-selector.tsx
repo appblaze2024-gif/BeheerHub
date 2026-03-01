@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Languages, Check } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,26 +25,34 @@ const languages = [
 export function LanguageSelector() {
   const [currentLang, setCurrentLang] = React.useState('nl');
 
+  React.useEffect(() => {
+    // Sync state with cookie on mount
+    const match = document.cookie.match(/googtrans=\/nl\/([^;]+)/);
+    if (match && match[1]) {
+      setCurrentLang(match[1]);
+    }
+  }, []);
+
   const handleLanguageChange = (langCode: string) => {
     setCurrentLang(langCode);
     
     // Set the cookie that Google Translate uses for persistence
     const cookieValue = `/nl/${langCode}`;
-    document.cookie = `googtrans=${cookieValue}; path=/`;
-    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}`;
     
-    // Fallback for cases where the cookie needs a leading dot for subdomains
-    if (window.location.hostname.includes('.')) {
-        document.cookie = `googtrans=${cookieValue}; path=/; domain=.${window.location.hostname}`;
-    }
+    // Set cookie for current domain and root path
+    document.cookie = `googtrans=${cookieValue}; path=/; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
     
+    // Also try setting it with domain for cloud environments
+    const domain = window.location.hostname;
+    document.cookie = `googtrans=${cookieValue}; path=/; domain=${domain}; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
+
     // Trigger the actual translation via the hidden Google combo box
     const select = document.querySelector('.goog-te-combo') as HTMLSelectElement;
     if (select) {
       select.value = langCode;
       select.dispatchEvent(new Event('change'));
     } else {
-      // If the selector is not there, we force a reload to let the cookie take effect
+      // Fallback: reload page to let the cookie take effect if script isn't ready
       window.location.reload();
     }
   };
@@ -54,10 +62,9 @@ export function LanguageSelector() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-9 gap-2 rounded-full text-[#3498db] hover:bg-blue-50 transition-all active:scale-95 px-2 md:px-3">
-          <span className="text-lg leading-none filter drop-shadow-sm">{currentLangObj.flag}</span>
-          <Languages className="h-4 w-4 md:hidden" />
-          <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{currentLangObj.code}</span>
+        <Button variant="ghost" size="sm" className="h-9 gap-1.5 rounded-full text-[#3498db] hover:bg-blue-50 transition-all active:scale-95 px-2">
+          <span className="text-xl leading-none filter drop-shadow-sm">{currentLangObj.flag}</span>
+          <ChevronDown className="h-3 w-3 opacity-40" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 rounded-2xl shadow-2xl p-2 border-slate-100 animate-in fade-in zoom-in duration-200">
