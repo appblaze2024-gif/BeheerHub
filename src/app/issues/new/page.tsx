@@ -233,7 +233,7 @@ export default function NewIssuePage() {
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
-  const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
+  const [isImporting, setIsImporting] = React.useState(false);
   const [containerSuggestions, setContainerSuggestions] = React.useState<MapObject[]>([]);
 
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
@@ -339,7 +339,7 @@ export default function NewIssuePage() {
         await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
       }
 
-      toast({ title: meldingId ? "Melding bijgewerkt" : "Melding opgeslagen" });
+      toast({ title: "Melding bijgewerkt" : "Melding opgeslagen" });
       startProcessing(1000);
       router.push('/issues/portal');
     } catch (e) {
@@ -594,7 +594,7 @@ export default function NewIssuePage() {
                     </div>
                 </div>
 
-                <div className={cn("flex-1 flex flex-col min-h-0 bg-white p-5 border-t shrink-0", isMobile ? "mt-4 rounded-t-[2.5rem] shadow-2xl border-none" : "lg:h-[40%]")}>
+                <div className={cn("flex-1 flex flex-col min-h-0 bg-white p-5 border-t shrink-0", isMobile ? "mt-4 rounded-t-[2.5rem] shadow-2xl border-none" : "h-[40%]")}>
                     <div className="flex items-center justify-between border-b pb-3 mb-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">BIJLAGEN ({uploadedFiles.length + uploadedPhotos.length})</h3>
                         <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold h-5 px-2">Ready</Badge>
