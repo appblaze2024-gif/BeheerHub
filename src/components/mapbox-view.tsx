@@ -152,15 +152,17 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
               latitude={obj.latitude}
               anchor="bottom"
               onClick={e => {
-                e.originalEvent.stopPropagation();
-                if (onObjectSelect) {
-                    onObjectSelect(obj, !isSelected);
-                } else {
-                    setSelectedPin(obj);
+                if (interactive) {
+                  e.originalEvent.stopPropagation();
+                  if (onObjectSelect) {
+                      onObjectSelect(obj, !isSelected);
+                  } else {
+                      setSelectedPin(obj);
+                  }
                 }
               }}
-              onMouseEnter={() => setHoveredPin(obj)}
-              onMouseLeave={() => setHoveredPin(null)}
+              onMouseEnter={() => interactive && setHoveredPin(obj)}
+              onMouseLeave={() => interactive && setHoveredPin(null)}
             >
               <div className="relative flex items-center justify-center w-8 h-8">
                 {isHighlighted && (
@@ -171,8 +173,9 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                     src="https://i.ibb.co/FbgGHW1G/waste-bin.png" 
                     alt="container"
                     className={cn(
-                      "relative h-7 w-7 cursor-pointer transition-transform",
-                      isSelected && "scale-125"
+                      "relative h-7 w-7 transition-transform",
+                      isSelected && "scale-125",
+                      interactive && "cursor-pointer"
                     )}
                     style={{
                       filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
@@ -181,8 +184,9 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                 ) : (
                   <Icon 
                     className={cn(
-                        "relative h-5 w-5 cursor-pointer stroke-white stroke-[1.5] transition-transform",
-                        isSelected && "scale-125"
+                        "relative h-5 w-5 stroke-white stroke-[1.5] transition-transform",
+                        isSelected && "scale-125",
+                        interactive && "cursor-pointer"
                     )} 
                     style={{
                         fill: isSelected ? 'hsl(48, 96%, 56%)' : color,
@@ -208,7 +212,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     }
     
     return markerElements;
-  }, [objects, longitude, latitude, selectedObjects, onObjectSelect, showHeatmap, highlightedObject]);
+  }, [objects, longitude, latitude, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive]);
 
   const pinToShow = hoveredPin || selectedPin;
 
@@ -236,7 +240,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
 
         {markers}
 
-        {pinToShow && !highlightedObject && (
+        {pinToShow && !highlightedObject && interactive && (
           <Popup
             anchor="top"
             longitude={Number(pinToShow.longitude)}
