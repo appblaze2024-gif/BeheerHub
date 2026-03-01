@@ -24,7 +24,10 @@ import {
   LogOut as LogOutIcon,
   ChevronLeft,
   Loader2,
-  Plus
+  Plus,
+  User as UserIcon,
+  Info,
+  Mail
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -49,7 +52,7 @@ function ProcessingOverlay() {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
       <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-white shadow-2xl border border-slate-100 scale-110">
-        <Loader2 className="h-10 w-10 animate-spin text-[#3498db]" />
+        <Loader2 className="h-10 w-10 animate-spin text-[#3b51a3]" />
         <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Verwerken...</p>
       </div>
     </div>
@@ -60,7 +63,6 @@ function Header() {
   const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useUser();
   const { profile } = useProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -90,16 +92,16 @@ function Header() {
   };
 
   return (
-    <header className="h-14 flex items-center justify-between px-4 bg-[#3498db] text-white sticky top-0 z-50 shadow-sm">
+    <header className="h-16 flex items-center justify-between px-6 bg-white border-b sticky top-0 z-50 shadow-sm">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/10">
+              <Button variant="ghost" size="icon" className="lg:hidden text-slate-600 hover:bg-slate-100">
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="p-0 border-none w-64 bg-white text-slate-900">
+            <SheetContent side="left" className="p-0 border-none w-64 sidebar-blue text-white">
               <SheetHeader className="sr-only">
                 <SheetTitle>Navigatie</SheetTitle>
               </SheetHeader>
@@ -108,55 +110,49 @@ function Header() {
           </Sheet>
           
           <div className="flex items-center">
-            <h1 className="text-lg font-bold tracking-tight">{getPageTitle()}</h1>
+            <h1 className="text-xl font-black uppercase tracking-tight text-slate-700 leading-none">{getPageTitle()}</h1>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="hidden md:flex items-center bg-white/10 rounded px-3 h-9 w-48 lg:w-64 border border-white/20">
-          <Input 
-            type="text" 
-            placeholder="Zoeken..." 
-            className="bg-transparent border-none text-white text-sm placeholder:text-white/60 focus-visible:ring-0 h-full p-0"
-          />
-          <Search className="h-4 w-4 text-white/60 ml-2" />
-        </div>
-
-        <div className="flex items-center">
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-400 hover:text-primary">
+            <UserIcon className="h-5 w-5" />
+          </Button>
           <NotificationCenter />
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-400 hover:text-primary">
+            <Info className="h-5 w-5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9 rounded-full text-slate-400 hover:text-red-600"
+            onClick={() => signOut(auth)}
+          >
+            <LogOutIcon className="h-5 w-5" />
+          </Button>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-9 px-2 gap-2 text-white hover:bg-white/10">
-              <Avatar className="h-7 w-7 border border-white/40">
-                <AvatarImage src={user?.photoURL || undefined} />
-                <AvatarFallback className="text-[10px] bg-white text-[#3498db] font-bold">
-                  {profile?.firstName?.[0]}{profile?.lastName?.[0]}
-                </AvatarFallback>
-              </Avatar>
-              <span className="hidden sm:inline text-sm font-medium">{profile?.firstName} {profile?.lastName}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 mt-1">
-            <DropdownMenuLabel>Mijn Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="cursor-pointer">
-              <Link href="/profile">Profielinstellingen</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="cursor-pointer">
-              <Link href="/settings">Systeeminstellingen</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => signOut(auth)}
-              className="text-red-600 cursor-pointer"
-            >
-              <LogOutIcon className="mr-2 h-4 w-4" /> Uitloggen
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-3 pl-6 border-l border-slate-100">
+          <div className="text-right hidden sm:block">
+            <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 leading-none mb-1">
+              {profile?.schouwenGemeente || 'BeheerHub'}
+            </p>
+            <p className="text-xs font-bold text-slate-400 leading-none truncate max-w-[120px]">
+              {profile?.firstName} {profile?.lastName}
+            </p>
+            <Badge variant="secondary" className="mt-1 h-4 text-[8px] font-black uppercase tracking-widest bg-primary/5 text-primary border-none">
+              {profile?.role || 'Gebruiker'}
+            </Badge>
+          </div>
+          <Avatar className="h-10 w-10 border-2 border-slate-50 shadow-sm">
+            <AvatarImage src={undefined} />
+            <AvatarFallback className="text-xs bg-slate-100 text-primary font-black uppercase">
+              {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+            </AvatarFallback>
+          </Avatar>
+        </div>
       </div>
     </header>
   );
@@ -175,7 +171,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-screen overflow-hidden">
       {isHeaderVisible && <Header />}
       <div className="flex flex-1 min-h-0 relative">
-        <aside className="hidden lg:block w-64 shrink-0 h-full border-r bg-white">
+        <aside className="hidden lg:block w-20 xl:w-24 shrink-0 h-full sidebar-blue shadow-2xl relative z-20">
           <AppSidebar />
         </aside>
         <main className="flex-1 overflow-auto bg-slate-50 custom-scrollbar relative">
