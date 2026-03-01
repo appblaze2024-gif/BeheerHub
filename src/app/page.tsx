@@ -139,7 +139,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* Notification Badge for Meldingen */}
+                    {/* Notification Badge for Meldingen card */}
                     {item.label === 'Meldingen' && newCount > 0 && (
                       <Badge 
                         variant="destructive" 
@@ -160,6 +160,8 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10 animate-in fade-in slide-in-from-right-4 duration-500">
             {activeModule.subItems?.map((sub) => {
               const Icon = activeModule.icon; 
+              const isPortalSubItem = sub.label === 'Portaal' || sub.id === 'portal';
+              
               return (
                 <Card 
                   key={sub.id}
@@ -191,6 +193,16 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Notification Badge for Portaal sub-item */}
+                    {isPortalSubItem && newCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute top-2 right-2 h-6 min-w-6 flex items-center justify-center font-black rounded-full border-2 border-white shadow-lg animate-in zoom-in"
+                      >
+                        {newCount}
+                      </Badge>
+                    )}
                   </CardContent>
                   <div className="absolute right-2 bottom-2 opacity-[0.05] group-hover:opacity-20 group-hover:text-[#3498db] transition-all duration-700 pointer-events-none transform">
                     <Icon className="h-16 w-16 md:h-20 md:w-20" />
