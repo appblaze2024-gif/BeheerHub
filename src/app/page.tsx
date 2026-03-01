@@ -76,10 +76,10 @@ export default function DashboardPage() {
               <Card 
                 key={item.label}
                 onClick={() => router.push(item.href)}
-                className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-32"
+                className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white min-h-[128px] h-full"
               >
                 <CardContent className="p-4 h-full flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start mb-2">
                     <div className="bg-slate-50 p-2.5 rounded-xl group-hover:bg-[#4a5ab5] group-hover:text-white transition-all duration-500 shadow-inner">
                       <Icon className="h-5 w-5" />
                     </div>
@@ -89,15 +89,35 @@ export default function DashboardPage() {
                   </div>
                   
                   <div className="relative z-10">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-1 group-hover:text-[#4a5ab5] transition-colors truncate">
-                      {item.label}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <div className="h-1 w-8 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#4a5ab5] w-0 group-hover:w-full transition-all duration-700 ease-out" />
+                    <div className="mb-2">
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-1 group-hover:text-[#4a5ab5] transition-colors truncate">
+                        {item.label}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1 w-8 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#4a5ab5] w-0 group-hover:w-full transition-all duration-700 ease-out" />
+                        </div>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-600">Openen</span>
                       </div>
-                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-600">Openen</span>
                     </div>
+
+                    {item.subItems && (
+                      <div className="flex flex-wrap gap-1.5 mt-3 relative z-20">
+                        {item.subItems.map((sub) => (
+                          <Button
+                            key={sub.id}
+                            variant="secondary"
+                            className="h-6 px-2 text-[9px] font-black uppercase bg-slate-50 hover:bg-[#4a5ab5] hover:text-white transition-all border border-slate-100 rounded-lg shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(sub.href);
+                            }}
+                          >
+                            {sub.label}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
                 
