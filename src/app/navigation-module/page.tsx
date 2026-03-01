@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -315,7 +314,7 @@ function NavigatingView({
       if (Math.abs(lastUpdateDistRef.current - roundedRemaining) >= 1) {
           setDistanceRemainingToDestination(roundedRemaining);
           lastUpdateDistRef.current = roundedRemaining;
-          setHasReachedCurrentTarget(roundedRemaining < 150);
+          setHasReachedCurrentTarget(remaining < 150);
       }
     } catch (e) {}
   }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
@@ -768,16 +767,6 @@ export default function StartNavigationPage() {
                 const data = await res.json();
                 if (data.routes && data.routes.length > 0) {
                     setPreviewRouteGeometry(data.routes[0].geometry);
-                    
-                    // Zoom to the calculated route
-                    if (mapRef.current) {
-                        const line = turf.lineString(data.routes[0].geometry.coordinates);
-                        const bbox = turf.bbox(line);
-                        mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], {
-                            padding: 80,
-                            duration: 1500
-                        });
-                    }
                 }
             } catch (e) {}
         } else {
@@ -786,6 +775,35 @@ export default function StartNavigationPage() {
     };
     fetchPreview();
   }, [sortedMeldingen, routeType, currentActiveSortBase]);
+
+  // Handle zooming into route for meldingen or selected area
+  React.useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current.getMap();
+
+    if (routeType === 'meldingen' && previewRouteGeometry) {
+        try {
+            const line = turf.lineString(previewRouteGeometry.coordinates);
+            const bbox = turf.bbox(line);
+            if (bbox[0] !== Infinity) {
+                map.fitBounds(bbox as [number, number, number, number], {
+                    padding: 80,
+                    duration: 1500
+                });
+            }
+        } catch (e) {}
+    } else if (routeType !== 'meldingen' && routeGeoJSONFeatures) {
+        try {
+            const bbox = turf.bbox(routeGeoJSONFeatures);
+            if (bbox[0] !== Infinity) {
+                map.fitBounds(bbox as [number, number, number, number], {
+                    padding: 80,
+                    duration: 1500
+                });
+            }
+        } catch (e) {}
+    }
+  }, [previewRouteGeometry, routeGeoJSONFeatures, routeType]);
 
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const availableRoutes = React.useMemo(() => {
@@ -816,21 +834,6 @@ export default function StartNavigationPage() {
     } catch (e) {}
     return null;
   }, [selectedRouteIdDef]);
-
-  // Zoom to route area for non-meldingen types
-  React.useEffect(() => {
-    if (routeType !== 'meldingen' && routeGeoJSONFeatures && mapRef.current) {
-        try {
-            const bbox = turf.bbox(routeGeoJSONFeatures);
-            if (bbox[0] !== Infinity) {
-                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], {
-                    padding: 80,
-                    duration: 1500
-                });
-            }
-        } catch (e) {}
-    }
-  }, [routeGeoJSONFeatures, routeType]);
 
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
