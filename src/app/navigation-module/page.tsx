@@ -613,21 +613,21 @@ function NavigatingView({
 
       {arrivedObject && (
           <div className="absolute inset-0 z-[90] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-              <Card className="w-full max-w-[300px] shadow-2xl animate-in zoom-in-95 duration-200 rounded-[2rem] overflow-hidden border-none">
-                  <CardHeader className="text-center pb-2 p-4">
-                      <div className="mx-auto bg-blue-100 p-2 rounded-xl w-12 h-12 flex items-center justify-center mb-3">
-                        <MapPin className="h-6 w-6 text-blue-600 fill-current" />
+              <Card className="w-full max-w-[380px] shadow-2xl animate-in zoom-in-95 duration-200 rounded-[2rem] overflow-hidden border-none">
+                  <CardHeader className="text-center pb-2 p-6">
+                      <div className="mx-auto bg-blue-100 p-2.5 rounded-2xl w-14 h-14 flex items-center justify-center mb-4 shadow-sm">
+                        <MapPin className="h-7 w-7 text-blue-600 fill-current" />
                       </div>
-                      <CardTitle className="text-base font-black uppercase tracking-tight text-slate-900 leading-none mb-1">Bestemming</CardTitle>
-                      <CardDescription className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                        {routeType === 'meldingen' ? 'Melding' : 'Object'}: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span>
+                      <CardTitle className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none mb-2">Bestemming Selectie</CardTitle>
+                      <CardDescription className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                        {routeType === 'meldingen' ? 'Meldingsnummer' : 'Object ID'}: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span>
                       </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 pt-0 space-y-2 flex flex-col items-center">
-                      <Button onClick={() => { if (routeType === 'meldingen') router.push(`/issues?id=${arrivedObject.id}`); else router.push(`/objects?id=${arrivedObject.id}`); }} className="w-full h-11 bg-primary hover:bg-primary/90 text-xs font-black uppercase tracking-widest gap-2 rounded-2xl shadow-lg shadow-primary/20">
-                          <FileText className="h-4 w-4" /> Open Details
+                  <CardContent className="p-6 pt-0 space-y-3 flex flex-col items-center">
+                      <Button onClick={() => { if (routeType === 'meldingen') router.push(`/issues?id=${arrivedObject.id}`); else router.push(`/objects?id=${arrivedObject.id}`); }} className="w-full h-12 bg-primary hover:bg-primary/90 text-sm font-black uppercase tracking-widest gap-2 rounded-2xl shadow-xl shadow-primary/20">
+                          <FileText className="h-5 w-5" /> Open Details
                       </Button>
-                      <Button variant="ghost" onClick={() => setArrivedObject(null)} className="w-full h-8 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl">Sluiten</Button>
+                      <Button variant="ghost" onClick={() => setArrivedObject(null)} className="w-full h-10 text-xs font-black uppercase tracking-[0.15em] text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl">Sluiten</Button>
                   </CardContent>
               </Card>
           </div>
