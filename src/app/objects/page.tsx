@@ -375,7 +375,7 @@ export default function ObjectsPage() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <div className="relative w-64 hidden sm:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input placeholder="Snelzoeken..." className="pl-9 h-9 text-xs font-medium rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!typeFilter} />
@@ -383,14 +383,14 @@ export default function ObjectsPage() {
           
           {profile?.role === 'Super admin' && (
             <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
-              <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-primary/20 text-primary hover:bg-primary/5">
+              <Button variant="default" size="sm" className="h-9 font-black uppercase tracking-tight bg-primary text-white shadow-lg shadow-primary/20 px-4 rounded-xl">
                 <Upload className="h-4 w-4 mr-2" /> 
-                Import
+                IMPORT
               </Button>
             </ObjectImportDialog>
           )}
           
-          <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
+          <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
         </div>
       </header>
 
