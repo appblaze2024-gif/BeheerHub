@@ -134,24 +134,23 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const { isLoading: isProfileLoading } = useProfile();
   const pathname = usePathname();
 
-  // Re-trigger translation when navigation occurs to ensure whole page is translated
+  // Handle translation persistency and SPA updates
   useEffect(() => {
-    const triggerTranslation = () => {
-      const select = document.querySelector('.goog-te-combo') as HTMLSelectElement;
-      if (select) {
-        // Read cookie to see what language we should be in
+    const handleTranslationUpdate = () => {
+      // Small delay to let React render, then poke the Google Translate widget
+      const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+      if (combo) {
         const match = document.cookie.match(/googtrans=\/nl\/([^;]+)/);
         const targetLang = match ? match[1] : 'nl';
         
-        if (select.value !== targetLang) {
-          select.value = targetLang;
-          select.dispatchEvent(new Event('change'));
+        if (combo.value !== targetLang) {
+          combo.value = targetLang;
+          combo.dispatchEvent(new Event('change'));
         }
       }
     };
     
-    // Small delay to ensure React has rendered new components, then force translation engine to re-scan
-    const timer = setTimeout(triggerTranslation, 500);
+    const timer = setTimeout(handleTranslationUpdate, 500);
     return () => clearTimeout(timer);
   }, [pathname]);
 
@@ -172,13 +171,16 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <Toaster />
-      <div id="google_translate_element" style={{ position: 'fixed', top: '-10000px', left: '-10000px' }} />
+      
+      {/* Hidden container for Google Translate widget */}
+      <div id="google_translate_element" style={{ visibility: 'hidden', position: 'absolute', top: -100 }} />
+      
       <Script
         id="google-translate-init"
         strategy="afterInteractive"
       >
         {`
-          function googleTranslateElementInit() {
+          window.googleTranslateElementInit = function() {
             new google.translate.TranslateElement({
               pageLanguage: 'nl',
               includedLanguages: 'nl,en,pl,uk,de,hu',

@@ -12,7 +12,6 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
 
 const languages = [
   { code: 'nl', name: 'Nederlands', flag: 'nl' },
@@ -37,22 +36,22 @@ export function LanguageSelector() {
   const handleLanguageChange = (langCode: string) => {
     setCurrentLang(langCode);
     
-    // Set the cookie that Google Translate uses for persistence
+    // Standard Google Translate cookie format: /source/target
     const cookieValue = `/nl/${langCode}`;
     const domain = window.location.hostname;
     
-    // Set cookie for current domain and root path with broad visibility
+    // Set cookie for current path and root to ensure visibility
     document.cookie = `googtrans=${cookieValue}; path=/; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
     document.cookie = `googtrans=${cookieValue}; path=/; domain=${domain}; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
 
-    // Trigger the actual translation via the hidden Google combo box if available
+    // Trigger the hidden Google Translate combo box if it's already in the DOM
     const select = document.querySelector('.goog-te-combo') as HTMLSelectElement;
     if (select) {
       select.value = langCode;
       select.dispatchEvent(new Event('change'));
     }
     
-    // Force a reload to ensure the entire DOM (including complex components) is picked up by the translation engine
+    // Force a full page refresh to guarantee that everything (SSR and CSR) is translated on next load
     window.location.reload();
   };
 
@@ -64,7 +63,7 @@ export function LanguageSelector() {
         <Button variant="ghost" size="sm" className="h-9 gap-2 rounded-full text-[#3498db] hover:bg-blue-50 transition-all active:scale-95 px-2">
           <div className="relative h-6 w-6 rounded-full overflow-hidden border border-slate-200 shadow-sm shrink-0 bg-slate-100">
             <img 
-              src={`https://flagcdn.com/${currentLangObj.flag}.svg`} 
+              src={`https://flagcdn.com/w40/${currentLangObj.flag}.png`} 
               alt={currentLangObj.name}
               className="h-full w-full object-cover"
             />
@@ -89,7 +88,7 @@ export function LanguageSelector() {
             <div className="flex items-center gap-3">
                 <div className="relative h-5 w-5 rounded-full overflow-hidden border border-slate-100 shrink-0 shadow-sm bg-slate-50">
                   <img 
-                    src={`https://flagcdn.com/${lang.flag}.svg`} 
+                    src={`https://flagcdn.com/w40/${lang.flag}.png`} 
                     alt={lang.name}
                     className="h-full w-full object-cover"
                   />
