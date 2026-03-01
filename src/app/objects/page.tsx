@@ -269,11 +269,9 @@ export default function ObjectsPage() {
     try {
         const batch = writeBatch(firestore);
         
-        // 1. Update the filter list in settings
         const updatedFilters = customFilters.map(f => f === filterToRename ? newFilterName.trim() : f);
         batch.set(filtersRef, { custom: updatedFilters }, { merge: true });
         
-        // 2. Update all objects that have this tag (if they are currently loaded or we fetch them)
         if (objects && objects.length > 0) {
             objects.forEach(obj => {
                 if (obj.locatieType === filterToRename) {
@@ -313,8 +311,6 @@ export default function ObjectsPage() {
     setNewFilterName(filterName);
     setIsAddFilterDialogOpen(true);
   };
-
-  const isRenaming = !!filterToRename;
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
@@ -664,10 +660,10 @@ export default function ObjectsPage() {
         <DialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
           <DialogHeader>
             <DialogTitle>
-                {isRenaming ? 'Filter hernoemen' : 'Nieuw filter'}
+                {!!filterToRename ? 'Filter hernoemen' : 'Nieuw filter'}
             </DialogTitle>
             <DialogDescription className="font-medium text-slate-500">
-                {isRenaming ? `Wijzig de naam van '${filterToRename}'. Dit werkt ook alle objecten bij.` : 'Geef een naam op voor de nieuwe categorie.'}
+                {!!filterToRename ? `Wijzig de naam van '${filterToRename}'. Dit werkt ook alle objecten bij.` : 'Geef een naam op voor de nieuwe categorie.'}
             </DialogDescription>
           </DialogHeader>
           <div className="py-6">
@@ -675,7 +671,7 @@ export default function ObjectsPage() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)} className="font-bold">Annuleren</Button>
-            <Button onClick={isRenaming ? handleRenameFilter : handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-bold rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
+            <Button onClick={!!filterToRename ? handleRenameFilter : handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-bold rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
                 {isSavingFilter ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Opslaan'}
             </Button>
           </DialogFooter>

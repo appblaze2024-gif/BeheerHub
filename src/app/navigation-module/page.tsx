@@ -564,7 +564,7 @@ function NavigatingView({
                             inRange && "scale-125 bg-green-600"
                         )}>
                             {isUnderground ? (
-                                <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-6 w-6 brightness-0 invert" />
+                                <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-6 w-6" />
                             ) : (
                                 <Icon className="h-5 w-5 text-white stroke-[2.5]" />
                             )}
@@ -779,11 +779,9 @@ export default function StartNavigationPage() {
 
   const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
 
-  // Optimized route calculation for meldingen
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
     
-    // FILTER: standard employees only see their assigned reports
     let visibleMeldingen = allMeldingen;
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
@@ -793,7 +791,6 @@ export default function StartNavigationPage() {
     if (visibleMeldingen.length === 0) return [];
 
     let unvisited = [...visibleMeldingen];
-    // Gebruik de actieve sort base (Rijsenhout of Gebruiker)
     let currentPos = currentActiveSortBase;
     let sorted: Melding[] = [];
 
@@ -817,7 +814,6 @@ export default function StartNavigationPage() {
     return sorted;
   }, [allMeldingen, routeType, currentActiveSortBase, isPrivileged, profile]);
 
-  // Fetch preview route geometry for meldingen
   React.useEffect(() => {
     const fetchPreview = async () => {
         if (routeType === 'meldingen' && sortedMeldingen.length >= 1) {
@@ -840,7 +836,6 @@ export default function StartNavigationPage() {
     fetchPreview();
   }, [sortedMeldingen, routeType, currentActiveSortBase]);
 
-  // Handle zooming into route for meldingen or selected area
   React.useEffect(() => {
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
@@ -887,13 +882,11 @@ export default function StartNavigationPage() {
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
     
-    // Bepaal de startlocatie: Gebruiker (als beschikbaar) of Rijsenhout
     let startLoc = userLocation || SIMULATION_START_LOCATION;
     const isAtBase = turf.distance(turf.point([startLoc.longitude, startLoc.latitude]), turf.point([SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude]), { units: 'meters' }) < 100;
 
     setIsStarting(true);
 
-    // Als we werkbonnen doen en we zijn niet op de basis, toon loader en herbereken route
     if (routeType === 'meldingen') {
         if (sortedMeldingen.length === 0) { 
             toast({ title: "Geen meldingen", description: "Geen aan u toegewezen meldingen gevonden." }); 
@@ -904,7 +897,6 @@ export default function StartNavigationPage() {
         if (!isAtBase && !simulate) {
             setIsRecalculating(true);
             setCurrentActiveSortBase(startLoc);
-            // Wacht even tot de memo herrekend is en de preview fetched
             await new Promise(resolve => setTimeout(resolve, 1500));
             setIsRecalculating(false);
         }
@@ -950,9 +942,7 @@ export default function StartNavigationPage() {
       ) : (
         <div className="w-full h-full relative flex flex-col">
           <div className={cn("flex flex-col flex-1 min-h-0", isMeldingenType ? "" : "relative")}>
-              {/* Map Section */}
               <div className={cn("relative overflow-hidden shrink-0", isMeldingenType ? "h-[60%]" : "h-full")}>
-                  {/* Floating Top Controls */}
                   <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
                       <Button 
                         variant="secondary" 
@@ -996,14 +986,12 @@ export default function StartNavigationPage() {
                     {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
                     {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'fill-color': '#32ADE6', 'fill-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
                     
-                    {/* Base location marker */}
                     <Marker longitude={SIMULATION_START_LOCATION.longitude} latitude={SIMULATION_START_LOCATION.latitude} anchor="center">
                         <div className="w-8 h-8 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
                             <Home className="h-4 w-4 fill-current" />
                         </div>
                     </Marker>
 
-                    {/* Melding markers with sequence numbers and assigned user "cloud" */}
                     {routeType === 'meldingen' && sortedMeldingen?.map((m, idx) => (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
                             if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
@@ -1022,7 +1010,6 @@ export default function StartNavigationPage() {
                         </Marker>
                     ))}
 
-                    {/* Show route preview line */}
                     {isMeldingenType && previewRouteGeometry && (
                         <Source id="preview-route" type="geojson" data={{ type: 'Feature', properties: {}, geometry: previewRouteGeometry }}>
                             <Layer 
@@ -1057,7 +1044,6 @@ export default function StartNavigationPage() {
                     })}
                   </MapGL>
 
-                  {/* Settings Card overlay for non-meldingen types */}
                   {!isMeldingenType && (
                     <Card className="absolute top-20 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 rounded-2xl p-4 hidden sm:block animate-in slide-in-from-left-4 duration-300">
                         <CardHeader className="p-3 border-b bg-slate-50/50">
@@ -1093,7 +1079,6 @@ export default function StartNavigationPage() {
                   )}
               </div>
 
-              {/* List Section for Meldingen (40%) */}
               {isMeldingenType && (
                   <div className="flex-1 overflow-hidden flex flex-col bg-white border-t-4 border-slate-900">
                       <div className="p-3 bg-slate-50 border-b flex items-center justify-between shrink-0">

@@ -53,7 +53,7 @@ const polygonOutlineLayer: LineLayer = {
 
 const getHeatmapColor = (vulgraad: number | undefined): string => {
     if (vulgraad === undefined || vulgraad === null) {
-      return 'hsl(221, 83%, 53%)'; // Blauw als er geen data is
+      return 'hsl(221, 83%, 53%)'; 
     }
     
     if (vulgraad < 25) return '#22c55e'; // Groen (0% - 24%)
@@ -117,7 +117,6 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     } else if (longitude && latitude) {
       map.flyTo({ center: [longitude, latitude], zoom: 19});
     } else if (!longitude && !latitude) {
-        // Reset to default view if no polygons and no specific coords
          map.flyTo({
             center: [5.2913, 52.1326],
             zoom: 7,
@@ -135,7 +134,6 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const isHighlighted = highlightedObject?.id === obj.id;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         
-        // Detect if it is a collection point (brengparkje) or underground container
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         const isUnderground = typeStr.includes('container') || 
                               typeStr.includes('ondergrond') ||
