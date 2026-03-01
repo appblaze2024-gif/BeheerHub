@@ -105,11 +105,12 @@ const newMeldingSchema = z.object({
   subcategorie: z.string().min(1, 'Subtype is verplicht'),
   behandelende_afdeling: z.string().optional().nullable(),
   behandelaar: z.string().optional().nullable(),
+  aangenomen_door: z.string().min(1, 'Naam is verplicht'),
   status: z.string().default('Nieuw'),
   voorvaldatum: z.any().optional().nullable(),
   voorvaltijd: z.string().optional().nullable(),
   meldingsdatum: z.any().optional().nullable(),
-  meldingsuur: z.string().optional().nullable(),
+  meldingsuur: z.string().min(1, 'Tijdstip is verplicht'),
   straatnaam: z.string().min(1, 'Straatnaam is verplicht'),
   huisnummer: z.string().min(1, 'Huisnummer is verplicht'),
   postcode: z.string().optional().nullable(),
@@ -261,6 +262,7 @@ export default function NewIssuePage() {
       status: 'Nieuw', 
       meldingsdatum: new Date(), 
       meldingsuur: format(new Date(), 'HH:mm'),
+      aangenomen_door: profile?.displayName || profile?.email || '',
       voorvaldatum: new Date(), 
       voorvaltijd: format(new Date(), 'HH:mm'), 
       hoofdcategorie: '', 
@@ -286,6 +288,12 @@ export default function NewIssuePage() {
       setLocation({ latitude: existingMelding.latitude, longitude: existingMelding.longitude });
     }
   }, [existingMelding, form]);
+
+  React.useEffect(() => {
+    if (!meldingId && profile && !form.getValues('aangenomen_door')) {
+      form.setValue('aangenomen_door', profile.displayName || profile.email || '');
+    }
+  }, [profile, meldingId, form]);
 
   const watchStraat = form.watch('straatnaam');
   const watchHuisnummer = form.watch('huisnummer');
@@ -336,7 +344,6 @@ export default function NewIssuePage() {
     let postcode = obj.postcode || '';
     let city = obj.plaats || '';
     
-    // Advanced parsing if street contains merged info
     if (rawStreet && (!houseNumber || !postcode || !city)) {
         const postcodeMatch = rawStreet.match(/(\d{4}\s?[A-Z]{2})/i);
         if (postcodeMatch) {
@@ -403,24 +410,21 @@ export default function NewIssuePage() {
       longitude: location?.longitude || 0,
       files: uploadedFiles,
       fotos: uploadedPhotos,
-      aangenomen_door: existingMelding?.aangenomen_door || profile?.displayName || 'Onbekend',
-      createdAt: existingMelding?.createdAt || serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    // Sanitize mData: remove undefined properties
     Object.keys(mData).forEach(key => mData[key] === undefined && delete mData[key]);
 
     if (meldingId) {
       updateDocumentNonBlocking(doc(firestore, 'meldingen', meldingId), mData);
     } else {
+      mData.createdAt = serverTimestamp();
       addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
     }
 
     toast({ title: meldingId ? "Melding bijgewerkt" : "Melding opgeslagen" });
     startProcessing(1000);
     router.push('/issues/portal');
-    // setIsSubmitting will be reset on unmount or in finally if it was async
   };
 
   const onSaveError = (errors: any) => {
@@ -448,6 +452,23 @@ export default function NewIssuePage() {
                 <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                   <FormField control={form.control} name="intakenummer" render={({ field }) => (
                     <FormItem><FormControl><Input {...field} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </FormRow>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormRow label={<>Datum<span className="text-red-500">*</span></>}>
+                    <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
+                      <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </FormRow>
+                  <FormRow label={<>Tijdstip<span className="text-red-500">*</span></>}>
+                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (
+                      <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </FormRow>
+                </div>
+                <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
+                  <FormField control={form.control} name="aangenomen_door" render={({ field }) => (
+                    <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
                   )} />
                 </FormRow>
                 <div className="grid grid-cols-2 gap-3">
@@ -527,6 +548,23 @@ export default function NewIssuePage() {
                   <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                     <FormField control={form.control} name="intakenummer" render={({ field }) => (
                       <FormItem><FormControl><Input {...field} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </FormRow>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormRow label={<>Datum<span className="text-red-500">*</span></>}>
+                      <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
+                        <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </FormRow>
+                    <FormRow label={<>Tijdstip<span className="text-red-500">*</span></>}>
+                      <FormField control={form.control} name="meldingsuur" render={({ field }) => (
+                        <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </FormRow>
+                  </div>
+                  <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
+                    <FormField control={form.control} name="aangenomen_door" render={({ field }) => (
+                      <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
                     )} />
                   </FormRow>
                   <div className="grid grid-cols-2 gap-3">
