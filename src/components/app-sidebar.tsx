@@ -36,18 +36,6 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex flex-col h-full sidebar-blue text-white items-center py-6">
-      <div className="shrink-0 flex items-center justify-center mb-8">
-        <div className="h-12 w-12 relative flex items-center justify-center bg-white rounded-full p-2">
-          <Image 
-            src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png" 
-            alt="Logo" 
-            width={32}
-            height={32}
-            className="object-contain" 
-          />
-        </div>
-      </div>
-
       <ScrollArea className="flex-1 w-full">
         <TooltipProvider delayDuration={0}>
           <div className="flex flex-col gap-6 items-center">
