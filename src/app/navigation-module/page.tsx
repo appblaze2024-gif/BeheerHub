@@ -768,6 +768,16 @@ export default function StartNavigationPage() {
                 const data = await res.json();
                 if (data.routes && data.routes.length > 0) {
                     setPreviewRouteGeometry(data.routes[0].geometry);
+                    
+                    // Zoom to the calculated route
+                    if (mapRef.current) {
+                        const line = turf.lineString(data.routes[0].geometry.coordinates);
+                        const bbox = turf.bbox(line);
+                        mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], {
+                            padding: 80,
+                            duration: 1500
+                        });
+                    }
                 }
             } catch (e) {}
         } else {
@@ -806,6 +816,21 @@ export default function StartNavigationPage() {
     } catch (e) {}
     return null;
   }, [selectedRouteIdDef]);
+
+  // Zoom to route area for non-meldingen types
+  React.useEffect(() => {
+    if (routeType !== 'meldingen' && routeGeoJSONFeatures && mapRef.current) {
+        try {
+            const bbox = turf.bbox(routeGeoJSONFeatures);
+            if (bbox[0] !== Infinity) {
+                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], {
+                    padding: 80,
+                    duration: 1500
+                });
+            }
+        } catch (e) {}
+    }
+  }, [routeGeoJSONFeatures, routeType]);
 
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
@@ -1061,8 +1086,7 @@ export default function StartNavigationPage() {
                                           <TableCell colSpan={7} className="text-center py-12 text-muted-foreground opacity-30">
                                               <LayoutGrid className="h-8 w-8 mx-auto mb-2" />
                                               <p className="font-black uppercase tracking-widest text-[10px]">Geen openstaande meldingen voor uitvoering</p>
-                                          </TableCell>
-                                      </TableRow>
+                                          </TableRow>
                                   )}
                               </TableBody>
                           </Table>
