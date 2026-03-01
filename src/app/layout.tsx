@@ -31,6 +31,7 @@ import { signOut } from 'firebase/auth';
 import { LoadingScreen } from '@/components/loading-screen';
 import { NotificationCenter } from '@/components/notification-center';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { AppInfoDialog } from '@/components/app-info-dialog';
 
 function ProcessingOverlay() {
   const { isProcessing } = useGlobalLoading();
@@ -88,9 +89,11 @@ function Header() {
             <NotificationCenter />
           </div>
           {!isMobile && (
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50">
-              <Info className="h-4 w-4" />
-            </Button>
+            <AppInfoDialog>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50">
+                <Info className="h-4 w-4" />
+              </Button>
+            </AppInfoDialog>
           )}
           <Button 
             variant="ghost" 
@@ -111,7 +114,7 @@ function Header() {
               <p className="text-xs font-black text-slate-900 leading-none">
                 {profile?.firstName} {profile?.lastName}
               </p>
-              <Badge className="mt-1 h-4 text-[7px] font-black uppercase bg-red-500 text-white border-none py-0 px-2 rounded-sm">
+              <Badge className="mt-1 h-4 text-[7px] font-black uppercase bg-red-500 text-white border-none py-0 heart-pulse px-2 rounded-sm">
                 {profile?.role || 'Beheerder'}
               </Badge>
             </div>
