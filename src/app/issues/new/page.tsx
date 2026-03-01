@@ -332,22 +332,56 @@ export default function NewIssuePage() {
   const handleContainerSelect = (obj: MapObject) => {
     form.setValue('containernummer', obj.idNummer || obj.id);
     
-    let street = obj.straatnaam || '';
+    let rawStreet = obj.straatnaam || '';
     let houseNumber = obj.huisnummer || '';
+    let postcode = obj.postcode || '';
+    let city = obj.plaats || '';
     
-    // Splits straatnaam als er een nummer in staat en huisnummer leeg is
-    if (street && !houseNumber) {
-        const match = street.match(/^(.*?)\s*(\d+.*)$/);
-        if (match) {
-            street = match[1].trim();
-            houseNumber = match[2].trim();
+    // Advanced parsing if street contains merged info
+    if (rawStreet && (!houseNumber || !postcode || !city)) {
+        // Look for postcode (4 digits + 2 letters)
+        const postcodeMatch = rawStreet.match(/(\d{4}\s?[A-Z]{2})/i);
+        if (postcodeMatch) {
+            const pc = postcodeMatch[0];
+            const parts = rawStreet.split(pc);
+            
+            if (!postcode) postcode = pc.toUpperCase();
+            
+            // Part before postcode usually contains street and house number
+            const before = parts[0].trim().replace(/,$/, '').trim();
+            // Part after postcode usually contains city
+            const after = parts[1] ? parts[1].trim().replace(/^,/, '').trim() : '';
+            
+            if (!city && after) city = after;
+            
+            // Further split 'before' into street and house number if houseNumber is missing
+            if (!houseNumber) {
+                const hnMatch = before.match(/(\d+.*)$/);
+                if (hnMatch) {
+                    houseNumber = hnMatch[0];
+                    rawStreet = before.substring(0, hnMatch.index!).trim();
+                } else {
+                    rawStreet = before;
+                }
+            } else {
+                rawStreet = before;
+            }
+        } else {
+            // No postcode found, just try to split street and house number if missing
+            if (!houseNumber) {
+                const hnMatch = rawStreet.match(/^(.*?)\s*(\d+.*)$/);
+                if (hnMatch) {
+                    rawStreet = hnMatch[1].trim();
+                    houseNumber = hnMatch[2].trim();
+                }
+            }
         }
     }
     
-    form.setValue('straatnaam', street);
+    form.setValue('straatnaam', rawStreet);
     form.setValue('huisnummer', houseNumber);
-    if (obj.plaats) form.setValue('plaats', obj.plaats);
-    if (obj.postcode) form.setValue('postcode', obj.postcode);
+    form.setValue('postcode', postcode);
+    form.setValue('plaats', city);
     if (obj.wijk) form.setValue('wijk', obj.wijk);
     
     setLocation({ latitude: obj.latitude, longitude: obj.longitude });
