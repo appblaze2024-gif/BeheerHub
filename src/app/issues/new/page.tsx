@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -421,13 +422,13 @@ export default function NewIssuePage() {
   }, [existingMelding, form]);
 
   // CONTAINER SEARCH LOGIC
-  const watchContainerNummer = form.watch('containernummer');
+  const watchContainernummer = form.watch('containernummer');
   React.useEffect(() => {
-    if (!watchContainerNummer || watchContainerNummer.length < 2 || isReadOnly || !allMapObjects) {
+    if (!watchContainernummer || watchContainernummer.length < 2 || isReadOnly || !allMapObjects) {
       setContainerSuggestions([]);
       return;
     }
-    const q = watchContainerNummer.toLowerCase();
+    const q = watchContainernummer.toLowerCase();
     const filtered = allMapObjects.filter(obj => 
       (obj.locatieType === 'Brengparkjes HHM' || obj.locatieType === 'Brenparkjes HHM') && (
         (obj.idNummer || '').toLowerCase().includes(q) ||
@@ -435,7 +436,7 @@ export default function NewIssuePage() {
       )
     ).slice(0, 8);
     setContainerSuggestions(filtered);
-  }, [watchContainerNummer, allMapObjects, isReadOnly]);
+  }, [watchContainernummer, allMapObjects, isReadOnly]);
 
   // AUTO GEOCODING
   const watchedAddress = form.watch(['straatnaam', 'huisnummer', 'plaats']);
@@ -654,7 +655,7 @@ export default function NewIssuePage() {
         </header>
 
         <main className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
-            <div className="flex-1 overflow-y-auto p-4 lg:p-6 no-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 lg:p-6 no-scrollbar custom-scrollbar">
                 <Form {...form}>
                     <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-4">
@@ -751,7 +752,8 @@ export default function NewIssuePage() {
                                         >
                                             <FormField control={form.control} name="soort_melder" render={({ field }) => (
                                                 <FormItem>
-                                                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
+                                                        <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             {soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}
                                                         </SelectContent>
