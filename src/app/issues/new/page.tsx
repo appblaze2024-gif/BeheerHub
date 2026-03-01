@@ -266,7 +266,7 @@ export default function NewIssuePage() {
       voorvaltijd: format(new Date(), 'HH:mm'), 
       hoofdcategorie: '', 
       subcategorie: '',
-      plaats: 'Bodegraven-Reeuwijk', 
+      plaats: '', 
     },
   });
 
@@ -325,9 +325,34 @@ export default function NewIssuePage() {
     const filtered = allMapObjects.filter(obj => 
       (obj.idNummer || '').toLowerCase().includes(q) ||
       (obj.id || '').toLowerCase().includes(q)
-    ).slice(0, 8);
+    ).slice(0, 15);
     setContainerSuggestions(filtered);
   }, [watchContainernummer, allMapObjects, isReadOnly]);
+
+  const handleContainerSelect = (obj: MapObject) => {
+    form.setValue('containernummer', obj.idNummer || obj.id);
+    
+    let street = obj.straatnaam || '';
+    let houseNumber = obj.huisnummer || '';
+    
+    // Splits straatnaam als er een nummer in staat en huisnummer leeg is
+    if (street && !houseNumber) {
+        const match = street.match(/^(.*?)\s*(\d+.*)$/);
+        if (match) {
+            street = match[1].trim();
+            houseNumber = match[2].trim();
+        }
+    }
+    
+    form.setValue('straatnaam', street);
+    form.setValue('huisnummer', houseNumber);
+    if (obj.plaats) form.setValue('plaats', obj.plaats);
+    if (obj.postcode) form.setValue('postcode', obj.postcode);
+    if (obj.wijk) form.setValue('wijk', obj.wijk);
+    
+    setLocation({ latitude: obj.latitude, longitude: obj.longitude });
+    setContainerSuggestions([]);
+  };
 
   const handleFileUpload = async (files: FileList | File[], type: 'files' | 'fotos') => {
     if (!files.length || !app || isReadOnly) return;
@@ -490,13 +515,15 @@ export default function NewIssuePage() {
                         <FormItem className="relative">
                           <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" autoComplete="off" /></FormControl>
                           {containerSuggestions.length > 0 && (
-                            <div className="absolute z-[100] w-full mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-200">
-                              {containerSuggestions.map(obj => (
-                                <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0" onClick={() => { form.setValue('containernummer', obj.idNummer || obj.id); form.setValue('straatnaam', obj.straatnaam || ''); form.setValue('huisnummer', obj.huisnummer || ''); setLocation({ latitude: obj.latitude, longitude: obj.longitude }); setContainerSuggestions([]); }}>
-                                  <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
-                                  <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer}</p>
-                                </button>
-                              ))}
+                            <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-200">
+                              <ScrollArea className="max-h-60">
+                                {containerSuggestions.map(obj => (
+                                  <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleContainerSelect(obj)}>
+                                    <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer} • {obj.plaats}</p>
+                                  </button>
+                                ))}
+                              </ScrollArea>
                             </div>
                           )}
                         </FormItem>
@@ -520,11 +547,11 @@ export default function NewIssuePage() {
                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
                 <CardContent className="p-4 pt-2 space-y-3">
                   <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                    <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                     <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                   </div>
-                  <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                 </CardContent>
               </Card>
             </div>
