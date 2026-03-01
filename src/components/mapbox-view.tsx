@@ -137,11 +137,13 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
+        const isBrengpark = typeStr.includes('brengpark');
+        const isHHM = typeStr.includes('hhm');
         const isUnderground = typeStr.includes('container') || 
                               typeStr.includes('ondergrond') ||
-                              typeStr.includes('brengpark') ||
                               typeStr.includes('ondergr') ||
-                              typeStr.includes('verzamel');
+                              typeStr.includes('verzamel') ||
+                              isBrengpark;
                               
         const Icon = Trash2;
 
@@ -168,7 +170,20 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                 {isHighlighted && (
                   <div className="absolute w-6 h-6 rounded-full bg-black/70 animate-pulse" />
                 )}
-                {isUnderground ? (
+                {isHHM && !isBrengpark ? (
+                  <img 
+                    src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" 
+                    alt="recycling bin"
+                    className={cn(
+                      "relative h-7 w-7 transition-transform",
+                      isSelected && "scale-125",
+                      interactive && "cursor-pointer"
+                    )}
+                    style={{
+                      filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
+                    }}
+                  />
+                ) : isUnderground ? (
                   <img 
                     src="https://i.ibb.co/FbgGHW1G/waste-bin.png" 
                     alt="container"
