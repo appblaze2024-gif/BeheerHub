@@ -78,7 +78,7 @@ export default function IssuesPage() {
   const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
   const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
   const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
-  const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
 
   const meldingIdFromUrl = searchParams.get('id');
 
@@ -101,7 +101,7 @@ export default function IssuesPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
-    let result = debouncedSearchQuery ? meldingen.filter(m => {
+    const result = debouncedSearchQuery ? meldingen.filter(m => {
       const q = debouncedSearchQuery.toLowerCase();
       return ['intakenummer', 'straatnaam', 'plaats', 'subcategorie'].some(f => (m as any)[f]?.toLowerCase().includes(q));
     }) : meldingen;
@@ -232,7 +232,7 @@ export default function IssuesPage() {
   if (isLoadingMeldingen || !meldingIdFromUrl) return <LoadingScreen message="Werkbonnen laden..." />;
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-0 overflow-hidden text-sm bg-gray-50">
+    <div className="flex flex-col flex-1 h-[calc(100vh-6.1rem)] min-h-0 overflow-hidden text-sm bg-gray-50">
         <header className="h-16 border-b bg-white flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
             <div className="flex items-center gap-4">
                  <Button variant="outline" size="icon" className="rounded-full h-10 w-10 border-slate-200" onClick={() => router.push('/navigation-module?type=meldingen')}>
@@ -324,7 +324,6 @@ export default function IssuesPage() {
                         </div>
                     </TabsContent>
                     
-                    {/* Other tabs styled consistently */}
                     <TabsContent value="Opmerkingen" className="mt-0">
                         <Card className="rounded-3xl border-none shadow-xl bg-white overflow-hidden">
                             <CardHeader className="bg-slate-50 border-b p-6"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle></CardHeader>

@@ -429,10 +429,8 @@ export default function NewIssuePage() {
     }
     const q = watchContainernummer.toLowerCase();
     const filtered = allMapObjects.filter(obj => 
-      (obj.locatieType === 'Brengparkjes HHM' || obj.locatieType === 'Brenparkjes HHM') && (
-        (obj.idNummer || '').toLowerCase().includes(q) ||
-        (obj.id || '').toLowerCase().includes(q)
-      )
+      (obj.idNummer || '').toLowerCase().includes(q) ||
+      (obj.id || '').toLowerCase().includes(q)
     ).slice(0, 8);
     setContainerSuggestions(filtered);
   }, [watchContainernummer, allMapObjects, isReadOnly]);
@@ -584,7 +582,7 @@ export default function NewIssuePage() {
   const subcategorieen = subcategorieenMap[currentHoofdcategorie] || ["Overig"];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-hidden bg-slate-50">
+    <div className="flex flex-col h-[calc(100vh-6.1rem)] overflow-hidden bg-slate-50">
         <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
             <div className="flex items-center gap-2">
                 {!isReadOnly && (

@@ -35,7 +35,9 @@ export default function MeldingenportaalPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
 
-  const [selectedMeldingForForward, setSelectedMeldingForForward] = React.useState<Melding | null>(null);
+  const [selectedMeldingForForward] = React.useState<Melding | null>(null);
+  const [isForwardDialogOpen, setIsForwardDialogOpen] = React.useState(false);
+  const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
 
   // Portaal Query: Only fetch 'Nieuw' meldingen, sorted by creation date
   const portalQuery = useMemoFirebase(() => {
@@ -107,8 +109,13 @@ export default function MeldingenportaalPage() {
     }
   };
 
+  const openForwardDialog = (melding: Melding) => {
+    setSelectedMelding(melding);
+    setIsForwardDialogOpen(true);
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-[calc(100vh-6.1rem)] overflow-hidden bg-background">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
         <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={() => router.push('/')} className="shrink-0 rounded-full h-9 w-9">
@@ -179,7 +186,7 @@ export default function MeldingenportaalPage() {
                                                     <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')} className="font-bold rounded-lg h-10 cursor-pointer">
                                                         Accepteren & Doorzetten
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setSelectedMeldingForForward(melding)} className="font-bold rounded-lg h-10 cursor-pointer">
+                                                    <DropdownMenuItem onClick={() => openForwardDialog(melding)} className="font-bold rounded-lg h-10 cursor-pointer">
                                                         <Mail className="mr-2 h-4 w-4 text-primary" />
                                                         Extern doorzetten
                                                     </DropdownMenuItem>
@@ -205,14 +212,9 @@ export default function MeldingenportaalPage() {
       </div>
 
       <ForwardExternalDialog
-        open={!!selectedMeldingForForward}
-        onOpenChange={(open) => {
-          if (!open) {
-            // Delay clearing the selection to allow for smooth close animation
-            setTimeout(() => setSelectedMeldingForForward(null), 200);
-          }
-        }}
-        melding={selectedMeldingForForward}
+        open={isForwardDialogOpen}
+        onOpenChange={setIsForwardDialogOpen}
+        melding={selectedMelding}
         onSuccess={() => {}}
       />
     </div>
