@@ -124,7 +124,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </CardContent>
-                  <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none transform group-hover:scale-110 group-hover:-rotate-12">
+                  <div className="absolute right-2 bottom-2 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none transform group-hover:scale-110 group-hover:-rotate-12">
                     <Icon className="h-24 w-24" />
                   </div>
                 </Card>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </CardContent>
-                  <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none transform group-hover:scale-110 group-hover:-rotate-12">
+                  <div className="absolute right-2 bottom-2 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none transform group-hover:scale-110 group-hover:-rotate-12">
                     <Icon className="h-24 w-24" />
                   </div>
                 </Card>
