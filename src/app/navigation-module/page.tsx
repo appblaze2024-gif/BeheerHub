@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -257,7 +258,7 @@ function NavigatingView({
             
             let diff = (target.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
-            while (diff > 180) -= 360;
+            while (diff > 180) diff -= 360;
             const newHeading = (prevSmooth.heading || 0) + diff * (lerpFactor * 0.5);
             
             const newSmooth = { latitude: newLat, longitude: newLng, speed: target.speed, heading: newHeading };
@@ -706,6 +707,9 @@ export default function StartNavigationPage() {
 
   const mapRef = React.useRef<MapRef>(null);
 
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
   
   const availableRoutes = React.useMemo(() => {
@@ -754,9 +758,6 @@ export default function StartNavigationPage() {
     if (typeFromUrl) setRouteType(typeFromUrl);
     if (lat && lng) setUrlMeldingLocatie({ latitude: parseFloat(lat), longitude: parseFloat(lng), straat: straat || 'Melding' });
   }, [searchParams]);
-
-  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
-  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore || routeType !== 'meldingen') return null;
