@@ -40,7 +40,8 @@ import {
   Sparkles,
   FastForward,
   LayoutGrid,
-  MessageSquare
+  MessageSquare,
+  Cpu
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -695,6 +696,8 @@ export default function StartNavigationPage() {
   
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [tripStartLocation, setTripStartLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+  const [isRecalculating, setIsRecalculating] = React.useState(false);
+  const [currentActiveSortBase, setCurrentActiveSortBase] = React.useState(SIMULATION_START_LOCATION);
   
   const initialType = searchParams.get('type') as 'veeg' | 'prullenbak' | 'meldingen' | null;
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | 'meldingen' | null>(initialType);
@@ -749,13 +752,13 @@ export default function StartNavigationPage() {
 
   const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
 
-  // Optimized route calculation for meldingen starting from Rijsenhout
+  // Optimized route calculation for meldingen
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
     
     let unvisited = [...allMeldingen];
-    // Gebruik de vaste startlocatie in Rijsenhout als uitgangspunt voor de routevolgorde
-    let currentPos = SIMULATION_START_LOCATION;
+    // Gebruik de actieve sort base (Rijsenhout of Gebruiker)
+    let currentPos = currentActiveSortBase;
     let sorted: Melding[] = [];
 
     while (unvisited.length > 0) {
@@ -776,14 +779,13 @@ export default function StartNavigationPage() {
       currentPos = { latitude: next.latitude, longitude: next.longitude };
     }
     return sorted;
-  }, [allMeldingen, routeType]);
+  }, [allMeldingen, routeType, currentActiveSortBase]);
 
   // Fetch preview route geometry for meldingen
   React.useEffect(() => {
     const fetchPreview = async () => {
         if (routeType === 'meldingen' && sortedMeldingen.length >= 1) {
-            // Voeg de vaste startlocatie toe aan de waypoints voor de preview lijn
-            const startWaypoint = `${SIMULATION_START_LOCATION.longitude},${SIMULATION_START_LOCATION.latitude}`;
+            const startWaypoint = `${currentActiveSortBase.longitude},${currentActiveSortBase.latitude}`;
             const meldingWaypoints = sortedMeldingen.slice(0, 24).map(m => `${m.longitude},${m.latitude}`).join(';');
             const waypoints = `${startWaypoint};${meldingWaypoints}`;
             
@@ -800,7 +802,7 @@ export default function StartNavigationPage() {
         }
     };
     fetchPreview();
-  }, [sortedMeldingen, routeType]);
+  }, [sortedMeldingen, routeType, currentActiveSortBase]);
 
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const availableRoutes = React.useMemo(() => {
@@ -832,42 +834,38 @@ export default function StartNavigationPage() {
     return null;
   }, [selectedRouteIdDef]);
 
-  const handleStartRoute = React.useCallback(async (simulate = false, useFixedStart = false) => {
+  const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
-    const predefinedStart = selectedRouteIdDef && 'startLatitude' in selectedRouteIdDef && (selectedRouteIdDef as any).startLatitude ? { latitude: (selectedRouteIdDef as any).startLatitude, longitude: (selectedRouteIdDef as any).startLongitude } : null;
     
-    // Bij werkbonnen altijd starten vanaf de vestiging in Rijsenhout
-    let startLoc = routeType === 'meldingen' ? SIMULATION_START_LOCATION : userLocation;
-    
-    if (useFixedStart) {
-        startLoc = SIMULATION_START_LOCATION;
-    } else if (simulate && predefinedStart) {
-        startLoc = predefinedStart;
-    } else if (!startLoc && predefinedStart) {
-        startLoc = predefinedStart;
-    } else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) {
-        startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
-    }
-
-    if (!startLoc && !simulate) {
-        toast({ title: "Locatie vereist", description: "GPS vereist voor Live Rit.", variant: "destructive" });
-        return;
-    }
+    // Bepaal de startlocatie: Gebruiker (als beschikbaar) of Rijsenhout
+    let startLoc = userLocation || SIMULATION_START_LOCATION;
+    const isAtBase = turf.distance(turf.point([startLoc.longitude, startLoc.latitude]), turf.point([SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude]), { units: 'meters' }) < 100;
 
     setIsStarting(true);
-    let finalObjects: MapObject[] = [];
-    
+
+    // Als we werkbonnen doen en we zijn niet op de basis, toon loader en herbereken route
     if (routeType === 'meldingen') {
         if (sortedMeldingen.length === 0) { 
             toast({ title: "Geen meldingen", description: "Geen openstaande meldingen." }); 
             setIsStarting(false); 
             return; 
         }
-        finalObjects = sortedMeldingen.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer } as MapObject));
-        setTripStartLocation(SIMULATION_START_LOCATION);
+
+        if (!isAtBase && !simulate) {
+            setIsRecalculating(true);
+            setCurrentActiveSortBase(startLoc);
+            // Wacht even tot de memo herrekend is en de preview fetched
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            setIsRecalculating(false);
+        }
+
+        const finalObjects = sortedMeldingen.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer } as MapObject));
+        setObjectsOnRoute(finalObjects);
+        setTripStartLocation(startLoc);
     } else if (selectedRouteIdDef && objectsOnMap) {
-        const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
-        const unvisited = [...objectsOnMap]; let currentPos = startCoords;
+        const unvisited = [...objectsOnMap]; 
+        let currentPos = startLoc;
+        let finalObjects: MapObject[] = [];
         while (unvisited.length > 0) {
           let nearestIdx = 0; let minD = Infinity;
           unvisited.forEach((u, i) => {
@@ -875,22 +873,30 @@ export default function StartNavigationPage() {
             if (d < minD) { minD = d; nearestIdx = i; }
           });
           const next = unvisited.splice(nearestIdx, 1)[0];
-          finalObjects.push(next); currentPos = { latitude: next.latitude, longitude: next.longitude };
+          finalObjects.push(next); 
+          currentPos = { latitude: next.latitude, longitude: next.longitude };
         }
-        setTripStartLocation(startCoords);
+        setObjectsOnRoute(finalObjects);
+        setTripStartLocation(startLoc);
     } else if (urlMeldingLocatie) {
-        finalObjects = [{ id: 'Bestemming', latitude: urlMeldingLocatie.latitude, longitude: urlMeldingLocatie.longitude, name: urlMeldingLocatie.straat || 'Melding' }];
-        setTripStartLocation(startLoc || { latitude: urlMeldingLocatie.latitude - 0.005, longitude: urlMeldingLocatie.longitude });
+        setObjectsOnRoute([{ id: 'Bestemming', latitude: urlMeldingLocatie.latitude, longitude: urlMeldingLocatie.longitude, name: urlMeldingLocatie.straat || 'Melding' }]);
+        setTripStartLocation(startLoc);
     }
-    setObjectsOnRoute(finalObjects); setNavigationState('navigating'); setIsStarting(false);
+
+    setNavigationState('navigating');
+    setIsStarting(false);
   }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, sortedMeldingen, objectsOnMap, toast]);
 
   const isMeldingenType = routeType === 'meldingen';
 
+  if (isRecalculating) {
+      return <LoadingScreen message="BeheerHub AI optimaliseert uw route vanaf huidige locatie..." />;
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {navigationState === 'navigating' ? (
-        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} routeType={routeType} />
+        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); setCurrentActiveSortBase(SIMULATION_START_LOCATION); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} routeType={routeType} />
       ) : (
         <div className="w-full h-full relative flex flex-col">
           <div className={cn("flex flex-col flex-1 min-h-0", isMeldingenType ? "" : "relative")}>
