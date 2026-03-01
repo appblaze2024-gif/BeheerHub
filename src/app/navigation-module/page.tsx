@@ -154,14 +154,21 @@ function NavigatingView({
   const lastDistanceCalcTimeRef = React.useRef(0);
   const lastGeometryUpdateTimeRef = React.useRef(0);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
+  const handleTouchStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e) {
+      touchStartY.current = e.touches[0].clientY;
+    }
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = (e: React.MouseEvent | React.TouchEvent) => {
     if (touchStartY.current === null) return;
-    const touchEndY = e.changedTouches[0].clientY;
-    const deltaY = touchStartY.current - touchEndY;
+    let clientY: number;
+    if ('changedTouches' in e) {
+      clientY = e.changedTouches[0].clientY;
+    } else {
+      clientY = (e as React.MouseEvent).clientY;
+    }
+    const deltaY = touchStartY.current - clientY;
 
     if (deltaY > 50) { 
       setIsDrawerExpanded(true);
@@ -921,7 +928,7 @@ export default function StartNavigationPage() {
                       {profile?.role === 'Super admin' && (
                         <Button 
                           variant="outline"
-                          className="h-10 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl transition-all hidden sm:flex"
+                          className="h-9 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl transition-all hidden sm:flex"
                           onClick={() => handleStartRoute(true)}
                           disabled={(routeType === 'meldingen' ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                         >
@@ -929,7 +936,7 @@ export default function StartNavigationPage() {
                         </Button>
                       )}
                       <Button 
-                        className="h-10 px-6 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 shadow-2xl rounded-2xl"
+                        className="h-9 px-6 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 shadow-2xl rounded-2xl"
                         onClick={() => handleStartRoute(false)}
                         disabled={(routeType === 'meldingen' ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                       >
@@ -1033,9 +1040,6 @@ export default function StartNavigationPage() {
                               <div className="bg-primary/10 p-1.5 rounded-lg"><FileText className="h-3.5 w-3.5 text-primary" /></div>
                               <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">Overzicht Werkbonnen</h3>
                               <Badge variant="outline" className="h-4.5 px-1.5 font-black text-[8px] border-2 bg-white">{sortedMeldingen.length} Route Volgorde</Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase tracking-widest text-slate-400">Excel Export</Button>
                           </div>
                       </div>
                       <ScrollArea className="flex-1">
