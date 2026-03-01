@@ -67,18 +67,23 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
       const meldingRef = doc(firestore, 'meldingen', melding.id);
       const behandelaarName = selectedUser.displayName || selectedUser.email || 'Onbekend';
       
-      updateDocumentNonBlocking(meldingRef, {
-        status: 'In behandeling',
+      const updateData: any = {
         behandelaar: behandelaarName,
         updatedAt: new Date().toISOString()
-      });
+      };
+
+      // Only force 'In behandeling' if it was a completely new/unassigned issue
+      if (melding.status === 'Nieuw') {
+        updateData.status = 'In behandeling';
+      }
+      
+      updateDocumentNonBlocking(meldingRef, updateData);
 
       toast({
-        title: 'Melding geaccepteerd',
+        title: 'Toewijzing bijgewerkt',
         description: `Melding ${melding.intakenummer} is toegewezen aan ${behandelaarName}.`,
       });
       
-      // Close dialog before triggering potential parent state updates to avoid freezing
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -179,7 +184,7 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
               disabled={!selectedUserId || isSubmitting}
               className="flex-1 font-black uppercase tracking-tight h-11 shadow-xl shadow-primary/20"
             >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Accepteren'}
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Toewijzen'}
             </Button>
           </div>
         </DialogFooter>

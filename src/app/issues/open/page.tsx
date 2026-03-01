@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, Info, User } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, Info, User, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { LoadingScreen } from '@/components/loading-screen';
+import { AcceptAssignDialog } from '@/components/accept-assign-dialog';
 
 const openStatuses = [
   "Intern doorgezet",
@@ -37,6 +38,9 @@ export default function OpenIssuesPage() {
   const { profile } = useProfile();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
+  
+  const [assignDialogOpen, setAssignDialogOpen] = React.useState(false);
+  const [selectedMeldingForAssign, setSelectedMeldingForAssign] = React.useState<Melding | null>(null);
 
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
 
@@ -88,6 +92,13 @@ export default function OpenIssuesPage() {
     "In behandeling": "bg-blue-500",
     "Gepland op korte termijn": "bg-purple-500",
     "Gepland op langere termijn": "bg-indigo-500",
+  };
+
+  const handleOpenAssign = (e: React.MouseEvent, melding: Melding) => {
+    if (!isPrivileged) return;
+    e.stopPropagation();
+    setSelectedMeldingForAssign(melding);
+    setAssignDialogOpen(true);
   };
 
   return (
@@ -162,12 +173,21 @@ export default function OpenIssuesPage() {
                                     <TableCell className="py-2 px-4 border-r border-slate-100 font-bold text-slate-900">{melding.subcategorie || '-'}</TableCell>
                                     <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-medium">{[melding.straatnaam, melding.huisnummer].filter(Boolean).join(' ') || '-'}</TableCell>
                                     <TableCell className="truncate py-2 px-4 border-r border-slate-100 hidden xl:table-cell text-xs">{melding.wijk || '-'}</TableCell>
-                                    <TableCell className="py-2 px-4 border-r border-slate-100">
-                                        <div className="flex items-center gap-2">
-                                            <User className="h-3.5 w-3.5 text-slate-400" />
-                                            <span className="text-[11px] font-black text-slate-700 truncate max-w-[120px]">
-                                                {melding.behandelaar || '-'}
-                                            </span>
+                                    <TableCell 
+                                        className={cn(
+                                            "py-2 px-4 border-r border-slate-100 group/cell",
+                                            isPrivileged && "hover:bg-slate-100/80 transition-colors"
+                                        )}
+                                        onClick={(e) => handleOpenAssign(e, melding)}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <User className="h-3.5 w-3.5 text-slate-400" />
+                                                <span className="text-[11px] font-black text-slate-700 truncate max-w-[120px]">
+                                                    {melding.behandelaar || '-'}
+                                                </span>
+                                            </div>
+                                            {isPrivileged && <Pencil className="h-3 w-3 text-slate-300 opacity-0 group-hover/cell:opacity-100 transition-opacity" />}
                                         </div>
                                     </TableCell>
                                     <TableCell className="py-2 px-4">
@@ -189,6 +209,13 @@ export default function OpenIssuesPage() {
             </div>
         )}
       </div>
+
+      <AcceptAssignDialog 
+        open={assignDialogOpen} 
+        onOpenChange={setAssignDialogOpen} 
+        melding={selectedMeldingForAssign} 
+        onSuccess={() => {}} 
+      />
     </div>
   );
 }
