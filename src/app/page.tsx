@@ -10,10 +10,11 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, query, where } from 'firebase/firestore';
 import { allMenuItems, MenuItem, SubMenuItem } from '@/lib/menu-config';
 import { useIsMobile } from '@/hooks/use-mobile';
+import type { Melding } from '@/lib/types';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -23,6 +24,18 @@ export default function DashboardPage() {
 
   const bannerRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'dashboard_banner') : null, [firestore]);
   const { data: banner } = useDoc<any>(bannerRef);
+
+  // Fetch new reports for the notification badge
+  const portalQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'meldingen'), 
+      where('status', '==', 'Nieuw')
+    );
+  }, [firestore]);
+
+  const { data: newMeldingen } = useCollection<Melding>(portalQuery);
+  const newCount = newMeldingen?.length || 0;
 
   // Filter out 'Dashboard' itself from the grid
   const mainNavItems = allMenuItems.filter(item => item.href !== '/');
@@ -125,6 +138,16 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Notification Badge for Meldingen */}
+                    {item.label === 'Meldingen' && newCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-1 -right-1 h-6 min-w-6 flex items-center justify-center font-black rounded-full border-2 border-white shadow-lg animate-in zoom-in"
+                      >
+                        {newCount}
+                      </Badge>
+                    )}
                   </CardContent>
                   <div className="absolute right-2 bottom-2 opacity-[0.05] group-hover:opacity-20 group-hover:text-[#3498db] transition-all duration-700 pointer-events-none transform">
                     <Icon className="h-16 w-16 md:h-20 md:w-20" />

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -62,7 +61,6 @@ import {
   FormControl, 
   FormField, 
   FormItem, 
-  FormLabel, 
   FormMessage 
 } from '@/components/ui/form';
 import { 
@@ -340,22 +338,14 @@ export default function NewIssuePage() {
     
     // Advanced parsing if street contains merged info
     if (rawStreet && (!houseNumber || !postcode || !city)) {
-        // Look for postcode (4 digits + 2 letters)
         const postcodeMatch = rawStreet.match(/(\d{4}\s?[A-Z]{2})/i);
         if (postcodeMatch) {
             const pc = postcodeMatch[0];
             const parts = rawStreet.split(pc);
-            
             if (!postcode) postcode = pc.toUpperCase();
-            
-            // Part before postcode usually contains street and house number
             const before = parts[0].trim().replace(/,$/, '').trim();
-            // Part after postcode usually contains city
             const after = parts[1] ? parts[1].trim().replace(/^,/, '').trim() : '';
-            
             if (!city && after) city = after;
-            
-            // Further split 'before' into street and house number if houseNumber is missing
             if (!houseNumber) {
                 const hnMatch = before.match(/(\d+.*)$/);
                 if (hnMatch) {
@@ -368,7 +358,6 @@ export default function NewIssuePage() {
                 rawStreet = before;
             }
         } else {
-            // No postcode found, just try to split street and house number if missing
             if (!houseNumber) {
                 const hnMatch = rawStreet.match(/^(.*?)\s*(\d+.*)$/);
                 if (hnMatch) {
@@ -402,41 +391,45 @@ export default function NewIssuePage() {
     }
   };
 
-  const onSubmit = async (data: NewMeldingFormValues) => {
+  const onSubmit = (data: NewMeldingFormValues) => {
     if (!firestore || isSubmitting || isReadOnly) return;
     setIsSubmitting(true);
-    try {
-      const mData: any = {
-        ...data,
-        voorvaldatum: data.voorvaldatum instanceof Date ? format(data.voorvaldatum, 'yyyy-MM-dd') : (data.voorvaldatum || null),
-        meldingsdatum: data.meldingsdatum instanceof Date ? format(data.meldingsdatum, 'yyyy-MM-dd') : (data.meldingsdatum || null),
-        latitude: location?.latitude || 0,
-        longitude: location?.longitude || 0,
-        files: uploadedFiles,
-        fotos: uploadedPhotos,
-        aangenomen_door: existingMelding?.aangenomen_door || profile?.displayName || 'Onbekend',
-        createdAt: existingMelding?.createdAt || serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
+    
+    const mData: any = {
+      ...data,
+      voorvaldatum: data.voorvaldatum instanceof Date ? format(data.voorvaldatum, 'yyyy-MM-dd') : (data.voorvaldatum || null),
+      meldingsdatum: data.meldingsdatum instanceof Date ? format(data.meldingsdatum, 'yyyy-MM-dd') : (data.meldingsdatum || null),
+      latitude: location?.latitude || 0,
+      longitude: location?.longitude || 0,
+      files: uploadedFiles,
+      fotos: uploadedPhotos,
+      aangenomen_door: existingMelding?.aangenomen_door || profile?.displayName || 'Onbekend',
+      createdAt: existingMelding?.createdAt || serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
 
-      // Sanitize mData: remove undefined properties
-      Object.keys(mData).forEach(key => mData[key] === undefined && delete mData[key]);
+    // Sanitize mData: remove undefined properties
+    Object.keys(mData).forEach(key => mData[key] === undefined && delete mData[key]);
 
-      if (meldingId) {
-        await updateDocumentNonBlocking(doc(firestore, 'meldingen', meldingId), mData);
-      } else {
-        await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
-      }
-
-      toast({ title: meldingId ? "Melding bijgewerkt" : "Melding opgeslagen" });
-      startProcessing(1000);
-      router.push('/issues/portal');
-    } catch (e) {
-      console.error("Save error:", e);
-      toast({ variant: 'destructive', title: 'Fout bij opslaan' });
-    } finally {
-      setIsSubmitting(false);
+    if (meldingId) {
+      updateDocumentNonBlocking(doc(firestore, 'meldingen', meldingId), mData);
+    } else {
+      addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
     }
+
+    toast({ title: meldingId ? "Melding bijgewerkt" : "Melding opgeslagen" });
+    startProcessing(1000);
+    router.push('/issues/portal');
+    // setIsSubmitting will be reset on unmount or in finally if it was async
+  };
+
+  const onSaveError = (errors: any) => {
+    console.error("Form validation errors:", errors);
+    toast({ 
+      variant: 'destructive', 
+      title: 'Validatiefout', 
+      description: 'Controleer alle verplichte velden (*).' 
+    });
   };
 
   const currentHoofdcategorie = form.watch('hoofdcategorie');
@@ -444,7 +437,7 @@ export default function NewIssuePage() {
 
   const formContent = (
     <Form {...form}>
-      <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit, onSaveError)} className="space-y-4">
         {isMobile ? (
           <Accordion type="multiple" defaultValue={["section-1"]} className="w-full">
             <AccordionItem value="section-1" className="border-none">
@@ -541,7 +534,8 @@ export default function NewIssuePage() {
                     <FormRow label="Status">
                       <FormField control={form.control} name="status" render={({ field }) => (
                         <FormItem>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
+                            <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                           </Select>
                         </FormItem>
