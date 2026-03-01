@@ -543,12 +543,16 @@ function NavigatingView({
             const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
             const isBrengpark = typeStr.includes('brengpark');
             const isHHM = typeStr.includes('hhm');
-            const isUnderground = !isMelding && !isSpecificPrullenbak && (typeStr.includes('container') || 
-                                  typeStr.includes('ondergrond') ||
-                                  typeStr.includes('ondergr') ||
-                                  typeStr.includes('verzamel') ||
-                                  isBrengpark);
+            
             const useRecyclingBin = !isMelding && (isSpecificPrullenbak || (isHHM && !isBrengpark));
+            const isUnderground = !isMelding && !useRecyclingBin && (
+              typeStr.includes('container') || 
+              typeStr.includes('ondergrond') ||
+              typeStr.includes('ondergr') ||
+              typeStr.includes('verzamel') ||
+              isBrengpark
+            );
+            
             const Icon = isMelding ? Bell : Trash2;
 
             return (
@@ -647,7 +651,7 @@ function NavigatingView({
         {isMobile ? (
             <div className="w-full flex flex-col items-center gap-3">
                 <Card className={cn("w-full bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-4 px-8 transition-all duration-300 ease-in-out cursor-pointer", isDrawerExpanded ? "max-h-[300px]" : "max-h-[110px]")} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}>
-                    <div className="h-1.5 w-12 bg-slate-200 rounded-full mx-auto mb-3" />
+                    <div className="h.5 w-12 bg-slate-200 rounded-full mx-auto mb-3" />
                     <div className="flex items-center justify-between">
                         <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p></div>
                         <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{durationMin}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p></div>
@@ -911,14 +915,23 @@ export default function StartNavigationPage() {
         setObjectsOnRoute(finalObjects);
         setTripStartLocation(startLoc);
     } else if (selectedRouteIdDef && objectsOnMap) {
-        const unvisited = [...objectsOnMap]; 
+        // De-duplicate by location
+        const seen = new Set();
+        const unique = (objectsOnMap || []).filter(obj => {
+          const key = `${obj.latitude.toFixed(6)}_${obj.longitude.toFixed(6)}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        const unvisited = [...unique]; 
         let currentPos = startLoc;
         let finalObjects: MapObject[] = [];
         while (unvisited.length > 0) {
           let nearestIdx = 0; let minD = Infinity;
           unvisited.forEach((u, i) => {
             const d = turf.distance(turf.point([currentPos.longitude, currentPos.latitude]), turf.point([u.longitude, u.latitude]));
-            if (d < minDist) { minDist = d; nearestIdx = i; }
+            if (d < minD) { minD = d; nearestIdx = i; }
           });
           const next = unvisited.splice(nearestIdx, 1)[0];
           finalObjects.push(next); 
@@ -1036,15 +1049,18 @@ export default function StartNavigationPage() {
                         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
                         const isBrengpark = typeStr.includes('brengpark');
                         const isHHM = typeStr.includes('hhm');
-                        const isUnderground = !isSpecificPrullenbak && (typeStr.includes('container') || 
-                                              typeStr.includes('ondergrond') ||
-                                              typeStr.includes('ondergr') ||
-                                              typeStr.includes('verzamel') ||
-                                              isBrengpark);
+                        
                         const useRecyclingBin = isSpecificPrullenbak || (isHHM && !isBrengpark);
+                        const isUnderground = !useRecyclingBin && (
+                          typeStr.includes('container') || 
+                          typeStr.includes('ondergrond') ||
+                          typeStr.includes('ondergr') ||
+                          typeStr.includes('verzamel') ||
+                          isBrengpark
+                        );
                         
                         return (
-                            <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
+                            <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center">
                                 {useRecyclingBin ? (
                                     <img src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" alt="recycling bin" className="h-5 w-5 drop-shadow-md" />
                                 ) : isUnderground ? (

@@ -68,6 +68,19 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
 
+  // De-duplicate objects by location to prevent overlapping icons
+  const uniqueObjects = React.useMemo(() => {
+    if (!objects) return [];
+    const seen = new Set();
+    return objects.filter(obj => {
+      // Use 6 decimal places for coordinate key (~10cm precision)
+      const key = `${obj.latitude.toFixed(6)}_${obj.longitude.toFixed(6)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [objects]);
+
   const geojson: turf.FeatureCollection<turf.Geometry> = React.useMemo(() => {
     return {
       type: 'FeatureCollection',
@@ -117,20 +130,20 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
       }
     } else if (longitude && latitude) {
       map.flyTo({ center: [longitude, latitude], zoom: 19});
-    } else if (!longitude && !latitude && !objects) {
+    } else if (!longitude && !latitude && !uniqueObjects.length) {
          map.flyTo({
             center: [5.2913, 52.1326],
             zoom: 7,
             duration: 1000
         });
     }
-  }, [wijkPolygons, longitude, latitude, highlightedObject, objects]);
+  }, [wijkPolygons, longitude, latitude, highlightedObject, uniqueObjects]);
 
   const markers = React.useMemo(() => {
     const markerElements: React.ReactNode[] = [];
 
-    if (objects) {
-      markerElements.push(...objects.map(obj => {
+    if (uniqueObjects) {
+      markerElements.push(...uniqueObjects.map(obj => {
         const isSelected = selectedObjects.some(so => so.id === obj.id);
         const isHighlighted = highlightedObject?.id === obj.id;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
@@ -139,11 +152,18 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const isBrengpark = typeStr.includes('brengpark');
         const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
         const isHHM = typeStr.includes('hhm');
-        const isUnderground = !isSpecificPrullenbak && (typeStr.includes('container') || 
-                              typeStr.includes('ondergrond') ||
-                              typeStr.includes('ondergr') ||
-                              typeStr.includes('verzamel') ||
-                              isBrengpark);
+        
+        // Priority logic: Specific types get the 3-colored bin
+        const useRecyclingBin = isSpecificPrullenbak || (isHHM && !isBrengpark);
+        
+        // Only consider it underground if it's NOT already tagged as a specific recycling bin
+        const isUnderground = !useRecyclingBin && (
+          typeStr.includes('container') || 
+          typeStr.includes('ondergrond') ||
+          typeStr.includes('ondergr') ||
+          typeStr.includes('verzamel') ||
+          isBrengpark
+        );
                               
         const Icon = Trash2;
 
@@ -152,7 +172,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
               key={`obj-${obj.id}`}
               longitude={obj.longitude}
               latitude={obj.latitude}
-              anchor="bottom"
+              anchor="center"
               onClick={e => {
                 if (interactive) {
                   e.originalEvent.stopPropagation();
@@ -170,7 +190,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                 {isHighlighted && (
                   <div className="absolute w-6 h-6 rounded-full bg-black/70 animate-pulse" />
                 )}
-                {isSpecificPrullenbak || (isHHM && !isBrengpark) ? (
+                {useRecyclingBin ? (
                   <img 
                     src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" 
                     alt="recycling bin"
@@ -227,7 +247,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     }
     
     return markerElements;
-  }, [objects, longitude, latitude, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive]);
+  }, [uniqueObjects, longitude, latitude, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive]);
 
   const pinToShow = hoveredPin || selectedPin;
 
