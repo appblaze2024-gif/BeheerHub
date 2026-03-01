@@ -42,7 +42,8 @@ import {
   MessageSquare,
   Cpu,
   Trash2,
-  Archive
+  Archive,
+  Bell
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -256,7 +257,7 @@ function NavigatingView({
             
             let diff = (target.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
-            while (diff > 180) diff -= 360;
+            while (diff > 180) -= 360;
             const newHeading = (prevSmooth.heading || 0) + diff * (lerpFactor * 0.5);
             
             const newSmooth = { latitude: newLat, longitude: newLng, speed: target.speed, heading: newHeading };
@@ -538,9 +539,10 @@ function NavigatingView({
             const isTarget = idx === currentObjectIndex;
             const inRange = isTarget && hasReachedCurrentTarget;
             
-            const isUnderground = obj.locatieType?.toLowerCase().includes('container') || 
-                                  obj.locatieType?.toLowerCase().includes('ondergrond');
-            const Icon = isUnderground ? Archive : Trash2;
+            const isMelding = routeType === 'meldingen';
+            const isUnderground = !isMelding && (obj.locatieType?.toLowerCase().includes('container') || 
+                                  obj.locatieType?.toLowerCase().includes('ondergrond'));
+            const Icon = isMelding ? Bell : (isUnderground ? Archive : Trash2);
 
             return (
                 <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={(e) => {
@@ -704,6 +706,30 @@ export default function StartNavigationPage() {
 
   const mapRef = React.useRef<MapRef>(null);
 
+  const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
+  
+  const availableRoutes = React.useMemo(() => {
+      if (!selectedProject) return [];
+      if (routeType === 'veeg') return selectedProject.veegroutes || [];
+      if (routeType === 'prullenbak') return selectedProject.prullenbakkenroutes || [];
+      return [];
+  }, [selectedProject, routeType]);
+
+  const selectedRouteIdDef = React.useMemo(() => {
+    if (!selectedRouteId || selectedRouteId === '--nieuwe-route--' || !selectedProject) return null;
+    const allRoutes = [...(selectedProject.veegroutes || []), ...(selectedProject.prullenbakkenroutes || [])];
+    return allRoutes.find(r => r.id === selectedRouteId) || null;
+  }, [selectedRouteId, selectedProject]);
+
+  const routeGeoJSONFeatures = React.useMemo(() => {
+    if (!selectedRouteIdDef) return null;
+    try {
+      const features = JSON.parse(selectedRouteIdDef.subGebieden);
+      if (Array.isArray(features) && features.length > 0) return { type: 'FeatureCollection' as const, features: features.map((f: any) => ({ type: 'Feature' as const, properties: {}, geometry: f.geometry })) };
+    } catch (e) {}
+    return null;
+  }, [selectedRouteIdDef]);
+
   React.useEffect(() => {
     if (navigationState === 'navigating') setIsHeaderVisible(false);
     else setIsHeaderVisible(true);
@@ -741,31 +767,6 @@ export default function StartNavigationPage() {
   }, [firestore, routeType]);
 
   const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
-
-  // Memoized values defined before hooks that use them
-  const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
-  
-  const availableRoutes = React.useMemo(() => {
-      if (!selectedProject) return [];
-      if (routeType === 'veeg') return selectedProject.veegroutes || [];
-      if (routeType === 'prullenbak') return selectedProject.prullenbakkenroutes || [];
-      return [];
-  }, [selectedProject, routeType]);
-
-  const selectedRouteIdDef = React.useMemo(() => {
-    if (!selectedRouteId || selectedRouteId === '--nieuwe-route--' || !selectedProject) return null;
-    const allRoutes = [...(selectedProject.veegroutes || []), ...(selectedProject.prullenbakkenroutes || [])];
-    return allRoutes.find(r => r.id === selectedRouteId) || null;
-  }, [selectedRouteId, selectedProject]);
-
-  const routeGeoJSONFeatures = React.useMemo(() => {
-    if (!selectedRouteIdDef) return null;
-    try {
-      const features = JSON.parse(selectedRouteIdDef.subGebieden);
-      if (Array.isArray(features) && features.length > 0) return { type: 'FeatureCollection' as const, features: features.map((f: any) => ({ type: 'Feature' as const, properties: {}, geometry: f.geometry })) };
-    } catch (e) {}
-    return null;
-  }, [selectedRouteIdDef]);
 
   // Optimized route calculation for meldingen
   const sortedMeldingen = React.useMemo(() => {
@@ -966,7 +967,7 @@ export default function StartNavigationPage() {
                   >
                     {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
                     {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
-                    {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
+                    {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'fill-color': '#32ADE6', 'fill-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
                     
                     {/* Base location marker */}
                     {routeType === 'meldingen' && (
