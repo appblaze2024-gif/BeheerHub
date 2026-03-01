@@ -151,33 +151,45 @@ export default function MeldingenportaalPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredMeldingen.map((melding) => (
-                            <TableRow key={melding.id} className="cursor-pointer hover:bg-slate-50 transition-colors h-14">
-                                <TableCell className="font-black text-xs sticky left-0 bg-white group-hover:bg-slate-50 z-10" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.intakenummer}</TableCell>
-                                <TableCell className="text-xs font-bold" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{[melding.straatnaam, melding.plaats].filter(Boolean).join(', ')}</TableCell>
-                                <TableCell className="text-[11px] font-bold text-slate-600" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</TableCell>
-                                <TableCell className='text-xs font-medium' onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.melder || '-'}</TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-green-600 rounded-full" onClick={() => handleOpenAccept(melding)}>
-                                            <CheckCircle2 className="h-5 w-5" />
-                                        </Button>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 rounded-full">
-                                                    <MoreHorizontal className="h-5 w-5" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
-                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenAccept(melding); }} className="font-bold rounded-xl h-11 cursor-pointer">Accepteren</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenForward(melding); }} className="font-bold rounded-xl h-11 cursor-pointer"><Mail className="mr-2 h-4 w-4 text-primary" />Extern doorzetten</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleStatusChange(melding, 'Geweigerd'); }} className="font-bold rounded-xl h-11 text-red-600 cursor-pointer"><XCircle className="mr-2 h-4 w-4" />Weigeren</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                        {filteredMeldingen.map((melding) => {
+                            const meldDatum = melding.datum || melding.meldingsdatum;
+                            return (
+                                <TableRow key={melding.id} className="cursor-pointer hover:bg-slate-50 transition-colors h-14">
+                                    <TableCell className="font-black text-xs sticky left-0 bg-white group-hover:bg-slate-50 z-10" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.intakenummer}</TableCell>
+                                    <TableCell className="text-xs font-bold" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{[melding.straatnaam, melding.plaats].filter(Boolean).join(', ')}</TableCell>
+                                    <TableCell className="text-[11px] font-bold text-slate-600" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
+                                        {meldDatum ? format(new Date(meldDatum), 'dd-MM-yy') : '-'}
+                                    </TableCell>
+                                    <TableCell className='text-xs font-medium' onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-slate-900 uppercase tracking-tight">{melding.melder || '-'}</span>
+                                            {melding.aangenomen_door && (
+                                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Door: {melding.aangenomen_door}</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-green-600 rounded-full" onClick={() => handleOpenAccept(melding)}>
+                                                <CheckCircle2 className="h-5 w-5" />
+                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 rounded-full">
+                                                        <MoreHorizontal className="h-5 w-5" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
+                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenAccept(melding); }} className="font-bold rounded-xl h-11 cursor-pointer">Accepteren</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenForward(melding); }} className="font-bold rounded-xl h-11 cursor-pointer"><Mail className="mr-2 h-4 w-4 text-primary" />Extern doorzetten</DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleStatusChange(melding, 'Geweigerd'); }} className="font-bold rounded-xl h-11 text-red-600 cursor-pointer"><XCircle className="mr-2 h-4 w-4" />Weigeren</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </div>

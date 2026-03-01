@@ -406,6 +406,7 @@ export default function NewIssuePage() {
       ...data,
       voorvaldatum: data.voorvaldatum instanceof Date ? format(data.voorvaldatum, 'yyyy-MM-dd') : (data.voorvaldatum || null),
       meldingsdatum: data.meldingsdatum instanceof Date ? format(data.meldingsdatum, 'yyyy-MM-dd') : (data.meldingsdatum || null),
+      datum: data.meldingsdatum instanceof Date ? format(data.meldingsdatum, 'yyyy-MM-dd') : (data.meldingsdatum || null),
       latitude: location?.latitude || 0,
       longitude: location?.longitude || 0,
       files: uploadedFiles,
@@ -413,6 +414,7 @@ export default function NewIssuePage() {
       updatedAt: serverTimestamp(),
     };
 
+    // Clean up undefined values for Firestore
     Object.keys(mData).forEach(key => mData[key] === undefined && delete mData[key]);
 
     if (meldingId) {
