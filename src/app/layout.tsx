@@ -22,7 +22,6 @@ import {
   LogOut as LogOutIcon,
   User as UserIcon,
   Info,
-  Mail
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -60,7 +59,7 @@ function Header() {
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-24 sidebar-blue text-white">
+          <SheetContent side="left" className="p-0 border-none w-16 sidebar-blue text-white">
             <SheetHeader className="sr-only">
               <SheetTitle>Navigatie</SheetTitle>
             </SheetHeader>
@@ -124,7 +123,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
-      <aside className="hidden lg:block w-24 shrink-0 h-full sidebar-blue relative z-20">
+      <aside className="hidden lg:block w-16 shrink-0 h-full sidebar-blue relative z-20">
         <AppSidebar />
       </aside>
       <div className="flex-1 flex flex-col min-w-0 relative">
