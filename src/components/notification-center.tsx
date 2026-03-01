@@ -225,12 +225,12 @@ export function NotificationCenter() {
   return (
     <Popover onOpenChange={(open) => { if(!open) { setSelectedChatUser(null); setUserSearchQuery(''); } }}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-xl relative h-10 w-10 text-white hover:bg-white/10">
-          <Bell className="h-5 w-5 text-current" />
+        <Button variant="ghost" size="icon" className="rounded-full relative h-9 w-9 text-blue-400 hover:bg-blue-50">
+          <Bell className="h-4 w-4 text-current" />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center font-black text-[10px] rounded-full border-2 border-[#3498db] animate-in zoom-in"
+              className="absolute -top-1 -right-1 h-4 min-w-4 px-1 flex items-center justify-center font-black text-[8px] rounded-full border border-white animate-in zoom-in"
             >
               {unreadCount}
             </Badge>

@@ -71,19 +71,19 @@ function Header() {
 
       <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-sm border border-slate-100">
         <div className="flex items-center gap-1 pr-4 border-r border-slate-100">
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-400 hover:bg-slate-100">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-blue-400 hover:bg-blue-50">
             <UserIcon className="h-4 w-4" />
           </Button>
           <div className="relative">
             <NotificationCenter />
           </div>
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-400 hover:bg-slate-100">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-blue-400 hover:bg-blue-50">
             <Info className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600"
+            className="h-9 w-9 rounded-full text-blue-400 hover:bg-red-50 hover:text-red-600"
             onClick={() => signOut(auth)}
           >
             <LogOutIcon className="h-4 w-4" />
