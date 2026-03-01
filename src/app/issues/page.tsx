@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -7,6 +6,7 @@ import { collection, doc, query, where } from 'firebase/firestore';
 import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import * as turf from '@turf/turf';
 import type { Melding, UploadedFile, MeldingTask, Hoeveelheid, Object as MapObject, Project } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
