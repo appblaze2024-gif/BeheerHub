@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -29,12 +28,13 @@ export default function DashboardPage() {
   return (
     <div className="p-10 space-y-10 flex flex-col h-full bg-[#f8fafc] relative">
       {/* Background Graphic Illustration */}
-      <div className="absolute top-0 right-0 w-[600px] h-[400px] opacity-20 pointer-events-none grayscale">
+      <div className="absolute top-0 right-0 w-[800px] h-[600px] opacity-[0.12] pointer-events-none grayscale transition-all duration-1000">
         <Image 
-          src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&q=80&w=1000" 
-          alt="Illustration" 
+          src="https://i.ibb.co/qMLXjXqz/top-view-paper-style-community-map-1.jpg" 
+          alt="Community Map Illustration" 
           fill
           className="object-contain object-right-top"
+          priority
         />
       </div>
 
