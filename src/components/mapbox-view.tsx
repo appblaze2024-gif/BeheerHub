@@ -136,9 +136,13 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const isHighlighted = highlightedObject?.id === obj.id;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         
-        const isUnderground = obj.locatieType?.toLowerCase().includes('container') || 
-                              obj.locatieType?.toLowerCase().includes('ondergrond') ||
-                              obj.locatieType?.toLowerCase().includes('brengpark');
+        // Detect if it is a collection point (brengparkje) or underground container
+        const typeStr = (obj.locatieType || '').toLowerCase();
+        const isUnderground = typeStr.includes('container') || 
+                              typeStr.includes('ondergrond') ||
+                              typeStr.includes('brengpark') ||
+                              typeStr.includes('ondergr');
+                              
         const Icon = isUnderground ? Archive : Trash2;
 
         return (

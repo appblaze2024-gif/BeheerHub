@@ -541,8 +541,11 @@ function NavigatingView({
             const inRange = isTarget && hasReachedCurrentTarget;
             
             const isMelding = routeType === 'meldingen';
-            const isUnderground = !isMelding && (obj.locatieType?.toLowerCase().includes('container') || 
-                                  obj.locatieType?.toLowerCase().includes('ondergrond'));
+            const typeStr = (obj.locatieType || '').toLowerCase();
+            const isUnderground = !isMelding && (typeStr.includes('container') || 
+                                  typeStr.includes('ondergrond') ||
+                                  typeStr.includes('brengpark') ||
+                                  typeStr.includes('ondergr'));
             const Icon = isMelding ? Bell : (isUnderground ? Archive : Trash2);
 
             return (
