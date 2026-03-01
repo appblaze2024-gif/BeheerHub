@@ -49,7 +49,6 @@ const werkbonNavItems = [
     { label: 'Documenten', icon: FileText },
     { label: "Foto's", icon: Camera },
     { label: 'Hoeveelheid', icon: Package },
-    { label: 'Uren', icon: Clock },
 ];
 
 export default function IssuesPage() {
@@ -438,17 +437,6 @@ export default function IssuesPage() {
                                     <div className="flex items-end"><Button className="h-11 w-full font-black uppercase tracking-tight rounded-xl shadow-lg shadow-primary/20" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>Toevoegen</Button></div>
                                 </div>
                             </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="Uren" className="mt-0">
-                        <Card className="rounded-[3rem] p-16 text-center shadow-2xl border-none bg-slate-900 text-white overflow-hidden relative group">
-                            <div className="absolute top-0 left-0 w-full h-full bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <p className="text-[10px] font-black uppercase text-blue-300 mb-6 tracking-[0.3em] relative z-10">Actieve Werktijd Registratie</p>
-                            <p className="text-7xl font-black text-white tracking-tighter tabular-nums mb-8 relative z-10">{elapsedTime}</p>
-                            <div className="flex justify-center gap-2 relative z-10">
-                                <Badge className="bg-green-50 text-white border-none px-6 py-2 font-black uppercase tracking-[0.2em] text-[10px] rounded-full animate-pulse">Live link actief</Badge>
-                            </div>
                         </Card>
                     </TabsContent>
                 </div>
