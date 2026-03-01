@@ -389,14 +389,15 @@ export default function IssuesPage() {
                                 <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle>
                                 <Button 
                                     variant={isListening ? "destructive" : "outline"} 
-                                    size="sm" 
-                                    className="rounded-full h-10 px-4 font-black uppercase gap-2"
+                                    size="icon" 
+                                    className="rounded-full h-12 w-12 shadow-lg shrink-0"
                                     onClick={toggleListening}
+                                    title={isListening ? "Stoppen" : "Dicteren"}
                                 >
                                     {isListening ? (
-                                        <><Loader2 className="h-4 w-4 animate-spin" /> STOPPEN</>
+                                        <Loader2 className="h-6 w-6 animate-spin" />
                                     ) : (
-                                        <><Mic className="h-4 w-4 text-primary" /> DICTEER</>
+                                        <Mic className="h-6 w-6 text-primary" />
                                     )}
                                 </Button>
                             </CardHeader>
