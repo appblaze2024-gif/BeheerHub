@@ -28,8 +28,8 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
-      {/* Background Graphic Illustration - Large and Subtle */}
-      <div className="absolute -top-20 -right-20 w-[1200px] h-[900px] opacity-[0.08] pointer-events-none transition-all duration-1000 overflow-hidden">
+      {/* Background Graphic Illustration - Compact and Colorful */}
+      <div className="absolute top-0 right-0 w-[800px] h-[600px] opacity-[0.3] pointer-events-none transition-all duration-1000 overflow-hidden">
         <Image 
           src="https://i.ibb.co/5W313N9x/defocused-map-with-pinpoints.jpg" 
           alt="Map Illustration" 
