@@ -324,7 +324,7 @@ export default function IssuesPage() {
                         </div>
                     </TabsContent>
                     
-                    {/* Other tabs remain largely the same but styled consistently */}
+                    {/* Other tabs styled consistently */}
                     <TabsContent value="Opmerkingen" className="mt-0">
                         <Card className="rounded-3xl border-none shadow-xl bg-white overflow-hidden">
                             <CardHeader className="bg-slate-50 border-b p-6"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle></CardHeader>
