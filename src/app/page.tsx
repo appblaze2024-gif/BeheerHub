@@ -102,14 +102,14 @@ export default function DashboardPage() {
 
       <div className="flex-1 overflow-hidden relative z-10">
         {!activeModule ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-6 h-full auto-rows-fr">
+          <div className="grid grid-cols-4 grid-rows-3 gap-4 pb-6 h-full">
             {mainNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Card 
                   key={item.label}
                   onClick={() => handleCardClick(item)}
-                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white min-h-[128px] h-full"
+                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-full"
                 >
                   <CardContent className="p-4 h-full flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-2">
@@ -145,14 +145,14 @@ export default function DashboardPage() {
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-6 h-full auto-rows-fr animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className="grid grid-cols-4 grid-rows-3 gap-4 pb-6 h-full animate-in fade-in slide-in-from-right-4 duration-500">
             {activeModule.subItems?.map((sub) => {
               const Icon = activeModule.icon; // Use parent icon for subs if no specific icon
               return (
                 <Card 
                   key={sub.id}
                   onClick={() => handleSubItemClick(sub)}
-                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white min-h-[128px] h-full"
+                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-full"
                 >
                   <CardContent className="p-4 h-full flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-2">
