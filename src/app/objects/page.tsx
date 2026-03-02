@@ -58,7 +58,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
+} from '@/components/accordion';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -104,7 +104,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -281,12 +281,15 @@ export default function ObjectsPage() {
     const objectRef = doc(firestore, 'objects', selectedObject.id);
     const updates: any = { [field]: value };
 
+    // Update state immediately for the coords
+    setSelectedObject((prev: any) => ({ ...prev, [field]: value }));
+
     // Auto-enrich address from coordinates if they are changed
     if (newCoords.latitude && newCoords.longitude && !isGeocoding) {
         setIsGeocoding(true);
         try {
             const response = await fetch(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${newCoords.longitude},${newCoords.latitude}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${newCoords.longitude},${newCoords.latitude}.json?access_token=${MAPBOX_TOKEN}&limit=1&types=address,postcode,place`
             );
             const data = await response.json();
             if (data.features && data.features.length > 0) {
@@ -298,20 +301,28 @@ export default function ObjectsPage() {
                 const postcode = context.find((c: any) => c.id.startsWith('postcode'))?.text || '';
                 const place = context.find((c: any) => c.id.startsWith('place'))?.text || '';
 
+                // Force update postcode and city from new coordinates
+                if (postcode) updates.postcode = postcode;
+                if (place) updates.plaats = place;
+                
+                // If street/number are missing, fill those too
                 if (!selectedObject.straatnaam) updates.straatnaam = street;
                 if (!selectedObject.huisnummer) updates.huisnummer = houseNumber;
-                if (!selectedObject.postcode) updates.postcode = postcode;
-                if (!selectedObject.plaats) updates.plaats = place;
+
+                updateDocumentNonBlocking(objectRef, updates);
+                setSelectedObject((prev: any) => ({ ...prev, ...updates }));
+            } else {
+                updateDocumentNonBlocking(objectRef, updates);
             }
         } catch (e) {
             console.error("Geocoding failed:", e);
+            updateDocumentNonBlocking(objectRef, updates);
         } finally {
             setIsGeocoding(false);
         }
+    } else {
+        updateDocumentNonBlocking(objectRef, updates);
     }
-
-    updateDocumentNonBlocking(objectRef, updates);
-    setSelectedObject((prev: any) => ({ ...prev, ...updates }));
   };
 
   const handleAddCustomFilter = async () => {

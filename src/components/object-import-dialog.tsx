@@ -238,7 +238,7 @@ export function ObjectImportDialog({
   const fetchAddress = async (longitude: number, latitude: number): Promise<{ street: string; houseNumber: string; postcode: string; place: string }> => {
     try {
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&limit=1&types=address,postcode,place`
       );
       const data = await response.json();
       if (data.features && data.features.length > 0) {
@@ -340,10 +340,14 @@ export function ObjectImportDialog({
 
             if (objectData.latitude && objectData.longitude) {
               const { street, houseNumber, postcode, place } = await fetchAddress(objectData.longitude, objectData.latitude);
+              
+              // Always fill postcode and place from coordinates
+              if (postcode) objectData.postcode = postcode;
+              if (place) objectData.plaats = place;
+              
+              // If street/number are missing, fill those too
               if (!objectData.straatnaam) objectData.straatnaam = street;
               if (!objectData.huisnummer) objectData.huisnummer = houseNumber;
-              if (!objectData.postcode) objectData.postcode = postcode;
-              if (!objectData.plaats) objectData.plaats = place;
             }
 
             if(originalId) {
@@ -375,7 +379,7 @@ export function ObjectImportDialog({
              <div className='flex flex-col items-center justify-center gap-4 py-8'>
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <p className="font-black uppercase tracking-tight">Objecten importeren...</p>
-                 <p className="text-xs text-muted-foreground font-bold">Dit kan even duren, omdat adresgegevens worden opgehaald.</p>
+                 <p className="text-xs text-muted-foreground font-bold text-center">Dit kan even duren, omdat de postcode en plaats automatisch worden opgehaald op basis van de coördinaten.</p>
                 <Progress value={importProgress} className="w-full" />
                 <p className='text-sm text-muted-foreground font-black'>{Math.round(importProgress)}% voltooid</p>
             </div>
@@ -500,7 +504,7 @@ export function ObjectImportDialog({
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle className="font-black uppercase tracking-tight text-xs">{mapping['id'] ? "Klaar om te importeren" : "Opgelet!"}</AlertTitle>
                         <AlertDescription className="text-[10px] font-bold">
-                          {mapping['id'] ? `De objecten worden opgeslagen onder filter: ${showNewCategoryInput ? (newCategoryName || 'Nieuw') : selectedCategory}` : "Zorg ervoor dat de kolom for 'id' is gekoppeld, dit wordt gebruikt als de unieke ID voor elk object."}
+                          {mapping['id'] ? `De objecten worden opgeslagen onder filter: ${showNewCategoryInput ? (newCategoryName || 'Nieuw') : selectedCategory}. De postcode en plaats worden automatisch verrijkt uit de coördinaten.` : "Zorg ervoor dat de kolom for 'id' is gekoppeld, dit wordt gebruikt als de unieke ID for elk object."}
                         </AlertDescription>
                     </Alert>
                     {error && <p className="text-red-500 text-sm font-bold mt-2">{error}</p>}
@@ -513,7 +517,7 @@ export function ObjectImportDialog({
                         <CheckCircle className="h-12 w-12 text-green-500" />
                     </div>
                     <p className='font-black uppercase tracking-tight text-xl'>Importeren voltooid!</p>
-                    <p className='text-sm text-slate-500 font-medium text-center'>{data.length} objecten zijn succesvol toegevoegd aan de categorie.</p>
+                    <p className='text-sm text-slate-500 font-medium text-center'>{data.length} objecten zijn succesvol toegevoegd aan de categorie, inclusief verrijkte adresgegevens.</p>
                 </div>
               )
       }
