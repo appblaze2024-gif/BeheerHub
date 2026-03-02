@@ -377,7 +377,7 @@ export default function IssuesPage() {
                     <TabsContent value="Werkzaamheden" className="mt-0">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <Card className="rounded-3xl bg-white shadow-xl border-none flex flex-col h-full overflow-hidden">
-                                <CardHeader className="bg-slate-900 text-white p-6 shrink-0">
+                                <CardHeader className="bg-slate-600 text-white p-6 shrink-0">
                                     <div className="flex justify-between items-start">
                                         <div className="space-y-1">
                                             <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">Intakenummer</p>
