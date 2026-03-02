@@ -96,6 +96,19 @@
         "createdBy": { "type": "string" }
       },
       "required": ["contractorId", "projectId", "title", "date"]
+    },
+    "Voertuig": {
+      "title": "Voertuig",
+      "description": "Gegevens van een voertuig in het wagenpark.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "voertuignummer": { "type": "string" },
+        "merk": { "type": "string" },
+        "model": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "merk", "model"]
     }
   },
   "auth": {
@@ -121,6 +134,30 @@
     "/contractors/{contractorId}/minutes/{minuteId}": {
       "schema": { "$ref": "#/entities/MeetingMinute" },
       "description": "Notulen per aannemer."
+    },
+    "/voertuigen/{voertuigId}": {
+      "schema": { "$ref": "#/entities/Voertuig" },
+      "description": "Voertuiggegevens."
+    },
+    "/voertuigen/{voertuigId}/maintenance/{id}": {
+      "schema": { "type": "object" },
+      "description": "Onderhoudshistorie."
+    },
+    "/voertuigen/{voertuigId}/damages/{id}": {
+      "schema": { "type": "object" },
+      "description": "Schadehistorie."
+    },
+    "/machines/{machineId}": {
+      "schema": { "type": "object" },
+      "description": "Machinegegevens."
+    },
+    "/machines/{machineId}/maintenance/{id}": {
+      "schema": { "type": "object" },
+      "description": "Onderhoudshistorie machine."
+    },
+    "/machines/{machineId}/damages/{id}": {
+      "schema": { "type": "object" },
+      "description": "Schadehistorie machine."
     }
   }
 }
