@@ -204,18 +204,39 @@ function NavigatingView({
 
   const totalSimDistanceRef = React.useRef(0);
 
-  // Dynamic Nearest Target Selection
+  // Hybrid Priority Routing: Oldest First + Nearest within group
   const nextObject = React.useMemo(() => {
     const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id));
     if (remaining.length === 0) return null;
     
-    if (!targetLocation) return remaining[0];
+    // Sort by age (oldest first)
+    const sortedByAge = [...remaining].sort((a, b) => {
+        const timeA = (a as any).createdAt?.seconds || 0;
+        const timeB = (b as any).createdAt?.seconds || 0;
+        return timeA - timeB;
+    });
+
+    // To prevent cherry-picking only new nearby items, we define a "priority group"
+    // consisting of items that are significantly older. 
+    // If the route is 'meldingen', we strictly respect age batches (e.g. 24h window).
+    let priorityGroup = sortedByAge;
+    
+    if (routeType === 'meldingen') {
+        const oldestTime = sortedByAge[0].createdAt?.seconds || 0;
+        const batchThreshold = 3600 * 24; // 24 hours window
+        // Keep all items that are within the same 24h window as the oldest item
+        priorityGroup = sortedByAge.filter(obj => 
+            ((obj as any).createdAt?.seconds || 0) <= oldestTime + batchThreshold
+        );
+    }
+    
+    if (!targetLocation) return priorityGroup[0];
     
     const currentPt = turf.point([targetLocation.longitude, targetLocation.latitude]);
-    let closest = remaining[0];
+    let closest = priorityGroup[0];
     let minDist = Infinity;
     
-    remaining.forEach(obj => {
+    priorityGroup.forEach(obj => {
         const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]));
         if (d < minDist) {
             minDist = d;
@@ -224,7 +245,7 @@ function NavigatingView({
     });
     
     return closest;
-  }, [objectsOnRoute, completedObjects, targetLocation?.latitude, targetLocation?.longitude]);
+  }, [objectsOnRoute, completedObjects, targetLocation?.latitude, targetLocation?.longitude, routeType]);
 
   const currentSpeedLimit = React.useMemo(() => {
     if (!currentLeg?.annotation?.maxspeed) return 50;
@@ -713,7 +734,7 @@ function NavigatingView({
                 </div>
                 <Card className="bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden w-64 hidden md:flex">
                     <CardContent className="p-4 space-y-2">
-                        <div className="flex justify-between items-end">
+                        <div className="justify-between items-end">
                             <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aankomst: {arrivalTime}</p><p className="text-lg font-black text-slate-900 leading-none">{durationMin} min <span className="text-slate-300">/ {distanceKm} km</span></p></div>
                             <div className="text-right"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Voortgang</p><p className="text-xs font-black text-primary">{completedObjects.length}/{objectsOnRoute.length}</p></div>
                         </div>
@@ -857,6 +878,7 @@ export default function StartNavigationPage() {
     return Array.from(locationMap.values());
   }, [objectsOnMap]);
 
+  // Priority Sort: Oldest First (Primary)
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
     
@@ -868,29 +890,13 @@ export default function StartNavigationPage() {
 
     if (visibleMeldingen.length === 0) return [];
 
-    let unvisited = [...visibleMeldingen];
-    let currentPos = currentActiveSortBase;
-    let sorted: Melding[] = [];
-
-    while (unvisited.length > 0) {
-      let nearestIdx = 0;
-      let minD = Infinity;
-      unvisited.forEach((u, i) => {
-        const d = turf.distance(
-          turf.point([currentPos.longitude, currentPos.latitude]),
-          turf.point([u.longitude, u.latitude])
-        );
-        if (d < minD) {
-          minD = d;
-          nearestIdx = i;
-        }
-      });
-      const next = unvisited.splice(nearestIdx, 1)[0];
-      sorted.push(next);
-      currentPos = { latitude: next.latitude, longitude: next.longitude };
-    }
-    return sorted;
-  }, [allMeldingen, routeType, currentActiveSortBase, isPrivileged, profile]);
+    // Sort strictly by age (oldest first) to ensure long-standing reports are handled
+    return [...visibleMeldingen].sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeA - timeB;
+    });
+  }, [allMeldingen, routeType, isPrivileged, profile]);
 
   React.useEffect(() => {
     const fetchPreview = async () => {
@@ -965,14 +971,14 @@ export default function StartNavigationPage() {
             return; 
         }
 
-        if (!isAtBase && !simulate) {
-            setIsRecalculating(true);
-            setCurrentActiveSortBase(startLoc);
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            setIsRecalculating(false);
-        }
-
-        const finalObjects = sortedMeldingen.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer } as MapObject));
+        const finalObjects = sortedMeldingen.map(m => ({ 
+            id: m.id, 
+            latitude: m.latitude, 
+            longitude: m.longitude, 
+            name: m.intakenummer,
+            createdAt: m.createdAt // Pass timestamp for age-priority logic
+        } as MapObject));
+        
         setObjectsOnRoute(finalObjects);
         setTripStartLocation(startLoc);
     } else if (selectedRouteIdDef && objectsOnMap) {
@@ -1177,7 +1183,7 @@ export default function StartNavigationPage() {
                           <div className="flex items-center gap-3">
                               <div className="bg-primary/10 p-1.5 rounded-lg"><FileText className="h-3.5 w-3.5 text-primary" /></div>
                               <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">Overzicht Werkbonnen</h3>
-                              <Badge variant="outline" className="h-4.5 px-1.5 font-black text-[8px] border-2 bg-white">{sortedMeldingen.length} Route Volgorde</Badge>
+                              <Badge variant="outline" className="h-4.5 px-1.5 font-black text-[8px] border-2 bg-white">{sortedMeldingen.length} Route Volgorde (Oudste eerst)</Badge>
                           </div>
                       </div>
                       <ScrollArea className="flex-1">
