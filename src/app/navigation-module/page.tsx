@@ -42,7 +42,8 @@ import {
   MessageSquare,
   Cpu,
   Trash2,
-  Bell
+  Bell,
+  CheckCircle
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -203,19 +204,12 @@ function NavigatingView({
 
   const totalSimDistanceRef = React.useRef(0);
 
-  /**
-   * Hybrid Priority Routing logic:
-   * 1. Check if any task is VERY CLOSE (within 800m radius).
-   * 2. If yes, take the nearest of those.
-   * 3. Else, follow the age-batch logic: find the oldest item, get its batch, and pick nearest in that batch.
-   */
   const nextObject = React.useMemo(() => {
     const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id));
     if (remaining.length === 0) return null;
     
     const currentPt = targetLocation ? turf.point([targetLocation.longitude, targetLocation.latitude]) : null;
 
-    // A. Priority Exception: Check for items in the immediate vicinity (800m)
     if (routeType === 'meldingen' && currentPt) {
         const nearItems = remaining.filter(obj => {
             const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]), { units: 'meters' });
@@ -236,8 +230,6 @@ function NavigatingView({
         }
     }
 
-    // B. Default Logic: Age-Batch Priority
-    // Sort by age (oldest first)
     const sortedByAge = [...remaining].sort((a, b) => {
         const timeA = (a as any).createdAt?.seconds || 0;
         const timeB = (b as any).createdAt?.seconds || 0;
@@ -248,8 +240,7 @@ function NavigatingView({
     
     if (routeType === 'meldingen') {
         const oldestTime = sortedByAge[0].createdAt?.seconds || 0;
-        const batchThreshold = 3600 * 24; // 24 hours window
-        // Keep all items that are within the same 24h window as the oldest item
+        const batchThreshold = 3600 * 24; 
         priorityGroup = sortedByAge.filter(obj => 
             ((obj as any).createdAt?.seconds || 0) <= oldestTime + batchThreshold
         );
@@ -395,7 +386,6 @@ function NavigatingView({
     } catch (e) {}
   }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
 
-  // Recalculate route if user deviates from the path (Off-route detection)
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || arrivedObject) return;
     
@@ -404,7 +394,6 @@ function NavigatingView({
         const pt = turf.point([targetLocation.longitude, targetLocation.latitude]);
         const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
         
-        // If user is more than 40 meters away from the route line, trigger a refresh
         if (snapped.properties.dist! > 40) {
             setCurrentRouteGeometry(null); 
         }
@@ -804,6 +793,8 @@ export default function StartNavigationPage() {
   const [previewRouteGeometry, setPreviewRouteGeometry] = React.useState<any>(null);
   const [activePopupMeldingId, setActivePopupMeldingId] = React.useState<string | null>(null);
 
+  const [showCompletedToday, setShowCompletedToday] = React.useState(false);
+
   const mapRef = React.useRef<MapRef>(null);
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
@@ -866,7 +857,25 @@ export default function StartNavigationPage() {
     );
   }, [firestore, routeType]);
 
-  const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
+  const { data: rawMeldingen } = useCollection<Melding>(meldingenQuery);
+
+  const completedTodayQuery = useMemoFirebase(() => {
+    if (!firestore || routeType !== 'meldingen') return null;
+    const today = formatDate(new Date(), 'yyyy-MM-dd');
+    return query(
+      collection(firestore, 'meldingen'),
+      where('status', '==', 'Afgerond'),
+      where('afhandeling_datum', '==', today)
+    );
+  }, [firestore, routeType]);
+
+  const { data: completedMeldingenFromDb } = useCollection<Melding>(completedTodayQuery);
+
+  const myCompletedToday = React.useMemo(() => {
+    if (!completedMeldingenFromDb || !profile) return [];
+    const myName = profile.displayName || profile.email || 'Onbekend';
+    return completedMeldingenFromDb.filter(m => m.afgehandeld_door === myName);
+  }, [completedMeldingenFromDb, profile]);
 
   const objectsOnRouteQuery = useMemoFirebase(() => {
     if (!firestore || !selectedRouteIdDef) return null;
@@ -875,7 +884,6 @@ export default function StartNavigationPage() {
 
   const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
 
-  // Define priority logic centrally
   const getObjectPriority = (obj: any) => {
     const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
     
@@ -892,7 +900,6 @@ export default function StartNavigationPage() {
     const locationMap = new Map<string, MapObject>();
     
     objectsOnMap.forEach(obj => {
-      // Use 5 decimal places (~1 meter precision) to collapse icons that are visually on top of each other
       const key = `${obj.latitude.toFixed(5)}_${obj.longitude.toFixed(5)}`;
       const existing = locationMap.get(key);
       if (!existing || getObjectPriority(obj) > getObjectPriority(existing)) {
@@ -903,14 +910,13 @@ export default function StartNavigationPage() {
     return Array.from(locationMap.values());
   }, [objectsOnMap]);
 
-  // Sortering voor werkbonnen: Combinatie van Oudste Batch + Geografisch dichtbij
   const sortedMeldingen = React.useMemo(() => {
-    if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
+    if (routeType !== 'meldingen' || !rawMeldingen || rawMeldingen.length === 0) return [];
     
-    let pool = [...allMeldingen];
+    let pool = [...rawMeldingen];
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
-        pool = pool.filter(m => m.behandelaar === userName);
+        pool = rawMeldingen.filter(m => m.behandelaar === userName);
     }
 
     if (pool.length === 0) return [];
@@ -919,13 +925,11 @@ export default function StartNavigationPage() {
     let currentPos = [currentActiveSortBase.longitude, currentActiveSortBase.latitude];
 
     while (pool.length > 0) {
-        // 1. Vind de oudste batch (meldingen binnen 24 uur van de alleroudste)
         const sortedByAge = [...pool].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
         const oldestTime = sortedByAge[0].createdAt?.seconds || 0;
         const batchThreshold = 3600 * 24; 
         const oldestBatch = pool.filter(m => (m.createdAt?.seconds || 0) <= oldestTime + batchThreshold);
 
-        // 2. Check voor "Super Close" items (ongeacht batch - binnen 800m)
         const proximityThreshold = 0.8; 
         const closeItems = pool.filter(m => {
             const dist = turf.distance(turf.point(currentPos), turf.point([m.longitude, m.latitude]), { units: 'kilometers' });
@@ -934,14 +938,12 @@ export default function StartNavigationPage() {
 
         let nextItem: Melding;
         if (closeItems.length > 0) {
-            // Als er iets heel dichtbij is, pak de dichtstbijzijnde daarvan
             nextItem = closeItems.reduce((prev, curr) => {
                 const distPrev = turf.distance(turf.point(currentPos), turf.point([prev.longitude, prev.latitude]));
                 const distCurr = turf.distance(turf.point(currentPos), turf.point([curr.longitude, curr.latitude]));
                 return distCurr < distPrev ? curr : prev;
             });
         } else {
-            // Anders pak de dichtstbijzijnde uit de oudste batch
             nextItem = oldestBatch.reduce((prev, curr) => {
                 const distPrev = turf.distance(turf.point(currentPos), turf.point([prev.longitude, prev.latitude]));
                 const distCurr = turf.distance(turf.point(currentPos), turf.point([curr.longitude, curr.latitude]));
@@ -955,7 +957,7 @@ export default function StartNavigationPage() {
     }
 
     return result;
-  }, [allMeldingen, routeType, isPrivileged, profile, currentActiveSortBase]);
+  }, [rawMeldingen, routeType, isPrivileged, profile, currentActiveSortBase]);
 
   React.useEffect(() => {
     const fetchPreview = async () => {
@@ -1019,8 +1021,6 @@ export default function StartNavigationPage() {
     setIsSimulationMode(simulate);
     
     let startLoc = userLocation || SIMULATION_START_LOCATION;
-    const isAtBase = turf.distance(turf.point([startLoc.longitude, startLoc.latitude]), turf.point([SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude]), { units: 'meters' }) < 100;
-
     setIsStarting(true);
 
     if (routeType === 'meldingen') {
@@ -1035,7 +1035,7 @@ export default function StartNavigationPage() {
             latitude: m.latitude, 
             longitude: m.longitude, 
             name: m.intakenummer,
-            createdAt: m.createdAt // Pass timestamp for age-priority logic
+            createdAt: m.createdAt 
         } as MapObject));
         
         setObjectsOnRoute(finalObjects);
@@ -1059,6 +1059,8 @@ export default function StartNavigationPage() {
   if (isRecalculating) {
       return <LoadingScreen message="BeheerHub AI optimaliseert uw route vanaf huidige locatie..." />;
   }
+
+  const tableData = showCompletedToday ? myCompletedToday : sortedMeldingen;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -1117,7 +1119,7 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
 
-                    {routeType === 'meldingen' && sortedMeldingen?.map((m, idx) => (
+                    {routeType === 'meldingen' && !showCompletedToday && sortedMeldingen?.map((m, idx) => (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
                             setActivePopupMeldingId(m.id);
                             if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
@@ -1138,8 +1140,8 @@ export default function StartNavigationPage() {
 
                     {isMeldingenType && activePopupMeldingId && (
                         <Popup
-                            longitude={sortedMeldingen.find(m => m.id === activePopupMeldingId)?.longitude || 0}
-                            latitude={sortedMeldingen.find(m => m.id === activePopupMeldingId)?.latitude || 0}
+                            longitude={tableData.find(m => m.id === activePopupMeldingId)?.longitude || 0}
+                            latitude={tableData.find(m => m.id === activePopupMeldingId)?.latitude || 0}
                             anchor="bottom"
                             onClose={() => setActivePopupMeldingId(null)}
                             closeOnClick={false}
@@ -1148,16 +1150,16 @@ export default function StartNavigationPage() {
                             <div className="p-2 max-w-[250px]">
                                 <div className="flex items-center gap-2 mb-1.5 border-b pb-1.5">
                                     <Bell className="h-3 w-3 text-primary" />
-                                    <p className="font-black text-[10px] uppercase text-primary tracking-tight">Melding {sortedMeldingen.find(m => m.id === activePopupMeldingId)?.intakenummer}</p>
+                                    <p className="font-black text-[10px] uppercase text-primary tracking-tight">Melding {tableData.find(m => m.id === activePopupMeldingId)?.intakenummer}</p>
                                 </div>
                                 <p className="text-[11px] font-bold text-slate-700 leading-relaxed italic">
-                                    "{sortedMeldingen.find(m => m.id === activePopupMeldingId)?.extra_informatie || 'Geen omschrijving.'}"
+                                    "{tableData.find(m => m.id === activePopupMeldingId)?.extra_informatie || 'Geen omschrijving.'}"
                                 </p>
                             </div>
                         </Popup>
                     )}
 
-                    {isMeldingenType && previewRouteGeometry && (
+                    {isMeldingenType && previewRouteGeometry && !showCompletedToday && (
                         <Source id="preview-route" type="geojson" data={{ type: 'Feature', properties: {}, geometry: previewRouteGeometry }}>
                             <Layer 
                                 id="preview-route-line" 
@@ -1239,9 +1241,29 @@ export default function StartNavigationPage() {
                   <div className="flex-1 overflow-hidden flex flex-col bg-white border-t-4 border-slate-900">
                       <div className="p-3 bg-slate-50 border-b flex items-center justify-between shrink-0">
                           <div className="flex items-center gap-3">
-                              <div className="bg-primary/10 p-1.5 rounded-lg"><FileText className="h-3.5 w-3.5 text-primary" /></div>
-                              <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">Overzicht Werkbonnen</h3>
-                              <Badge variant="outline" className="h-4.5 px-1.5 font-black text-[8px] border-2 bg-white">{sortedMeldingen.length} Route Volgorde (Batch + Slimme Check)</Badge>
+                              <div className="bg-primary/10 p-1.5 rounded-lg">
+                                {showCompletedToday ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <FileText className="h-3.5 w-3.5 text-primary" />}
+                              </div>
+                              <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">
+                                {showCompletedToday ? 'Mijn afgemelde bonnen (Vandaag)' : 'Overzicht Werkbonnen'}
+                              </h3>
+                              <Badge variant="outline" className={cn("h-4.5 px-1.5 font-black text-[8px] border-2 bg-white", showCompletedToday ? "text-green-600 border-green-100" : "")}>
+                                {tableData.length} {showCompletedToday ? 'Gereed' : 'Route Volgorde (Batch + Slimme Check)'}
+                              </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                              <Button 
+                                variant={showCompletedToday ? "default" : "outline"}
+                                size="sm"
+                                className={cn(
+                                    "h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all",
+                                    showCompletedToday ? "bg-green-600 hover:bg-green-700 text-white border-green-600 shadow-lg shadow-green-600/20" : "border-slate-200"
+                                )}
+                                onClick={() => setShowCompletedToday(!showCompletedToday)}
+                              >
+                                {showCompletedToday ? <CheckCircle2 className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+                                {showCompletedToday ? 'TOON OPENSTAAND' : 'VANDAAG AFGEMELD'}
+                              </Button>
                           </div>
                       </div>
                       <ScrollArea className="flex-1">
@@ -1258,8 +1280,8 @@ export default function StartNavigationPage() {
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
-                                  {sortedMeldingen.length > 0 ? (
-                                      sortedMeldingen.map((m, index) => (
+                                  {tableData.length > 0 ? (
+                                      tableData.map((m, index) => (
                                           <TableRow 
                                             key={m.id} 
                                             className={cn(
@@ -1300,7 +1322,7 @@ export default function StartNavigationPage() {
                                       <TableRow>
                                           <TableCell colSpan={7} className="text-center py-12 text-muted-foreground opacity-30">
                                               <LayoutGrid className="h-8 w-8 mx-auto mb-2" />
-                                              <p className="font-black uppercase tracking-widest text-[10px]">Geen openstaande meldingen for uitvoering</p>
+                                              <p className="font-black uppercase tracking-widest text-[10px]">Geen {showCompletedToday ? 'afgemelde' : 'openstaande'} meldingen gevonden</p>
                                           </TableCell>
                                       </TableRow>
                                   )}
