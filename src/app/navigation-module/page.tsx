@@ -83,8 +83,8 @@ const routeLayer: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#1d4ed8', 
-    'line-width': 10,
+    'line-color': '#ef4444', 
+    'line-width': 8,
     'line-opacity': 0.9,
   },
 };
@@ -98,9 +98,9 @@ const routeLayerCasing: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#1e3a8a', 
-    'line-width': 14,
-    'line-opacity': 0.3,
+    'line-color': '#991b1b', 
+    'line-width': 12,
+    'line-opacity': 0.2,
   },
 };
 
@@ -205,7 +205,7 @@ function NavigatingView({
 
   /**
    * Hybrid Priority Routing logic:
-   * 1. Check if any task is VERY CLOSE (within 500m radius).
+   * 1. Check if any task is VERY CLOSE (within 800m radius).
    * 2. If yes, take the nearest of those.
    * 3. Else, follow the age-batch logic: find the oldest item, get its batch, and pick nearest in that batch.
    */
@@ -215,11 +215,11 @@ function NavigatingView({
     
     const currentPt = targetLocation ? turf.point([targetLocation.longitude, targetLocation.latitude]) : null;
 
-    // A. Priority Exception: Check for items in the immediate vicinity (500m)
+    // A. Priority Exception: Check for items in the immediate vicinity (800m)
     if (routeType === 'meldingen' && currentPt) {
         const nearItems = remaining.filter(obj => {
             const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]), { units: 'meters' });
-            return d < 500;
+            return d < 800;
         });
 
         if (nearItems.length > 0) {
@@ -903,25 +903,59 @@ export default function StartNavigationPage() {
     return Array.from(locationMap.values());
   }, [objectsOnMap]);
 
-  // Priority Sort: Oldest First (Primary)
+  // Sortering voor werkbonnen: Combinatie van Oudste Batch + Geografisch dichtbij
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
     
-    let visibleMeldingen = allMeldingen;
+    let pool = [...allMeldingen];
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
-        visibleMeldingen = allMeldingen.filter(m => m.behandelaar === userName);
+        pool = pool.filter(m => m.behandelaar === userName);
     }
 
-    if (visibleMeldingen.length === 0) return [];
+    if (pool.length === 0) return [];
 
-    // Sort strictly by age (oldest first) to ensure long-standing reports are handled
-    return [...visibleMeldingen].sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeA - timeB;
-    });
-  }, [allMeldingen, routeType, isPrivileged, profile]);
+    const result: Melding[] = [];
+    let currentPos = [currentActiveSortBase.longitude, currentActiveSortBase.latitude];
+
+    while (pool.length > 0) {
+        // 1. Vind de oudste batch (meldingen binnen 24 uur van de alleroudste)
+        const sortedByAge = [...pool].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+        const oldestTime = sortedByAge[0].createdAt?.seconds || 0;
+        const batchThreshold = 3600 * 24; 
+        const oldestBatch = pool.filter(m => (m.createdAt?.seconds || 0) <= oldestTime + batchThreshold);
+
+        // 2. Check voor "Super Close" items (ongeacht batch - binnen 800m)
+        const proximityThreshold = 0.8; 
+        const closeItems = pool.filter(m => {
+            const dist = turf.distance(turf.point(currentPos), turf.point([m.longitude, m.latitude]), { units: 'kilometers' });
+            return dist < proximityThreshold;
+        });
+
+        let nextItem: Melding;
+        if (closeItems.length > 0) {
+            // Als er iets heel dichtbij is, pak de dichtstbijzijnde daarvan
+            nextItem = closeItems.reduce((prev, curr) => {
+                const distPrev = turf.distance(turf.point(currentPos), turf.point([prev.longitude, prev.latitude]));
+                const distCurr = turf.distance(turf.point(currentPos), turf.point([curr.longitude, curr.latitude]));
+                return distCurr < distPrev ? curr : prev;
+            });
+        } else {
+            // Anders pak de dichtstbijzijnde uit de oudste batch
+            nextItem = oldestBatch.reduce((prev, curr) => {
+                const distPrev = turf.distance(turf.point(currentPos), turf.point([prev.longitude, prev.latitude]));
+                const distCurr = turf.distance(turf.point(currentPos), turf.point([curr.longitude, curr.latitude]));
+                return distCurr < distPrev ? curr : prev;
+            });
+        }
+
+        result.push(nextItem);
+        currentPos = [nextItem.longitude, nextItem.latitude];
+        pool = pool.filter(m => m.id !== nextItem.id);
+    }
+
+    return result;
+  }, [allMeldingen, routeType, isPrivileged, profile, currentActiveSortBase]);
 
   React.useEffect(() => {
     const fetchPreview = async () => {
@@ -1207,7 +1241,7 @@ export default function StartNavigationPage() {
                           <div className="flex items-center gap-3">
                               <div className="bg-primary/10 p-1.5 rounded-lg"><FileText className="h-3.5 w-3.5 text-primary" /></div>
                               <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">Overzicht Werkbonnen</h3>
-                              <Badge variant="outline" className="h-4.5 px-1.5 font-black text-[8px] border-2 bg-white">{sortedMeldingen.length} Route Volgorde (Oudste eerst)</Badge>
+                              <Badge variant="outline" className="h-4.5 px-1.5 font-black text-[8px] border-2 bg-white">{sortedMeldingen.length} Route Volgorde (Batch + Slimme Check)</Badge>
                           </div>
                       </div>
                       <ScrollArea className="flex-1">
