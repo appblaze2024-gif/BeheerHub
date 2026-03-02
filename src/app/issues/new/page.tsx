@@ -785,6 +785,7 @@ export default function NewIssuePage() {
                       longitude={location?.longitude} 
                       mainLocationLabel={form.watch('containernummer')}
                       objects={nearbyObjects}
+                      onObjectSelect={handleContainerSelect}
                     />
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1 shadow-sm">
                         <MapPin className="h-3 w-3 text-primary" /> GIS Locatie
