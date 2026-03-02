@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -39,6 +38,7 @@ import {
   Pencil,
   Calendar,
   LocateFixed,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,15 +108,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const DAYS_OF_WEEK = [
-  { id: 'maandag', label: 'Ma' },
-  { id: 'dinsdag', label: 'Di' },
-  { id: 'woensdag', label: 'Wo' },
-  { id: 'donderdag', label: 'Do' },
-  { id: 'vrijdag', label: 'Vr' },
-  { id: 'zaterdag', label: 'Za' },
-  { id: 'zondag', label: 'Zo' },
-];
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
 export default function ObjectsPage() {
   const firestore = useFirestore();
@@ -143,6 +135,7 @@ export default function ObjectsPage() {
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
   const [filterToRename, setFilterToRename] = React.useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = React.useState(false);
+  const [isGeocoding, setIsGeocoding] = React.useState(false);
 
   const [isProximityFilterActive, setIsProximityFilterActive] = React.useState(false);
   const [currentUserCoords, setCurrentUserCoords] = React.useState<{ latitude: number; longitude: number } | null>(null);
@@ -275,6 +268,50 @@ export default function ObjectsPage() {
     const objectRef = doc(firestore, 'objects', selectedObject.id);
     updateDocumentNonBlocking(objectRef, { [field]: value });
     setSelectedObject((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleUpdateCoords = async (field: 'latitude' | 'longitude', value: number) => {
+    if (!firestore || !selectedObject || !canEdit) return;
+    
+    const newCoords = {
+        latitude: field === 'latitude' ? value : selectedObject.latitude,
+        longitude: field === 'longitude' ? value : selectedObject.longitude
+    };
+
+    const objectRef = doc(firestore, 'objects', selectedObject.id);
+    const updates: any = { [field]: value };
+
+    // Auto-enrich address from coordinates if they are changed
+    if (newCoords.latitude && newCoords.longitude && !isGeocoding) {
+        setIsGeocoding(true);
+        try {
+            const response = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${newCoords.longitude},${newCoords.latitude}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+            );
+            const data = await response.json();
+            if (data.features && data.features.length > 0) {
+                const feature = data.features[0];
+                const context = feature.context || [];
+                
+                const street = feature.text || '';
+                const houseNumber = feature.address || '';
+                const postcode = context.find((c: any) => c.id.startsWith('postcode'))?.text || '';
+                const place = context.find((c: any) => c.id.startsWith('place'))?.text || '';
+
+                if (!selectedObject.straatnaam) updates.straatnaam = street;
+                if (!selectedObject.huisnummer) updates.huisnummer = houseNumber;
+                if (!selectedObject.postcode) updates.postcode = postcode;
+                if (!selectedObject.plaats) updates.plaats = place;
+            }
+        } catch (e) {
+            console.error("Geocoding failed:", e);
+        } finally {
+            setIsGeocoding(false);
+        }
+    }
+
+    updateDocumentNonBlocking(objectRef, updates);
+    setSelectedObject((prev: any) => ({ ...prev, ...updates }));
   };
 
   const handleAddCustomFilter = async () => {
@@ -539,7 +576,10 @@ export default function ObjectsPage() {
                     </div>
 
                     <div className="space-y-6">
-                        <h3 className="text-lg font-bold text-slate-900 border-b pb-3 flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Locatie & Adres</h3>
+                        <div className="flex items-center justify-between border-b pb-3">
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Locatie & Adres</h3>
+                            {isGeocoding && <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest animate-pulse"><RefreshCw className="h-3 w-3 animate-spin" /> Adres bijwerken...</div>}
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                             <div className="space-y-2">
                                 <Label className="text-xs font-medium text-slate-500 ml-1">Straatnaam</Label>
@@ -556,6 +596,14 @@ export default function ObjectsPage() {
                             <div className="space-y-2">
                                 <Label className="text-xs font-medium text-slate-500 ml-1">Plaats</Label>
                                 <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-medium text-slate-500 ml-1">Latitude (Y)</Label>
+                                <Input type="number" value={selectedObject.latitude || ''} onChange={e => handleUpdateCoords('latitude', parseFloat(e.target.value))} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-medium text-slate-500 ml-1">Longitude (X)</Label>
+                                <Input type="number" value={selectedObject.longitude || ''} onChange={e => handleUpdateCoords('longitude', parseFloat(e.target.value))} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
                             </div>
                         </div>
                     </div>

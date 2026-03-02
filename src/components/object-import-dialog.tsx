@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -162,7 +161,7 @@ export function ObjectImportDialog({
 
         if (shpFile) {
             if (!dbfFile) {
-                setError("Selecteer alstublieft zowel een .shp als een .dbf bestand voor shapefile import.");
+                setError("Selecteer alstublieft zowel een .shp als een .dbf bestand for shapefile import.");
                 return;
             }
             const shpBuffer = await shpFile.arrayBuffer();
@@ -236,7 +235,7 @@ export function ObjectImportDialog({
     }
   };
 
-  const fetchAddress = async (longitude: number, latitude: number): Promise<{ street: string; houseNumber: string }> => {
+  const fetchAddress = async (longitude: number, latitude: number): Promise<{ street: string; houseNumber: string; postcode: string; place: string }> => {
     try {
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
@@ -244,15 +243,22 @@ export function ObjectImportDialog({
       const data = await response.json();
       if (data.features && data.features.length > 0) {
         const feature = data.features[0];
+        const context = feature.context || [];
+        
+        const postcode = context.find((c: any) => c.id.startsWith('postcode'))?.text || '';
+        const place = context.find((c: any) => c.id.startsWith('place'))?.text || '';
+
         return {
           street: feature.text || '',
           houseNumber: feature.address || '',
+          postcode: postcode,
+          place: place,
         };
       }
     } catch (error) {
       console.error('Error fetching address:', error);
     }
-    return { street: '', houseNumber: '' };
+    return { street: '', houseNumber: '', postcode: '', place: '' };
   };
 
   const handleImport = async () => {
@@ -332,10 +338,12 @@ export function ObjectImportDialog({
             // Force selected category
             objectData.locatieType = finalCategory;
 
-            if (!objectData.straatnaam && objectData.latitude && objectData.longitude) {
-              const { street, houseNumber } = await fetchAddress(objectData.longitude, objectData.latitude);
-              objectData.straatnaam = street;
-              objectData.huisnummer = houseNumber;
+            if (objectData.latitude && objectData.longitude) {
+              const { street, houseNumber, postcode, place } = await fetchAddress(objectData.longitude, objectData.latitude);
+              if (!objectData.straatnaam) objectData.straatnaam = street;
+              if (!objectData.huisnummer) objectData.huisnummer = houseNumber;
+              if (!objectData.postcode) objectData.postcode = postcode;
+              if (!objectData.plaats) objectData.plaats = place;
             }
 
             if(originalId) {
@@ -492,7 +500,7 @@ export function ObjectImportDialog({
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle className="font-black uppercase tracking-tight text-xs">{mapping['id'] ? "Klaar om te importeren" : "Opgelet!"}</AlertTitle>
                         <AlertDescription className="text-[10px] font-bold">
-                          {mapping['id'] ? `De objecten worden opgeslagen onder filter: ${showNewCategoryInput ? (newCategoryName || 'Nieuw') : selectedCategory}` : "Zorg ervoor dat de kolom voor 'id' is gekoppeld, dit wordt gebruikt als de unieke ID voor elk object."}
+                          {mapping['id'] ? `De objecten worden opgeslagen onder filter: ${showNewCategoryInput ? (newCategoryName || 'Nieuw') : selectedCategory}` : "Zorg ervoor dat de kolom for 'id' is gekoppeld, dit wordt gebruikt als de unieke ID voor elk object."}
                         </AlertDescription>
                     </Alert>
                     {error && <p className="text-red-500 text-sm font-bold mt-2">{error}</p>}
