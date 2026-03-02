@@ -408,6 +408,12 @@ export default function IssuesPage() {
                                             <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Soort Melder</p>
                                             <p className="font-bold text-slate-900 truncate">{selectedMelding.soort_melder || selectedMelding.melder || 'Anoniem'}</p>
                                         </div>
+                                        {selectedMelding.containernummer && (
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Containernummer</p>
+                                                <p className="font-bold text-slate-900">{selectedMelding.containernummer}</p>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex-1 min-h-0 flex flex-col space-y-3">
                                         <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest shrink-0">Omschrijving melding</p>
