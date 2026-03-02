@@ -1247,9 +1247,6 @@ export default function StartNavigationPage() {
                               <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">
                                 {showCompletedToday ? 'Mijn afgemelde bonnen (Vandaag)' : 'Overzicht Werkbonnen'}
                               </h3>
-                              <Badge variant="outline" className={cn("h-4.5 px-1.5 font-black text-[8px] border-2 bg-white", showCompletedToday ? "text-green-600 border-green-100" : "")}>
-                                {tableData.length} {showCompletedToday ? 'Gereed' : 'Route Volgorde (Batch + Slimme Check)'}
-                              </Badge>
                           </div>
                           <div className="flex items-center gap-2">
                               <Button 
