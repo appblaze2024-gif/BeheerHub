@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1106,8 +1105,7 @@ export default function StartNavigationPage() {
                                 paint={{ 
                                     'line-color': '#ef4444', 
                                     'line-width': 4,
-                                    'line-opacity': 0.6,
-                                    'line-dasharray': [2, 1]
+                                    'line-opacity': 0.6
                                 }} 
                             />
                         </Source>
