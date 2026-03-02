@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -784,6 +783,7 @@ export default function NewIssuePage() {
                     <MapboxView 
                       latitude={location?.latitude} 
                       longitude={location?.longitude} 
+                      mainLocationLabel={form.watch('containernummer')}
                       objects={nearbyObjects}
                     />
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1 shadow-sm">

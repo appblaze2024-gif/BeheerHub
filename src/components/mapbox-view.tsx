@@ -24,6 +24,7 @@ interface MapObject {
 interface MapboxViewProps {
   longitude?: number;
   latitude?: number;
+  mainLocationLabel?: string | null;
   objects?: MapObject[];
   selectedObjects?: MapObject[];
   onObjectSelect?: (object: MapObject, selected: boolean) => void;
@@ -62,7 +63,18 @@ const getHeatmapColor = (vulgraad: number | undefined): string => {
     return '#ef4444'; // Rood (75% - 100%)
 };
 
-export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [], showHeatmap = true, interactive = true, highlightedObject = null }: MapboxViewProps) {
+export function MapboxView({ 
+  longitude, 
+  latitude, 
+  mainLocationLabel,
+  objects, 
+  selectedObjects = [], 
+  onObjectSelect, 
+  wijkPolygons = [], 
+  showHeatmap = true, 
+  interactive = true, 
+  highlightedObject = null 
+}: MapboxViewProps) {
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
   const [hoveredPin, setHoveredPin] = React.useState<MapObject | null>(null);
   const { profile } = useProfile();
@@ -75,12 +87,6 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     
     const getPriority = (obj: MapObject) => {
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-        
-        // Priority logic:
-        // 1. Prullenbakken (Data Meerlanden) -> 3 (recycling-bin)
-        // 2. Brengparkje HHM -> 2 (waste-bin)
-        // 3. Other underground -> 2 (waste-bin)
-        // 4. Default -> 1
         
         const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
         const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
@@ -170,13 +176,8 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-        
         const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
         const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
-        
-        // User request: 
-        // 1. "Prullenbakken (Data Meerlanden)" -> recycling-bin.png
-        // 2. "brengparkje HHM" -> waste-bin.png (3-color icon)
         
         const useRecyclingBin = isPrullenbakMeerlanden;
         const useWasteBin = isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond');
@@ -254,16 +255,27 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     if (longitude && latitude) {
         markerElements.push(
             <Marker key="main-location" longitude={longitude} latitude={latitude} anchor="center">
-                <div className="relative flex h-5 w-5 items-center justify-center">
-                    <div className="absolute h-full w-full rounded-full bg-red-500/50 animate-pulse-scale" />
-                    <div className="relative h-3 w-3 rounded-full bg-red-600 border-2 border-white" />
+                <div className="relative flex items-center justify-center pointer-events-none">
+                    {/* Zwarte ronde om de icoon heen */}
+                    <div className="absolute h-12 w-12 rounded-full border-[3px] border-black animate-pulse opacity-80" />
+                    
+                    {/* Wolkje met containernummer */}
+                    {mainLocationLabel && (
+                        <div className="absolute bottom-full mb-4 bg-black/90 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl z-[100] border border-white/20 whitespace-nowrap animate-in zoom-in-95 duration-200">
+                            {mainLocationLabel}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-black/90" />
+                        </div>
+                    )}
+                    
+                    {/* Kleine stip in het midden */}
+                    <div className="h-1.5 w-1.5 rounded-full bg-black border border-white shadow-sm" />
                 </div>
             </Marker>
         );
     }
     
     return markerElements;
-  }, [uniqueObjects, longitude, latitude, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive]);
+  }, [uniqueObjects, longitude, latitude, mainLocationLabel, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive]);
 
   const pinToShow = hoveredPin || selectedPin;
 

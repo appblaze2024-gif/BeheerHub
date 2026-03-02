@@ -429,6 +429,7 @@ export default function IssuesPage() {
                                 <MapboxView 
                                   latitude={selectedMelding.latitude} 
                                   longitude={selectedMelding.longitude} 
+                                  mainLocationLabel={selectedMelding.containernummer}
                                   interactive={false} 
                                   objects={nearbyObjects}
                                 />
