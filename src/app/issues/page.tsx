@@ -29,7 +29,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingScreen } from '@/components/loading-screen';
 import { MapboxView } from '@/components/mapbox-view';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { translateToDutch } from '@/ai/flows/translate-to-dutch-flow';
+import { translateText } from '@/ai/flows/translate-text-flow';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const meldingFormSchema = z.object({
   hoofdcategorie: z.string().min(1, 'Hoofdcategorie is verplicht'),
@@ -50,6 +57,15 @@ const werkbonNavItems = [
     { label: 'Documenten', icon: FileText },
     { label: "Foto's", icon: Camera },
     { label: 'Hoeveelheid', icon: Package },
+];
+
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
 ];
 
 export default function IssuesPage() {
@@ -81,6 +97,8 @@ export default function IssuesPage() {
   const [userLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
 
   const [isTranslating, setIsTranslating] = React.useState(false);
+  const [sourceLang, setSourceLang] = React.useState(translationLanguages[0]);
+  const [targetLang, setTargetLang] = React.useState(translationLanguages[0]);
 
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
 
@@ -225,7 +243,7 @@ export default function IssuesPage() {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'nl-NL';
+    recognition.lang = sourceLang.code;
     recognition.continuous = true;
     recognition.interimResults = false;
 
@@ -249,9 +267,9 @@ export default function IssuesPage() {
 
     setIsTranslating(true);
     try {
-      const result = await translateToDutch(currentText);
+      const result = await translateText(currentText, targetLang.name);
       form.setValue('afhandeling_bijzonderheden', result.translatedText);
-      toast({ title: 'AI Vertaling gereed', description: 'De tekst is omgezet naar zakelijk Nederlands.' });
+      toast({ title: `Vertaald naar ${targetLang.label}`, description: `De tekst is succesvol omgezet naar ${targetLang.label}.` });
     } catch (err) {
       console.error(err);
       toast({ variant: 'destructive', title: 'Vertaalfout', description: 'AI kon de tekst niet vertalen.' });
@@ -303,7 +321,7 @@ export default function IssuesPage() {
         (snapshot) => setUploadProgress(prev => ({...prev, [file.name]: (snapshot.bytesTransferred / snapshot.totalBytes) * 100})),
         () => {},
         () => getDownloadURL(uploadTask.snapshot.ref).then(url => {
-            const uploaded: UploadedFile = { name: file.name, url, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: path };
+            const uploaded: UploadedFile = { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: path };
             if (type === 'documents') setUploadedFiles(prev => [...prev, uploaded]);
             else setAfhandelingFotos(prev => [...prev, uploaded]);
             setUploadProgress(prev => { const n = {...prev}; delete n[file.name]; return n; });
@@ -416,30 +434,66 @@ export default function IssuesPage() {
                         <Card className="rounded-3xl border-none shadow-xl bg-white overflow-hidden h-full flex flex-col">
                             <CardHeader className="bg-slate-50 border-b p-6 flex flex-row items-center justify-between">
                                 <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle>
-                                <div className="flex gap-2">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="h-9 px-4 font-black uppercase text-[10px] gap-2 border-primary/20 text-primary rounded-xl"
-                                        onClick={handleAITranslate}
-                                        disabled={isTranslating || !form.getValues('afhandeling_bijzonderheden')}
-                                    >
-                                        {isTranslating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                                        AI Vertaal naar NL
-                                    </Button>
-                                    <Button 
-                                        variant={isListening ? "destructive" : "outline"} 
-                                        size="icon" 
-                                        className="rounded-full h-9 w-9 shadow-lg shrink-0"
-                                        onClick={toggleListening}
-                                        title={isListening ? "Stoppen" : "Dicteren"}
-                                    >
-                                        {isListening ? (
-                                            <Loader2 className="h-5 w-5 animate-spin" />
-                                        ) : (
-                                            <Mic className="h-5 w-5 text-primary" />
-                                        )}
-                                    </Button>
+                                <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                                    <div className="flex items-center gap-1.5 pr-2 border-r border-slate-200">
+                                        <Select value={sourceLang.code} onValueChange={(val) => setSourceLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
+                                            <SelectTrigger className="h-8 w-[60px] p-0 border-none bg-transparent shadow-none focus:ring-0">
+                                                <div className="flex items-center justify-center w-full">
+                                                    <img src={`https://flagcdn.com/w40/${sourceLang.flag}.png`} alt={sourceLang.label} className="h-4 w-6 rounded-sm object-cover border border-slate-200" />
+                                                </div>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {translationLanguages.map(l => (
+                                                    <SelectItem key={l.code} value={l.code}>
+                                                        <div className="flex items-center gap-2">
+                                                            <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
+                                                            <span className="text-xs font-bold">{l.label}</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button 
+                                            variant={isListening ? "destructive" : "ghost"} 
+                                            size="icon" 
+                                            className="rounded-full h-8 w-8 shadow-sm shrink-0"
+                                            onClick={toggleListening}
+                                            title={isListening ? "Stoppen" : `Dicteren in ${sourceLang.label}`}
+                                        >
+                                            {isListening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4 text-primary" />}
+                                        </Button>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 pl-1">
+                                        <ChevronRight className="h-3 w-3 text-slate-300" />
+                                        <Select value={targetLang.code} onValueChange={(val) => setTargetLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
+                                            <SelectTrigger className="h-8 w-[60px] p-0 border-none bg-transparent shadow-none focus:ring-0">
+                                                <div className="flex items-center justify-center w-full">
+                                                    <img src={`https://flagcdn.com/w40/${targetLang.flag}.png`} alt={targetLang.label} className="h-4 w-6 rounded-sm object-cover border border-slate-200" />
+                                                </div>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {translationLanguages.map(l => (
+                                                    <SelectItem key={l.code} value={l.code}>
+                                                        <div className="flex items-center gap-2">
+                                                            <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
+                                                            <span className="text-xs font-bold">{l.label}</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-8 px-3 font-black uppercase text-[9px] gap-2 text-primary hover:bg-primary/5 rounded-xl"
+                                            onClick={handleAITranslate}
+                                            disabled={isTranslating || !form.getValues('afhandeling_bijzonderheden')}
+                                        >
+                                            {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                            Vertaal
+                                        </Button>
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-6 flex-1">
