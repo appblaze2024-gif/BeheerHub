@@ -34,6 +34,8 @@ import {
   FileText,
   Filter,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Maximize,
   Minimize,
   Sparkles,
@@ -43,7 +45,8 @@ import {
   Cpu,
   Trash2,
   Bell,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -208,60 +211,9 @@ function NavigatingView({
     const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id));
     if (remaining.length === 0) return null;
     
-    const currentPt = targetLocation ? turf.point([targetLocation.longitude, targetLocation.latitude]) : null;
-
-    if (routeType === 'meldingen' && currentPt) {
-        const nearItems = remaining.filter(obj => {
-            const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]), { units: 'meters' });
-            return d < 800;
-        });
-
-        if (nearItems.length > 0) {
-            let closestNear = nearItems[0];
-            let minDistNear = Infinity;
-            nearItems.forEach(obj => {
-                const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]));
-                if (d < minDistNear) {
-                    minDistNear = d;
-                    closestNear = obj;
-                }
-            });
-            return closestNear;
-        }
-    }
-
-    const sortedByAge = [...remaining].sort((a, b) => {
-        const timeA = (a as any).createdAt?.seconds || 0;
-        const timeB = (b as any).createdAt?.seconds || 0;
-        return timeA - timeB;
-    });
-
-    let priorityGroup = sortedByAge;
-    
-    if (routeType === 'meldingen') {
-        const oldestTime = sortedByAge[0].createdAt?.seconds || 0;
-        const batchThreshold = 3600 * 24; 
-        priorityGroup = sortedByAge.filter(obj => 
-            ((obj as any).createdAt?.seconds || 0) <= oldestTime + batchThreshold
-        );
-    }
-    
-    if (!targetLocation) return priorityGroup[0];
-    
-    const pt = turf.point([targetLocation.longitude, targetLocation.latitude]);
-    let closest = priorityGroup[0];
-    let minDist = Infinity;
-    
-    priorityGroup.forEach(obj => {
-        const d = turf.distance(pt, turf.point([obj.longitude, obj.latitude]));
-        if (d < minDist) {
-            minDist = d;
-            closest = obj;
-        }
-    });
-    
-    return closest;
-  }, [objectsOnRoute, completedObjects, targetLocation?.latitude, targetLocation?.longitude, routeType]);
+    // In navigating mode, we strictly follow the passed sequence objectsOnRoute
+    return remaining[0];
+  }, [objectsOnRoute, completedObjects]);
 
   const currentSpeedLimit = React.useMemo(() => {
     if (!currentLeg?.annotation?.maxspeed) return 50;
@@ -563,6 +515,7 @@ function NavigatingView({
     const durationSeconds = (distanceRemainingToDestination / (currentLeg.distance || 1)) * currentLeg.duration;
     return Math.round(durationSeconds / 60);
   }, [currentLeg, distanceRemainingToDestination]);
+  const durationMinLabel = durationMin;
   const distanceKm = React.useMemo(() => (distanceRemainingToDestination / 1000).toFixed(1), [distanceRemainingToDestination]);
 
   const isRouteFinished = React.useMemo(() => {
@@ -724,7 +677,7 @@ function NavigatingView({
                     <div className="h.5 w-12 bg-slate-200 rounded-full mx-auto mb-3" />
                     <div className="flex items-center justify-between">
                         <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p></div>
-                        <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{durationMin}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p></div>
+                        <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{durationMinLabel}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p></div>
                         <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{distanceKm}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">km</p></div>
                     </div>
                     <div className={cn("mt-8 flex gap-4 transition-all duration-300", isDrawerExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none")}>
@@ -752,7 +705,7 @@ function NavigatingView({
                 <Card className="bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden w-64 hidden md:flex">
                     <CardContent className="p-4 space-y-2">
                         <div className="justify-between items-end">
-                            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aankomst: {arrivalTime}</p><p className="text-lg font-black text-slate-900 leading-none">{durationMin} min <span className="text-slate-300">/ {distanceKm} km</span></p></div>
+                            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aankomst: {arrivalTime}</p><p className="text-lg font-black text-slate-900 leading-none">{durationMinLabel} min <span className="text-slate-300">/ {distanceKm} km</span></p></div>
                             <div className="text-right"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Voortgang</p><p className="text-xs font-black text-primary">{completedObjects.length}/{objectsOnRoute.length}</p></div>
                         </div>
                         <Progress value={(completedObjects.length / (objectsOnRoute.length || 1)) * 100} className="h-1.5 bg-slate-100" />
@@ -798,6 +751,9 @@ export default function StartNavigationPage() {
 
   const [showCompletedToday, setShowCompletedToday] = React.useState(false);
   const [hasResumed, setHasResumed] = React.useState(false);
+
+  // Manual reordering state
+  const [customSortedIds, setCustomSortedIds] = React.useState<string[] | null>(null);
 
   const mapRef = React.useRef<MapRef>(null);
 
@@ -961,7 +917,7 @@ export default function StartNavigationPage() {
     return result;
   }, [rawMeldingen, routeType, isPrivileged, profile, currentActiveSortBase]);
 
-  const finalSortedMeldingen = React.useMemo(() => {
+  const baseSortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen') return [];
     const excludeId = searchParams.get('exclude');
     if (excludeId) {
@@ -969,6 +925,46 @@ export default function StartNavigationPage() {
     }
     return sortedMeldingen;
   }, [sortedMeldingen, searchParams, routeType]);
+
+  // Sync customSortedIds with the automatic sort
+  React.useEffect(() => {
+    if (routeType !== 'meldingen' || !baseSortedMeldingen.length) {
+        setCustomSortedIds(null);
+        return;
+    }
+    
+    if (customSortedIds === null) {
+        setCustomSortedIds(baseSortedMeldingen.map(m => m.id));
+    } else {
+        const currentIds = baseSortedMeldingen.map(m => m.id);
+        const filteredCustom = customSortedIds.filter(id => currentIds.includes(id));
+        const newIds = currentIds.filter(id => !customSortedIds.includes(id));
+        
+        if (newIds.length > 0 || filteredCustom.length !== customSortedIds.length) {
+            setCustomSortedIds([...filteredCustom, ...newIds]);
+        }
+    }
+  }, [baseSortedMeldingen, routeType]);
+
+  const finalSortedMeldingen = React.useMemo(() => {
+    if (routeType !== 'meldingen' || !baseSortedMeldingen.length || !customSortedIds) return baseSortedMeldingen;
+    const map = new Map(baseSortedMeldingen.map(m => [m.id, m]));
+    return customSortedIds.map(id => map.get(id)).filter((m): m is Melding => !!m);
+  }, [baseSortedMeldingen, customSortedIds, routeType]);
+
+  const moveMelding = (index: number, direction: 'up' | 'down') => {
+    if (!customSortedIds) return;
+    const newIds = [...customSortedIds];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (targetIndex < 0 || targetIndex >= newIds.length) return;
+    
+    const temp = newIds[index];
+    newIds[index] = newIds[targetIndex];
+    newIds[targetIndex] = temp;
+    
+    setCustomSortedIds(newIds);
+  };
 
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
@@ -1008,7 +1004,6 @@ export default function StartNavigationPage() {
     setIsStarting(false);
   }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, finalSortedMeldingen, objectsOnMap, uniqueObjectsOnMap, toast]);
 
-  // Effect to resume navigation automatically when returning from a finished work order
   React.useEffect(() => {
     const isResume = searchParams.get('resume') === 'true';
     if (isResume && !hasResumed && !isLoadingProjects && projects && routeType === 'meldingen') {
@@ -1017,7 +1012,6 @@ export default function StartNavigationPage() {
             if (userLocation) {
                 setCurrentActiveSortBase(userLocation);
             }
-            // Add a small delay to ensure states are settled
             const timer = setTimeout(() => handleStartRoute(false), 100);
             return () => clearTimeout(timer);
         } else if (rawMeldingen && rawMeldingen.length === 0) {
@@ -1285,6 +1279,16 @@ export default function StartNavigationPage() {
                               </h3>
                           </div>
                           <div className="flex items-center gap-2">
+                              {!showCompletedToday && customSortedIds && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-slate-200"
+                                  onClick={() => setCustomSortedIds(null)}
+                                >
+                                  <RefreshCw className="h-3 w-3" /> ROUTE OPTIMALISEREN
+                                </Button>
+                              )}
                               <Button 
                                 variant={showCompletedToday ? "default" : "outline"}
                                 size="sm"
@@ -1303,7 +1307,7 @@ export default function StartNavigationPage() {
                           <Table className="min-w-[1200px] border-collapse">
                               <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
                                   <TableRow className="h-8 hover:bg-transparent">
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-12 text-center">#</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-16 text-center">#</TableHead>
                                       <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Intakenr.</TableHead>
                                       <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Adresgegevens</TableHead>
                                       <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Omschrijving</TableHead>
@@ -1318,7 +1322,7 @@ export default function StartNavigationPage() {
                                           <TableRow 
                                             key={m.id} 
                                             className={cn(
-                                                "h-9 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group",
+                                                "h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group",
                                                 activePopupMeldingId === m.id && "bg-blue-50/80"
                                             )}
                                             onClick={() => {
@@ -1328,7 +1332,29 @@ export default function StartNavigationPage() {
                                                 }
                                             }}
                                           >
-                                              <TableCell className="font-black text-xs text-center border-r bg-slate-50/50 text-primary w-12">{index + 1}</TableCell>
+                                              <TableCell className="p-0 border-r bg-slate-50/50 text-primary w-16">
+                                                  {!showCompletedToday ? (
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <button 
+                                                            className="text-slate-300 hover:text-primary disabled:opacity-10 py-0.5" 
+                                                            onClick={(e) => { e.stopPropagation(); moveMelding(index, 'up'); }}
+                                                            disabled={index === 0}
+                                                        >
+                                                            <ChevronUp className="h-4 w-4" />
+                                                        </button>
+                                                        <span className="font-black text-xs leading-none my-0.5">{index + 1}</span>
+                                                        <button 
+                                                            className="text-slate-300 hover:text-primary disabled:opacity-10 py-0.5" 
+                                                            onClick={(e) => { e.stopPropagation(); moveMelding(index, 'down'); }}
+                                                            disabled={index === tableData.length - 1}
+                                                        >
+                                                            <ChevronDown className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="text-center font-black text-xs">{index + 1}</div>
+                                                  )}
+                                              </TableCell>
                                               <TableCell className="font-black text-[11px] border-r group-hover:text-primary transition-colors px-3">{m.intakenummer}</TableCell>
                                               <TableCell className="text-[11px] font-bold border-r px-3">
                                                   <div className="flex flex-col leading-tight">
