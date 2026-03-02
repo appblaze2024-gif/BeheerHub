@@ -393,8 +393,8 @@ export default function IssuesPage() {
                                             <p className="font-bold text-slate-900">{selectedMelding.datum} • {selectedMelding.tijdstip || '--:--'}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Wijk / Gebied</p>
-                                            <p className="font-bold text-slate-900 uppercase truncate">{selectedMelding.wijk || '-'}</p>
+                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Wijk / Werkgebied</p>
+                                            <p className="font-bold text-slate-900 uppercase truncate">{selectedMelding.werkgebied || selectedMelding.wijk || '-'}</p>
                                         </div>
                                         <div className="col-span-2 space-y-1">
                                             <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
