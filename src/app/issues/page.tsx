@@ -280,19 +280,22 @@ export default function IssuesPage() {
 
   const handleStartWork = async () => {
     if (!firestore || !selectedMelding?.id) return;
-    await updateDocumentNonBlocking(doc(firestore, 'meldingen', selectedMelding.id), { workStartedAt: new Date().toISOString() });
+    updateDocumentNonBlocking(doc(firestore, 'meldingen', selectedMelding.id), { workStartedAt: new Date().toISOString() });
   };
 
   const handleAfronden = async () => {
     if (!firestore || !selectedMelding?.id || !user) return;
     setIsSubmitting(true);
+    
+    const mId = selectedMelding.id;
     let minutesWorked = selectedMelding.gewerkteMinuten || 0;
     if (selectedMelding.workStartedAt) {
       minutesWorked += Math.round((Date.now() - new Date(selectedMelding.workStartedAt).getTime()) / (1000 * 60));
     }
     const finisher = profile?.displayName || user.email || 'Onbekend';
+    
     try {
-        await updateDocumentNonBlocking(doc(firestore, 'meldingen', selectedMelding.id), {
+        updateDocumentNonBlocking(doc(firestore, 'meldingen', mId), {
             status: 'Afgerond',
             afhandeling_datum: format(new Date(), 'yyyy-MM-dd'),
             afhandeling_tijdstip: format(new Date(), 'HH:mm'),
@@ -303,7 +306,8 @@ export default function IssuesPage() {
         });
         toast({ title: 'Werkbon afgerond' });
         setSelectedMeldingId(null);
-        router.push('/navigation-module?type=meldingen');
+        // Redirect directly to navigation module with resume flag and exclude the completed ID
+        router.push(`/navigation-module?type=meldingen&resume=true&exclude=${mId}`);
     } catch (error) { 
         toast({ variant: "destructive", title: 'Fout bij afronden' }); 
     } finally { 

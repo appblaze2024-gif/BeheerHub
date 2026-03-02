@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -798,6 +797,7 @@ export default function StartNavigationPage() {
   const [activePopupMeldingId, setActivePopupMeldingId] = React.useState<string | null>(null);
 
   const [showCompletedToday, setShowCompletedToday] = React.useState(false);
+  const [hasResumed, setHasResumed] = React.useState(false);
 
   const mapRef = React.useRef<MapRef>(null);
 
@@ -888,21 +888,19 @@ export default function StartNavigationPage() {
 
   const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
 
-  const getObjectPriority = (obj: any) => {
-    const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-    
-    const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
-    const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
-    
-    if (isPrullenbakMeerlanden) return 3;
-    if (isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond')) return 2;
-    return 1;
-  };
-
   const uniqueObjectsOnMap = React.useMemo(() => {
     if (!objectsOnMap) return [];
     const locationMap = new Map<string, MapObject>();
     
+    const getObjectPriority = (obj: any) => {
+        const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
+        const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
+        const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
+        if (isPrullenbakMeerlanden) return 3;
+        if (isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond')) return 2;
+        return 1;
+    };
+
     objectsOnMap.forEach(obj => {
       const key = `${obj.latitude.toFixed(5)}_${obj.longitude.toFixed(5)}`;
       const existing = locationMap.get(key);
@@ -963,11 +961,76 @@ export default function StartNavigationPage() {
     return result;
   }, [rawMeldingen, routeType, isPrivileged, profile, currentActiveSortBase]);
 
+  const finalSortedMeldingen = React.useMemo(() => {
+    if (routeType !== 'meldingen') return [];
+    const excludeId = searchParams.get('exclude');
+    if (excludeId) {
+        return sortedMeldingen.filter(m => m.id !== excludeId);
+    }
+    return sortedMeldingen;
+  }, [sortedMeldingen, searchParams, routeType]);
+
+  const handleStartRoute = React.useCallback(async (simulate = false) => {
+    setIsSimulationMode(simulate);
+    
+    let startLoc = userLocation || SIMULATION_START_LOCATION;
+    setIsStarting(true);
+
+    if (routeType === 'meldingen') {
+        const sourceList = finalSortedMeldingen;
+        if (sourceList.length === 0) { 
+            toast({ title: "Geen meldingen", description: "Geen aan u toegewezen meldingen gevonden." }); 
+            setIsStarting(false); 
+            return; 
+        }
+
+        const finalObjects = sourceList.map(m => ({ 
+            id: m.id, 
+            latitude: m.latitude, 
+            longitude: m.longitude, 
+            name: m.intakenummer,
+            createdAt: m.createdAt 
+        } as MapObject));
+        
+        setObjectsOnRoute(finalObjects);
+        setTripStartLocation(startLoc);
+    } else if (selectedRouteIdDef && objectsOnMap) {
+        const unique = uniqueObjectsOnMap;
+        const finalObjects = unique.map(obj => ({ ...obj } as MapObject));
+        setObjectsOnRoute(finalObjects);
+        setTripStartLocation(startLoc);
+    } else if (urlMeldingLocatie) {
+        setObjectsOnRoute([{ id: 'Bestemming', latitude: urlMeldingLocatie.latitude, longitude: urlMeldingLocatie.longitude, name: urlMeldingLocatie.straat || 'Melding' }]);
+        setTripStartLocation(startLoc);
+    }
+
+    setNavigationState('navigating');
+    setIsStarting(false);
+  }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, finalSortedMeldingen, objectsOnMap, uniqueObjectsOnMap, toast]);
+
+  // Effect to resume navigation automatically when returning from a finished work order
+  React.useEffect(() => {
+    const isResume = searchParams.get('resume') === 'true';
+    if (isResume && !hasResumed && !isLoadingProjects && projects && routeType === 'meldingen') {
+        if (finalSortedMeldingen.length > 0) {
+            setHasResumed(true);
+            if (userLocation) {
+                setCurrentActiveSortBase(userLocation);
+            }
+            // Add a small delay to ensure states are settled
+            const timer = setTimeout(() => handleStartRoute(false), 100);
+            return () => clearTimeout(timer);
+        } else if (rawMeldingen && rawMeldingen.length === 0) {
+            setHasResumed(true);
+        }
+    }
+  }, [searchParams, hasResumed, isLoadingProjects, projects, routeType, finalSortedMeldingen, handleStartRoute, userLocation, rawMeldingen]);
+
   React.useEffect(() => {
     const fetchPreview = async () => {
-        if (routeType === 'meldingen' && sortedMeldingen.length >= 1) {
+        if (routeType === 'meldingen' && finalSortedMeldingen.length >= 1) {
             const startWaypoint = `${currentActiveSortBase.longitude},${currentActiveSortBase.latitude}`;
-            const meldingWaypoints = sortedMeldingen.slice(0, 24).map(m => `${m.longitude},${m.latitude}`).join(';');
+            const meldingWaypoints = finalSortedMeldingen.slice(0, 24).map(m => `${m.longitude},${m.latitude}`).join(';');
             const waypoints = `${startWaypoint};${meldingWaypoints}`;
             
             const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
@@ -983,7 +1046,7 @@ export default function StartNavigationPage() {
         }
     };
     fetchPreview();
-  }, [sortedMeldingen, routeType, currentActiveSortBase]);
+  }, [finalSortedMeldingen, routeType, currentActiveSortBase]);
 
   React.useEffect(() => {
     if (!mapRef.current) return;
@@ -1021,50 +1084,13 @@ export default function StartNavigationPage() {
     }
   }, [previewRouteGeometry, routeGeoJSONFeatures, routeType]);
 
-  const handleStartRoute = React.useCallback(async (simulate = false) => {
-    setIsSimulationMode(simulate);
-    
-    let startLoc = userLocation || SIMULATION_START_LOCATION;
-    setIsStarting(true);
-
-    if (routeType === 'meldingen') {
-        if (sortedMeldingen.length === 0) { 
-            toast({ title: "Geen meldingen", description: "Geen aan u toegewezen meldingen gevonden." }); 
-            setIsStarting(false); 
-            return; 
-        }
-
-        const finalObjects = sortedMeldingen.map(m => ({ 
-            id: m.id, 
-            latitude: m.latitude, 
-            longitude: m.longitude, 
-            name: m.intakenummer,
-            createdAt: m.createdAt 
-        } as MapObject));
-        
-        setObjectsOnRoute(finalObjects);
-        setTripStartLocation(startLoc);
-    } else if (selectedRouteIdDef && objectsOnMap) {
-        const unique = uniqueObjectsOnMap;
-        const finalObjects = unique.map(obj => ({ ...obj } as MapObject));
-        setObjectsOnRoute(finalObjects);
-        setTripStartLocation(startLoc);
-    } else if (urlMeldingLocatie) {
-        setObjectsOnRoute([{ id: 'Bestemming', latitude: urlMeldingLocatie.latitude, longitude: urlMeldingLocatie.longitude, name: urlMeldingLocatie.straat || 'Melding' }]);
-        setTripStartLocation(startLoc);
-    }
-
-    setNavigationState('navigating');
-    setIsStarting(false);
-  }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, sortedMeldingen, objectsOnMap, uniqueObjectsOnMap, toast]);
-
   const isMeldingenType = routeType === 'meldingen';
 
   if (isRecalculating) {
       return <LoadingScreen message="BeheerHub AI optimaliseert uw route vanaf huidige locatie..." />;
   }
 
-  const tableData = showCompletedToday ? myCompletedToday : sortedMeldingen;
+  const tableData = showCompletedToday ? myCompletedToday : finalSortedMeldingen;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -1091,7 +1117,7 @@ export default function StartNavigationPage() {
                           variant="outline"
                           className="h-9 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl transition-all hidden sm:flex"
                           onClick={() => handleStartRoute(true)}
-                          disabled={(routeType === 'meldingen' ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
+                          disabled={(routeType === 'meldingen' ? !finalSortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                         >
                             <Gauge className="mr-2 h-4 w-4" /> SIMULATOR
                         </Button>
@@ -1099,7 +1125,7 @@ export default function StartNavigationPage() {
                       <Button 
                         className="h-9 px-6 font-black uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl"
                         onClick={() => handleStartRoute(false)}
-                        disabled={(routeType === 'meldingen' ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
+                        disabled={(routeType === 'meldingen' ? !finalSortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                       >
                           {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />}
                           START RIT
@@ -1123,7 +1149,7 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
 
-                    {routeType === 'meldingen' && !showCompletedToday && sortedMeldingen?.map((m, idx) => (
+                    {routeType === 'meldingen' && !showCompletedToday && finalSortedMeldingen?.map((m, idx) => (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
                             setActivePopupMeldingId(m.id);
                             if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
@@ -1193,18 +1219,10 @@ export default function StartNavigationPage() {
 
                     {routeType !== 'meldingen' && uniqueObjectsOnMap?.map(obj => {
                         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-                        
                         const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
                         const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
-                        
                         const useRecyclingBin = isPrullenbakMeerlanden;
-                        const useWasteBin = !useRecyclingBin && (
-                          isBrengpark || 
-                          typeStr.includes('container') || 
-                          typeStr.includes('ondergrond') ||
-                          typeStr.includes('ondergr') ||
-                          typeStr.includes('verzamel')
-                        );
+                        const useWasteBin = !useRecyclingBin && (isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond') || typeStr.includes('ondergr') || typeStr.includes('verzamel'));
                         
                         return (
                             <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center">
