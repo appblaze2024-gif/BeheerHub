@@ -31,6 +31,14 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
     
+    match /annual_planning_sections/{document=**} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /annual_planning_configs/{document=**} {
+      allow read, write: if isSignedIn();
+    }
+    
     match /annual_milestones/{document=**} {
       allow read, write: if isSignedIn();
     }
@@ -39,7 +47,6 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isPrivileged() || isAdmin();
 
-      // Wildcard match voor alle subcollecties (minutes, settings, etc.)
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
         allow write: if isPrivileged() || isAdmin();
@@ -88,14 +95,17 @@ service cloud.firestore {
     match /voertuigen/{id} {
       allow read: if isSignedIn();
       allow write: if isPrivileged() || isAdmin();
+      
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
         allow write: if isPrivileged() || isAdmin();
       }
     }
+    
     match /machines/{id} {
       allow read: if isSignedIn();
       allow write: if isPrivileged() || isAdmin();
+      
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
         allow write: if isPrivileged() || isAdmin();

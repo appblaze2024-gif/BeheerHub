@@ -147,6 +147,10 @@
       "schema": { "type": "object" },
       "description": "Schadehistorie."
     },
+    "/voertuigen/{voertuigId}/documents/{id}": {
+      "schema": { "type": "object" },
+      "description": "Documenten voertuig."
+    },
     "/machines/{machineId}": {
       "schema": { "type": "object" },
       "description": "Machinegegevens."
@@ -158,6 +162,26 @@
     "/machines/{machineId}/damages/{id}": {
       "schema": { "type": "object" },
       "description": "Schadehistorie machine."
+    },
+    "/machines/{machineId}/documents/{id}": {
+      "schema": { "type": "object" },
+      "description": "Documenten machine."
+    },
+    "/annual_planning_sections/{id}": {
+      "schema": { "type": "object" },
+      "description": "Secties van de jaarplanning."
+    },
+    "/annual_planning_configs/{id}": {
+      "schema": { "type": "object" },
+      "description": "Configuratie van de jaarplanning."
+    },
+    "/annual_planning/{id}": {
+      "schema": { "type": "object" },
+      "description": "Planning regels."
+    },
+    "/annual_milestones/{id}": {
+      "schema": { "type": "object" },
+      "description": "Jaarplanning mijlpalen."
     }
   }
 }

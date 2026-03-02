@@ -31,6 +31,14 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
     
+    match /annual_planning_sections/{document=**} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /annual_planning_configs/{document=**} {
+      allow read, write: if isSignedIn();
+    }
+    
     match /annual_milestones/{document=**} {
       allow read, write: if isSignedIn();
     }
