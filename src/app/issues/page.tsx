@@ -405,8 +405,8 @@ export default function IssuesPage() {
                                             <p className="font-bold text-slate-900 truncate">{selectedMelding.hoofdcategorie} • {selectedMelding.subcategorie}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Melder</p>
-                                            <p className="font-bold text-slate-900 truncate">{selectedMelding.melder || 'Anoniem'}</p>
+                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Soort Melder</p>
+                                            <p className="font-bold text-slate-900 truncate">{selectedMelding.soort_melder || selectedMelding.melder || 'Anoniem'}</p>
                                         </div>
                                     </div>
                                     <div className="flex-1 min-h-0 flex flex-col space-y-3">
