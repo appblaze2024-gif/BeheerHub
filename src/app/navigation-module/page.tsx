@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
+import MapGL, { Marker, Source, Layer, Popup, type MapRef } from 'react-map-gl';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -724,6 +724,7 @@ export default function StartNavigationPage() {
   const [urlMeldingLocatie, setUrlMeldingLocatie] = React.useState<{ latitude: number; longitude: number; straat?: string } | null>(null);
   
   const [previewRouteGeometry, setPreviewRouteGeometry] = React.useState<any>(null);
+  const [activePopupMeldingId, setActivePopupMeldingId] = React.useState<string | null>(null);
 
   const mapRef = React.useRef<MapRef>(null);
 
@@ -1035,6 +1036,7 @@ export default function StartNavigationPage() {
 
                     {routeType === 'meldingen' && sortedMeldingen?.map((m, idx) => (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
+                            setActivePopupMeldingId(m.id);
                             if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
                         }}>
                             <div className="relative flex flex-col items-center">
@@ -1050,6 +1052,27 @@ export default function StartNavigationPage() {
                             </div>
                         </Marker>
                     ))}
+
+                    {isMeldingenType && activePopupMeldingId && (
+                        <Popup
+                            longitude={sortedMeldingen.find(m => m.id === activePopupMeldingId)?.longitude || 0}
+                            latitude={sortedMeldingen.find(m => m.id === activePopupMeldingId)?.latitude || 0}
+                            anchor="bottom"
+                            onClose={() => setActivePopupMeldingId(null)}
+                            closeOnClick={false}
+                            className="z-[100]"
+                        >
+                            <div className="p-2 max-w-[250px]">
+                                <div className="flex items-center gap-2 mb-1.5 border-b pb-1.5">
+                                    <Bell className="h-3 w-3 text-primary" />
+                                    <p className="font-black text-[10px] uppercase text-primary tracking-tight">Melding {sortedMeldingen.find(m => m.id === activePopupMeldingId)?.intakenummer}</p>
+                                </div>
+                                <p className="text-[11px] font-bold text-slate-700 leading-relaxed italic">
+                                    "{sortedMeldingen.find(m => m.id === activePopupMeldingId)?.extra_informatie || 'Geen omschrijving.'}"
+                                </p>
+                            </div>
+                        </Popup>
+                    )}
 
                     {isMeldingenType && previewRouteGeometry && (
                         <Source id="preview-route" type="geojson" data={{ type: 'Feature', properties: {}, geometry: previewRouteGeometry }}>
@@ -1157,8 +1180,12 @@ export default function StartNavigationPage() {
                                       sortedMeldingen.map((m, index) => (
                                           <TableRow 
                                             key={m.id} 
-                                            className="h-9 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group"
+                                            className={cn(
+                                                "h-9 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group",
+                                                activePopupMeldingId === m.id && "bg-blue-50/80"
+                                            )}
                                             onClick={() => {
+                                                setActivePopupMeldingId(m.id);
                                                 if (mapRef.current) {
                                                     mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
                                                 }
