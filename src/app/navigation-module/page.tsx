@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -203,7 +204,27 @@ function NavigatingView({
 
   const totalSimDistanceRef = React.useRef(0);
 
-  const nextObject = objectsOnRoute[currentObjectIndex];
+  // Dynamic Nearest Target Selection
+  const nextObject = React.useMemo(() => {
+    const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id));
+    if (remaining.length === 0) return null;
+    
+    if (!targetLocation) return remaining[0];
+    
+    const currentPt = turf.point([targetLocation.longitude, targetLocation.latitude]);
+    let closest = remaining[0];
+    let minDist = Infinity;
+    
+    remaining.forEach(obj => {
+        const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]));
+        if (d < minDist) {
+            minDist = d;
+            closest = obj;
+        }
+    });
+    
+    return closest;
+  }, [objectsOnRoute, completedObjects, targetLocation?.latitude, targetLocation?.longitude]);
 
   const currentSpeedLimit = React.useMemo(() => {
     if (!currentLeg?.annotation?.maxspeed) return 50;
@@ -328,6 +349,22 @@ function NavigatingView({
     } catch (e) {}
   }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
 
+  // Recalculate route if user deviates from the path (Off-route detection)
+  React.useEffect(() => {
+    if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || arrivedObject) return;
+    
+    try {
+        const line = turf.lineString(currentRouteGeometry.coordinates);
+        const pt = turf.point([targetLocation.longitude, targetLocation.latitude]);
+        const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
+        
+        // If user is more than 40 meters away from the route line, trigger a refresh
+        if (snapped.properties.dist! > 40) {
+            setCurrentRouteGeometry(null); 
+        }
+    } catch (e) {}
+  }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isCalculatingRoute, arrivedObject]);
+
   React.useEffect(() => {
     if (!currentRouteGeometry || !snappedLocation) { 
       setThrottledGeometry(null); 
@@ -437,6 +474,7 @@ function NavigatingView({
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     if (lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
+    
     const fetchRoute = async () => {
       setIsCalculatingRoute(true); lastFetchedTargetId.current = nextObject.id;
       const { longitude, latitude } = targetLocation;
@@ -464,19 +502,9 @@ function NavigatingView({
     setCompletedObjects(prev => [...prev, finishedId]);
     setArrivedObject(null);
     setHasReachedCurrentTarget(false);
-    const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id) && obj.id !== finishedId);
-    if (remaining.length > 0) {
-        const currentPt = turf.point([targetLocation!.longitude, targetLocation!.latitude]);
-        let nextIdx = 0; let minDist = Infinity;
-        objectsOnRoute.forEach((obj, idx) => {
-            if (!completedObjects.includes(obj.id) && obj.id !== finishedId) {
-                const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]));
-                if (d < minDist) { minDist = d; nextIdx = idx; }
-            }
-        });
-        setCurrentObjectIndex(nextIdx);
-    } else setCurrentObjectIndex(objectsOnRoute.length); 
-    setCurrentRouteGeometry(null); setCurrentLeg(null); lastFetchedTargetId.current = null;
+    setCurrentRouteGeometry(null); 
+    setCurrentLeg(null); 
+    lastFetchedTargetId.current = null;
   };
 
   const handleJumpToArrival = (e: React.MouseEvent) => {
@@ -502,7 +530,11 @@ function NavigatingView({
   }, [currentLeg, distanceRemainingToDestination]);
   const distanceKm = React.useMemo(() => (distanceRemainingToDestination / 1000).toFixed(1), [distanceRemainingToDestination]);
 
-  if (currentObjectIndex >= objectsOnRoute.length && objectsOnRoute.length > 0 && !arrivedObject && !isCalculatingRoute) {
+  const isRouteFinished = React.useMemo(() => {
+    return completedObjects.length === objectsOnRoute.length && objectsOnRoute.length > 0 && !arrivedObject && !isCalculatingRoute;
+  }, [completedObjects, objectsOnRoute, arrivedObject, isCalculatingRoute]);
+
+  if (isRouteFinished) {
     return (
         <div className="flex flex-col items-center justify-center h-full gap-4 bg-background p-6 text-center">
             <CheckCircle2 className="h-16 w-16 text-green-500" />
@@ -535,7 +567,7 @@ function NavigatingView({
         )}
         {objectsOnRoute.map((obj, idx) => {
             if (completedObjects.includes(obj.id)) return null;
-            const isTarget = idx === currentObjectIndex;
+            const isTarget = nextObject?.id === obj.id;
             const inRange = isTarget && hasReachedCurrentTarget;
             
             const isMelding = routeType === 'meldingen';
@@ -578,9 +610,6 @@ function NavigatingView({
                             ) : (
                                 <Icon className="h-5 w-5 text-white stroke-[2.5]" />
                             )}
-                            <div className="absolute -top-2 -right-2 bg-white text-primary rounded-full w-5 h-5 flex items-center justify-center border-2 border-primary shadow-sm">
-                                <span className="font-black text-[9px]">{idx + 1}</span>
-                            </div>
                         </div>
                     </div>
                 </Marker>
@@ -631,14 +660,17 @@ function NavigatingView({
                       <div className="mx-auto bg-blue-100 p-2.5 rounded-2xl w-14 h-14 flex items-center justify-center mb-4 shadow-sm">
                         <MapPin className="h-7 w-7 text-blue-600 fill-current" />
                       </div>
-                      <CardTitle className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none mb-2">Bestemming Selectie</CardTitle>
+                      <CardTitle className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none mb-2">Bestemming Bereikt</CardTitle>
                       <CardDescription className="text-xs font-bold uppercase tracking-widest text-slate-400">
                         {routeType === 'meldingen' ? 'Meldingsnummer' : 'Object ID'}: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span>
                       </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-0 space-y-3 flex flex-col items-center">
-                      <Button onClick={() => { if (routeType === 'meldingen') router.push(`/issues?id=${arrivedObject.id}`); else router.push(`/objects?id=${arrivedObject.id}`); }} className="w-full h-12 bg-primary hover:bg-primary/90 text-sm font-black uppercase tracking-widest gap-2 rounded-2xl shadow-xl shadow-primary/20">
-                          <FileText className="h-5 w-5" /> Open Details
+                      <Button onClick={() => handleArrivedAction('finish')} className="w-full h-12 bg-green-600 hover:bg-green-700 text-sm font-black uppercase tracking-widest gap-2 rounded-2xl shadow-xl shadow-green-600/20">
+                          <CheckCircle2 className="h-5 w-5" /> AFHANDELEN
+                      </Button>
+                      <Button onClick={() => { if (routeType === 'meldingen') router.push(`/issues?id=${arrivedObject.id}`); else router.push(`/objects?id=${arrivedObject.id}`); }} variant="outline" className="w-full h-12 border-2 text-sm font-black uppercase tracking-widest gap-2 rounded-2xl">
+                          <FileText className="h-5 w-5" /> Details
                       </Button>
                       <Button variant="ghost" onClick={() => setArrivedObject(null)} className="w-full h-10 text-xs font-black uppercase tracking-[0.15em] text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl">Sluiten</Button>
                   </CardContent>
@@ -944,22 +976,8 @@ export default function StartNavigationPage() {
         setObjectsOnRoute(finalObjects);
         setTripStartLocation(startLoc);
     } else if (selectedRouteIdDef && objectsOnMap) {
-        // Use the priority-deduplicated list
         const unique = uniqueObjectsOnMap;
-
-        const unvisited = [...unique]; 
-        let currentPos = startLoc;
-        let finalObjects: MapObject[] = [];
-        while (unvisited.length > 0) {
-          let nearestIdx = 0; let minD = Infinity;
-          unvisited.forEach((u, i) => {
-            const d = turf.distance(turf.point([currentPos.longitude, currentPos.latitude]), turf.point([u.longitude, u.latitude]));
-            if (d < minD) { minD = d; nearestIdx = i; }
-          });
-          const next = unvisited.splice(nearestIdx, 1)[0];
-          finalObjects.push(next); 
-          currentPos = { latitude: next.latitude, longitude: next.longitude };
-        }
+        const finalObjects = unique.map(obj => ({ ...obj } as MapObject));
         setObjectsOnRoute(finalObjects);
         setTripStartLocation(startLoc);
     } else if (urlMeldingLocatie) {
