@@ -701,11 +701,14 @@ function NavigatingView({
                       </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-0 space-y-3 flex flex-col items-center">
-                      <Button onClick={() => handleArrivedAction('finish')} className="w-full h-12 bg-green-600 hover:bg-green-700 text-sm font-black uppercase tracking-widest gap-2 rounded-2xl shadow-xl shadow-green-600/20">
-                          <CheckCircle2 className="h-5 w-5" /> AFHANDELEN
-                      </Button>
-                      <Button onClick={() => { if (routeType === 'meldingen') router.push(`/issues?id=${arrivedObject.id}`); else router.push(`/objects?id=${arrivedObject.id}`); }} variant="outline" className="w-full h-12 border-2 text-sm font-black uppercase tracking-widest gap-2 rounded-2xl">
-                          <FileText className="h-5 w-5" /> Details
+                      <Button 
+                        onClick={() => { 
+                          if (routeType === 'meldingen') router.push(`/issues?id=${arrivedObject.id}`); 
+                          else router.push(`/objects?id=${arrivedObject.id}`); 
+                        }} 
+                        className="w-full h-12 bg-primary hover:bg-primary/90 text-sm font-black uppercase tracking-widest gap-2 rounded-2xl shadow-xl shadow-primary/20"
+                      >
+                          <FileText className="h-5 w-5" /> WERKBON OPENEN
                       </Button>
                       <Button variant="ghost" onClick={() => setArrivedObject(null)} className="w-full h-10 text-xs font-black uppercase tracking-[0.15em] text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl">Sluiten</Button>
                   </CardContent>
