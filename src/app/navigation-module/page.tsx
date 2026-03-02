@@ -203,11 +203,40 @@ function NavigatingView({
 
   const totalSimDistanceRef = React.useRef(0);
 
-  // Hybrid Priority Routing: Oldest First + Nearest within group
+  /**
+   * Hybrid Priority Routing logic:
+   * 1. Check if any task is VERY CLOSE (within 500m radius).
+   * 2. If yes, take the nearest of those.
+   * 3. Else, follow the age-batch logic: find the oldest item, get its batch, and pick nearest in that batch.
+   */
   const nextObject = React.useMemo(() => {
     const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id));
     if (remaining.length === 0) return null;
     
+    const currentPt = targetLocation ? turf.point([targetLocation.longitude, targetLocation.latitude]) : null;
+
+    // A. Priority Exception: Check for items in the immediate vicinity (500m)
+    if (routeType === 'meldingen' && currentPt) {
+        const nearItems = remaining.filter(obj => {
+            const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]), { units: 'meters' });
+            return d < 500;
+        });
+
+        if (nearItems.length > 0) {
+            let closestNear = nearItems[0];
+            let minDistNear = Infinity;
+            nearItems.forEach(obj => {
+                const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]));
+                if (d < minDistNear) {
+                    minDistNear = d;
+                    closestNear = obj;
+                }
+            });
+            return closestNear;
+        }
+    }
+
+    // B. Default Logic: Age-Batch Priority
     // Sort by age (oldest first)
     const sortedByAge = [...remaining].sort((a, b) => {
         const timeA = (a as any).createdAt?.seconds || 0;
@@ -215,9 +244,6 @@ function NavigatingView({
         return timeA - timeB;
     });
 
-    // To prevent cherry-picking only new nearby items, we define a "priority group"
-    // consisting of items that are significantly older. 
-    // If the route is 'meldingen', we strictly respect age batches (e.g. 24h window).
     let priorityGroup = sortedByAge;
     
     if (routeType === 'meldingen') {
@@ -231,12 +257,12 @@ function NavigatingView({
     
     if (!targetLocation) return priorityGroup[0];
     
-    const currentPt = turf.point([targetLocation.longitude, targetLocation.latitude]);
+    const pt = turf.point([targetLocation.longitude, targetLocation.latitude]);
     let closest = priorityGroup[0];
     let minDist = Infinity;
     
     priorityGroup.forEach(obj => {
-        const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]));
+        const d = turf.distance(pt, turf.point([obj.longitude, obj.latitude]));
         if (d < minDist) {
             minDist = d;
             closest = obj;
@@ -1240,7 +1266,7 @@ export default function StartNavigationPage() {
                                       <TableRow>
                                           <TableCell colSpan={7} className="text-center py-12 text-muted-foreground opacity-30">
                                               <LayoutGrid className="h-8 w-8 mx-auto mb-2" />
-                                              <p className="font-black uppercase tracking-widest text-[10px]">Geen openstaande meldingen voor uitvoering</p>
+                                              <p className="font-black uppercase tracking-widest text-[10px]">Geen openstaande meldingen for uitvoering</p>
                                           </TableCell>
                                       </TableRow>
                                   )}
