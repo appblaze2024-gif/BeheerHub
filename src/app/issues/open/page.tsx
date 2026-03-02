@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, Info, User, Pencil } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, Info, User, Pencil, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -172,7 +172,12 @@ export default function OpenIssuesPage() {
                                     <TableCell className="py-2 px-4 border-r border-slate-100 hidden md:table-cell font-medium text-slate-500">{melding.hoofdcategorie || '-'}</TableCell>
                                     <TableCell className="py-2 px-4 border-r border-slate-100 font-bold text-slate-900">{melding.subcategorie || '-'}</TableCell>
                                     <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-medium">{[melding.straatnaam, melding.huisnummer].filter(Boolean).join(' ') || '-'}</TableCell>
-                                    <TableCell className="truncate py-2 px-4 border-r border-slate-100 hidden xl:table-cell text-xs">{melding.wijk || '-'}</TableCell>
+                                    <TableCell className="truncate py-2 px-4 border-r border-slate-100 hidden xl:table-cell text-xs">
+                                        <div className="flex items-center gap-1.5">
+                                            <LayoutGrid className="h-3 w-3 text-slate-300" />
+                                            <span className="font-bold">{melding.werkgebied || melding.wijk || '-'}</span>
+                                        </div>
+                                    </TableCell>
                                     <TableCell 
                                         className={cn(
                                             "py-2 px-4 border-r border-slate-100 group/cell",
