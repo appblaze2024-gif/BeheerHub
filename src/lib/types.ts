@@ -1,4 +1,3 @@
-
 export type UserPermissions = {
   [module: string]: {
     view?: boolean;
@@ -230,6 +229,7 @@ export type Project = {
     unavailable: Record<string, string[]>;
     available: Record<string, string[]>;
   };
+  objectFilter?: string | null;
 };
 
 export type Bestand = {

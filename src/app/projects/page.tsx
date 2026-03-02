@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home, Truck, Search, ChevronRight, CornerDownRight, PlusCircle, Loader2 } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home, Truck, Search, ChevronRight, CornerDownRight, PlusCircle, Loader2, Tag } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -30,6 +30,8 @@ import {
   deleteDocumentNonBlocking,
   useFirebaseApp,
   useMemoFirebase,
+  useDoc,
+  setDocumentNonBlocking,
 } from '@/firebase';
 import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
@@ -93,6 +95,7 @@ const EMPTY_PROJECT: Project = {
   wijken: [],
   veegroutes: [],
   prullenbakkenroutes: [],
+  objectFilter: null,
 };
 
 export type Afspraak = {
@@ -1232,6 +1235,10 @@ export default function ProjectsPage() {
   const canEdit = isSuperUser || !!profile?.permissions?.projects?.edit;
   const canDelete = isSuperUser || !!profile?.permissions?.projects?.delete;
 
+  const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
+  const { data: filtersData } = useDoc<{ custom: string[] }>(filtersRef);
+  const customFilters = filtersData?.custom || [];
+
   const projectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
@@ -1328,7 +1335,7 @@ export default function ProjectsPage() {
     }
   };
   
-  const handleInputChange = (field: keyof Project, value: string) => {
+  const handleInputChange = (field: keyof Project, value: any) => {
       setCurrentProject(prev => ({...prev, [field]: value}));
   }
 
@@ -1418,6 +1425,30 @@ export default function ProjectsPage() {
                     {project.projectnaam} [{project.projectnummer}]
                     </SelectItem>
                 ))}
+                </SelectContent>
+            </Select>
+
+            <Label
+                htmlFor="select-object-filter"
+                className="font-bold uppercase text-[10px] tracking-widest text-slate-400 whitespace-nowrap ml-4"
+            >
+                Objecten:
+            </Label>
+            <Select
+                value={currentProject.objectFilter || 'all'}
+                onValueChange={(val) => handleInputChange('objectFilter', val === 'all' ? null : val)}
+                disabled={!canEdit || !selectedProjectId}
+            >
+                <SelectTrigger id="select-object-filter" className="w-full md:w-48 h-10 font-bold">
+                    <SelectValue placeholder="Kies filter..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Alle Objecten</SelectItem>
+                    <SelectItem value="prullenbak">Prullenbakken</SelectItem>
+                    <SelectItem value="container">Containers</SelectItem>
+                    {customFilters.filter(f => !!f).map(f => (
+                        <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
                 </SelectContent>
             </Select>
           </div>
