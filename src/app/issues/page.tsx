@@ -373,59 +373,59 @@ export default function IssuesPage() {
                     </TabsList>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-6">
-                    <TabsContent value="Werkzaamheden" className="mt-0">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <Card className="rounded-3xl bg-white shadow-xl border-none flex flex-col h-full overflow-hidden">
-                                <CardHeader className="bg-slate-500 text-white p-6 shrink-0">
+                <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+                    <TabsContent value="Werkzaamheden" className="mt-0 h-full">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                            <Card className="rounded-2xl bg-white shadow-xl border-none flex flex-col h-full overflow-hidden">
+                                <CardHeader className="bg-slate-500 text-white p-5 shrink-0">
                                     <div className="flex justify-between items-start">
                                         <div className="space-y-1">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">Intakenummer</p>
-                                            <CardTitle className="text-2xl font-black uppercase tracking-tight">{selectedMelding.intakenummer}</CardTitle>
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-blue-200">Intakenummer</p>
+                                            <CardTitle className="text-xl font-black uppercase tracking-tight">{selectedMelding.intakenummer}</CardTitle>
                                         </div>
-                                        <Badge className="bg-blue-500 text-white border-none font-black text-[10px] h-6 px-3">{selectedMelding.status}</Badge>
+                                        <Badge className="bg-blue-500 text-white border-none font-black text-[9px] h-5 px-2.5">{selectedMelding.status}</Badge>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="p-8 space-y-8 flex-1 flex flex-col min-h-0">
-                                    <div className="grid grid-cols-2 gap-x-12 gap-y-6 shrink-0">
-                                        <div className="space-y-1">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Datum & Tijd</p>
-                                            <p className="font-bold text-slate-900">{selectedMelding.datum} • {selectedMelding.tijdstip || '--:--'}</p>
+                                <CardContent className="p-6 space-y-6 flex-1 flex flex-col min-h-0">
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-4 shrink-0">
+                                        <div className="space-y-0.5">
+                                            <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Datum & Tijd</p>
+                                            <p className="text-xs font-bold text-slate-900">{selectedMelding.datum} • {selectedMelding.tijdstip || '--:--'}</p>
                                         </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Wijk / Werkgebied</p>
-                                            <p className="font-bold text-slate-900 uppercase truncate">{selectedMelding.werkgebied || selectedMelding.wijk || '-'}</p>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Wijk / Werkgebied</p>
+                                            <p className="text-xs font-bold text-slate-900 uppercase truncate">{selectedMelding.werkgebied || selectedMelding.wijk || '-'}</p>
                                         </div>
-                                        <div className="col-span-2 space-y-1">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
-                                            <p className="font-bold text-slate-900">{selectedMelding.straatnaam} {selectedMelding.huisnummer}, {selectedMelding.plaats}</p>
+                                        <div className="col-span-2 space-y-0.5">
+                                            <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
+                                            <p className="text-xs font-bold text-slate-900">{selectedMelding.straatnaam} {selectedMelding.huisnummer}, {selectedMelding.plaats}</p>
                                         </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Categorie</p>
-                                            <p className="font-bold text-slate-900 truncate">{selectedMelding.hoofdcategorie} • {selectedMelding.subcategorie}</p>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Categorie</p>
+                                            <p className="text-xs font-bold text-slate-900 truncate">{selectedMelding.hoofdcategorie} • {selectedMelding.subcategorie}</p>
                                         </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Soort Melder</p>
-                                            <p className="font-bold text-slate-900 truncate">{selectedMelding.soort_melder || selectedMelding.melder || 'Anoniem'}</p>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Soort Melder</p>
+                                            <p className="text-xs font-bold text-slate-900 truncate">{selectedMelding.soort_melder || selectedMelding.melder || 'Anoniem'}</p>
                                         </div>
                                         {selectedMelding.containernummer && (
-                                            <div className="space-y-1">
-                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Containernummer</p>
-                                                <p className="font-bold text-slate-900">{selectedMelding.containernummer}</p>
+                                            <div className="space-y-0.5">
+                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Containernummer</p>
+                                                <p className="text-xs font-bold text-slate-900">{selectedMelding.containernummer}</p>
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex-1 min-h-0 flex flex-col space-y-3">
-                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest shrink-0">Omschrijving melding</p>
-                                        <ScrollArea className="flex-1 bg-slate-50 rounded-2xl border border-slate-100 p-5">
-                                            <p className="text-sm italic text-slate-600 font-medium leading-relaxed">
+                                    <div className="flex-1 min-h-0 flex flex-col space-y-2">
+                                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest shrink-0">Omschrijving melding</p>
+                                        <ScrollArea className="flex-1 bg-slate-50 rounded-xl border border-slate-100 p-4">
+                                            <p className="text-xs italic text-slate-600 font-medium leading-relaxed">
                                                 "{selectedMelding.extra_informatie || 'Geen omschrijving opgegeven.'}"
                                             </p>
                                         </ScrollArea>
                                     </div>
                                 </CardContent>
                             </Card>
-                            <div className="rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl min-h-[450px]">
+                            <div className="rounded-2xl overflow-hidden border-2 border-white shadow-2xl min-h-[400px]">
                                 <MapboxView 
                                   latitude={selectedMelding.latitude} 
                                   longitude={selectedMelding.longitude} 
