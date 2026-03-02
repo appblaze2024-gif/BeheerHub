@@ -1007,7 +1007,7 @@ export default function StartNavigationPage() {
                         </Button>
                       )}
                       <Button 
-                        className="h-9 px-6 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 shadow-2xl rounded-2xl"
+                        className="h-9 px-6 font-black uppercase tracking-widest bg-green-600 text-white hover:bg-green-700 shadow-2xl rounded-2xl"
                         onClick={() => handleStartRoute(false)}
                         disabled={(routeType === 'meldingen' ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                       >
