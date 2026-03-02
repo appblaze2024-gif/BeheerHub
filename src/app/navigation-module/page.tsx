@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -1137,6 +1138,20 @@ export default function StartNavigationPage() {
                                 <div className="w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white hover:scale-125 transition-transform cursor-pointer relative z-0">
                                     {idx + 1}
                                 </div>
+                            </div>
+                        </Marker>
+                    ))}
+
+                    {routeType === 'meldingen' && showCompletedToday && myCompletedToday?.map((m) => (
+                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
+                            setActivePopupMeldingId(m.id);
+                            if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
+                        }}>
+                            <div className="relative flex flex-col items-center">
+                                <div className={cn(
+                                    "w-5 h-5 bg-green-600 rounded-full border-2 border-white shadow-lg transition-all cursor-pointer relative z-0",
+                                    activePopupMeldingId === m.id ? "scale-150 ring-4 ring-green-500/30" : "hover:scale-110"
+                                )} />
                             </div>
                         </Marker>
                     ))}
