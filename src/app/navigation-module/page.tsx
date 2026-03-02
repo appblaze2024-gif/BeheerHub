@@ -430,7 +430,7 @@ function NavigatingView({
         } catch (e) {}
         simAnimationRef.current = requestAnimationFrame(runSimulation);
     };
-    simAnimationRef.current = requestAnimationFrame(runSimulation);
+    runSimulation(performance.now());
     return () => { if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); };
   }, [isSimulating, currentRouteGeometry, nextObject?.id]);
 
@@ -1007,7 +1007,7 @@ export default function StartNavigationPage() {
                         </Button>
                       )}
                       <Button 
-                        className="h-9 px-6 font-black uppercase tracking-widest bg-green-600 text-white hover:bg-green-700 shadow-2xl rounded-2xl"
+                        className="h-9 px-6 font-black uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl"
                         onClick={() => handleStartRoute(false)}
                         disabled={(routeType === 'meldingen' ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                       >
