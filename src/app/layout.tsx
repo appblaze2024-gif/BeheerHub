@@ -4,7 +4,6 @@ import './globals.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Suspense, useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import Script from 'next/script';
 import { cn } from '@/lib/utils';
 import {
   FirebaseClientProvider,
@@ -31,7 +30,6 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { NotificationCenter } from '@/components/notification-center';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AppInfoDialog } from '@/components/app-info-dialog';
-import { LanguageSelector } from '@/components/language-selector';
 
 function ProcessingOverlay() {
   const { isProcessing } = useGlobalLoading();
@@ -82,7 +80,6 @@ function Header() {
 
       <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm p-1 rounded-full shadow-sm border border-slate-100">
         <div className="flex items-center gap-0.5 md:gap-1 md:pr-4 md:border-r border-slate-100">
-          <LanguageSelector />
           <div className="relative">
             <NotificationCenter />
           </div>
@@ -132,27 +129,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const { isHeaderVisible } = useNavigationUI();
   const { isUserLoading } = useUser();
   const { isLoading: isProfileLoading } = useProfile();
-  const pathname = usePathname();
-
-  // Handle translation persistency and SPA updates
-  useEffect(() => {
-    const handleTranslationUpdate = () => {
-      // Small delay to let React render, then poke the Google Translate widget
-      const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
-      if (combo) {
-        const match = document.cookie.match(/googtrans=\/nl\/([^;]+)/);
-        const targetLang = match ? match[1] : 'nl';
-        
-        if (combo.value !== targetLang) {
-          combo.value = targetLang;
-          combo.dispatchEvent(new Event('change'));
-        }
-      }
-    };
-    
-    const timer = setTimeout(handleTranslationUpdate, 500);
-    return () => clearTimeout(timer);
-  }, [pathname]);
 
   if (isUserLoading || isProfileLoading) {
     return <LoadingScreen className="h-screen" />;
@@ -171,29 +147,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <Toaster />
-      
-      {/* Hidden container for Google Translate widget */}
-      <div id="google_translate_element" style={{ visibility: 'hidden', position: 'absolute', top: -100 }} />
-      
-      <Script
-        id="google-translate-init"
-        strategy="afterInteractive"
-      >
-        {`
-          window.googleTranslateElementInit = function() {
-            new google.translate.TranslateElement({
-              pageLanguage: 'nl',
-              includedLanguages: 'nl,en,pl,uk,de,hu',
-              autoDisplay: false,
-              layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-            }, 'google_translate_element');
-          }
-        `}
-      </Script>
-      <Script
-        src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-        strategy="afterInteractive"
-      />
     </div>
   );
 }
