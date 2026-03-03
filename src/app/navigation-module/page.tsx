@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { MapboxView } from '@/components/mapbox-view';
 import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
@@ -626,7 +627,7 @@ export default function StartNavigationPage() {
     if (user && firestore) {
       updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: safeOffset });
     }
-    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }, duration: 200 });
+    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: Number(safeOffset) || 0, left: 0, right: 0 }, duration: 200 });
   };
 
   React.useEffect(() => {
