@@ -40,7 +40,8 @@ import {
   Settings,
   Sliders,
   Table as TableIcon,
-  History
+  History,
+  AlertCircle
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -693,7 +694,9 @@ export default function StartNavigationPage() {
         setDisplayedRouteGeometry(null);
         return;
     }
-    const startPos = userLocation || SIMULATION_START_LOCATION;
+    
+    // Capture current start position: use current smooth location if navigating
+    const startPos = (navigationState === 'navigating' ? smoothLocation : (userLocation || SIMULATION_START_LOCATION));
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypointsStr}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
@@ -708,20 +711,26 @@ export default function StartNavigationPage() {
             if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(data.routes[0].geometry.coordinates);
                 const bbox = turf.bbox(line);
-                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                    padding: { top: 150, bottom: 550, left: 150, right: 150 }, 
-                    duration: 1500 
-                });
+                if (bbox[0] !== Infinity) {
+                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
+                        padding: { top: 150, bottom: 550, left: 150, right: 150 }, 
+                        duration: 1500 
+                    });
+                }
             }
         }
     } catch (e) { console.error("Route error:", e); }
-  }, [sortedMissions, userLocation]);
+  }, [sortedMissions, userLocation, navigationState, smoothLocation]);
 
+  // Effect to automatically update route line when missions change
   React.useEffect(() => {
-    if (navigationState === 'setup' && sortedMissions.length > 0) {
-        fetchRoute(true);
+    if (sortedMissions.length > 0) {
+        fetchRoute(navigationState === 'setup');
+    } else if (rawMeldingen && sortedMissions.length === 0) {
+        setCurrentRouteGeometry(null);
+        setDisplayedRouteGeometry(null);
     }
-  }, [sortedMissions.length, navigationState, fetchRoute]);
+  }, [sortedMissions, navigationState, fetchRoute, rawMeldingen]);
 
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
@@ -1036,9 +1045,7 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
-                        fetchRoute();
-                        // If we are in navigating mode, keep it going. 
-                        // If we were in setup, the map FitBounds will center on the next mission automatically.
+                        // The useEffect watching sortedMissions will trigger fetchRoute automatically
                     }} 
                 />
             </div>
