@@ -559,14 +559,26 @@ export default function StartNavigationPage() {
         (pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
-            if (navigationState !== 'navigating') {
-                setSmoothLocation({ ...loc, heading: pos.coords.heading || 0 });
+            // Update location marker instantly if not simulating
+            if (!isSimulationMode) {
+                setSmoothLocation({ ...loc, heading: pos.coords.heading || smoothLocation.heading || 0 });
+                
+                // Real navigation camera follow
+                if (navigationState === 'navigating' && mapRef.current) {
+                    mapRef.current.getMap().flyTo({
+                        center: [loc.longitude, loc.latitude],
+                        bearing: pos.coords.heading || 0,
+                        zoom: 18,
+                        pitch: 60,
+                        duration: 1000
+                    });
+                }
             }
         },
         null, { enableHighAccuracy: true }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState]);
+  }, [navigationState, isSimulationMode, smoothLocation.heading]);
 
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -603,11 +615,13 @@ export default function StartNavigationPage() {
     });
   }, [filteredMeldingen, userLocation]);
 
-  const fetchRoute = React.useCallback(async () => {
-    if (sortedMissions.length === 0) return;
+  const fetchRoute = React.useCallback(async (zoomToFit = false) => {
+    if (sortedMissions.length === 0) {
+        setCurrentRouteGeometry(null);
+        return;
+    }
     const startPos = userLocation || SIMULATION_START_LOCATION;
     
-    // Build waypoints string (start + up to 24 missions)
     const waypoints = [
         [startPos.longitude, startPos.latitude],
         ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])
@@ -623,11 +637,13 @@ export default function StartNavigationPage() {
             setCurrentRouteGeometry(data.routes[0].geometry);
             setDistanceRemaining(Math.round(data.routes[0].distance));
             
-            // Auto-zoom to the entire route if we just loaded or started
-            if (mapRef.current) {
+            if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(data.routes[0].geometry.coordinates);
                 const bbox = turf.bbox(line);
-                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 80, duration: 1500 });
+                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
+                    padding: { top: 80, bottom: 300, left: 80, right: 80 }, 
+                    duration: 1500 
+                });
             }
         }
     } catch (e) {
@@ -635,10 +651,10 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, userLocation]);
 
-  // Initial load: Fetch the multi-point route and zoom
+  // Initial load: Fetch the multi-point route and zoom to FIT EVERYTHING including start
   React.useEffect(() => {
     if (sortedMissions.length > 0 && !currentRouteGeometry) {
-        fetchRoute();
+        fetchRoute(true);
     }
   }, [sortedMissions, fetchRoute, currentRouteGeometry]);
 
@@ -656,8 +672,14 @@ export default function StartNavigationPage() {
             setIsListExpanded(false);
             setIsLocating(false);
             
-            // Real navigation zoom
-            mapRef.current?.getMap().flyTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: 60, bearing: pos.coords.heading || 0, duration: 2000 });
+            // ZOOM INTO START LOCATION FOR REAL NAV
+            mapRef.current?.getMap().flyTo({ 
+                center: [loc.longitude, loc.latitude], 
+                zoom: 18, 
+                pitch: 60, 
+                bearing: pos.coords.heading || 0, 
+                duration: 2000 
+            });
             
             fetchRoute(); // Re-calculate from new GPS position
             toast({ title: "Route gestart", description: "Navigeren vanaf huidige locatie." });
@@ -666,19 +688,30 @@ export default function StartNavigationPage() {
             toast({ variant: 'destructive', title: "GPS Fout", description: "Kon uw locatie niet bepalen. Route start vanaf basis." });
             setNavigationState('navigating');
             setIsListExpanded(false);
+            
+            mapRef.current?.getMap().flyTo({ 
+                center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
+                zoom: 18, 
+                pitch: 60, 
+                duration: 2000 
+            });
         }, { enableHighAccuracy: true });
     } else {
         setIsSimulationMode(true);
         setNavigationState('navigating');
         setIsListExpanded(false);
         
-        // Initial sim zoom
         const first = currentRouteGeometry?.coordinates[0];
         if (first) {
-            mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 18, pitch: 60, duration: 2000 });
+            mapRef.current?.getMap().flyTo({ 
+                center: [first[0], first[1]], 
+                zoom: 18, 
+                pitch: 60, 
+                duration: 2000 
+            });
         }
         
-        startSimulation();
+        setTimeout(startSimulation, 2000);
     }
   };
 
@@ -691,7 +724,7 @@ export default function StartNavigationPage() {
     const animate = () => {
         if (isPaused || activeWerkbonId) { simAnimationRef.current = requestAnimationFrame(animate); return; }
         const deltaTime = 0.016; 
-        const speedMs = 13.8; 
+        const speedMs = 13.8; // ~50km/h
         simStateRef.current.distanceTravelled += speedMs * deltaTime;
         
         if (simStateRef.current.distanceTravelled >= totalDist) {
@@ -710,7 +743,7 @@ export default function StartNavigationPage() {
         setSpeedKmh(Math.round(speedMs * 3.6));
         setHeading(head);
         
-        // Follow cam
+        // Follow cam for simulation
         if (mapRef.current) {
             mapRef.current.getMap().jumpTo({ center: [lng, lat], bearing: head });
         }
@@ -722,12 +755,14 @@ export default function StartNavigationPage() {
 
   const handleLocateUser = () => {
     setIsLocating(true);
-    navigator.geolocation.getCurrentPosition((pos) => {
-        const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-        setUserLocation(loc);
-        mapRef.current?.getMap().flyTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: navigationState === 'navigating' ? 60 : 0, duration: 1500 });
-        setIsLocating(false);
-    }, () => setIsLocating(false), { enableHighAccuracy: true });
+    const target = userLocation || SIMULATION_START_LOCATION;
+    mapRef.current?.getMap().flyTo({ 
+        center: [target.longitude, target.latitude], 
+        zoom: 18, 
+        pitch: navigationState === 'navigating' ? 60 : 0, 
+        duration: 1500 
+    });
+    setIsLocating(false);
   };
 
   const toggleColumn = (col: string) => {
@@ -751,7 +786,9 @@ export default function StartNavigationPage() {
                 {smoothLocation && (
                     <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center" rotation={smoothLocation.heading}>
                         <div className="relative flex items-center justify-center w-12 h-12">
-                            <svg viewBox="0 0 100 100" className="h-10 w-10 text-primary drop-shadow-2xl"><path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" /></svg>
+                            <svg viewBox="0 0 100 100" className="h-10 w-10 text-primary drop-shadow-2xl">
+                                <path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" />
+                            </svg>
                         </div>
                     </Marker>
                 )}
@@ -969,10 +1006,9 @@ export default function StartNavigationPage() {
                         onCompleted={(id) => {
                             setCompletedObjects(prev => [...prev, id]);
                             setActiveWerkbonId(null);
-                            if (navigationState === 'navigating') {
-                                fetchRoute(); // Update multi-point route after completion
-                                toast({ title: "Melding afgerond", description: "Route naar volgende punt wordt berekend..." });
-                            }
+                            // Auto-refresh the multi-point route
+                            fetchRoute();
+                            toast({ title: "Melding afgerond", description: "Route naar volgende opdracht wordt berekend..." });
                         }} 
                     />
                 </div>
