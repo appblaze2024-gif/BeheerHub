@@ -170,7 +170,6 @@ function IntegratedWerkbonOverlay({
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
-    const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
     const recognitionRef = React.useRef<any>(null);
 
@@ -196,22 +195,6 @@ function IntegratedWerkbonOverlay({
             setHoeveelheden(melding.hoeveelheden || []);
             setAfhandelingFotos(melding.afhandeling_fotos || []);
             setUploadedFiles(melding.files || []);
-        }
-    }, [melding]);
-
-    React.useEffect(() => {
-        if (!melding) { setElapsedTime("0 uur en 0 minuten"); return; }
-        if (melding.workStartedAt) {
-          const interval = setInterval(() => {
-            const startTime = new Date(melding.workStartedAt!).getTime();
-            const now = Date.now();
-            const minutes = Math.floor((now - startTime) / (1000 * 60)) + (melding.gewerkteMinuten || 0);
-            setElapsedTime(`${Math.floor(minutes / 60)} uur en ${minutes % 60} minuten`);
-          }, 1000);
-          return () => clearInterval(interval);
-        } else {
-          const min = melding.gewerkteMinuten || 0;
-          setElapsedTime(`${Math.floor(min / 60)} uur en ${min % 60} minuten`);
         }
     }, [melding]);
 
@@ -370,7 +353,7 @@ function IntegratedWerkbonOverlay({
                         <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                                 <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col overflow-hidden">
-                                    <CardHeader className="bg-slate-500 text-white p-4 lg:p-5 shrink-0">
+                                    <CardHeader className="bg-slate-50 text-white p-4 lg:p-5 shrink-0">
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-0.5 lg:space-y-1">
                                                 <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-blue-200">Intakenummer</p>
@@ -386,8 +369,8 @@ function IntegratedWerkbonOverlay({
                                                 <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.datum} • {melding.tijdstip || '--:--'}</p>
                                             </div>
                                             <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Werktijd</p>
-                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{elapsedTime}</p>
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Containernummer</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.containernummer || '-'}</p>
                                             </div>
                                             <div className="col-span-2 space-y-0.5">
                                                 <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
@@ -515,7 +498,7 @@ function IntegratedWerkbonOverlay({
                                 </Card>
                                 <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
                                     <CardHeader className="bg-slate-50 border-b p-4 lg:p-6 flex flex-row items-center justify-between">
-                                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle>
+                                        <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle>
                                         <Badge variant="secondary" className="bg-green-100 text-green-700 border-none font-bold text-[9px] uppercase px-2 h-5">{afhandelingFotos.length} Foto's</Badge>
                                     </CardHeader>
                                     <CardContent className="p-4 lg:p-8 space-y-6">
