@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -47,7 +48,7 @@ import {
   RefreshCw,
   Layout,
   Zap,
-  Image as ImageIcon
+  ImageIcon
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -350,6 +351,10 @@ function IntegratedWerkbonOverlay({
                             <FileText className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                             <span className="text-[10px] lg:text-[11px]">Werkzaamheden</span>
                         </TabsTrigger>
+                        <TabsTrigger value="Opmerkingen" className="gap-1.5 lg:gap-2 shrink-0 px-3 lg:px-4">
+                            <MessageSquare className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                            <span className="text-[10px] lg:text-[11px]">Opmerkingen</span>
+                        </TabsTrigger>
                         <TabsTrigger value="Fotos" className="gap-1.5 lg:gap-2 shrink-0 px-3 lg:px-4">
                             <Camera className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                             <span className="text-[10px] lg:text-[11px]">Foto's</span>
@@ -364,8 +369,53 @@ function IntegratedWerkbonOverlay({
                 <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar">
                         <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300 space-y-6">
-                            
-                            {/* INTEGRATED: Notes & Quick Keys at the TOP */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                                <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col overflow-hidden">
+                                    <CardHeader className="bg-slate-500 text-white p-4 lg:p-5 shrink-0">
+                                        <div className="flex justify-between items-start">
+                                            <div className="space-y-0.5 lg:space-y-1">
+                                                <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-blue-200">Intakenummer</p>
+                                                <CardTitle className="text-lg lg:text-xl font-black uppercase tracking-tight">{melding.intakenummer}</CardTitle>
+                                            </div>
+                                            <Badge className="bg-blue-500 text-white border-none font-black text-[8px] lg:text-[9px] h-4 lg:h-5 px-2 lg:px-2.5">{melding.status}</Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+                                        <div className="grid grid-cols-2 gap-x-4 lg:gap-x-6 gap-y-3 lg:gap-y-4">
+                                            <div className="space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Datum & Tijd</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.datum} • {melding.tijdstip || '--:--'}</p>
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Werktijd</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{elapsedTime}</p>
+                                            </div>
+                                            <div className="col-span-2 space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</p>
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Categorie</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.hoofdcategorie} • {melding.subcategorie}</p>
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Wijk</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.werkgebied || melding.wijk || '-'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5 lg:space-y-2 border-t pt-4">
+                                            <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Oorspronkelijke melding</p>
+                                            <p className="text-[10px] lg:text-xs italic text-slate-600 font-medium leading-relaxed">"{melding.extra_informatie || 'Geen omschrijving.'}"</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <div className="rounded-xl lg:rounded-2xl overflow-hidden border-2 border-white shadow-2xl min-h-[300px] lg:min-h-[400px]">
+                                    <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={false} objects={nearbyObjects} />
+                                </div>
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="Opmerkingen" className="mt-0 h-full space-y-6">
                             <Card className="rounded-xl lg:rounded-2xl border-none shadow-xl bg-white overflow-hidden shrink-0">
                                 <CardHeader className="bg-slate-50 border-b p-4 lg:p-5 flex flex-row items-center justify-between">
                                     <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities & Sneltoetsen</CardTitle>
@@ -449,51 +499,6 @@ function IntegratedWerkbonOverlay({
                                     </div>
                                 </CardContent>
                             </Card>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                                <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col overflow-hidden">
-                                    <CardHeader className="bg-slate-500 text-white p-4 lg:p-5 shrink-0">
-                                        <div className="flex justify-between items-start">
-                                            <div className="space-y-0.5 lg:space-y-1">
-                                                <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-blue-200">Intakenummer</p>
-                                                <CardTitle className="text-lg lg:text-xl font-black uppercase tracking-tight">{melding.intakenummer}</CardTitle>
-                                            </div>
-                                            <Badge className="bg-blue-500 text-white border-none font-black text-[8px] lg:text-[9px] h-4 lg:h-5 px-2 lg:px-2.5">{melding.status}</Badge>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="p-4 lg:p-6 space-y-4 lg:space-y-6">
-                                        <div className="grid grid-cols-2 gap-x-4 lg:gap-x-6 gap-y-3 lg:gap-y-4">
-                                            <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Datum & Tijd</p>
-                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.datum} • {melding.tijdstip || '--:--'}</p>
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Werktijd</p>
-                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{elapsedTime}</p>
-                                            </div>
-                                            <div className="col-span-2 space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
-                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</p>
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Categorie</p>
-                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.hoofdcategorie} • {melding.subcategorie}</p>
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Wijk</p>
-                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.werkgebied || melding.wijk || '-'}</p>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1.5 lg:space-y-2 border-t pt-4">
-                                            <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Oorspronkelijke melding</p>
-                                            <p className="text-[10px] lg:text-xs italic text-slate-600 font-medium leading-relaxed">"{melding.extra_informatie || 'Geen omschrijving.'}"</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <div className="rounded-xl lg:rounded-2xl overflow-hidden border-2 border-white shadow-2xl min-h-[300px] lg:min-h-[400px]">
-                                    <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={false} objects={nearbyObjects} />
-                                </div>
-                            </div>
                         </TabsContent>
 
                         <TabsContent value="Fotos" className="mt-0">
@@ -511,7 +516,7 @@ function IntegratedWerkbonOverlay({
                                 </Card>
                                 <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
                                     <CardHeader className="bg-slate-50 border-b p-4 lg:p-6 flex flex-row items-center justify-between">
-                                        <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle>
+                                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle>
                                         <Badge variant="secondary" className="bg-green-100 text-green-700 border-none font-bold text-[9px] uppercase px-2 h-5">{afhandelingFotos.length} Foto's</Badge>
                                     </CardHeader>
                                     <CardContent className="p-4 lg:p-8 space-y-6">
