@@ -563,8 +563,6 @@ export default function StartNavigationPage() {
             
             if (!isSimulationMode) {
                 setSmoothLocation({ ...loc, heading: pos.coords.heading || smoothLocation.heading || 0 });
-                
-                // Update actuele snelheid van GPS
                 if (pos.coords.speed !== null) {
                     setSpeedKmh(Math.round(pos.coords.speed * 3.6));
                 }
@@ -623,6 +621,7 @@ export default function StartNavigationPage() {
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
+        setDistanceRemaining(0);
         return;
     }
     const startPos = userLocation || SIMULATION_START_LOCATION;
@@ -635,7 +634,9 @@ export default function StartNavigationPage() {
         const data = await res.json();
         if (data.routes?.[0]) {
             setCurrentRouteGeometry(data.routes[0].geometry);
-            setDistanceRemaining(Math.round(data.routes[0].distance));
+            // distanceRemaining used in HUD should reflect distance to NEXT mission (leg 0)
+            setDistanceRemaining(Math.round(data.routes[0].legs[0]?.distance || 0));
+            
             if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(data.routes[0].geometry.coordinates);
                 const bbox = turf.bbox(line);
@@ -650,6 +651,15 @@ export default function StartNavigationPage() {
     } catch (e) { console.error("Route fetch error:", e); }
   }, [sortedMissions, userLocation]);
 
+  // Periodic route update during active navigation
+  React.useEffect(() => {
+    if (navigationState !== 'navigating' || isSimulationMode) return;
+    const interval = setInterval(() => {
+        fetchRoute();
+    }, 30000); 
+    return () => clearInterval(interval);
+  }, [navigationState, isSimulationMode, fetchRoute]);
+
   React.useEffect(() => {
     if (sortedMissions.length > 0 && !currentRouteGeometry) fetchRoute(true);
   }, [sortedMissions, fetchRoute, currentRouteGeometry]);
@@ -659,7 +669,6 @@ export default function StartNavigationPage() {
     
     if (!simulate) {
         setIsLocating(true);
-        // FORCE GPS CHECK
         navigator.geolocation.getCurrentPosition((pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
@@ -669,7 +678,6 @@ export default function StartNavigationPage() {
             setIsListExpanded(false);
             setIsLocating(false);
             
-            // Fly to location
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: 18, 
@@ -677,16 +685,13 @@ export default function StartNavigationPage() {
                 bearing: pos.coords.heading || 0, 
                 duration: 2000 
             });
-            
-            // Re-fetch route from exact GPS point
             fetchRoute();
-            toast({ title: "Route gestart vanaf GPS" });
+            toast({ title: "Navigatie gestart" });
         }, () => {
-            // FALLBACK TO BASE
             setIsLocating(false);
             setNavigationState('navigating');
             setIsListExpanded(false);
-            toast({ title: "GPS niet gevonden", description: "Startend vanaf basislocatie Rijsenhout." });
+            toast({ title: "GPS signaal zwak", description: "Navigatie start vanaf basislocatie Rijsenhout." });
             mapRef.current?.getMap().flyTo({ 
                 center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
                 zoom: 18, 
@@ -808,7 +813,7 @@ export default function StartNavigationPage() {
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().setPitch(0);
                         mapRef.current?.getMap().setBearing(0);
-                        fetchRoute(true); // Zoom out to show full route
+                        fetchRoute(true);
                     }}>STOP RIT</Button>
                 )}
             </div>
@@ -819,7 +824,7 @@ export default function StartNavigationPage() {
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto ring-1 ring-black/5">
                     <CardContent className="p-6 flex items-center justify-between gap-8">
                         <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-8">
-                            {/* ETA berekening: we gaan uit van gemiddeld 40 km/u (11.1 m/s) als we geen snelheid hebben */}
+                            {/* ETA calculation: assuming 40 km/h avg speed if speed is low/gps locked */}
                             <p className="text-4xl font-black text-slate-900 tracking-tighter">
                                 {formatDate(addSeconds(new Date(), (distanceRemaining / (speedKmh > 5 ? speedKmh / 3.6 : 11.1))), 'HH:mm')}
                             </p>
@@ -902,7 +907,8 @@ export default function StartNavigationPage() {
                             </TableHeader>
                             <TableBody>
                                 {filteredMeldingen.map(m => {
-                                    const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
+                                    const base = userLocation || SIMULATION_START_LOCATION;
+                                    const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                                     return (
                                         <TableRow key={m.id} className="h-14 hover:bg-blue-50 transition-colors cursor-pointer border-b border-slate-100 group" onClick={() => setActiveWerkbonId(m.id)}>
                                             {visibleColumns.intakenr && <TableCell className="font-black text-xs border-r border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", getMeldingAgeColor(m.datum))} />{m.intakenummer}</div></TableCell>}
