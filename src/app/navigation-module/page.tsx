@@ -48,7 +48,7 @@ import {
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -771,13 +771,14 @@ export default function StartNavigationPage() {
         if (data.routes?.[0]) {
             const geometry = data.routes[0].geometry;
             setCurrentRouteGeometry(geometry);
+            // Slicing logic: initially show the full forward line.
             setDisplayedRouteGeometry(turf.feature(geometry));
             if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(geometry.coordinates);
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: 120, // Increased padding to zoom out further
+                        padding: 150, 
                         duration: 1500 
                     });
                 }
@@ -841,25 +842,37 @@ export default function StartNavigationPage() {
     const line = turf.lineString(currentRouteGeometry.coordinates);
     const totalDist = turf.length(line, { units: 'meters' });
     simStateRef.current = { distanceTravelled: 0, currentSpeedMs: 0 };
+    
     const animate = () => {
-        if (isPaused || activeWerkbonId) { simAnimationRef.current = requestAnimationFrame(animate); return; }
+        if (isPaused || activeWerkbonId) { 
+            simAnimationRef.current = requestAnimationFrame(animate); 
+            return; 
+        }
+        
         const speedMs = 13.8;
         simStateRef.current.distanceTravelled += speedMs * 0.016;
+        
         if (simStateRef.current.distanceTravelled >= totalDist) {
             setSpeedKmh(0);
             return;
         }
+        
         const curr = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
         const [lng, lat] = curr.geometry.coordinates;
+        
         const aheadDist = Math.min(simStateRef.current.distanceTravelled + 2, totalDist);
         const ahead = turf.along(line, aheadDist, { units: 'meters' });
         const head = (turf.bearing(curr, ahead) + 360) % 360;
         lastHeadingRef.current = head;
+        
+        // Slicing ONLY forward.
         const forwardPart = turf.lineSlice(curr, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
         setDisplayedRouteGeometry(forwardPart);
+        
         setDistanceRemaining(Math.max(0, Math.round(totalDist - simStateRef.current.distanceTravelled)));
         setSmoothLocation({ latitude: lat, longitude: lng, heading: head });
         setSpeedKmh(Math.round(speedMs * 3.6));
+        
         if (mapRef.current) {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
@@ -1128,6 +1141,8 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
+                        // Trigger a route refresh starting from the issue location.
+                        fetchRoute();
                     }} 
                 />
             </div>
