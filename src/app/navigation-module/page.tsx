@@ -745,29 +745,29 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {/* Floating Navigation HUD Overlay - CENTER */}
+        {/* Floating Navigation HUD Overlay - BOTTOM CENTER */}
         {navigationState === 'navigating' && !activeWerkbonId && (
-            <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-top-10 duration-700 pointer-events-none">
-                <Card className="bg-slate-900/95 backdrop-blur-xl shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] border-2 border-white/10 rounded-[2.5rem] overflow-hidden pointer-events-auto ring-1 ring-white/5">
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
+                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto ring-1 ring-black/5">
                     <CardContent className="p-6 flex items-center justify-between gap-8">
-                        <div className="flex flex-col items-center shrink-0 border-r border-white/10 pr-8">
-                            <p className="text-4xl font-black text-white tracking-tighter">{formatDate(addSeconds(new Date(), (distanceRemaining/5000)*3600), 'HH:mm')}</p>
+                        <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-8">
+                            <p className="text-4xl font-black text-slate-900 tracking-tighter">{formatDate(addSeconds(new Date(), (distanceRemaining/5000)*3600), 'HH:mm')}</p>
                             <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1">aankomst</p>
                         </div>
                         <div className="flex-1 flex flex-col gap-3 min-w-0">
                             <div className="flex justify-between items-end px-1">
                                 <div className="space-y-0.5">
                                     <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Volgende opdracht</p>
-                                    <p className="text-lg font-black text-white uppercase tracking-tight truncate max-w-[200px]">{nextObject?.intakenummer}</p>
+                                    <p className="text-lg font-black text-slate-900 uppercase tracking-tight truncate max-w-[200px]">{nextObject?.intakenummer}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-2xl font-black text-white leading-none">{(distanceRemaining/1000).toFixed(1)} <span className="text-xs text-slate-500 uppercase">km</span></p>
+                                    <p className="text-2xl font-black text-slate-900 leading-none">{(distanceRemaining/1000).toFixed(1)} <span className="text-xs text-slate-500 uppercase">km</span></p>
                                 </div>
                             </div>
-                            <Progress value={100} className="h-2 bg-white/10" />
+                            <Progress value={100} className="h-2 bg-slate-100" />
                         </div>
-                        <div className="h-20 w-20 rounded-full border-[6px] border-primary flex flex-col items-center justify-center bg-slate-800 shadow-[inset_0_0_20px_rgba(37,99,235,0.3)] shrink-0 ring-4 ring-white/5">
-                            <span className="text-3xl font-black text-white leading-none tracking-tighter">{speedKmh}</span>
+                        <div className="h-20 w-20 rounded-full border-[6px] border-primary flex flex-col items-center justify-center bg-slate-50 shadow-[inset_0_0_20px_rgba(37,99,235,0.1)] shrink-0 ring-4 ring-slate-100">
+                            <span className="text-3xl font-black text-slate-900 leading-none tracking-tighter">{speedKmh}</span>
                             <span className="text-[8px] font-black uppercase text-primary mt-0.5">km/h</span>
                         </div>
                     </CardContent>
