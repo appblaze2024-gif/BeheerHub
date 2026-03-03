@@ -45,13 +45,13 @@ import {
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
-import { addSeconds, format as formatDate, differenceInCalendarDays, parse } from 'date-fns';
+import { addSeconds, format as formatDate, differenceInCalendarDays } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import {
   Table,
@@ -537,6 +537,10 @@ export default function StartNavigationPage() {
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isListExpanded, setIsListExpanded] = React.useState(true);
 
+  // Height and Resizing states
+  const [listHeight, setListHeight] = React.useState(400);
+  const [isResizing, setIsResizing] = React.useState(false);
+
   // New states for toggles
   const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
@@ -592,8 +596,58 @@ export default function StartNavigationPage() {
                 navOffsetRef.current = val;
             }
         }
+        if (profile.navListHeight !== undefined) {
+            const val = Number(profile.navListHeight);
+            if (!isNaN(val)) {
+                setListHeight(val);
+            }
+        }
     }
   }, [profile]);
+
+  // Resizing logic
+  const handleResize = (clientY: number) => {
+    const newHeight = window.innerHeight - clientY;
+    const clampedHeight = Math.max(56, Math.min(newHeight, window.innerHeight * 0.85));
+    setListHeight(clampedHeight);
+  };
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      handleResize(moveEvent.clientY);
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      setIsResizing(false);
+      // Save height to Firestore
+      if (user && firestore) {
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
+      }
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setIsResizing(true);
+    const onTouchMove = (moveEvent: TouchEvent) => {
+      handleResize(moveEvent.touches[0].clientY);
+    };
+    const onTouchEnd = () => {
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      setIsResizing(false);
+      // Save height to Firestore
+      if (user && firestore) {
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
+      }
+    };
+    document.addEventListener('touchmove', onTouchMove);
+    document.addEventListener('touchend', onTouchEnd);
+  };
 
   const updateNavZoom = (newZoom: number) => {
     const val = Number(newZoom);
@@ -745,7 +799,7 @@ export default function StartNavigationPage() {
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: { top: 60, bottom: 180, left: 60, right: 60 }, 
+                        padding: { top: 60, bottom: 80, left: 60, right: 60 }, 
                         duration: 1500 
                     });
                 }
@@ -998,10 +1052,28 @@ export default function StartNavigationPage() {
             </div>
         )}
 
-        <div className={cn(
-            "absolute bottom-0 left-0 right-0 z-40 transition-all duration-500 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl",
-            navigationState === 'navigating' ? "h-0 translate-y-full opacity-0" : (isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]")
-        )}>
+        <div 
+            className={cn(
+                "absolute bottom-0 left-0 right-0 z-40 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl",
+                !isResizing && "transition-all duration-500",
+                navigationState === 'navigating' ? "h-0 translate-y-full opacity-0" : (isListExpanded ? "" : "h-14 translate-y-[calc(100%-3.5rem)]")
+            )}
+            style={navigationState !== 'navigating' && isListExpanded ? { height: `${listHeight}px` } : {}}
+        >
+            {/* Drag Handle */}
+            {navigationState !== 'navigating' && isListExpanded && (
+                <div 
+                    onMouseDown={onMouseDown}
+                    onTouchStart={onTouchStart}
+                    className="absolute top-0 left-0 right-0 h-4 cursor-ns-resize z-50 flex items-center justify-center -translate-y-1/2 group/handle"
+                >
+                    <div className="bg-slate-900 rounded-full h-7 w-7 flex flex-col items-center justify-center shadow-2xl border-2 border-white group-hover/handle:scale-110 transition-transform">
+                        <ChevronUp className="h-2.5 w-2.5 text-white -mb-0.5" />
+                        <ChevronDown className="h-2.5 w-2.5 text-white -mt-0.5" />
+                    </div>
+                </div>
+            )}
+
             <div className="h-12 flex items-center justify-between px-6 cursor-pointer shrink-0 border-b bg-slate-50" onClick={() => setIsListExpanded(!isListExpanded)}>
                 <div className="flex items-center gap-3"><TableIcon className="h-4 w-4 text-primary" /><span className="font-black uppercase text-[11px] tracking-tight">Opdrachtenlijst ({filteredMeldingen.length})</span></div>
                 

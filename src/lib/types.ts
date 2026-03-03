@@ -32,6 +32,7 @@ export type UserProfile = {
   navZoom?: number;
   navPitch?: number;
   navOffset?: number;
+  navListHeight?: number;
 };
 
 export interface Message {
