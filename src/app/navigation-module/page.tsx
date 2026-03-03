@@ -916,15 +916,22 @@ export default function StartNavigationPage() {
     );
   };
 
+  // Improved resume effect to ensure navigation state is triggered
   React.useEffect(() => {
     const isResume = searchParams.get('resume') === 'true';
     if (isResume && !hasResumed && !isLoadingProjects && projects && routeType === 'meldingen' && rawMeldingen) {
+        // We need to wait for sortedMeldingen to have data
         if (sortedMeldingen.length > 0) {
             setHasResumed(true);
-            const timer = setTimeout(() => handleStartRit(false), 100);
+            // Small delay to ensure state updates are processed
+            const timer = setTimeout(() => {
+                handleStartRit(false);
+            }, 300);
             return () => clearTimeout(timer);
-        } else if (rawMeldingen.length === 0 || (excludeId && rawMeldingen.filter(m => m.id !== excludeId).length === 0)) {
-            // Pool is empty, nothing to resume to
+        } else if (rawMeldingen.length > 0) {
+            // Still waiting for data to load or filter
+        } else if (rawMeldingen.length === 0) {
+            // No meldingen left at all
             setHasResumed(true);
         }
     }
@@ -974,6 +981,7 @@ export default function StartNavigationPage() {
     return Array.from(assignees).sort();
   }, [tableData]);
 
+  // Loading screen during resume transition
   const isResuming = searchParams.get('resume') === 'true' && !hasResumed;
 
   return (
