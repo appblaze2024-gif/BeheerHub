@@ -818,6 +818,15 @@ export default function StartNavigationPage() {
                         activeLoc.longitude = snapped.geometry.coordinates[0];
                         activeLoc.latitude = snapped.geometry.coordinates[1];
 
+                        // Calculate visual heading based on movement over the line if GPS heading is poor
+                        if (pos.coords.heading === null) {
+                            const prevPt = turf.point([smoothLocation.longitude, smoothLocation.latitude]);
+                            const distance = turf.distance(prevPt, snapped, { units: 'meters' });
+                            if (distance > 1) {
+                                activeLoc.heading = (turf.bearing(prevPt, snapped) + 360) % 360;
+                            }
+                        }
+
                         // Calculate forward part of route
                         const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
                         setDisplayedRouteGeometry(forwardPart);
@@ -844,7 +853,7 @@ export default function StartNavigationPage() {
         { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, smoothLocation]);
 
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
