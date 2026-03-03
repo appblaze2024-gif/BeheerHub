@@ -771,7 +771,6 @@ export default function StartNavigationPage() {
         if (data.routes?.[0]) {
             const geometry = data.routes[0].geometry;
             setCurrentRouteGeometry(geometry);
-            // Slicing logic: initially show the full forward line.
             setDisplayedRouteGeometry(turf.feature(geometry));
             if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(geometry.coordinates);
@@ -865,7 +864,6 @@ export default function StartNavigationPage() {
         const head = (turf.bearing(curr, ahead) + 360) % 360;
         lastHeadingRef.current = head;
         
-        // Slicing ONLY forward.
         const forwardPart = turf.lineSlice(curr, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
         setDisplayedRouteGeometry(forwardPart);
         
@@ -942,18 +940,6 @@ export default function StartNavigationPage() {
                 <ArrowLeft className="h-6 w-6 text-slate-600" />
             </Button>
             <div className="flex items-center gap-3 pointer-events-auto">
-                <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border border-slate-100" onClick={() => {
-                    const target = userLocation || SIMULATION_START_LOCATION;
-                    mapRef.current?.getMap().flyTo({ 
-                        center: [target.longitude, target.latitude], 
-                        zoom: navigationState === 'navigating' ? Number(navZoomRef.current) || 18 : 18, 
-                        pitch: navigationState === 'navigating' ? Number(navPitchRef.current) || 60 : 0, 
-                        duration: 1500,
-                        padding: { top: 0, bottom: navigationState === 'navigating' ? Math.max(0, Number(navOffsetRef.current) || 0) : 0, left: 0, right: 0 }
-                    });
-                }} disabled={isLocating}>
-                    {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
-                </Button>
                 {navigationState === 'setup' ? (
                     <div className="flex gap-2">
                         {isPrivileged && <Button variant="outline" className="h-12 px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-100" onClick={() => handleStartRit(true)}><Gauge className="mr-2 h-5 w-5" /> SIMULATOR</Button>}
@@ -1141,7 +1127,6 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
-                        // Trigger a route refresh starting from the issue location.
                         fetchRoute();
                     }} 
                 />
