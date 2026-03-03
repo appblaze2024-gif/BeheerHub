@@ -319,7 +319,7 @@ function IntegratedWerkbonOverlay({
         <div className="flex flex-col h-full bg-slate-50">
             <header className="h-14 lg:h-16 bg-white border-b flex items-center justify-between px-4 lg:px-6 shrink-0 shadow-sm z-10 sticky top-0">
                 <div className="flex items-center gap-3 lg:gap-4">
-                    <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors">
+                    <Button variant="ghost" size="icon" onClose={onClose} className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors">
                         <ArrowLeft className="h-6 w-6 text-slate-600" />
                     </Button>
                     <div>
@@ -724,7 +724,7 @@ export default function StartNavigationPage() {
     setNavZoomState(val);
     navZoomRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val });
-    mapRef.current?.getMap().easeTo({ zoom: val, duration: 200 });
+    mapRef.current?.getMap().jumpTo({ zoom: val });
   };
 
   const updateNavPitch = (newPitch: number) => {
@@ -733,7 +733,7 @@ export default function StartNavigationPage() {
     setNavPitchState(val);
     navPitchRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val });
-    mapRef.current?.getMap().easeTo({ pitch: val, duration: 200 });
+    mapRef.current?.getMap().jumpTo({ pitch: val });
   };
 
   const updateNavOffset = (newOffset: number) => {
@@ -742,7 +742,7 @@ export default function StartNavigationPage() {
     setNavOffsetState(val);
     navOffsetRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val });
-    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: Math.max(0, val), left: 0, right: 0 }, duration: 200 });
+    mapRef.current?.getMap().jumpTo({ padding: { top: 0, bottom: Math.max(0, val), left: 0, right: 0 } });
   };
 
   const toggleColumnVisibility = (colId: string) => {
@@ -768,12 +768,11 @@ export default function StartNavigationPage() {
 
                 if (navigationState === 'navigating' && mapRef.current) {
                     const map = mapRef.current.getMap();
-                    map.easeTo({
+                    map.jumpTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
                         zoom: Number(navZoomRef.current) || 18,
                         pitch: Number(navPitchRef.current) || 60,
-                        duration: 300,
                         padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
                     });
 
@@ -866,7 +865,7 @@ export default function StartNavigationPage() {
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
                         padding: 250, 
-                        duration: 800 
+                        duration: 0 
                     });
                 }
             }
@@ -895,12 +894,11 @@ export default function StartNavigationPage() {
             setIsListExpanded(false);
             setIsLocating(false);
             
-            mapRef.current?.getMap().flyTo({ 
+            mapRef.current?.getMap().jumpTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: Number(navZoomRef.current) || 18, 
                 pitch: Number(navPitchRef.current) || 60, 
                 bearing: heading, 
-                duration: 800,
                 padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
             });
             fetchRoute();
@@ -930,7 +928,7 @@ export default function StartNavigationPage() {
         setTimeout(() => {
             setIsStartingSimulation(false);
             startSimulation();
-        }, 1500);
+        }, 100); // reduced delay for instant feel
     }
   };
 
@@ -1062,8 +1060,7 @@ export default function StartNavigationPage() {
                         setNavigationState('setup'); 
                         setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
-                        mapRef.current?.getMap().setPitch(0);
-                        mapRef.current?.getMap().setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+                        mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
                         fetchRoute(true); 
                     }}>STOP RIT</Button>
                 )}
@@ -1140,7 +1137,7 @@ export default function StartNavigationPage() {
                 <div 
                     onMouseDown={onMouseDown}
                     onTouchStart={onTouchStart}
-                    className="absolute top-0 left-0 right-0 h-4 cursor-ns-resize z-50 flex items-center justify-center -translate-y-1/2 group/handle"
+                    className="absolute top-0 left-0 right-0 h-4 px-2 cursor-ns-resize z-50 flex items-center justify-center -translate-y-1/2 group/handle"
                 >
                     <div className="bg-slate-900 rounded-full h-7 w-7 flex flex-col items-center justify-center shadow-2xl border-2 border-white group-hover/handle:scale-110 transition-transform">
                         <ChevronUp className="h-2.5 w-2.5 text-white -mb-0.5" />
