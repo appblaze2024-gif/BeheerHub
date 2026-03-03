@@ -778,7 +778,7 @@ export default function StartNavigationPage() {
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: 150, 
+                        padding: 250, 
                         duration: 1500 
                     });
                 }
