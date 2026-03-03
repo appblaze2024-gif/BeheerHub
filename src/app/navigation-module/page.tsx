@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -27,7 +26,14 @@ import {
   Bell,
   LocateFixed,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Columns,
+  X as XIcon,
+  FileText,
+  Sparkles,
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -48,13 +54,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
 import { translateText } from '@/ai/flows/translate-text-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -154,7 +168,6 @@ function IntegratedWerkbonOverlay({
                 gewerkteMinuten: minutesWorked,
                 workStartedAt: null, 
             });
-            toast({ title: 'Werkbon afgerond' });
             onCompleted(melding.id);
             onClose();
         } catch (error) { toast({ variant: "destructive", title: 'Fout bij afronden' }); } finally { setIsSubmitting(false); }
@@ -186,66 +199,121 @@ function IntegratedWerkbonOverlay({
         } catch (err) { toast({ variant: 'destructive', title: 'Vertaalfout' }); } finally { setIsTranslating(false); }
     };
 
-    if (isLoading || !melding) return <div className="p-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    if (isLoading || !melding) return <div className="p-12 flex justify-center h-full items-center"><Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" /></div>;
 
     return (
-        <div className="flex flex-col h-full bg-white animate-in slide-in-from-bottom duration-300">
-            <header className="h-14 border-b bg-slate-50 px-4 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full"><XIcon className="h-5 w-5" /></Button>
+        <div className="flex flex-col h-full bg-white">
+            <header className="h-16 border-b bg-slate-50 px-6 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors">
+                        <XIcon className="h-6 w-6 text-slate-600" />
+                    </Button>
                     <div>
-                        <h3 className="text-sm font-black uppercase tracking-tight leading-none">{melding.intakenummer}</h3>
+                        <h3 className="text-lg font-black uppercase tracking-tight leading-none text-slate-900">{melding.intakenummer}</h3>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{melding.subcategorie}</p>
                     </div>
                 </div>
                 {melding.workStartedAt ? (
-                    <Button className="bg-orange-600 hover:bg-orange-700 h-9 font-black uppercase px-6 text-xs rounded-xl shadow-lg shadow-orange-600/20" onClick={handleAfronden} disabled={isSubmitting}>
-                        {isSubmitting ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Check className="mr-2 h-3 w-3" />}
+                    <Button className="bg-orange-600 hover:bg-orange-700 h-11 font-black uppercase px-8 text-xs rounded-xl shadow-lg shadow-orange-600/20" onClick={handleAfronden} disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                         AFHANDELEN
                     </Button>
                 ) : (
-                    <Button className="bg-green-600 hover:bg-green-700 h-9 font-black uppercase px-6 text-xs rounded-xl shadow-lg shadow-green-600/20" onClick={handleStartWork}>
+                    <Button className="bg-green-600 hover:bg-green-700 h-11 font-black uppercase px-8 text-xs rounded-xl shadow-lg shadow-green-600/20" onClick={handleStartWork}>
                         START WERK
                     </Button>
                 )}
             </header>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                <TabsList className="bg-white border-b h-10 px-4 justify-start gap-6">
-                    <TabsTrigger value="Werkzaamheden" className="text-[10px]"><FileText className="h-3 w-3 mr-1.5" /> Werk</TabsTrigger>
-                    <TabsTrigger value="Opmerkingen" className="text-[10px]"><MessageSquare className="h-3 w-3 mr-1.5" /> Notitie</TabsTrigger>
-                    <TabsTrigger value="Fotos" className="text-[10px]"><Camera className="h-3 w-3 mr-1.5" /> Foto's</TabsTrigger>
+                <TabsList className="bg-white border-b h-12 px-6 justify-start gap-10">
+                    <TabsTrigger value="Werkzaamheden" className="text-[11px] font-black uppercase tracking-widest border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary h-full rounded-none"><FileText className="h-4 w-4 mr-2" /> Werkgegevens</TabsTrigger>
+                    <TabsTrigger value="Opmerkingen" className="text-[11px] font-black uppercase tracking-widest border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary h-full rounded-none"><MessageSquare className="h-4 w-4 mr-2" /> Uitvoering Notitie</TabsTrigger>
+                    <TabsTrigger value="Fotos" className="text-[11px] font-black uppercase tracking-widest border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary h-full rounded-none"><Camera className="h-4 w-4 mr-2" /> Bijlagen & Foto's</TabsTrigger>
                 </TabsList>
 
                 <ScrollArea className="flex-1">
-                    <div className="p-4 space-y-6">
-                        <TabsContent value="Werkzaamheden" className="mt-0 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><p className="text-[8px] font-black uppercase text-slate-400">Locatie</p><p className="text-xs font-bold">{melding.straatnaam} {melding.huisnummer}</p></div>
-                                <div><p className="text-[8px] font-black uppercase text-slate-400">Plaats</p><p className="text-xs font-bold uppercase">{melding.plaats}</p></div>
-                                <div className="col-span-2"><p className="text-[8px] font-black uppercase text-slate-400">Omschrijving</p><p className="text-xs font-medium italic text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border">"{melding.extra_informatie || 'Geen omschrijving.'}"</p></div>
+                    <div className="p-8 max-w-4xl mx-auto space-y-10">
+                        <TabsContent value="Werkzaamheden" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Locatie & Adres</p>
+                                    <p className="text-base font-black text-slate-900">{melding.straatnaam} {melding.huisnummer}</p>
+                                    <p className="text-xs font-bold text-slate-500 uppercase">{melding.postcode} {melding.plaats}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Wijk / Gebied</p>
+                                    <Badge variant="outline" className="font-black uppercase text-[10px] bg-slate-50 border-slate-200">
+                                        <LayoutGrid className="h-3 w-3 mr-1.5 text-primary" />
+                                        {melding.werkgebied || melding.wijk || '-'}
+                                    </Badge>
+                                </div>
+                                <div className="col-span-full space-y-3">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Melding Omschrijving</p>
+                                    <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100 shadow-inner">
+                                        <p className="text-sm font-medium italic text-slate-600 leading-relaxed">
+                                            "{melding.extra_informatie || 'Geen gedetailleerde omschrijving opgegeven.'}"
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="Opmerkingen" className="mt-0 space-y-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Button variant={isListening ? "destructive" : "outline"} size="sm" onClick={toggleListening} className="h-8 text-[10px] font-black"><Mic className="h-3.5 w-3.5 mr-1.5" /> DICTEER</Button>
-                                <Button variant="outline" size="sm" onClick={handleAITranslate} disabled={isTranslating} className="h-8 text-[10px] font-black"><RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", isTranslating && "animate-spin")} /> VERTAAL</Button>
+                        <TabsContent value="Opmerkingen" className="mt-0 space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-2xl border w-fit">
+                                <Button 
+                                    variant={isListening ? "destructive" : "ghost"} 
+                                    size="sm" 
+                                    onClick={toggleListening} 
+                                    className="h-9 font-black uppercase text-[10px] px-4 gap-2 rounded-xl"
+                                >
+                                    {isListening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />} 
+                                    {isListening ? "AAN HET LUISTEREN..." : "DICHTEER NOTITIE"}
+                                </Button>
+                                <Separator orientation="vertical" className="h-6" />
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={handleAITranslate} 
+                                    disabled={isTranslating || !afhandelingBijzonderheden} 
+                                    className="h-9 font-black uppercase text-[10px] px-4 gap-2 rounded-xl text-primary"
+                                >
+                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} 
+                                    AI VERTAAL / VERBETER
+                                </Button>
                             </div>
                             <Textarea 
-                                placeholder="Typ hier de bijzonderheden..." 
-                                className="min-h-[200px] text-xs font-medium rounded-xl bg-slate-50 border-slate-100" 
+                                placeholder="Typ hier de bijzonderheden van de uitvoering..." 
+                                className="min-h-[300px] text-sm font-medium leading-relaxed rounded-[2rem] bg-slate-50 border-slate-200 focus:ring-primary/20 p-6" 
                                 value={afhandelingBijzonderheden}
                                 onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
                             />
                         </TabsContent>
 
-                        <TabsContent value="Fotos" className="mt-0">
-                            <div className="grid grid-cols-3 gap-2">
-                                {melding.fotos?.map((p, i) => (
-                                    <div key={i} className="relative aspect-square rounded-xl overflow-hidden border bg-slate-100"><Image src={p.url} alt="foto" fill className="object-cover" /></div>
-                                ))}
-                                <Button variant="outline" className="aspect-square rounded-xl border-dashed flex flex-col gap-1 text-[10px] font-black uppercase text-slate-400"><Camera className="h-5 w-5" /> FOTO</Button>
+                        <TabsContent value="Fotos" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Gevonden Foto's ({melding.fotos?.length || 0})</h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                    {melding.fotos?.map((p, i) => (
+                                        <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-slate-100 shadow-sm bg-slate-50">
+                                            <Image src={p.url} alt="foto" fill className="object-cover" />
+                                        </div>
+                                    ))}
+                                    {(!melding.fotos || melding.fotos.length === 0) && (
+                                        <div className="col-span-full py-12 text-center border-2 border-dashed rounded-3xl opacity-20">
+                                            <Camera className="h-10 w-10 mx-auto mb-2" />
+                                            <p className="text-[10px] font-black uppercase">Geen foto's bijgevoegd</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <Separator />
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Actie: Foto Toevoegen</h4>
+                                <Button variant="outline" className="w-full h-24 border-dashed border-2 rounded-3xl flex flex-col gap-2 font-black uppercase text-[10px] text-slate-400 hover:bg-slate-50 hover:border-primary/20 transition-all">
+                                    <Camera className="h-8 w-8 text-slate-200" />
+                                    MAAK OF UPLOAD FOTO
+                                </Button>
                             </div>
                         </TabsContent>
                     </div>
@@ -266,7 +334,6 @@ export default function StartNavigationPage() {
   
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
-  const [objectsOnRoute, setObjectsOnRoute] = React.useState<MapObject[]>([]);
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
@@ -274,6 +341,19 @@ export default function StartNavigationPage() {
   const [activeWerkbonId, setActiveWerkbonId] = React.useState<string | null>(null);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isListExpanded, setIsListExpanded] = React.useState(true);
+  const [isAssignedVisible, setIsAssignedVisible] = React.useState(false);
+
+  // Column visibility state
+  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>({
+    intakenr: true,
+    adres: true,
+    omschrijving: true,
+    hoofdtype: true,
+    subtype: true,
+    werkgebied: true,
+    toegewezen: true,
+    afstand: true
+  });
 
   // Navigation logic states
   const [smoothLocation, setSmoothLocation] = React.useState<any>(null);
@@ -290,7 +370,7 @@ export default function StartNavigationPage() {
   React.useEffect(() => {
     setIsHeaderVisible(false);
     return () => setIsHeaderVisible(true);
-  }, []);
+  }, [setIsHeaderVisible]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
@@ -326,7 +406,11 @@ export default function StartNavigationPage() {
     }
     if (debouncedSearchQuery) {
         const q = debouncedSearchQuery.toLowerCase();
-        pool = pool.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
+        pool = pool.filter(m => 
+            m.intakenummer.toLowerCase().includes(q) || 
+            (m.straatnaam || '').toLowerCase().includes(q) ||
+            (m.plaats || '').toLowerCase().includes(q)
+        );
     }
     return pool;
   }, [rawMeldingen, isPrivileged, profile, debouncedSearchQuery, completedObjects]);
@@ -341,7 +425,7 @@ export default function StartNavigationPage() {
     })[0];
   }, [filteredMeldingen, userLocation]);
 
-  const fetchRoute = async () => {
+  const fetchRoute = React.useCallback(async () => {
     if (!nextObject || !userLocation) return;
     const start = userLocation;
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start.longitude},${start.latitude};${nextObject.longitude},${nextObject.latitude}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
@@ -353,14 +437,14 @@ export default function StartNavigationPage() {
             setDistanceRemaining(Math.round(data.routes[0].distance));
         }
     } catch (e) {}
-  };
+  }, [nextObject, userLocation]);
 
   React.useEffect(() => {
     if (navigationState === 'navigating') fetchRoute();
-  }, [nextObject?.id, navigationState]);
+  }, [nextObject?.id, navigationState, fetchRoute]);
 
   const handleStartRit = (simulate = false) => {
-    if (filteredMeldingen.length === 0) { toast({ title: "Geen taken" }); return; }
+    if (filteredMeldingen.length === 0) { toast({ title: "Geen opdrachten beschikbaar" }); return; }
     setIsSimulationMode(simulate);
     setNavigationState('navigating');
     setIsListExpanded(false);
@@ -373,7 +457,7 @@ export default function StartNavigationPage() {
     const totalDist = turf.length(line, { units: 'meters' });
     simStateRef.current = { distanceTravelled: 0, currentSpeedMs: 0 };
 
-    const animate = (timestamp: number) => {
+    const animate = () => {
         if (isPaused || activeWerkbonId) { simAnimationRef.current = requestAnimationFrame(animate); return; }
         const deltaTime = 0.016; 
         const speedMs = 13.8; 
@@ -410,6 +494,10 @@ export default function StartNavigationPage() {
     }, () => setIsLocating(false), { enableHighAccuracy: true });
   };
 
+  const toggleColumn = (col: string) => {
+    setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }));
+  };
+
   if (isLoading) return <LoadingScreen />;
 
   return (
@@ -422,12 +510,6 @@ export default function StartNavigationPage() {
                 style={{ width: '100%', height: '100%' }} 
                 mapStyle={mapStyle} 
                 mapboxAccessToken={MAPBOX_TOKEN}
-                onMove={evt => {
-                    if (navigationState === 'navigating') {
-                        // Keep following if in navigation mode and not manually panning? 
-                        // Simplified for MVP: always allow manual pan
-                    }
-                }}
             >
                 {/* User Marker */}
                 {smoothLocation && (
@@ -441,8 +523,16 @@ export default function StartNavigationPage() {
                 {/* Mission Markers */}
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
-                        <div className={cn("w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center cursor-pointer transition-transform hover:scale-110", getMeldingAgeColor(m.datum))}>
-                            <Bell className="h-4 w-4 text-white" />
+                        <div className="relative group cursor-pointer">
+                            <div className={cn("w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110", getMeldingAgeColor(m.datum))}>
+                                <Bell className="h-4 w-4 text-white" />
+                            </div>
+                            {isAssignedVisible && (
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-md text-white px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest whitespace-nowrap shadow-2xl border border-white/20 animate-in zoom-in-95">
+                                    {m.behandelaar || 'Onbekend'}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-black/90" />
+                                </div>
+                            )}
                         </div>
                     </Marker>
                 ))}
@@ -459,38 +549,42 @@ export default function StartNavigationPage() {
         {/* Floating Header UI */}
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
             <div className="flex items-center gap-2 pointer-events-auto">
-                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6" /></Button>
+                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => router.push('/')}>
+                    <ArrowLeft className="h-6 w-6 text-slate-600" />
+                </Button>
             </div>
             <div className="flex items-center gap-3 pointer-events-auto">
-                <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary" onClick={handleLocateUser} disabled={isLocating}><LocateFixed className="h-6 w-6" /></Button>
+                <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border-slate-100" onClick={handleLocateUser} disabled={isLocating}>
+                    {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
+                </Button>
                 {navigationState === 'setup' ? (
                     <>
-                        {isPrivileged && <Button variant="outline" className="h-12 px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl" onClick={() => handleStartRit(true)}><Gauge className="mr-2 h-5 w-5" /> SIMULATOR</Button>}
+                        {isPrivileged && <Button variant="outline" className="h-12 px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border-slate-100" onClick={() => handleStartRit(true)}><Gauge className="mr-2 h-5 w-5" /> SIMULATOR</Button>}
                         <Button className="h-12 px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRit(false)}><Play className="mr-2 h-5 w-5 fill-current" /> START RIT</Button>
                     </>
                 ) : (
-                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl" onClick={() => { setNavigationState('setup'); setIsListExpanded(true); setCurrentRouteGeometry(null); if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); }}>STOP RIT</Button>
+                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl border-none" onClick={() => { setNavigationState('setup'); setIsListExpanded(true); setCurrentRouteGeometry(null); if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); }}>STOP RIT</Button>
                 )}
             </div>
         </div>
 
         {/* Navigation Info Overlay */}
         {navigationState === 'navigating' && !activeWerkbonId && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-lg animate-in slide-in-from-bottom duration-500">
-                <Card className="bg-white/95 backdrop-blur-md shadow-2xl border-none rounded-[2.5rem] overflow-hidden">
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-lg animate-in slide-in-from-bottom duration-500 pointer-events-none">
+                <Card className="bg-white/95 backdrop-blur-md shadow-2xl border-none rounded-[2.5rem] overflow-hidden pointer-events-auto">
                     <CardContent className="p-6 flex items-center justify-between gap-6">
                         <div className="flex flex-col items-center">
-                            <p className="text-3xl font-black">{formatDate(addSeconds(new Date(), (distanceRemaining/5000)*3600), 'HH:mm')}</p>
-                            <p className="text-[10px] font-black text-slate-400 uppercase">aankomst</p>
+                            <p className="text-3xl font-black text-slate-900">{formatDate(addSeconds(new Date(), (distanceRemaining/5000)*3600), 'HH:mm')}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p>
                         </div>
                         <div className="flex-1 flex flex-col gap-2">
                             <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">
-                                <span>Volgende: {nextObject?.intakenummer}</span>
+                                <span className="truncate max-w-[150px]">Volgende: {nextObject?.intakenummer}</span>
                                 <span>{(distanceRemaining/1000).toFixed(1)} km</span>
                             </div>
                             <Progress value={100} className="h-2 bg-slate-100" />
                         </div>
-                        <div className="h-16 w-16 rounded-full border-4 border-primary flex flex-col items-center justify-center bg-white shadow-lg">
+                        <div className="h-16 w-16 rounded-full border-4 border-primary flex flex-col items-center justify-center bg-white shadow-lg shrink-0">
                             <span className="text-xl font-black text-primary leading-none">{speedKmh}</span>
                             <span className="text-[7px] font-black uppercase text-slate-400">km/h</span>
                         </div>
@@ -499,53 +593,122 @@ export default function StartNavigationPage() {
             </div>
         )}
 
-        {/* Collapsible Mission List */}
+        {/* Integrated Collapsible Excel List */}
         <div className={cn(
             "absolute bottom-0 left-0 right-0 z-40 transition-transform duration-500 ease-in-out bg-white border-t-4 border-slate-900 rounded-t-[2.5rem] shadow-2xl flex flex-col",
             isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]"
         )}>
-            <div className="h-14 flex items-center justify-between px-8 cursor-pointer" onClick={() => setIsListExpanded(!isListExpanded)}>
+            <div className="h-14 flex items-center justify-between px-8 cursor-pointer shrink-0" onClick={() => setIsListExpanded(!isListExpanded)}>
                 <div className="flex items-center gap-4">
                     <LayoutGrid className="h-5 w-5 text-primary" />
-                    <span className="font-black uppercase text-sm tracking-tight">Openstaande Opdrachten ({filteredMeldingen.length})</span>
+                    <span className="font-black uppercase text-sm tracking-tight">Meldingen ({filteredMeldingen.length})</span>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="relative w-48 md:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input placeholder="Zoek op nummer..." className="h-9 pl-9 rounded-xl border-slate-200 bg-slate-50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onClick={e => e.stopPropagation()} />
-                    </div>
+                <div className="flex items-center gap-6">
+                    {isListExpanded && (
+                        <div className="flex items-center gap-3">
+                            <div className="relative w-48 lg:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input 
+                                    placeholder="Zoek op nummer of adres..." 
+                                    className="h-9 pl-9 rounded-xl border-slate-200 bg-slate-50 font-bold" 
+                                    value={searchQuery} 
+                                    onChange={e => setSearchQuery(e.target.value)} 
+                                    onClick={e => e.stopPropagation()} 
+                                />
+                            </div>
+                            
+                            {isPrivileged && (
+                                <Button 
+                                    variant={isAssignedVisible ? "default" : "outline"} 
+                                    size="sm" 
+                                    className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all border-slate-200"
+                                    onClick={(e) => { e.stopPropagation(); setIsAssignedVisible(!isAssignedVisible); }}
+                                >
+                                    {isAssignedVisible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                                    TOEGEWEZEN
+                                </Button>
+                            )}
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-slate-200" onClick={e => e.stopPropagation()}>
+                                        <Columns className="h-3 w-3" /> KOLOMMEN
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-xl border-slate-100" onClick={e => e.stopPropagation()}>
+                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tabel Weergave</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    {Object.entries(visibleColumns).map(([key, isVisible]) => (
+                                        <DropdownMenuCheckboxItem key={key} checked={isVisible} onCheckedChange={() => toggleColumn(key)} className="font-bold text-xs uppercase tracking-tight">
+                                            {key}
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    )}
                     {isListExpanded ? <ChevronDown className="h-6 w-6 text-slate-300" /> : <ChevronUp className="h-6 w-6 text-slate-300" />}
                 </div>
             </div>
             
             <div className="flex-1 overflow-hidden">
                 <ScrollArea className="h-full px-4 pb-10">
-                    <Table className="min-w-[1000px]">
-                        <TableHeader className="bg-slate-50 sticky top-0 z-10">
-                            <TableRow className="h-10 hover:bg-transparent">
-                                <TableHead className="font-black uppercase text-[10px] w-32 border-r">Intakenr.</TableHead>
-                                <TableHead className="font-black uppercase text-[10px] w-48 border-r">Adres</TableHead>
-                                <TableHead className="font-black uppercase text-[10px] border-r">Omschrijving</TableHead>
-                                <TableHead className="font-black uppercase text-[10px] w-40 border-r">Subtype</TableHead>
-                                <TableHead className="font-black uppercase text-[10px] w-32">Wijk</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredMeldingen.map(m => (
-                                <TableRow key={m.id} className="h-14 hover:bg-blue-50 transition-colors cursor-pointer border-b" onClick={() => setActiveWerkbonId(m.id)}>
-                                    <TableCell className="font-black text-xs border-r">
-                                        <div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", getMeldingAgeColor(m.datum))} />{m.intakenummer}</div>
-                                    </TableCell>
-                                    <TableCell className="text-xs font-bold border-r truncate max-w-[180px]">{m.straatnaam} {m.huisnummer}</TableCell>
-                                    <TableCell className="text-xs font-medium border-r italic text-slate-500 truncate max-w-[300px]">"{m.extra_informatie}"</TableCell>
-                                    <TableCell className="text-[10px] font-black uppercase border-r text-slate-900 truncate">{m.subcategorie}</TableCell>
-                                    <TableCell className="text-[10px] font-black uppercase">
-                                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100">{m.werkgebied || m.wijk || '-'}</Badge>
-                                    </TableCell>
+                    <div className="min-w-[1200px]">
+                        <Table className="border-collapse table-fixed w-full border-slate-200">
+                            <TableHeader className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-200">
+                                <TableRow className="h-10 hover:bg-transparent">
+                                    {visibleColumns.intakenr && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200 sticky left-0 bg-slate-100 z-20">Intakenr.</TableHead>}
+                                    {visibleColumns.adres && <TableHead className="font-black uppercase text-[10px] w-48 border-r border-slate-200">Adres</TableHead>}
+                                    {visibleColumns.omschrijving && <TableHead className="font-black uppercase text-[10px] border-r border-slate-200">Omschrijving</TableHead>}
+                                    {visibleColumns.hoofdtype && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Hoofdtype</TableHead>}
+                                    {visibleColumns.subtype && <TableHead className="font-black uppercase text-[10px] w-40 border-r border-slate-200">Subtype</TableHead>}
+                                    {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Werkgebied</TableHead>}
+                                    {visibleColumns.toegewezen && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Toegewezen</TableHead>}
+                                    {visibleColumns.afstand && <TableHead className="font-black uppercase text-[10px] w-24 text-right sticky right-0 bg-slate-100 z-20 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">Afstand</TableHead>}
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredMeldingen.map(m => {
+                                    const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
+                                    return (
+                                        <TableRow key={m.id} className="h-14 hover:bg-blue-50 transition-colors cursor-pointer border-b border-slate-100 group" onClick={() => setActiveWerkbonId(m.id)}>
+                                            {visibleColumns.intakenr && (
+                                                <TableCell className="font-black text-xs border-r border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                                    <div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", getMeldingAgeColor(m.datum))} />{m.intakenummer}</div>
+                                                </TableCell>
+                                            )}
+                                            {visibleColumns.adres && <TableCell className="text-xs font-bold border-r border-slate-100 truncate">{m.straatnaam} {m.huisnummer}</TableCell>}
+                                            {visibleColumns.omschrijving && <TableCell className="text-xs font-medium border-r border-slate-100 italic text-slate-500 truncate max-w-[300px]">"{m.extra_informatie}"</TableCell>}
+                                            {visibleColumns.hoofdtype && <TableCell className="text-[10px] font-black uppercase border-r border-slate-100 text-slate-400">{m.hoofdcategorie}</TableCell>}
+                                            {visibleColumns.subtype && <TableCell className="text-[10px] font-black uppercase border-r border-slate-100 text-slate-900 truncate">{m.subcategorie}</TableCell>}
+                                            {visibleColumns.werkgebied && (
+                                                <TableCell className="border-r border-slate-100">
+                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-black text-[9px] uppercase tracking-tighter h-6 px-2">
+                                                        <LayoutGrid className="h-2.5 w-2.5 mr-1.5" />
+                                                        {m.werkgebied || m.wijk || '-'}
+                                                    </Badge>
+                                                </TableCell>
+                                            )}
+                                            {visibleColumns.toegewezen && (
+                                                <TableCell className="text-xs font-bold border-r border-slate-100 truncate text-slate-600">
+                                                    <div className="flex items-center gap-2">
+                                                        <UserIcon className="h-3 w-3 text-slate-300" />
+                                                        {m.behandelaar || '-'}
+                                                    </div>
+                                                </TableCell>
+                                            )}
+                                            {visibleColumns.afstand && (
+                                                <TableCell className="text-right font-black text-xs text-primary sticky right-0 bg-white group-hover:bg-blue-50 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">
+                                                    {dist} km
+                                                </TableCell>
+                                            )}
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    <ScrollBar orientation="horizontal" />
                 </ScrollArea>
             </div>
         </div>
@@ -553,14 +716,14 @@ export default function StartNavigationPage() {
         {/* Integrated Werkbon Overlay */}
         {activeWerkbonId && (
             <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-                <div className="w-full max-w-4xl h-[85vh] rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-white/20">
+                <div className="w-full max-w-4xl h-[85vh] rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-white/20 animate-in zoom-in-95 duration-300">
                     <IntegratedWerkbonOverlay 
                         meldingId={activeWerkbonId} 
                         onClose={() => setActiveWerkbonId(null)} 
                         onCompleted={(id) => {
                             setCompletedObjects(prev => [...prev, id]);
+                            setActiveWerkbonId(null);
                             if (navigationState === 'navigating') {
-                                // Route recalculation happens automatically via useEffect on nextObject change
                                 toast({ title: "Melding afgerond", description: "Route naar volgende punt wordt berekend..." });
                             }
                         }} 
