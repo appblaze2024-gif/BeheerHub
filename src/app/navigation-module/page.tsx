@@ -98,6 +98,14 @@ const routeLayerCasing: Layer = {
   paint: { 'line-color': '#1e40af', 'line-width': 12, 'line-opacity': 0.2 },
 };
 
+const traversedRouteLayer: Layer = {
+  id: 'traversed-route',
+  type: 'line',
+  source: 'traversed-route-line',
+  layout: { 'line-join': 'round', 'line-cap': 'round' },
+  paint: { 'line-color': '#94a3b8', 'line-width': 8, 'line-opacity': 0.5 },
+};
+
 const getMeldingAgeColor = (datum?: string) => {
     if (!datum) return 'bg-slate-400';
     try {
@@ -540,6 +548,7 @@ export default function StartNavigationPage() {
   const lastHeadingRef = React.useRef(0);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
+  const [traversedRouteGeometry, setTraversedRouteGeometry] = React.useState<any>(null);
   const [distanceRemaining, setDistanceRemaining] = React.useState(0);
   const [speedKmh, setSpeedKmh] = React.useState(0);
   const [isPaused, setIsPaused] = React.useState(false);
@@ -621,7 +630,8 @@ export default function StartNavigationPage() {
                 if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
 
                 if (navigationState === 'navigating' && mapRef.current) {
-                    mapRef.current.getMap().easeTo({
+                    const map = mapRef.current.getMap();
+                    map.easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
                         zoom: Number(navZoomRef.current) || 18,
@@ -629,13 +639,27 @@ export default function StartNavigationPage() {
                         duration: 1000,
                         padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
                     });
+
+                    // Update route slicing for real navigation
+                    if (currentRouteGeometry) {
+                        try {
+                            const line = turf.lineString(currentRouteGeometry.coordinates);
+                            const currPt = turf.nearestPointOnLine(line, turf.point([loc.longitude, loc.latitude]));
+                            
+                            const forwardPart = turf.lineSlice(currPt, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
+                            setDisplayedRouteGeometry(forwardPart.geometry);
+                            
+                            const backwardPart = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), currPt, line);
+                            setTraversedRouteGeometry(backwardPart.geometry);
+                        } catch (e) { }
+                    }
                 }
             }
         },
         null, { enableHighAccuracy: true }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry]);
 
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -692,10 +716,11 @@ export default function StartNavigationPage() {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
+        setTraversedRouteGeometry(null);
         return;
     }
     
-    // Capture current start position: use current smooth location if navigating
+    // Capture current start position
     const startPos = (navigationState === 'navigating' ? smoothLocation : (userLocation || SIMULATION_START_LOCATION));
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
@@ -707,6 +732,7 @@ export default function StartNavigationPage() {
         if (data.routes?.[0]) {
             setCurrentRouteGeometry(data.routes[0].geometry);
             setDisplayedRouteGeometry(data.routes[0].geometry);
+            setTraversedRouteGeometry(null);
             
             if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(data.routes[0].geometry.coordinates);
@@ -729,6 +755,7 @@ export default function StartNavigationPage() {
     } else if (rawMeldingen && sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
+        setTraversedRouteGeometry(null);
     }
   }, [sortedMissions, navigationState, fetchRoute, rawMeldingen]);
 
@@ -794,6 +821,9 @@ export default function StartNavigationPage() {
         
         const forwardPart = turf.lineSlice(curr, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
         setDisplayedRouteGeometry(forwardPart.geometry);
+
+        const backwardPart = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), curr, line);
+        setTraversedRouteGeometry(backwardPart.geometry);
         
         setDistanceRemaining(Math.max(0, Math.round(totalDist - simStateRef.current.distanceTravelled)));
         setSmoothLocation({ latitude: lat, longitude: lng, heading: head });
@@ -849,6 +879,11 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 ))}
+                {traversedRouteGeometry && (
+                    <Source id="traversed-route-line" type="geojson" data={traversedRouteGeometry}>
+                        <Layer {...traversedRouteLayer} />
+                    </Source>
+                )}
                 {displayedRouteGeometry && (
                     <Source id="route-line" type="geojson" data={displayedRouteGeometry}>
                         <Layer {...routeLayerCasing} /><Layer {...routeLayer} />
@@ -1044,7 +1079,6 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
-                        // The useEffect watching sortedMissions will trigger fetchRoute automatically
                     }} 
                 />
             </div>
