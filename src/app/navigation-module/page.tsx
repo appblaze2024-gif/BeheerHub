@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -475,8 +475,8 @@ function IntegratedWerkbonOverlay({
                         </div>
                         <ScrollArea className="flex-1 p-5">
                             <div className="space-y-3">
-                                {melding.files?.map(f => (
-                                    <div key={f.storagePath} className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 shadow-sm group">
+                                {melding.files?.map((f, i) => (
+                                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 shadow-sm group">
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className="bg-blue-100 p-2 rounded-lg"><Paperclip className="h-4 w-4 text-blue-600" /></div>
                                             <p className="text-[10px] font-black truncate text-slate-900 uppercase">{f.name}</p>
@@ -559,11 +559,8 @@ export default function StartNavigationPage() {
         (pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
-            // Update location marker instantly if not simulating
             if (!isSimulationMode) {
                 setSmoothLocation({ ...loc, heading: pos.coords.heading || smoothLocation.heading || 0 });
-                
-                // Real navigation camera follow
                 if (navigationState === 'navigating' && mapRef.current) {
                     mapRef.current.getMap().flyTo({
                         center: [loc.longitude, loc.latitude],
@@ -621,12 +618,7 @@ export default function StartNavigationPage() {
         return;
     }
     const startPos = userLocation || SIMULATION_START_LOCATION;
-    
-    const waypoints = [
-        [startPos.longitude, startPos.latitude],
-        ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])
-    ];
-    
+    const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypointsStr}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
     
@@ -636,31 +628,21 @@ export default function StartNavigationPage() {
         if (data.routes?.[0]) {
             setCurrentRouteGeometry(data.routes[0].geometry);
             setDistanceRemaining(Math.round(data.routes[0].distance));
-            
             if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(data.routes[0].geometry.coordinates);
                 const bbox = turf.bbox(line);
-                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                    padding: { top: 80, bottom: 300, left: 80, right: 80 }, 
-                    duration: 1500 
-                });
+                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: { top: 80, bottom: 300, left: 80, right: 80 }, duration: 1500 });
             }
         }
-    } catch (e) {
-        console.error("Route fetch error:", e);
-    }
+    } catch (e) { console.error("Route fetch error:", e); }
   }, [sortedMissions, userLocation]);
 
-  // Initial load: Fetch the multi-point route and zoom to FIT EVERYTHING including start
   React.useEffect(() => {
-    if (sortedMissions.length > 0 && !currentRouteGeometry) {
-        fetchRoute(true);
-    }
+    if (sortedMissions.length > 0 && !currentRouteGeometry) fetchRoute(true);
   }, [sortedMissions, fetchRoute, currentRouteGeometry]);
 
   const handleStartRit = (simulate = false) => {
     if (filteredMeldingen.length === 0) { toast({ title: "Geen opdrachten beschikbaar" }); return; }
-    
     if (!simulate) {
         setIsLocating(true);
         navigator.geolocation.getCurrentPosition((pos) => {
@@ -671,46 +653,21 @@ export default function StartNavigationPage() {
             setNavigationState('navigating');
             setIsListExpanded(false);
             setIsLocating(false);
-            
-            // ZOOM INTO START LOCATION FOR REAL NAV
-            mapRef.current?.getMap().flyTo({ 
-                center: [loc.longitude, loc.latitude], 
-                zoom: 18, 
-                pitch: 60, 
-                bearing: pos.coords.heading || 0, 
-                duration: 2000 
-            });
-            
-            fetchRoute(); // Re-calculate from new GPS position
-            toast({ title: "Route gestart", description: "Navigeren vanaf huidige locatie." });
-        }, (err) => {
+            mapRef.current?.getMap().flyTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: 60, bearing: pos.coords.heading || 0, duration: 2000 });
+            fetchRoute();
+            toast({ title: "Route gestart" });
+        }, () => {
             setIsLocating(false);
-            toast({ variant: 'destructive', title: "GPS Fout", description: "Kon uw locatie niet bepalen. Route start vanaf basis." });
             setNavigationState('navigating');
             setIsListExpanded(false);
-            
-            mapRef.current?.getMap().flyTo({ 
-                center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
-                zoom: 18, 
-                pitch: 60, 
-                duration: 2000 
-            });
+            mapRef.current?.getMap().flyTo({ center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], zoom: 18, pitch: 60, duration: 2000 });
         }, { enableHighAccuracy: true });
     } else {
         setIsSimulationMode(true);
         setNavigationState('navigating');
         setIsListExpanded(false);
-        
         const first = currentRouteGeometry?.coordinates[0];
-        if (first) {
-            mapRef.current?.getMap().flyTo({ 
-                center: [first[0], first[1]], 
-                zoom: 18, 
-                pitch: 60, 
-                duration: 2000 
-            });
-        }
-        
+        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 18, pitch: 60, duration: 2000 });
         setTimeout(startSimulation, 2000);
     }
   };
@@ -720,60 +677,36 @@ export default function StartNavigationPage() {
     const line = turf.lineString(currentRouteGeometry.coordinates);
     const totalDist = turf.length(line, { units: 'meters' });
     simStateRef.current = { distanceTravelled: 0, currentSpeedMs: 0 };
-
     const animate = () => {
         if (isPaused || activeWerkbonId) { simAnimationRef.current = requestAnimationFrame(animate); return; }
         const deltaTime = 0.016; 
-        const speedMs = 13.8; // ~50km/h
+        const speedMs = 13.8; 
         simStateRef.current.distanceTravelled += speedMs * deltaTime;
-        
         if (simStateRef.current.distanceTravelled >= totalDist) {
             const final = currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1];
             setSmoothLocation({ latitude: final[1], longitude: final[0], heading: 0 });
             setSpeedKmh(0);
             return;
         }
-
         const curr = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
         const ahead = turf.along(line, simStateRef.current.distanceTravelled + 2, { units: 'meters' });
         const [lng, lat] = curr.geometry.coordinates;
         const head = (turf.bearing(curr, ahead) + 360) % 360;
-        
         setSmoothLocation({ latitude: lat, longitude: lng, heading: head });
         setSpeedKmh(Math.round(speedMs * 3.6));
         setHeading(head);
-        
-        // Follow cam for simulation
-        if (mapRef.current) {
-            mapRef.current.getMap().jumpTo({ center: [lng, lat], bearing: head });
-        }
-        
+        if (mapRef.current) mapRef.current.getMap().jumpTo({ center: [lng, lat], bearing: head });
         simAnimationRef.current = requestAnimationFrame(animate);
     };
     simAnimationRef.current = requestAnimationFrame(animate);
   };
 
-  const handleLocateUser = () => {
-    setIsLocating(true);
-    const target = userLocation || SIMULATION_START_LOCATION;
-    mapRef.current?.getMap().flyTo({ 
-        center: [target.longitude, target.latitude], 
-        zoom: 18, 
-        pitch: navigationState === 'navigating' ? 60 : 0, 
-        duration: 1500 
-    });
-    setIsLocating(false);
-  };
-
-  const toggleColumn = (col: string) => {
-    setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }));
-  };
+  const toggleColumn = (col: string) => setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }));
 
   if (isLoading) return <LoadingScreen />;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
-        {/* Fullscreen Map */}
         <div className="absolute inset-0 z-0">
             <MapGL 
                 ref={mapRef} 
@@ -782,7 +715,6 @@ export default function StartNavigationPage() {
                 mapStyle={mapStyle} 
                 mapboxAccessToken={MAPBOX_TOKEN}
             >
-                {/* User Marker */}
                 {smoothLocation && (
                     <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center" rotation={smoothLocation.heading}>
                         <div className="relative flex items-center justify-center w-12 h-12">
@@ -792,8 +724,6 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 )}
-
-                {/* Mission Markers */}
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
                         <div className="relative group cursor-pointer">
@@ -809,8 +739,6 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 ))}
-
-                {/* Navigation Line */}
                 {currentRouteGeometry && (
                     <Source id="route-line" type="geojson" data={currentRouteGeometry}>
                         <Layer {...routeLayerCasing} /><Layer {...routeLayer} />
@@ -819,7 +747,6 @@ export default function StartNavigationPage() {
             </MapGL>
         </div>
 
-        {/* Floating Header UI */}
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
             <div className="flex items-center gap-2 pointer-events-auto">
                 <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => router.push('/')}>
@@ -827,7 +754,10 @@ export default function StartNavigationPage() {
                 </Button>
             </div>
             <div className="flex items-center gap-3 pointer-events-auto">
-                <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border border-slate-100" onClick={handleLocateUser} disabled={isLocating}>
+                <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border border-slate-100" onClick={() => {
+                    const target = userLocation || SIMULATION_START_LOCATION;
+                    mapRef.current?.getMap().flyTo({ center: [target.longitude, target.latitude], zoom: 18, pitch: navigationState === 'navigating' ? 60 : 0, duration: 1500 });
+                }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
                 </Button>
                 {navigationState === 'setup' ? (
@@ -844,9 +774,8 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {/* Floating Navigation HUD Overlay - BOTTOM CENTER */}
         {navigationState === 'navigating' && !activeWerkbonId && (
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto ring-1 ring-black/5">
                     <CardContent className="p-6 flex items-center justify-between gap-8">
                         <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-8">
@@ -874,10 +803,11 @@ export default function StartNavigationPage() {
             </div>
         )}
 
-        {/* Integrated Collapsible Excel List - SQUARE */}
         <div className={cn(
             "absolute bottom-0 left-0 right-0 z-40 transition-transform duration-500 ease-in-out bg-white border-t-4 border-slate-900 rounded-none shadow-2xl flex flex-col",
-            isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]"
+            navigationState === 'navigating' 
+                ? "h-0 translate-y-full pointer-events-none" 
+                : (isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]")
         )}>
             <div className="h-14 flex items-center justify-between px-8 cursor-pointer shrink-0 border-b border-slate-200" onClick={() => setIsListExpanded(!isListExpanded)}>
                 <div className="flex items-center gap-4">
@@ -889,40 +819,20 @@ export default function StartNavigationPage() {
                         <div className="flex items-center gap-3">
                             <div className="relative w-48 lg:w-64">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input 
-                                    placeholder="Zoek op nummer of adres..." 
-                                    className="h-9 pl-9 rounded-xl border-slate-200 bg-slate-50 font-bold" 
-                                    value={searchQuery} 
-                                    onChange={e => setSearchQuery(e.target.value)} 
-                                    onClick={e => e.stopPropagation()} 
-                                />
+                                <Input placeholder="Zoek op nummer of adres..." className="h-9 pl-9 rounded-xl border-slate-200 bg-slate-50 font-bold" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onClick={e => e.stopPropagation()} />
                             </div>
-                            
                             {isPrivileged && (
-                                <Button 
-                                    variant={isAssignedVisible ? "default" : "outline"} 
-                                    size="sm" 
-                                    className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all border-slate-200"
-                                    onClick={(e) => { e.stopPropagation(); setIsAssignedVisible(!isAssignedVisible); }}
-                                >
-                                    {isAssignedVisible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                                    TOEGEWEZEN
+                                <Button variant={isAssignedVisible ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all border-slate-200" onClick={(e) => { e.stopPropagation(); setIsAssignedVisible(!isAssignedVisible); }}>
+                                    {isAssignedVisible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} TOEGEWEZEN
                                 </Button>
                             )}
-
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-slate-200" onClick={e => e.stopPropagation()}>
-                                        <Columns className="h-3 w-3" /> KOLOMMEN
-                                    </Button>
-                                </DropdownMenuTrigger>
+                                <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-slate-200" onClick={e => e.stopPropagation()}><Columns className="h-3 w-3" /> KOLOMMEN</Button></DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-xl border-slate-100" onClick={e => e.stopPropagation()}>
                                     <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tabel Weergave</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     {Object.entries(visibleColumns).map(([key, isVisible]) => (
-                                        <DropdownMenuCheckboxItem key={key} checked={isVisible} onCheckedChange={() => toggleColumn(key)} className="font-bold text-xs uppercase tracking-tight">
-                                            {key}
-                                        </DropdownMenuCheckboxItem>
+                                        <DropdownMenuCheckboxItem key={key} checked={isVisible} onCheckedChange={() => toggleColumn(key)} className="font-bold text-xs uppercase tracking-tight">{key}</DropdownMenuCheckboxItem>
                                     ))}
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -931,7 +841,6 @@ export default function StartNavigationPage() {
                     {isListExpanded ? <ChevronDown className="h-6 w-6 text-slate-300" /> : <ChevronUp className="h-6 w-6 text-slate-300" />}
                 </div>
             </div>
-            
             <div className="flex-1 overflow-hidden">
                 <ScrollArea className="h-full px-0 pb-10">
                     <div className="min-w-[1200px]">
@@ -943,9 +852,7 @@ export default function StartNavigationPage() {
                                     {visibleColumns.omschrijving && <TableHead className="font-black uppercase text-[10px] border-r border-slate-200">Omschrijving</TableHead>}
                                     {visibleColumns.hoofdtype && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Hoofdtype</TableHead>}
                                     {visibleColumns.subtype && <TableHead className="font-black uppercase text-[10px] w-40 border-r border-slate-200">Subtype</TableHead>}
-                                    {visibleColumns.werkgebied && (
-                                        <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Werkgebied</TableHead>
-                                    )}
+                                    {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Werkgebied</TableHead>}
                                     {visibleColumns.toegewezen && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Toegewezen</TableHead>}
                                     {visibleColumns.afstand && <TableHead className="font-black uppercase text-[10px] w-24 text-right sticky right-0 bg-slate-100 z-20 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">Afstand</TableHead>}
                                 </TableRow>
@@ -955,36 +862,14 @@ export default function StartNavigationPage() {
                                     const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
                                     return (
                                         <TableRow key={m.id} className="h-14 hover:bg-blue-50 transition-colors cursor-pointer border-b border-slate-100 group" onClick={() => setActiveWerkbonId(m.id)}>
-                                            {visibleColumns.intakenr && (
-                                                <TableCell className="font-black text-xs border-r border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                                                    <div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", getMeldingAgeColor(m.datum))} />{m.intakenummer}</div>
-                                                </TableCell>
-                                            )}
+                                            {visibleColumns.intakenr && <TableCell className="font-black text-xs border-r border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", getMeldingAgeColor(m.datum))} />{m.intakenummer}</div></TableCell>}
                                             {visibleColumns.adres && <TableCell className="text-xs font-bold border-r border-slate-100 truncate">{m.straatnaam} {m.huisnummer}</TableCell>}
                                             {visibleColumns.omschrijving && <TableCell className="text-xs font-medium border-r border-slate-100 italic text-slate-500 truncate max-w-[300px]">"{m.extra_informatie}"</TableCell>}
                                             {visibleColumns.hoofdtype && <TableCell className="text-[10px] font-black uppercase border-r border-slate-100 text-slate-400">{m.hoofdcategorie}</TableCell>}
                                             {visibleColumns.subtype && <TableCell className="text-[10px] font-black uppercase border-r border-slate-100 text-slate-900 truncate">{m.subcategorie}</TableCell>}
-                                            {visibleColumns.werkgebied && (
-                                                <TableCell className="border-r border-slate-100">
-                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-black text-[9px] uppercase tracking-tighter h-6 px-2">
-                                                        <LayoutGrid className="h-2.5 w-2.5 mr-1.5" />
-                                                        {m.werkgebied || m.wijk || '-'}
-                                                    </Badge>
-                                                </TableCell>
-                                            )}
-                                            {visibleColumns.toegewezen && (
-                                                <TableCell className="text-xs font-bold border-r border-slate-100 truncate text-slate-600">
-                                                    <div className="flex items-center gap-2">
-                                                        <User className="h-3 w-3 text-slate-300" />
-                                                        {m.behandelaar || '-'}
-                                                    </div>
-                                                </TableCell>
-                                            )}
-                                            {visibleColumns.afstand && (
-                                                <TableCell className="text-right font-black text-xs text-primary sticky right-0 bg-white group-hover:bg-blue-50 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">
-                                                    {dist} km
-                                                </TableCell>
-                                            )}
+                                            {visibleColumns.werkgebied && <TableCell className="border-r border-slate-100"><Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-black text-[9px] uppercase tracking-tighter h-6 px-2"><LayoutGrid className="h-2.5 w-2.5 mr-1.5" />{m.werkgebied || m.wijk || '-'}</Badge></TableCell>}
+                                            {visibleColumns.toegewezen && <TableCell className="text-xs font-bold border-r border-slate-100 truncate text-slate-600"><div className="flex items-center gap-2"><User className="h-3 w-3 text-slate-300" />{m.behandelaar || '-'}</div></TableCell>}
+                                            {visibleColumns.afstand && <TableCell className="text-right font-black text-xs text-primary sticky right-0 bg-white group-hover:bg-blue-50 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">{dist} km</TableCell>}
                                         </TableRow>
                                     );
                                 })}
@@ -996,7 +881,6 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {/* Integrated Werkbon Overlay - FULL LAYOUT */}
         {activeWerkbonId && (
             <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
                 <div className="w-full max-w-6xl h-[90vh] rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-white/20 animate-in zoom-in-95 duration-300">
@@ -1006,9 +890,8 @@ export default function StartNavigationPage() {
                         onCompleted={(id) => {
                             setCompletedObjects(prev => [...prev, id]);
                             setActiveWerkbonId(null);
-                            // Auto-refresh the multi-point route
                             fetchRoute();
-                            toast({ title: "Melding afgerond", description: "Route naar volgende opdracht wordt berekend..." });
+                            toast({ title: "Melding afgerond", description: "Route wordt herberekend..." });
                         }} 
                     />
                 </div>
