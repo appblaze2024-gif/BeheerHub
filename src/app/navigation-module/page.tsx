@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -631,7 +632,12 @@ export default function StartNavigationPage() {
             if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(data.routes[0].geometry.coordinates);
                 const bbox = turf.bbox(line);
-                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: { top: 80, bottom: 300, left: 80, right: 80 }, duration: 1500 });
+                if (bbox[0] !== Infinity) {
+                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
+                        padding: { top: 150, bottom: 450, left: 150, right: 150 }, 
+                        duration: 1500 
+                    });
+                }
             }
         }
     } catch (e) { console.error("Route fetch error:", e); }
@@ -710,7 +716,7 @@ export default function StartNavigationPage() {
         <div className="absolute inset-0 z-0">
             <MapGL 
                 ref={mapRef} 
-                initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 15 }} 
+                initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 13 }} 
                 style={{ width: '100%', height: '100%' }} 
                 mapStyle={mapStyle} 
                 mapboxAccessToken={MAPBOX_TOKEN}
