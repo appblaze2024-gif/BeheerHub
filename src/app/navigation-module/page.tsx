@@ -46,7 +46,7 @@ import {
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -89,7 +89,6 @@ import {
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
-// Basislocatie: Aarbergerweg 5-7, Rijsenhout
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
 const routeLayer: Layer = {
@@ -120,8 +119,17 @@ const getMeldingAgeColor = (datum?: string) => {
     } catch (e) { return 'bg-slate-400'; }
 };
 
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
+
 /**
- * Geïntegreerde Werkbon Component - NU VOLLEDIG SCHERM
+ * Geïntegreerde Werkbon Component - FULL SCREEN
  */
 function IntegratedWerkbonOverlay({ 
     meldingId, 
@@ -528,15 +536,6 @@ function IntegratedWerkbonOverlay({
     );
 }
 
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
-
 export default function StartNavigationPage() {
   const firestore = useFirestore();
   const { user } = useUser();
@@ -573,10 +572,8 @@ export default function StartNavigationPage() {
   // Persistent Display Settings
   const navZoomRef = React.useRef(18);
   const [navZoom, setNavZoomState] = React.useState(18);
-  
   const navPitchRef = React.useRef(60);
   const [navPitch, setNavPitchState] = React.useState(60);
-  
   const navOffsetRef = React.useRef(450);
   const [navOffset, setNavOffsetState] = React.useState(450);
 
@@ -598,62 +595,46 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
-  // Load saved settings from profile on mount
+  // Load saved settings from profile
   React.useEffect(() => {
     if (profile) {
-        if (profile.navZoom !== undefined && profile.navZoom !== null) {
-            const val = Number(profile.navZoom);
-            if (!isNaN(val)) {
-                setNavZoomState(val);
-                navZoomRef.current = val;
-            }
+        if (profile.navZoom !== undefined) {
+            setNavZoomState(Number(profile.navZoom));
+            navZoomRef.current = Number(profile.navZoom);
         }
-        if (profile.navPitch !== undefined && profile.navPitch !== null) {
-            const val = Number(profile.navPitch);
-            if (!isNaN(val)) {
-                setNavPitchState(val);
-                navPitchRef.current = val;
-            }
+        if (profile.navPitch !== undefined) {
+            setNavPitchState(Number(profile.navPitch));
+            navPitchRef.current = Number(profile.navPitch);
         }
-        if (profile.navOffset !== undefined && profile.navOffset !== null) {
-            const val = Number(profile.navOffset);
-            if (!isNaN(val)) {
-                const safeVal = Math.max(0, val);
-                setNavOffsetState(safeVal);
-                navOffsetRef.current = safeVal;
-            }
+        if (profile.navOffset !== undefined) {
+            setNavOffsetState(Number(profile.navOffset));
+            navOffsetRef.current = Number(profile.navOffset);
         }
     }
   }, [profile]);
 
   const updateNavZoom = (newZoom: number) => {
-    const safeZoom = Number(newZoom) || 18;
-    setNavZoomState(safeZoom);
-    navZoomRef.current = safeZoom;
-    if (user && firestore) {
-      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: safeZoom });
-    }
-    mapRef.current?.getMap().easeTo({ zoom: safeZoom, duration: 200 });
+    const val = Number(newZoom);
+    setNavZoomState(val);
+    navZoomRef.current = val;
+    if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val });
+    mapRef.current?.getMap().easeTo({ zoom: val, duration: 200 });
   };
 
   const updateNavPitch = (newPitch: number) => {
-    const safePitch = Number(newPitch) || 60;
-    setNavPitchState(safePitch);
-    navPitchRef.current = safePitch;
-    if (user && firestore) {
-      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: safePitch });
-    }
-    mapRef.current?.getMap().easeTo({ pitch: safePitch, duration: 200 });
+    const val = Number(newPitch);
+    setNavPitchState(val);
+    navPitchRef.current = val;
+    if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val });
+    mapRef.current?.getMap().easeTo({ pitch: val, duration: 200 });
   };
 
   const updateNavOffset = (newOffset: number) => {
-    const safeOffset = Math.max(0, Number(newOffset) || 0);
-    setNavOffsetState(safeOffset);
-    navOffsetRef.current = safeOffset;
-    if (user && firestore) {
-      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: safeOffset });
-    }
-    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: Number(safeOffset) || 0, left: 0, right: 0 }, duration: 200 });
+    const val = Number(newOffset);
+    setNavOffsetState(val);
+    navOffsetRef.current = val;
+    if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val });
+    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: val, left: 0, right: 0 }, duration: 200 });
   };
 
   React.useEffect(() => {
@@ -666,24 +647,17 @@ export default function StartNavigationPage() {
             if (!isSimulationMode) {
                 const heading = pos.coords.heading !== null ? pos.coords.heading : lastHeadingRef.current;
                 lastHeadingRef.current = heading;
-                
                 setSmoothLocation({ ...loc, heading: heading });
-                if (pos.coords.speed !== null) {
-                    setSpeedKmh(Math.round(pos.coords.speed * 3.6));
-                }
+                if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
 
                 if (navigationState === 'navigating' && mapRef.current) {
-                    const safeZoom = Number(navZoomRef.current) || 18;
-                    const safePitch = Number(navPitchRef.current) || 60;
-                    const safeOffset = Number(navOffsetRef.current) || 0;
-
                     mapRef.current.getMap().easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
-                        zoom: safeZoom,
-                        pitch: safePitch,
+                        zoom: Number(navZoomRef.current),
+                        pitch: Number(navPitchRef.current),
                         duration: 1000,
-                        padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
+                        padding: { top: 0, bottom: Number(navOffsetRef.current), left: 0, right: 0 }
                     });
                 }
             }
@@ -709,11 +683,7 @@ export default function StartNavigationPage() {
     }
     if (debouncedSearchQuery) {
         const q = debouncedSearchQuery.toLowerCase();
-        pool = pool.filter(m => 
-            m.intakenummer.toLowerCase().includes(q) || 
-            (m.straatnaam || '').toLowerCase().includes(q) ||
-            (m.plaats || '').toLowerCase().includes(q)
-        );
+        pool = pool.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
     }
     return pool;
   }, [rawMeldingen, isPrivileged, profile, debouncedSearchQuery, completedObjects]);
@@ -732,7 +702,6 @@ export default function StartNavigationPage() {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
-        setDistanceRemaining(0);
         return;
     }
     const startPos = userLocation || SIMULATION_START_LOCATION;
@@ -746,24 +715,28 @@ export default function StartNavigationPage() {
         if (data.routes?.[0]) {
             setCurrentRouteGeometry(data.routes[0].geometry);
             setDisplayedRouteGeometry(data.routes[0].geometry);
-            setDistanceRemaining(Math.round(data.routes[0].legs[0]?.distance || 0));
             
             if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(data.routes[0].geometry.coordinates);
                 const bbox = turf.bbox(line);
-                if (bbox[0] !== Infinity) {
-                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: { top: 250, bottom: 550, left: 250, right: 250 }, 
-                        duration: 1500 
-                    });
-                }
+                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
+                    padding: { top: 250, bottom: 550, left: 250, right: 250 }, 
+                    duration: 1500 
+                });
             }
         }
-    } catch (e) { console.error("Route fetch error:", e); }
+    } catch (e) { console.error("Route error:", e); }
   }, [sortedMissions, userLocation]);
 
+  // Effect to fetch route automatically when missions change
+  React.useEffect(() => {
+    if (navigationState === 'setup') {
+        fetchRoute();
+    }
+  }, [sortedMissions, navigationState, fetchRoute]);
+
   const handleStartRit = (simulate = false) => {
-    if (filteredMeldingen.length === 0) { toast({ title: "Geen opdrachten beschikbaar" }); return; }
+    if (filteredMeldingen.length === 0) return;
     
     if (!simulate) {
         setIsLocating(true);
@@ -778,58 +751,25 @@ export default function StartNavigationPage() {
             setIsListExpanded(false);
             setIsLocating(false);
             
-            const safeZoom = Number(navZoomRef.current) || 18;
-            const safePitch = Number(navPitchRef.current) || 60;
-            const safeOffset = Number(navOffsetRef.current) || 0;
-
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
-                zoom: safeZoom, 
-                pitch: safePitch, 
+                zoom: Number(navZoomRef.current), 
+                pitch: Number(navPitchRef.current), 
                 bearing: heading, 
                 duration: 2000,
-                padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
+                padding: { top: 0, bottom: Number(navOffsetRef.current), left: 0, right: 0 }
             });
             fetchRoute();
-            toast({ title: "Navigatie gestart" });
         }, () => {
             setIsLocating(false);
             setNavigationState('navigating');
             setIsListExpanded(false);
-            toast({ title: "GPS signaal zwak", description: "Navigatie start vanaf basislocatie Rijsenhout." });
-            
-            const safeZoom = Number(navZoomRef.current) || 18;
-            const safePitch = Number(navPitchRef.current) || 60;
-            const safeOffset = Number(navOffsetRef.current) || 0;
-
-            mapRef.current?.getMap().flyTo({ 
-                center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
-                zoom: safeZoom, 
-                pitch: safePitch, 
-                bearing: 0, 
-                duration: 2000,
-                padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
-            });
             fetchRoute();
-        }, { enableHighAccuracy: true, timeout: 5000 });
+        }, { enableHighAccuracy: true });
     } else {
         setIsSimulationMode(true);
         setNavigationState('navigating');
         setIsListExpanded(false);
-        const first = currentRouteGeometry?.coordinates[0];
-        if (first) {
-            const safeZoom = Number(navZoomRef.current) || 18;
-            const safePitch = Number(navPitchRef.current) || 60;
-            const safeOffset = Number(navOffsetRef.current) || 0;
-
-            mapRef.current?.getMap().flyTo({ 
-                center: [first[0], first[1]], 
-                zoom: safeZoom, 
-                pitch: safePitch, 
-                duration: 2000, 
-                padding: { top: 0, bottom: safeOffset, left: 0, right: 0 } 
-            });
-        }
         setTimeout(startSimulation, 2000);
     }
   };
@@ -841,15 +781,11 @@ export default function StartNavigationPage() {
     simStateRef.current = { distanceTravelled: 0, currentSpeedMs: 0 };
     const animate = () => {
         if (isPaused || activeWerkbonId) { simAnimationRef.current = requestAnimationFrame(animate); return; }
-        const deltaTime = 0.016; 
         const speedMs = 13.8; // ~50 km/h
-        simStateRef.current.distanceTravelled += speedMs * deltaTime;
+        simStateRef.current.distanceTravelled += speedMs * 0.016;
         
         if (simStateRef.current.distanceTravelled >= totalDist) {
-            const final = currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1];
-            setSmoothLocation({ latitude: final[1], longitude: final[0], heading: 0 });
             setSpeedKmh(0);
-            setDisplayedRouteGeometry(null);
             return;
         }
 
@@ -867,16 +803,12 @@ export default function StartNavigationPage() {
         setSpeedKmh(Math.round(speedMs * 3.6));
         
         if (mapRef.current) {
-            const safeZoom = Number(navZoomRef.current) || 18;
-            const safePitch = Number(navPitchRef.current) || 60;
-            const safeOffset = Number(navOffsetRef.current) || 0;
-
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
-                pitch: safePitch,
-                zoom: safeZoom,
-                padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
+                pitch: Number(navPitchRef.current),
+                zoom: Number(navZoomRef.current),
+                padding: { top: 0, bottom: Number(navOffsetRef.current), left: 0, right: 0 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -897,14 +829,8 @@ export default function StartNavigationPage() {
                 mapboxAccessToken={MAPBOX_TOKEN}
             >
                 {smoothLocation && (
-                    <Marker 
-                        longitude={smoothLocation.longitude} 
-                        latitude={smoothLocation.latitude} 
-                        anchor="center" 
-                        rotation={smoothLocation.heading}
-                        rotationAlignment="map"
-                    >
-                        <div className="relative flex items-center justify-center w-20 h-20 transition-all duration-300">
+                    <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center" rotation={smoothLocation.heading} rotationAlignment="map">
+                        <div className="relative flex items-center justify-center w-20 h-20">
                             <svg viewBox="0 0 100 100" className="h-14 w-14 text-primary drop-shadow-[0_15px_15px_rgba(0,0,0,0.6)]">
                                 <path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" />
                             </svg>
@@ -913,16 +839,8 @@ export default function StartNavigationPage() {
                 )}
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
-                        <div className="relative group cursor-pointer">
-                            <div className={cn("w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110", getMeldingAgeColor(m.datum))}>
-                                <Bell className="h-4 w-4 text-white" />
-                            </div>
-                            {isAssignedVisible && (
-                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-md text-white px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest whitespace-nowrap shadow-2xl border border-white/20 animate-in zoom-in-95">
-                                    {m.behandelaar || 'Onbekend'}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-black/90" />
-                                </div>
-                            )}
+                        <div className={cn("w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer", getMeldingAgeColor(m.datum))}>
+                            <Bell className="h-4 w-4 text-white" />
                         </div>
                     </Marker>
                 ))}
@@ -935,44 +853,35 @@ export default function StartNavigationPage() {
         </div>
 
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
-            <div className="flex items-center gap-2 pointer-events-auto">
-                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => router.push('/')}>
-                    <ArrowLeft className="h-6 w-6 text-slate-600" />
-                </Button>
-            </div>
+            <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 pointer-events-auto" onClick={() => router.push('/')}>
+                <ArrowLeft className="h-6 w-6 text-slate-600" />
+            </Button>
             <div className="flex items-center gap-3 pointer-events-auto">
                 <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border border-slate-100" onClick={() => {
                     const target = userLocation || SIMULATION_START_LOCATION;
-                    const isNavigating = navigationState === 'navigating';
-                    const safeZoom = isNavigating ? (Number(navZoomRef.current) || 18) : 18;
-                    const safePitch = isNavigating ? (Number(navPitchRef.current) || 60) : 0;
-                    const safeOffset = isNavigating ? (Number(navOffsetRef.current) || 0) : 0;
-
                     mapRef.current?.getMap().flyTo({ 
                         center: [target.longitude, target.latitude], 
-                        zoom: safeZoom, 
-                        pitch: safePitch, 
+                        zoom: navigationState === 'navigating' ? Number(navZoomRef.current) : 18, 
+                        pitch: navigationState === 'navigating' ? Number(navPitchRef.current) : 0, 
                         duration: 1500,
-                        padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
+                        padding: { top: 0, bottom: navigationState === 'navigating' ? Number(navOffsetRef.current) : 0, left: 0, right: 0 }
                     });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
                 </Button>
                 {navigationState === 'setup' ? (
-                    <>
+                    <div className="flex gap-2">
                         {isPrivileged && <Button variant="outline" className="h-12 px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-100" onClick={() => handleStartRit(true)}><Gauge className="mr-2 h-5 w-5" /> SIMULATOR</Button>}
                         <Button className="h-12 px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRit(false)}>
-                            {isLocating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5 fill-current" />}
-                            START RIT
+                            {isLocating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5 fill-current" />} START RIT
                         </Button>
-                    </>
+                    </div>
                 ) : (
-                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl border-none" onClick={() => { 
+                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl" onClick={() => { 
                         setNavigationState('setup'); 
                         setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().setPitch(0);
-                        mapRef.current?.getMap().setBearing(0);
                         mapRef.current?.getMap().setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
                         fetchRoute(true);
                     }}>STOP RIT</Button>
@@ -982,77 +891,29 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && (
             <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 pointer-events-auto">
-                <Button 
-                    variant="secondary" 
-                    size="icon" 
-                    className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100"
-                    onClick={() => updateNavZoom(Math.min(Number(navZoom) + 0.5, 22))}
-                >
+                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => updateNavZoom(Math.min(navZoom + 0.5, 22))}>
                     <Plus className="h-6 w-6 text-slate-600" />
                 </Button>
-                <Button 
-                    variant="secondary" 
-                    size="icon" 
-                    className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100"
-                    onClick={() => updateNavZoom(Math.max(Number(navZoom) - 0.5, 10))}
-                >
+                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => updateNavZoom(Math.max(navZoom - 0.5, 10))}>
                     <Minus className="h-6 w-6 text-slate-600" />
                 </Button>
-                
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button 
-                            variant="secondary" 
-                            size="icon" 
-                            className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 mt-2"
-                        >
-                            <Settings className="h-6 w-6 text-slate-600" />
-                        </Button>
+                        <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 mt-2"><Settings className="h-6 w-6 text-slate-600" /></Button>
                     </PopoverTrigger>
-                    <PopoverContent side="left" className="w-80 p-6 rounded-3xl shadow-2xl border-none bg-white/95 backdrop-blur-md">
+                    <PopoverContent side="left" className="w-80 p-6 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-md">
                         <div className="space-y-6">
-                            <div className="flex items-center gap-2 border-b pb-3">
-                                <Sliders className="h-4 w-4 text-primary" />
-                                <h4 className="font-black uppercase text-xs tracking-tight">Weergave Instellingen</h4>
-                            </div>
-                            
+                            <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte (Auto Positie)</Label>
-                                        <span className="text-[10px] font-bold text-primary">{Math.round(Number(navOffset) || 0)}px</span>
-                                    </div>
-                                    <Slider 
-                                        value={[Number(navOffset) || 0]} 
-                                        min={0} 
-                                        max={600} 
-                                        step={10} 
-                                        onValueChange={([val]) => updateNavOffset(val)}
-                                    />
-                                    <p className="text-[8px] text-slate-400 font-medium italic">Schuif om de auto hoger of lager op het scherm te plaatsen.</p>
+                                    <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div>
+                                    <Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} />
                                 </div>
-
                                 <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <Label className="text-[10px] font-black uppercase text-slate-400">Kanteling (Perspectief)</Label>
-                                        <span className="text-[10px] font-bold text-primary">{Math.round(Number(navPitch) || 0)}°</span>
-                                    </div>
-                                    <Slider 
-                                        value={[Number(navPitch) || 0]} 
-                                        min={0} 
-                                        max={85} 
-                                        step={1} 
-                                        onValueChange={([val]) => updateNavPitch(val)}
-                                    />
-                                    <p className="text-[8px] text-slate-400 font-medium italic">Pas de diepte van de 3D-weergave aan.</p>
+                                    <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
+                                    <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
                                 </div>
                             </div>
-                            
-                            <Button variant="outline" className="w-full h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200" onClick={() => {
-                                updateNavZoom(18);
-                                updateNavPitch(60);
-                                updateNavOffset(450);
-                            }}>Reset naar Standaard</Button>
                         </div>
                     </PopoverContent>
                 </Popover>
@@ -1061,29 +922,22 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto ring-1 ring-black/5">
+                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
                     <CardContent className="p-6 flex items-center justify-between gap-8">
                         <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-8">
-                            <p className="text-4xl font-black text-slate-900 tracking-tighter">
-                                {formatDate(addSeconds(new Date(), (distanceRemaining / (speedKmh > 5 ? speedKmh / 3.6 : 11.1))), 'HH:mm')}
-                            </p>
-                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1">aankomst</p>
+                            <p className="text-4xl font-black text-slate-900">{formatDate(addSeconds(new Date(), (distanceRemaining / 13.8)), 'HH:mm')}</p>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">aankomst</p>
                         </div>
                         <div className="flex-1 flex flex-col gap-3 min-w-0">
-                            <div className="flex justify-between items-end px-1">
-                                <div className="space-y-0.5">
-                                    <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Volgende opdracht</p>
-                                    <p className="text-lg font-black text-slate-900 uppercase tracking-tight truncate max-w-[200px]">{sortedMissions[0]?.intakenummer}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-2xl font-black text-slate-900 leading-none">{(distanceRemaining/1000).toFixed(1)} <span className="text-xs text-slate-500 uppercase">km</span></p>
-                                </div>
+                            <div className="space-y-0.5">
+                                <p className="text-[9px] font-black uppercase text-slate-500">Volgende</p>
+                                <p className="text-lg font-black text-slate-900 uppercase truncate">{sortedMissions[0]?.intakenummer}</p>
                             </div>
                             <Progress value={100} className="h-2 bg-slate-100" />
                         </div>
-                        <div className="h-20 w-20 rounded-full border-[6px] border-primary flex flex-col items-center justify-center bg-slate-50 shadow-[inset_0_0_20px_rgba(37,99,235,0.1)] shrink-0 ring-4 ring-slate-100">
-                            <span className="text-3xl font-black text-slate-900 leading-none tracking-tighter">{speedKmh}</span>
-                            <span className="text-[8px] font-black uppercase text-primary mt-0.5">km/h</span>
+                        <div className="h-20 w-20 rounded-full border-[6px] border-primary flex flex-col items-center justify-center bg-slate-50 shrink-0">
+                            <span className="text-3xl font-black text-slate-900">{speedKmh}</span>
+                            <span className="text-[8px] font-black uppercase text-primary">km/h</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -1091,82 +945,39 @@ export default function StartNavigationPage() {
         )}
 
         <div className={cn(
-            "absolute bottom-0 left-0 right-0 z-40 transition-all duration-500 ease-in-out bg-white border-t-4 border-slate-900 rounded-none shadow-2xl flex flex-col",
-            navigationState === 'navigating' 
-                ? "h-0 translate-y-full opacity-0 pointer-events-none" 
-                : (isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]")
+            "absolute bottom-0 left-0 right-0 z-40 transition-all duration-500 bg-white border-t-4 border-slate-900 flex flex-col",
+            navigationState === 'navigating' ? "h-0 translate-y-full opacity-0" : (isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]")
         )}>
-            <div className="h-14 flex items-center justify-between px-8 cursor-pointer shrink-0 border-b border-slate-200" onClick={() => setIsListExpanded(!isListExpanded)}>
-                <div className="flex items-center gap-4">
-                    <LayoutGrid className="h-5 w-5 text-primary" />
-                    <span className="font-black uppercase text-sm tracking-tight">Meldingen ({filteredMeldingen.length})</span>
-                </div>
-                <div className="flex items-center gap-6">
-                    {isListExpanded && (
-                        <div className="flex items-center gap-3">
-                            <div className="relative w-48 lg:w-64">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input placeholder="Zoek op nummer of adres..." className="h-9 pl-9 rounded-xl border-slate-200 bg-slate-50 font-bold" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onClick={e => e.stopPropagation()} />
-                            </div>
-                            {isPrivileged && (
-                                <Button variant={isAssignedVisible ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all border-slate-200" onClick={(e) => { e.stopPropagation(); setIsAssignedVisible(!isAssignedVisible); }}>
-                                    {isAssignedVisible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} TOEGEWEZEN
-                                </Button>
-                            )}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-slate-200" onClick={e => e.stopPropagation()}><Columns className="h-3 w-3" /> KOLOMMEN</Button></DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-xl border-slate-100" onClick={e => e.stopPropagation()}>
-                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tabel Weergave</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    {Object.entries(visibleColumns).map(([key, isVisible]) => (
-                                        <DropdownMenuCheckboxItem key={key} checked={isVisible} onCheckedChange={() => toggleColumn(key)} className="font-bold text-xs uppercase tracking-tight">{key}</DropdownMenuCheckboxItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    )}
-                    {isListExpanded ? <ChevronDown className="h-6 w-6 text-slate-300" /> : <ChevronUp className="h-6 w-6 text-slate-300" />}
-                </div>
+            <div className="h-14 flex items-center justify-between px-8 cursor-pointer shrink-0 border-b" onClick={() => setIsListExpanded(!isListExpanded)}>
+                <div className="flex items-center gap-4"><LayoutGrid className="h-5 w-5 text-primary" /><span className="font-black uppercase text-sm">Meldingen ({filteredMeldingen.length})</span></div>
+                {isListExpanded ? <ChevronDown className="h-6 w-6 text-slate-300" /> : <ChevronUp className="h-6 w-6 text-slate-300" />}
             </div>
-            <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full px-0 pb-10">
-                    <div className="min-w-[1200px]">
-                        <Table className="border-collapse table-fixed w-full border-slate-200">
-                            <TableHeader className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-200">
-                                <TableRow className="h-10 hover:bg-transparent">
-                                    {visibleColumns.intakenr && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200 sticky left-0 bg-slate-100 z-20">Intakenr.</TableHead>}
-                                    {visibleColumns.adres && <TableHead className="font-black uppercase text-[10px] w-48 border-r border-slate-200">Adres</TableHead>}
-                                    {visibleColumns.omschrijving && <TableHead className="font-black uppercase text-[10px] border-r border-slate-200">Omschrijving</TableHead>}
-                                    {visibleColumns.hoofdtype && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Hoofdtype</TableHead>}
-                                    {visibleColumns.subtype && <TableHead className="font-black uppercase text-[10px] w-40 border-r border-slate-200">Subtype</TableHead>}
-                                    {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Werkgebied</TableHead>}
-                                    {visibleColumns.toegewezen && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Toegewezen</TableHead>}
-                                    {visibleColumns.afstand && <TableHead className="font-black uppercase text-[10px] w-24 text-right sticky right-0 bg-slate-100 z-20 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">Afstand</TableHead>}
+            <ScrollArea className="flex-1">
+                <Table className="min-w-[1200px]">
+                    <TableHeader className="bg-slate-100 sticky top-0 z-10">
+                        <TableRow>
+                            {visibleColumns.intakenr && <TableHead className="font-black uppercase text-[10px]">Intakenr.</TableHead>}
+                            {visibleColumns.adres && <TableHead className="font-black uppercase text-[10px]">Adres</TableHead>}
+                            {visibleColumns.omschrijving && <TableHead className="font-black uppercase text-[10px]">Omschrijving</TableHead>}
+                            <TableHead className="text-right font-black uppercase text-[10px]">Afstand</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredMeldingen.map(m => {
+                            const base = userLocation || SIMULATION_START_LOCATION;
+                            const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
+                            return (
+                                <TableRow key={m.id} className="h-14 hover:bg-blue-50 transition-colors cursor-pointer" onClick={() => setActiveWerkbonId(m.id)}>
+                                    <TableCell className="font-black text-xs"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", getMeldingAgeColor(m.datum))} />{m.intakenummer}</div></TableCell>
+                                    <TableCell className="text-xs font-bold truncate">{m.straatnaam} {m.huisnummer}</TableCell>
+                                    <TableCell className="text-xs font-medium italic text-slate-500 truncate max-w-[300px]">"{m.extra_informatie}"</TableCell>
+                                    <TableCell className="text-right font-black text-xs text-primary">{dist} km</TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredMeldingen.map(m => {
-                                    const base = userLocation || SIMULATION_START_LOCATION;
-                                    const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
-                                    return (
-                                        <TableRow key={m.id} className="h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 group" onClick={() => setActiveWerkbonId(m.id)}>
-                                            {visibleColumns.intakenr && <TableCell className="font-black text-xs border-r border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", getMeldingAgeColor(m.datum))} />{m.intakenummer}</div></TableCell>}
-                                            {visibleColumns.adres && <TableCell className="text-xs font-bold border-r border-slate-100 truncate">{m.straatnaam} {m.huisnummer}</TableCell>}
-                                            {visibleColumns.omschrijving && <TableCell className="text-xs font-medium border-r border-slate-100 italic text-slate-500 truncate max-w-[300px]">"{m.extra_informatie}"</TableCell>}
-                                            {visibleColumns.hoofdtype && <TableCell className="text-[10px] font-black uppercase border-r border-slate-100 text-slate-400">{m.hoofdcategorie}</TableCell>}
-                                            {visibleColumns.subtype && <TableCell className="text-[10px] font-black uppercase border-r border-slate-100 text-slate-900 truncate">{m.subcategorie}</TableCell>}
-                                            {visibleColumns.werkgebied && <TableCell className="border-r border-slate-100"><Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-black text-[9px] uppercase tracking-tighter h-6 px-2"><LayoutGrid className="h-2.5 w-2.5 mr-1.5" />{m.werkgebied || m.wijk || '-'}</Badge></TableCell>}
-                                            {visibleColumns.toegewezen && <TableCell className="text-xs font-bold border-r border-slate-100 truncate text-slate-600"><div className="flex items-center gap-2"><User className="h-3 w-3 text-slate-300" />{m.behandelaar || '-'}</div></TableCell>}
-                                            {visibleColumns.afstand && <TableCell className="text-right font-black text-xs text-primary sticky right-0 bg-white group-hover:bg-blue-50 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">{dist} km</TableCell>}
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-            </div>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </ScrollArea>
         </div>
 
         {activeWerkbonId && (
@@ -1178,7 +989,6 @@ export default function StartNavigationPage() {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
                         fetchRoute();
-                        toast({ title: "Melding afgerond", description: "Route wordt herberekend..." });
                     }} 
                 />
             </div>
