@@ -27,12 +27,10 @@ import {
   LocateFixed,
   ChevronDown,
   ChevronUp,
-  Columns,
   X as XIcon,
   FileText,
   Sparkles,
   Trash2,
-  Eye,
   EyeOff,
   User,
   Package,
@@ -41,7 +39,8 @@ import {
   Plus,
   Minus,
   Settings,
-  Sliders
+  Sliders,
+  Table as TableIcon
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -63,24 +62,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
 import { translateText } from '@/ai/flows/translate-text-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Separator } from '@/components/ui/separator';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
 import {
   Popover,
   PopoverContent,
@@ -555,10 +543,9 @@ export default function StartNavigationPage() {
   const [activeWerkbonId, setActiveWerkbonId] = React.useState<string | null>(null);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isListExpanded, setIsListExpanded] = React.useState(true);
-  const [isAssignedVisible, setIsAssignedVisible] = React.useState(false);
 
   // Column visibility state
-  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>({
+  const [visibleColumns] = React.useState<Record<string, boolean>>({
     intakenr: true,
     adres: true,
     omschrijving: true,
@@ -720,7 +707,7 @@ export default function StartNavigationPage() {
                 const line = turf.lineString(data.routes[0].geometry.coordinates);
                 const bbox = turf.bbox(line);
                 mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                    padding: { top: 250, bottom: 550, left: 250, right: 250 }, 
+                    padding: { top: 150, bottom: 450, left: 150, right: 150 }, 
                     duration: 1500 
                 });
             }
@@ -728,12 +715,17 @@ export default function StartNavigationPage() {
     } catch (e) { console.error("Route error:", e); }
   }, [sortedMissions, userLocation]);
 
-  // Effect to fetch route automatically when missions change
+  // Zoom uit bij laden
   React.useEffect(() => {
-    if (navigationState === 'setup') {
-        fetchRoute();
+    if (navigationState === 'setup' && sortedMissions.length > 0) {
+        fetchRoute(true);
     }
-  }, [sortedMissions, navigationState, fetchRoute]);
+  }, [sortedMissions.length, navigationState]); // Alleen bij laden of wijziging aantal
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleStartRit = (simulate = false) => {
     if (filteredMeldingen.length === 0) return;
@@ -816,8 +808,6 @@ export default function StartNavigationPage() {
     simAnimationRef.current = requestAnimationFrame(animate);
   };
 
-  const toggleColumn = (col: string) => setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }));
-
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -883,7 +873,7 @@ export default function StartNavigationPage() {
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().setPitch(0);
                         mapRef.current?.getMap().setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
-                        fetchRoute(true);
+                        fetchRoute(true); // Zoom uit naar volledige route
                     }}>STOP RIT</Button>
                 )}
             </div>
@@ -945,21 +935,36 @@ export default function StartNavigationPage() {
         )}
 
         <div className={cn(
-            "absolute bottom-0 left-0 right-0 z-40 transition-all duration-500 bg-white border-t-4 border-slate-900 flex flex-col",
+            "absolute bottom-0 left-0 right-0 z-40 transition-all duration-500 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl",
             navigationState === 'navigating' ? "h-0 translate-y-full opacity-0" : (isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]")
         )}>
-            <div className="h-14 flex items-center justify-between px-8 cursor-pointer shrink-0 border-b" onClick={() => setIsListExpanded(!isListExpanded)}>
-                <div className="flex items-center gap-4"><LayoutGrid className="h-5 w-5 text-primary" /><span className="font-black uppercase text-sm">Meldingen ({filteredMeldingen.length})</span></div>
-                {isListExpanded ? <ChevronDown className="h-6 w-6 text-slate-300" /> : <ChevronUp className="h-6 w-6 text-slate-300" />}
+            <div className="h-12 flex items-center justify-between px-6 cursor-pointer shrink-0 border-b bg-slate-50" onClick={() => setIsListExpanded(!isListExpanded)}>
+                <div className="flex items-center gap-3"><TableIcon className="h-4 w-4 text-primary" /><span className="font-black uppercase text-[11px] tracking-tight">Opdrachtenlijst ({filteredMeldingen.length})</span></div>
+                <div className="flex items-center gap-4">
+                    <div className="relative w-48 pointer-events-auto" onClick={e => e.stopPropagation()}>
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                        <Input 
+                            placeholder="Snelzoeken..." 
+                            className="h-7 pl-7 text-[10px] font-bold rounded-lg border-slate-200 bg-white" 
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    {isListExpanded ? <ChevronDown className="h-5 w-5 text-slate-300" /> : <ChevronUp className="h-5 w-5 text-slate-300" />}
+                </div>
             </div>
-            <ScrollArea className="flex-1">
-                <Table className="min-w-[1200px]">
-                    <TableHeader className="bg-slate-100 sticky top-0 z-10">
-                        <TableRow>
-                            {visibleColumns.intakenr && <TableHead className="font-black uppercase text-[10px]">Intakenr.</TableHead>}
-                            {visibleColumns.adres && <TableHead className="font-black uppercase text-[10px]">Adres</TableHead>}
-                            {visibleColumns.omschrijving && <TableHead className="font-black uppercase text-[10px]">Omschrijving</TableHead>}
-                            <TableHead className="text-right font-black uppercase text-[10px]">Afstand</TableHead>
+            
+            <ScrollArea className="flex-1 bg-white">
+                <Table className="min-w-[1200px] border-collapse border-slate-200 text-[10px]">
+                    <TableHeader className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-300">
+                        <TableRow className="h-8 hover:bg-transparent">
+                            {visibleColumns.intakenr && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Nr.</TableHead>}
+                            {visibleColumns.adres && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Locatie (Straat + Nr)</TableHead>}
+                            {visibleColumns.omschrijving && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Memo / Omschrijving</TableHead>}
+                            {visibleColumns.hoofdtype && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Hoofdtype</TableHead>}
+                            {visibleColumns.subtype && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
+                            {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Werkgebied</TableHead>}
+                            {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -967,14 +972,29 @@ export default function StartNavigationPage() {
                             const base = userLocation || SIMULATION_START_LOCATION;
                             const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                             return (
-                                <TableRow key={m.id} className="h-14 hover:bg-blue-50 transition-colors cursor-pointer" onClick={() => setActiveWerkbonId(m.id)}>
-                                    <TableCell className="font-black text-xs"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", getMeldingAgeColor(m.datum))} />{m.intakenummer}</div></TableCell>
-                                    <TableCell className="text-xs font-bold truncate">{m.straatnaam} {m.huisnummer}</TableCell>
-                                    <TableCell className="text-xs font-medium italic text-slate-500 truncate max-w-[300px]">"{m.extra_informatie}"</TableCell>
-                                    <TableCell className="text-right font-black text-xs text-primary">{dist} km</TableCell>
+                                <TableRow key={m.id} className="h-8 hover:bg-blue-50 transition-colors cursor-pointer border-b border-slate-100" onClick={() => setActiveWerkbonId(m.id)}>
+                                    <TableCell className="font-black text-[10px] border-r border-slate-100 px-2 py-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className={cn("h-1.5 w-1.5 rounded-full", getMeldingAgeColor(m.datum))} />
+                                            {m.intakenummer}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[200px]">{m.straatnaam} {m.huisnummer}</TableCell>
+                                    <TableCell className="font-medium italic text-slate-500 border-r border-slate-100 px-2 py-1 truncate max-w-[350px]">"{m.extra_informatie || '-'}"</TableCell>
+                                    <TableCell className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 py-1">{m.hoofdcategorie}</TableCell>
+                                    <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[150px]">{m.subcategorie}</TableCell>
+                                    <TableCell className="font-black uppercase text-primary border-r border-slate-100 px-2 py-1">{m.werkgebied || m.wijk || '-'}</TableCell>
+                                    <TableCell className="text-right font-black text-primary px-2 py-1">{dist}</TableCell>
                                 </TableRow>
                             );
                         })}
+                        {filteredMeldingen.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-32 text-center text-slate-300 font-bold uppercase tracking-widest text-[10px]">
+                                    Geen actieve meldingen gevonden
+                                </TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </ScrollArea>
