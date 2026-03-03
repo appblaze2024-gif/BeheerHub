@@ -350,10 +350,6 @@ function IntegratedWerkbonOverlay({
                             <FileText className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                             <span className="text-[10px] lg:text-[11px]">Werkzaamheden</span>
                         </TabsTrigger>
-                        <TabsTrigger value="Opmerkingen" className="gap-1.5 lg:gap-2 shrink-0 px-3 lg:px-4">
-                            <MessageSquare className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
-                            <span className="text-[10px] lg:text-[11px]">Opmerkingen</span>
-                        </TabsTrigger>
                         <TabsTrigger value="Fotos" className="gap-1.5 lg:gap-2 shrink-0 px-3 lg:px-4">
                             <Camera className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                             <span className="text-[10px] lg:text-[11px]">Foto's</span>
@@ -367,9 +363,95 @@ function IntegratedWerkbonOverlay({
                 
                 <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar">
-                        <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 h-full">
-                                <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col h-full overflow-hidden">
+                        <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300 space-y-6">
+                            
+                            {/* INTEGRATED: Notes & Quick Keys at the TOP */}
+                            <Card className="rounded-xl lg:rounded-2xl border-none shadow-xl bg-white overflow-hidden shrink-0">
+                                <CardHeader className="bg-slate-50 border-b p-4 lg:p-5 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities & Sneltoetsen</CardTitle>
+                                    <div className="flex items-center gap-1.5 lg:gap-2 bg-slate-100 p-1 lg:p-1.5 rounded-xl lg:rounded-2xl border border-slate-200">
+                                        <div className="flex items-center gap-1 lg:gap-1.5 pr-1.5 lg:pr-2 border-r border-slate-200">
+                                            <Select value={sourceLang.code} onValueChange={(val) => setSourceLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
+                                                <SelectTrigger className="h-7 lg:h-8 w-[50px] lg:w-[60px] p-0 border-none bg-transparent shadow-none focus:ring-0">
+                                                    <div className="flex items-center justify-center w-full">
+                                                        <img src={`https://flagcdn.com/w40/${sourceLang.flag}.png`} alt={sourceLang.label} className="h-3 w-5 lg:h-4 lg:w-6 rounded-sm object-cover border border-slate-200" />
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {translationLanguages.map(l => (
+                                                        <SelectItem key={l.code} value={l.code}>
+                                                            <div className="flex items-center gap-2">
+                                                                <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
+                                                                <span className="text-xs font-bold">{l.label}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Button variant={isListening ? "destructive" : "ghost"} size="icon" className="rounded-full h-7 w-7 lg:h-8 lg:w-8 shadow-sm shrink-0" onClick={toggleListening} title={isListening ? "Stoppen" : `Dicteren in ${sourceLang.label}`}>
+                                                {isListening ? <Loader2 className="h-3 w-3 lg:h-4 lg:w-4 animate-spin" /> : <Mic className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-primary" />}
+                                            </Button>
+                                        </div>
+                                        <div className="flex items-center gap-1 lg:gap-1.5 pl-1">
+                                            <ChevronRight className="h-3 w-3 text-slate-300" />
+                                            <Select value={targetLang.code} onValueChange={(val) => setTargetLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
+                                                <SelectTrigger className="h-7 lg:h-8 w-[50px] lg:w-[60px] p-0 border-none bg-transparent shadow-none focus:ring-0">
+                                                    <div className="flex items-center justify-center w-full">
+                                                        <img src={`https://flagcdn.com/w40/${targetLang.flag}.png`} alt={targetLang.label} className="h-3 w-5 lg:h-4 lg:w-6 rounded-sm object-cover border border-slate-200" />
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {translationLanguages.map(l => (
+                                                        <SelectItem key={l.code} value={l.code}>
+                                                            <div className="flex items-center gap-2">
+                                                                <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
+                                                                <span className="text-xs font-bold">{l.label}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Button variant="ghost" size="sm" className="h-7 lg:h-8 px-2 lg:px-3 font-black uppercase text-[8px] lg:text-[9px] gap-1.5 lg:gap-2 text-primary hover:bg-primary/5 rounded-lg lg:rounded-xl" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden}>
+                                                {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                                Vertaal
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-4 lg:p-6 space-y-4">
+                                    <Textarea 
+                                        placeholder="Voer hier je bevindingen in..." 
+                                        className="resize-none text-[11px] lg:text-sm font-medium leading-relaxed rounded-xl border-slate-100 bg-slate-50 focus:ring-primary/20 min-h-[120px]"
+                                        value={afhandelingBijzonderheden}
+                                        onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
+                                    />
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center justify-between border-b pb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Zap className="h-3.5 w-3.5 text-primary" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sneltoetsen</span>
+                                            </div>
+                                            <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-tight rounded-lg border-slate-200" onClick={handleSaveQuickKey} disabled={!afhandelingBijzonderheden.trim()}>
+                                                <Plus className="h-3.5 w-3.5 mr-1.5" /> Opslaan
+                                            </Button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {profile?.quickKeys?.map((key, i) => (
+                                                <div key={i} className="group relative flex items-center">
+                                                    <Button variant="secondary" size="sm" className="h-8 px-3 rounded-xl font-bold text-[10px] bg-slate-100 border border-slate-200 shadow-sm hover:border-primary/30 transition-all truncate max-w-[150px]" onClick={() => handleUseQuickKey(key)}>{key}</Button>
+                                                    <button className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" onClick={(e) => { e.stopPropagation(); handleDeleteQuickKey(key); }}><X className="h-2 w-2" /></button>
+                                                </div>
+                                            ))}
+                                            {(!profile?.quickKeys || profile.quickKeys.length === 0) && (
+                                                <p className="text-[9px] font-bold text-slate-300 italic uppercase">Geen sneltoetsen.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                                <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col overflow-hidden">
                                     <CardHeader className="bg-slate-500 text-white p-4 lg:p-5 shrink-0">
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-0.5 lg:space-y-1">
@@ -379,8 +461,8 @@ function IntegratedWerkbonOverlay({
                                             <Badge className="bg-blue-500 text-white border-none font-black text-[8px] lg:text-[9px] h-4 lg:h-5 px-2 lg:px-2.5">{melding.status}</Badge>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-4 lg:p-6 space-y-4 lg:space-y-6 flex-1 flex flex-col min-h-0">
-                                        <div className="grid grid-cols-2 gap-x-4 lg:gap-x-6 gap-y-3 lg:gap-y-4 shrink-0">
+                                    <CardContent className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+                                        <div className="grid grid-cols-2 gap-x-4 lg:gap-x-6 gap-y-3 lg:gap-y-4">
                                             <div className="space-y-0.5">
                                                 <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Datum & Tijd</p>
                                                 <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.datum} • {melding.tijdstip || '--:--'}</p>
@@ -402,240 +484,51 @@ function IntegratedWerkbonOverlay({
                                                 <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.werkgebied || melding.wijk || '-'}</p>
                                             </div>
                                         </div>
-                                        <div className="flex-1 min-h-0 flex flex-col space-y-1.5 lg:space-y-2">
-                                            <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest shrink-0">Omschrijving melding</p>
-                                            <ScrollArea className="flex-1 bg-slate-50 rounded-lg lg:rounded-xl border border-slate-100 p-3 lg:p-4">
-                                                <p className="text-[10px] lg:text-xs italic text-slate-600 font-medium leading-relaxed">
-                                                    "{melding.extra_informatie || 'Geen omschrijving opgegeven.'}"
-                                                </p>
-                                            </ScrollArea>
+                                        <div className="space-y-1.5 lg:space-y-2 border-t pt-4">
+                                            <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Oorspronkelijke melding</p>
+                                            <p className="text-[10px] lg:text-xs italic text-slate-600 font-medium leading-relaxed">"{melding.extra_informatie || 'Geen omschrijving.'}"</p>
                                         </div>
                                     </CardContent>
                                 </Card>
                                 <div className="rounded-xl lg:rounded-2xl overflow-hidden border-2 border-white shadow-2xl min-h-[300px] lg:min-h-[400px]">
-                                    <MapboxView 
-                                      latitude={melding.latitude} 
-                                      longitude={melding.longitude} 
-                                      mainLocationLabel={melding.containernummer}
-                                      interactive={false} 
-                                      objects={nearbyObjects}
-                                    />
+                                    <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={false} objects={nearbyObjects} />
                                 </div>
                             </div>
-                        </TabsContent>
-
-                        <TabsContent value="Opmerkingen" className="mt-0 h-full flex flex-col gap-4">
-                            <Card className="rounded-xl lg:rounded-3xl border-none shadow-xl bg-white overflow-hidden flex flex-col flex-1">
-                                <CardHeader className="bg-slate-50 border-b p-4 lg:p-6 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle>
-                                    <div className="flex items-center gap-1.5 lg:gap-2 bg-slate-100 p-1 lg:p-1.5 rounded-xl lg:rounded-2xl border border-slate-200">
-                                        <div className="flex items-center gap-1 lg:gap-1.5 pr-1.5 lg:pr-2 border-r border-slate-200">
-                                            <Select value={sourceLang.code} onValueChange={(val) => setSourceLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
-                                                <SelectTrigger className="h-7 lg:h-8 w-[50px] lg:w-[60px] p-0 border-none bg-transparent shadow-none focus:ring-0">
-                                                    <div className="flex items-center justify-center w-full">
-                                                        <img src={`https://flagcdn.com/w40/${sourceLang.flag}.png`} alt={sourceLang.label} className="h-3 w-5 lg:h-4 lg:w-6 rounded-sm object-cover border border-slate-200" />
-                                                    </div>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {translationLanguages.map(l => (
-                                                        <SelectItem key={l.code} value={l.code}>
-                                                            <div className="flex items-center gap-2">
-                                                                <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
-                                                                <span className="text-xs font-bold">{l.label}</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <Button 
-                                                variant={isListening ? "destructive" : "ghost"} 
-                                                size="icon" 
-                                                className="rounded-full h-7 w-7 lg:h-8 lg:w-8 shadow-sm shrink-0"
-                                                onClick={toggleListening}
-                                                title={isListening ? "Stoppen" : `Dicteren in ${sourceLang.label}`}
-                                            >
-                                                {isListening ? <Loader2 className="h-3 w-3 lg:h-4 lg:w-4 animate-spin" /> : <Mic className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-primary" />}
-                                            </Button>
-                                        </div>
-
-                                        <div className="flex items-center gap-1 lg:gap-1.5 pl-1">
-                                            <ChevronRight className="h-3 w-3 text-slate-300" />
-                                            <Select value={targetLang.code} onValueChange={(val) => setTargetLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
-                                                <SelectTrigger className="h-7 lg:h-8 w-[50px] lg:w-[60px] p-0 border-none bg-transparent shadow-none focus:ring-0">
-                                                    <div className="flex items-center justify-center w-full">
-                                                        <img src={`https://flagcdn.com/w40/${targetLang.flag}.png`} alt={targetLang.label} className="h-3 w-5 lg:h-4 lg:w-6 rounded-sm object-cover border border-slate-200" />
-                                                    </div>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {translationLanguages.map(l => (
-                                                        <SelectItem key={l.code} value={l.code}>
-                                                            <div className="flex items-center gap-2">
-                                                                <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
-                                                                <span className="text-xs font-bold">{l.label}</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-7 lg:h-8 px-2 lg:px-3 font-black uppercase text-[8px] lg:text-[9px] gap-1.5 lg:gap-2 text-primary hover:bg-primary/5 rounded-lg lg:rounded-xl"
-                                                onClick={handleAITranslate}
-                                                disabled={isTranslating || !afhandelingBijzonderheden}
-                                            >
-                                                {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                                                Vertaal
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="p-4 lg:p-6 flex-1 flex flex-col gap-4">
-                                    <div className="flex items-center justify-between border-b pb-3 shrink-0">
-                                        <div className="flex items-center gap-2">
-                                            <Zap className="h-3.5 w-3.5 text-primary" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sneltoetsen</span>
-                                        </div>
-                                        <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-tight rounded-lg border-slate-200" onClick={handleSaveQuickKey} disabled={!afhandelingBijzonderheden.trim()}>
-                                            <Plus className="h-3.5 w-3.5 mr-1.5" /> Opslaan als Sneltoets
-                                        </Button>
-                                    </div>
-                                    
-                                    <div className="flex flex-wrap gap-2 shrink-0">
-                                        {profile?.quickKeys?.map((key, i) => (
-                                            <div key={i} className="group relative flex items-center">
-                                                <Button 
-                                                    variant="secondary" 
-                                                    size="sm" 
-                                                    className="h-8 px-3 rounded-xl font-bold text-[10px] bg-white border border-slate-100 shadow-sm hover:border-primary/30 transition-all truncate max-w-[150px]"
-                                                    onClick={() => handleUseQuickKey(key)}
-                                                >
-                                                    {key}
-                                                </Button>
-                                                <button 
-                                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteQuickKey(key); }}
-                                                >
-                                                    <X className="h-2 w-2" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {(!profile?.quickKeys || profile.quickKeys.length === 0) && (
-                                            <p className="text-[9px] font-bold text-slate-300 italic uppercase">Nog geen sneltoetsen opgeslagen.</p>
-                                        )}
-                                    </div>
-
-                                    <Textarea 
-                                        placeholder="Voeg hier bijzonderheden toe over de uitvoering of gebruik de dicteerknop..." 
-                                        className="resize-none text-[11px] lg:text-sm font-medium leading-relaxed rounded-xl lg:rounded-2xl border-slate-100 bg-slate-50 focus:ring-primary/20 flex-1 min-h-[200px]"
-                                        value={afhandelingBijzonderheden}
-                                        onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
-                                    />
-                                </CardContent>
-                            </Card>
                         </TabsContent>
 
                         <TabsContent value="Fotos" className="mt-0">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8">
                                 <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
-                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-6">
-                                        <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Brondocumenten (Foto's)</CardTitle>
-                                    </CardHeader>
+                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-6"><CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Brondocumenten (Foto's)</CardTitle></CardHeader>
                                     <CardContent className="p-4 lg:p-8">
                                         <div className="grid grid-cols-3 gap-3 lg:gap-4">
                                             {melding.fotos?.map((p, i) => (
-                                                <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border-2 border-slate-50 shadow-sm">
-                                                    <Image src={p.url} alt="melding" fill className="object-cover" />
-                                                </div>
+                                                <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border-2 border-slate-50 shadow-sm"><Image src={p.url} alt="melding" fill className="object-cover" /></div>
                                             ))}
-                                            {(!melding.fotos || melding.fotos.length === 0) && (
-                                                <div className="col-span-3 py-12 lg:py-20 text-center opacity-20">
-                                                    <Camera className="h-10 w-10 lg:h-12 lg:w-12 mx-auto mb-2" />
-                                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen bronfoto's</p>
-                                                </div>
-                                            )}
+                                            {(!melding.fotos || melding.fotos.length === 0) && (<div className="col-span-3 py-12 text-center opacity-20"><Camera className="h-10 w-10 mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">Geen bronfoto's</p></div>)}
                                         </div>
                                     </CardContent>
                                 </Card>
                                 <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
                                     <CardHeader className="bg-slate-50 border-b p-4 lg:p-6 flex flex-row items-center justify-between">
                                         <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle>
-                                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-none font-bold text-[9px] uppercase px-2 h-5">
-                                            {afhandelingFotos.length} Foto's
-                                        </Badge>
+                                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-none font-bold text-[9px] uppercase px-2 h-5">{afhandelingFotos.length} Foto's</Badge>
                                     </CardHeader>
                                     <CardContent className="p-4 lg:p-8 space-y-6">
                                         <div className="flex gap-2">
-                                            <Button 
-                                                variant="outline" 
-                                                className="flex-1 h-16 lg:h-20 border-dashed border-2 border-slate-200 hover:border-primary/30 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 transition-all bg-slate-50/50" 
-                                                onClick={() => document.getElementById('camera-input-integrated')?.click()}
-                                            >
-                                                <Camera className="h-6 w-6 text-primary" /> 
-                                                <span>Foto Maken</span>
-                                            </Button>
-                                            <Button 
-                                                variant="outline" 
-                                                className="flex-1 h-16 lg:h-20 border-dashed border-2 border-slate-200 hover:border-primary/30 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 transition-all bg-slate-50/50" 
-                                                onClick={() => document.getElementById('gallery-input-integrated')?.click()}
-                                            >
-                                                <ImageIcon className="h-6 w-6 text-slate-400" /> 
-                                                <span>Album</span>
-                                            </Button>
+                                            <Button variant="outline" className="flex-1 h-16 border-dashed border-2 border-slate-200 hover:border-primary/30 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 transition-all bg-slate-50/50" onClick={() => document.getElementById('camera-input-integrated')?.click()}><Camera className="h-6 w-6 text-primary" /><span>Foto Maken</span></Button>
+                                            <Button variant="outline" className="flex-1 h-16 border-dashed border-2 border-slate-200 hover:border-primary/30 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 transition-all bg-slate-50/50" onClick={() => document.getElementById('gallery-input-integrated')?.click()}><ImageIcon className="h-6 w-6 text-slate-400" /><span>Album</span></Button>
                                         </div>
-                                        
-                                        <input 
-                                            type="file" 
-                                            id="camera-input-integrated" 
-                                            className="hidden" 
-                                            accept="image/*" 
-                                            capture="environment" 
-                                            onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} 
-                                        />
-                                        <input 
-                                            type="file" 
-                                            id="gallery-input-integrated" 
-                                            className="hidden" 
-                                            accept="image/*" 
-                                            multiple 
-                                            onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} 
-                                        />
-
-                                        <div className="grid grid-cols-3 gap-3 lg:gap-4">
+                                        <input type="file" id="camera-input-integrated" className="hidden" accept="image/*" capture="environment" onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
+                                        <input type="file" id="gallery-input-integrated" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
+                                        <div className="grid grid-cols-3 gap-3">
                                             {afhandelingFotos.map((p, i) => (
-                                                <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border-2 border-white shadow-md group">
+                                                <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-white shadow-md group">
                                                     <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                                    <Button 
-                                                        variant="destructive" 
-                                                        size="icon" 
-                                                        className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                                        onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </Button>
+                                                    <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><X className="h-3 w-3" /></Button>
                                                 </div>
                                             ))}
-                                            {afhandelingFotos.length === 0 && (
-                                                <div className="col-span-3 py-12 text-center opacity-20">
-                                                    <ImageIcon className="h-8 w-8 mx-auto mb-2" />
-                                                    <p className="text-[9px] font-black uppercase tracking-widest">Nog geen foto's gemaakt</p>
-                                                </div>
-                                            )}
                                         </div>
-                                        
-                                        {Object.keys(uploadProgress).length > 0 && (
-                                            <div className="space-y-2">
-                                                {Object.entries(uploadProgress).map(([name, progress]) => (
-                                                    <div key={name} className="space-y-1">
-                                                        <div className="flex justify-between text-[8px] font-black uppercase">
-                                                            <span className="truncate max-w-[150px]">{name}</span>
-                                                            <span>{Math.round(progress)}%</span>
-                                                        </div>
-                                                        <Progress value={progress} className="h-1" />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
                                     </CardContent>
                                 </Card>
                             </div>
