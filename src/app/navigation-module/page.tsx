@@ -575,10 +575,10 @@ export default function StartNavigationPage() {
                     mapRef.current.getMap().easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
-                        zoom: 19,
-                        pitch: 65, // Less sharp tilt
+                        zoom: 18,
+                        pitch: 60,
                         duration: 1000,
-                        padding: { bottom: 400 } // Icon further down
+                        padding: { bottom: 450 }
                     });
                 }
             }
@@ -687,11 +687,11 @@ export default function StartNavigationPage() {
             
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
-                zoom: 19, 
-                pitch: 65, 
+                zoom: 18, 
+                pitch: 60, 
                 bearing: heading, 
                 duration: 2000,
-                padding: { bottom: 400 }
+                padding: { bottom: 450 }
             });
             fetchRoute();
             toast({ title: "Navigatie gestart" });
@@ -702,10 +702,10 @@ export default function StartNavigationPage() {
             toast({ title: "GPS signaal zwak", description: "Navigatie start vanaf basislocatie Rijsenhout." });
             mapRef.current?.getMap().flyTo({ 
                 center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
-                zoom: 19, 
-                pitch: 65, 
+                zoom: 18, 
+                pitch: 60, 
                 duration: 2000,
-                padding: { bottom: 400 }
+                padding: { bottom: 450 }
             });
             fetchRoute();
         }, { enableHighAccuracy: true, timeout: 5000 });
@@ -714,7 +714,7 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         const first = currentRouteGeometry?.coordinates[0];
-        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 19, pitch: 65, duration: 2000, padding: { bottom: 400 } });
+        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 18, pitch: 60, duration: 2000, padding: { bottom: 450 } });
         setTimeout(startSimulation, 2000);
     }
   };
@@ -756,9 +756,9 @@ export default function StartNavigationPage() {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
-                pitch: 65,
-                zoom: 19,
-                padding: { bottom: 400 }
+                pitch: 60,
+                zoom: 18,
+                padding: { bottom: 450 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -829,10 +829,10 @@ export default function StartNavigationPage() {
                     const target = userLocation || SIMULATION_START_LOCATION;
                     mapRef.current?.getMap().flyTo({ 
                         center: [target.longitude, target.latitude], 
-                        zoom: 19, 
-                        pitch: navigationState === 'navigating' ? 65 : 0, 
+                        zoom: 18, 
+                        pitch: navigationState === 'navigating' ? 60 : 0, 
                         duration: 1500,
-                        padding: { bottom: navigationState === 'navigating' ? 400 : 0 }
+                        padding: { bottom: navigationState === 'navigating' ? 450 : 0 }
                     });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
