@@ -843,7 +843,19 @@ export default function StartNavigationPage() {
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.routes && data.routes.length > 0) setPreviewRouteGeometry(data.routes[0].geometry);
+                if (data.routes && data.routes.length > 0) {
+                    const geometry = data.routes[0].geometry;
+                    setPreviewRouteGeometry(geometry);
+                    
+                    // Auto-zoom to route bounds
+                    if (mapRef.current) {
+                        const bbox = turf.bbox(geometry);
+                        mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], {
+                            padding: 100,
+                            duration: 1500
+                        });
+                    }
+                }
             } catch (e) {}
         } else {
             setPreviewRouteGeometry(null);
@@ -854,6 +866,8 @@ export default function StartNavigationPage() {
 
   const isMeldingenType = routeType === 'meldingen';
   const tableData = showCompletedToday ? myCompletedToday : sortedMeldingen;
+
+  const startMarkerLocation = userLocation || SIMULATION_START_LOCATION;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -875,7 +889,15 @@ export default function StartNavigationPage() {
                   </div>
 
                   <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN}>
-                    {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
+                    {/* Startlocatie markering (Huisje) */}
+                    <Marker longitude={startMarkerLocation.longitude} latitude={startMarkerLocation.latitude} anchor="center">
+                        <div className="relative flex flex-col items-center">
+                            <div className="absolute h-10 w-10 rounded-full bg-primary/20 animate-ping" />
+                            <div className="relative h-10 w-10 rounded-2xl bg-white border-2 border-primary shadow-xl flex items-center justify-center">
+                                <Home className="h-5 w-5 text-primary fill-current" />
+                            </div>
+                        </div>
+                    </Marker>
                     
                     {isMeldingenType && !showCompletedToday && sortedMeldingen?.map((m) => (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActivePopupMeldingId(m.id)}>
@@ -917,11 +939,11 @@ export default function StartNavigationPage() {
                                           const baseLoc = userLocation || currentActiveSortBase;
                                           const dist = turf.distance(turf.point([baseLoc.longitude, baseLoc.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                                           return (
-                                              <TableRow key={m.id} className={cn("h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
-                                                  <TableCell className="font-black text-[11px] border-r group-hover:text-primary transition-colors px-3">{m.intakenummer}</TableCell>
-                                                  <TableCell className="text-[11px] font-bold border-r px-3"><div><span>{m.straatnaam} {m.huisnummer}</span><br /><span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{m.plaats}</span></div></TableCell>
-                                                  <TableCell className="text-[10px] font-black border-r text-slate-900 uppercase tracking-tight px-3">{m.subcategorie}</TableCell>
-                                                  <TableCell className="px-3"><Badge variant="outline" className="h-5 px-2 text-[9px] font-black uppercase bg-slate-50 border-slate-200">{dist} km</Badge></TableCell>
+                                              <TableRow key={m.id} className={cn("h-10 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
+                                                  <TableCell className="font-black text-[10px] border-r group-hover:text-primary transition-colors px-3 py-1">{m.intakenummer}</TableCell>
+                                                  <TableCell className="text-[10px] font-bold border-r px-3 py-1"><div><span>{m.straatnaam} {m.huisnummer}</span><br /><span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">{m.plaats}</span></div></TableCell>
+                                                  <TableCell className="text-[9px] font-black border-r text-slate-900 uppercase tracking-tight px-3 py-1">{m.subcategorie}</TableCell>
+                                                  <TableCell className="px-3 py-1"><Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200">{dist} km</Badge></TableCell>
                                               </TableRow>
                                           )
                                       })
