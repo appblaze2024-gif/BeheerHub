@@ -575,9 +575,10 @@ export default function StartNavigationPage() {
                     mapRef.current.getMap().easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
-                        zoom: 18,
+                        zoom: 19,
                         pitch: 75,
-                        duration: 1000
+                        duration: 1000,
+                        padding: { bottom: 300 } // Offset to keep marker in lower third
                     });
                 }
             }
@@ -686,10 +687,11 @@ export default function StartNavigationPage() {
             
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
-                zoom: 18, 
+                zoom: 19, 
                 pitch: 75, 
                 bearing: heading, 
-                duration: 2000 
+                duration: 2000,
+                padding: { bottom: 300 }
             });
             fetchRoute();
             toast({ title: "Navigatie gestart" });
@@ -700,9 +702,10 @@ export default function StartNavigationPage() {
             toast({ title: "GPS signaal zwak", description: "Navigatie start vanaf basislocatie Rijsenhout." });
             mapRef.current?.getMap().flyTo({ 
                 center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
-                zoom: 18, 
+                zoom: 19, 
                 pitch: 75, 
-                duration: 2000 
+                duration: 2000,
+                padding: { bottom: 300 }
             });
             fetchRoute();
         }, { enableHighAccuracy: true, timeout: 5000 });
@@ -711,7 +714,7 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         const first = currentRouteGeometry?.coordinates[0];
-        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 18, pitch: 75, duration: 2000 });
+        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 19, pitch: 75, duration: 2000, padding: { bottom: 300 } });
         setTimeout(startSimulation, 2000);
     }
   };
@@ -754,7 +757,8 @@ export default function StartNavigationPage() {
                 center: [lng, lat], 
                 bearing: head,
                 pitch: 75,
-                zoom: 18
+                zoom: 19,
+                padding: { bottom: 300 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -784,8 +788,8 @@ export default function StartNavigationPage() {
                         rotation={smoothLocation.heading}
                         rotationAlignment="map"
                     >
-                        <div className="relative flex items-center justify-center w-12 h-12">
-                            <svg viewBox="0 0 100 100" className="h-10 w-10 text-primary drop-shadow-2xl">
+                        <div className="relative flex items-center justify-center w-16 h-16 transition-all duration-300">
+                            <svg viewBox="0 0 100 100" className="h-12 w-12 text-primary drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
                                 <path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" />
                             </svg>
                         </div>
@@ -825,9 +829,10 @@ export default function StartNavigationPage() {
                     const target = userLocation || SIMULATION_START_LOCATION;
                     mapRef.current?.getMap().flyTo({ 
                         center: [target.longitude, target.latitude], 
-                        zoom: 18, 
+                        zoom: 19, 
                         pitch: navigationState === 'navigating' ? 75 : 0, 
-                        duration: 1500 
+                        duration: 1500,
+                        padding: { bottom: navigationState === 'navigating' ? 300 : 0 }
                     });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
@@ -847,6 +852,7 @@ export default function StartNavigationPage() {
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().setPitch(0);
                         mapRef.current?.getMap().setBearing(0);
+                        mapRef.current?.getMap().setPadding({ bottom: 0 });
                         fetchRoute(true);
                     }}>STOP RIT</Button>
                 )}
