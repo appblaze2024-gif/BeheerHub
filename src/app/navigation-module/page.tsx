@@ -711,12 +711,13 @@ export default function StartNavigationPage() {
 
                 if (navigationState === 'navigating' && mapRef.current) {
                     const map = mapRef.current.getMap();
+                    // FAST NAVIGATION EASE: Reduced duration for snappier tracking
                     map.easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
                         zoom: Number(navZoomRef.current) || 18,
                         pitch: Number(navPitchRef.current) || 60,
-                        duration: 1000,
+                        duration: 300,
                         padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
                     });
 
@@ -805,9 +806,10 @@ export default function StartNavigationPage() {
                 const line = turf.lineString(geometry.coordinates);
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
+                    // Optimized zoom: Fast and clear
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
                         padding: 250, 
-                        duration: 1500 
+                        duration: 800 
                     });
                 }
             }
@@ -836,22 +838,21 @@ export default function StartNavigationPage() {
             setIsListExpanded(false);
             setIsLocating(false);
             
+            // SNAPPY TRANSITION: Reduced duration from 2000 to 800
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: Number(navZoomRef.current) || 18, 
                 pitch: Number(navPitchRef.current) || 60, 
                 bearing: heading, 
-                duration: 2000,
+                duration: 800,
                 padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
             });
             fetchRoute();
         };
 
-        // If background watch has a position, use it
         if (userLocation) {
             beginNavigation(userLocation, lastHeadingRef.current || 0);
         } else {
-            // Force a lookup
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
@@ -862,7 +863,7 @@ export default function StartNavigationPage() {
                     console.error("Initial location failed, using default:", err);
                     beginNavigation(SIMULATION_START_LOCATION, 0);
                 },
-                { enableHighAccuracy: true, timeout: 8000 }
+                { enableHighAccuracy: true, timeout: 5000 }
             );
         }
     } else {
@@ -873,7 +874,7 @@ export default function StartNavigationPage() {
         setTimeout(() => {
             setIsStartingSimulation(false);
             startSimulation();
-        }, 2000);
+        }, 1500);
     }
   };
 
@@ -1153,7 +1154,7 @@ export default function StartNavigationPage() {
                             {visibleColumns.memo && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Memo / Omschrijving</TableHead>}
                             {visibleColumns.hoofdcategorie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Hoofdtype</TableHead>}
                             {visibleColumns.subcategorie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
-                            {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Werkgebied</TableHead>}
+                            {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-200 px-2 h-8">Werkgebied</TableHead>}
                             {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
                         </TableRow>
                     </TableHeader>
