@@ -66,6 +66,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { translateText } from '@/ai/flows/translate-text-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -586,22 +588,32 @@ export default function StartNavigationPage() {
   React.useEffect(() => {
     if (profile) {
         if (profile.navZoom !== undefined) {
-            setNavZoomState(Number(profile.navZoom));
-            navZoomRef.current = Number(profile.navZoom);
+            const val = Number(profile.navZoom);
+            if (!isNaN(val)) {
+                setNavZoomState(val);
+                navZoomRef.current = val;
+            }
         }
         if (profile.navPitch !== undefined) {
-            setNavPitchState(Number(profile.navPitch));
-            navPitchRef.current = Number(profile.navPitch);
+            const val = Number(profile.navPitch);
+            if (!isNaN(val)) {
+                setNavPitchState(val);
+                navPitchRef.current = val;
+            }
         }
         if (profile.navOffset !== undefined) {
-            setNavOffsetState(Number(profile.navOffset));
-            navOffsetRef.current = Number(profile.navOffset);
+            const val = Number(profile.navOffset);
+            if (!isNaN(val)) {
+                setNavOffsetState(val);
+                navOffsetRef.current = val;
+            }
         }
     }
   }, [profile]);
 
   const updateNavZoom = (newZoom: number) => {
     const val = Number(newZoom);
+    if (isNaN(val)) return;
     setNavZoomState(val);
     navZoomRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val });
@@ -610,6 +622,7 @@ export default function StartNavigationPage() {
 
   const updateNavPitch = (newPitch: number) => {
     const val = Number(newPitch);
+    if (isNaN(val)) return;
     setNavPitchState(val);
     navPitchRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val });
@@ -618,6 +631,7 @@ export default function StartNavigationPage() {
 
   const updateNavOffset = (newOffset: number) => {
     const val = Number(newOffset);
+    if (isNaN(val)) return;
     setNavOffsetState(val);
     navOffsetRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val });
@@ -641,10 +655,10 @@ export default function StartNavigationPage() {
                     mapRef.current.getMap().easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
-                        zoom: Number(navZoomRef.current),
-                        pitch: Number(navPitchRef.current),
+                        zoom: Number(navZoomRef.current) || 18,
+                        pitch: Number(navPitchRef.current) || 60,
                         duration: 1000,
-                        padding: { top: 0, bottom: Number(navOffsetRef.current), left: 0, right: 0 }
+                        padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
                     });
                 }
             }
@@ -720,7 +734,7 @@ export default function StartNavigationPage() {
     if (navigationState === 'setup' && sortedMissions.length > 0) {
         fetchRoute(true);
     }
-  }, [sortedMissions.length, navigationState]); // Alleen bij laden of wijziging aantal
+  }, [sortedMissions.length, navigationState, fetchRoute]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
@@ -745,11 +759,11 @@ export default function StartNavigationPage() {
             
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
-                zoom: Number(navZoomRef.current), 
-                pitch: Number(navPitchRef.current), 
+                zoom: Number(navZoomRef.current) || 18, 
+                pitch: Number(navPitchRef.current) || 60, 
                 bearing: heading, 
                 duration: 2000,
-                padding: { top: 0, bottom: Number(navOffsetRef.current), left: 0, right: 0 }
+                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
             });
             fetchRoute();
         }, () => {
@@ -798,9 +812,9 @@ export default function StartNavigationPage() {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
-                pitch: Number(navPitchRef.current),
-                zoom: Number(navZoomRef.current),
-                padding: { top: 0, bottom: Number(navOffsetRef.current), left: 0, right: 0 }
+                pitch: Number(navPitchRef.current) || 60,
+                zoom: Number(navZoomRef.current) || 18,
+                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -851,10 +865,10 @@ export default function StartNavigationPage() {
                     const target = userLocation || SIMULATION_START_LOCATION;
                     mapRef.current?.getMap().flyTo({ 
                         center: [target.longitude, target.latitude], 
-                        zoom: navigationState === 'navigating' ? Number(navZoomRef.current) : 18, 
-                        pitch: navigationState === 'navigating' ? Number(navPitchRef.current) : 0, 
+                        zoom: navigationState === 'navigating' ? Number(navZoomRef.current) || 18 : 18, 
+                        pitch: navigationState === 'navigating' ? Number(navPitchRef.current) || 60 : 0, 
                         duration: 1500,
-                        padding: { top: 0, bottom: navigationState === 'navigating' ? Number(navOffsetRef.current) : 0, left: 0, right: 0 }
+                        padding: { top: 0, bottom: navigationState === 'navigating' ? Number(navOffsetRef.current) || 0 : 0, left: 0, right: 0 }
                     });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
