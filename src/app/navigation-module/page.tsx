@@ -613,7 +613,7 @@ export default function StartNavigationPage() {
     if (user && firestore) {
       updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: newOffset });
     }
-    mapRef.current?.getMap().easeTo({ padding: { bottom: newOffset }, duration: 200 });
+    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: newOffset, left: 0, right: 0 }, duration: 200 });
   };
 
   React.useEffect(() => {
@@ -644,7 +644,7 @@ export default function StartNavigationPage() {
                         zoom: navZoomRef.current,
                         pitch: navPitchRef.current,
                         duration: 1000,
-                        padding: { bottom: navOffsetRef.current }
+                        padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 }
                     });
                 }
             }
@@ -714,7 +714,7 @@ export default function StartNavigationPage() {
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: { top: 150, bottom: 450, left: 150, right: 150 }, 
+                        padding: { top: 250, bottom: 550, left: 250, right: 250 }, 
                         duration: 1500 
                     });
                 }
@@ -757,7 +757,7 @@ export default function StartNavigationPage() {
                 pitch: navPitchRef.current, 
                 bearing: heading, 
                 duration: 2000,
-                padding: { bottom: navOffsetRef.current }
+                padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 }
             });
             fetchRoute();
             toast({ title: "Navigatie gestart" });
@@ -772,7 +772,7 @@ export default function StartNavigationPage() {
                 pitch: navPitchRef.current, 
                 bearing: 0, 
                 duration: 2000,
-                padding: { bottom: navOffsetRef.current }
+                padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 }
             });
             fetchRoute();
         }, { enableHighAccuracy: true, timeout: 5000 });
@@ -786,7 +786,7 @@ export default function StartNavigationPage() {
             zoom: navZoomRef.current, 
             pitch: navPitchRef.current, 
             duration: 2000, 
-            padding: { bottom: navOffsetRef.current } 
+            padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 } 
         });
         setTimeout(startSimulation, 2000);
     }
@@ -831,7 +831,7 @@ export default function StartNavigationPage() {
                 bearing: head,
                 pitch: navPitchRef.current,
                 zoom: navZoomRef.current,
-                padding: { bottom: navOffsetRef.current }
+                padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -903,7 +903,9 @@ export default function StartNavigationPage() {
                         zoom: navigationState === 'navigating' ? navZoomRef.current : 18, 
                         pitch: navigationState === 'navigating' ? navPitchRef.current : 0, 
                         duration: 1500,
-                        padding: { bottom: navigationState === 'navigating' ? navOffsetRef.current : 0 }
+                        padding: navigationState === 'navigating' 
+                            ? { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 } 
+                            : { top: 0, bottom: 0, left: 0, right: 0 }
                     });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
@@ -923,7 +925,7 @@ export default function StartNavigationPage() {
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().setPitch(0);
                         mapRef.current?.getMap().setBearing(0);
-                        mapRef.current?.getMap().setPadding({ bottom: 0 });
+                        mapRef.current?.getMap().setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
                         fetchRoute(true);
                     }}>STOP RIT</Button>
                 )}
@@ -974,7 +976,7 @@ export default function StartNavigationPage() {
                                     </div>
                                     <Slider 
                                         value={[navOffset]} 
-                                        min={0} 
+                                        min={-100} 
                                         max={600} 
                                         step={10} 
                                         onValueChange={([val]) => updateNavOffset(val)}
@@ -1099,7 +1101,7 @@ export default function StartNavigationPage() {
                                     const base = userLocation || SIMULATION_START_LOCATION;
                                     const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                                     return (
-                                        <TableRow key={m.id} className="h-14 hover:bg-blue-50 transition-colors cursor-pointer border-b border-slate-100 group" onClick={() => setActiveWerkbonId(m.id)}>
+                                        <TableRow key={m.id} className="h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 group" onClick={() => setActiveWerkbonId(m.id)}>
                                             {visibleColumns.intakenr && <TableCell className="font-black text-xs border-r border-slate-100 sticky left-0 bg-white group-hover:bg-blue-50 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", getMeldingAgeColor(m.datum))} />{m.intakenummer}</div></TableCell>}
                                             {visibleColumns.adres && <TableCell className="text-xs font-bold border-r border-slate-100 truncate">{m.straatnaam} {m.huisnummer}</TableCell>}
                                             {visibleColumns.omschrijving && <TableCell className="text-xs font-medium border-r border-slate-100 italic text-slate-500 truncate max-w-[300px]">"{m.extra_informatie}"</TableCell>}
