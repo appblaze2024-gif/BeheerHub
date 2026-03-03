@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -712,6 +713,7 @@ export default function StartNavigationPage() {
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [tripStartLocation, setTripStartLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [currentActiveSortBase, setCurrentActiveSortBase] = React.useState(SIMULATION_START_LOCATION);
+  const [isLocating, setIsLocating] = React.useState(false);
   
   const initialType = searchParams.get('type') as 'veeg' | 'prullenbak' | 'meldingen' | null;
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | 'meldingen' | null>(initialType);
@@ -877,6 +879,32 @@ export default function StartNavigationPage() {
     setIsStarting(false);
   }, [userLocation, routeType, sortedMeldingen, toast]);
 
+  const handleLocateUser = () => {
+    if (!navigator.geolocation) {
+        toast({ variant: 'destructive', title: 'GPS niet beschikbaar', description: 'Uw browser ondersteunt geen locatievoorzieningen.' });
+        return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const newLoc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            setUserLocation(newLoc);
+            if (mapRef.current) {
+                mapRef.current.getMap().flyTo({ center: [newLoc.longitude, newLoc.latitude], zoom: 14, speed: 1.2 });
+            }
+            setIsLocating(false);
+            toast({ title: 'Locatie gevonden', description: 'De route wordt herberekend vanaf uw positie.' });
+        },
+        (err) => {
+            console.warn("Location error:", err.message);
+            setIsLocating(false);
+            toast({ variant: 'destructive', title: 'Locatiefout', description: 'Kon uw huidige locatie niet bepalen.' });
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
   React.useEffect(() => {
     const isResume = searchParams.get('resume') === 'true';
     if (isResume && !hasResumed && !isLoadingProjects && projects && routeType === 'meldingen') {
@@ -954,6 +982,15 @@ export default function StartNavigationPage() {
                   </div>
 
                   <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
+                      <Button 
+                          variant="outline" 
+                          size="icon"
+                          className="h-10 w-10 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border-none text-primary hover:text-primary/80" 
+                          onClick={handleLocateUser}
+                          disabled={isLocating}
+                      >
+                          {isLocating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
+                      </Button>
                       {profile?.role === 'Super admin' && (
                         <Button variant="outline" className="h-9 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl hidden sm:flex" onClick={() => handleStartRit(true)} disabled={!sortedMeldingen.length || isStarting}><Gauge className="mr-2 h-4 w-4" /> SIMULATOR</Button>
                       )}
