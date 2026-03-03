@@ -725,6 +725,7 @@ export default function StartNavigationPage() {
   const [isPreviewCalculating, setIsPreviewCalculating] = React.useState(false);
 
   const [showCompletedToday, setShowCompletedToday] = React.useState(false);
+  const [showAssignmentInfo, setShowAssignmentInfo] = React.useState(false);
   const [hasResumed, setHasResumed] = React.useState(false);
 
   // Column visibility state
@@ -903,6 +904,14 @@ export default function StartNavigationPage() {
   const tableData = showCompletedToday ? myCompletedToday : sortedMeldingen;
   const startMarkerLocation = userLocation || SIMULATION_START_LOCATION;
 
+  const uniqueAssignees = React.useMemo(() => {
+    const assignees = new Set<string>();
+    tableData.forEach(m => {
+      if (m.behandelaar) assignees.add(m.behandelaar);
+    });
+    return Array.from(assignees).sort();
+  }, [tableData]);
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {navigationState === 'navigating' ? (
@@ -983,6 +992,14 @@ export default function StartNavigationPage() {
                               <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">{showCompletedToday ? 'Vandaag Afgemeld' : 'Optimale Route Volgorde'}</h3>
                           </div>
                           <div className="flex items-center gap-2">
+                              <Button 
+                                variant={showAssignmentInfo ? "default" : "outline"} 
+                                size="sm" 
+                                className={cn("h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all", showAssignmentInfo ? "bg-blue-600 text-white" : "border-slate-200 bg-white")} 
+                                onClick={() => setShowAssignmentInfo(!showAssignmentInfo)}
+                              >
+                                  <User className="h-3 w-3" /> TOEGEWEZEN
+                              </Button>
                               <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                       <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-slate-200 bg-white">
@@ -990,7 +1007,7 @@ export default function StartNavigationPage() {
                                       </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
-                                      <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Zichtbare velden</DropdownMenuLabel>
+                                      <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2 py-1">Zichtbare velden</DropdownMenuLabel>
                                       <DropdownMenuSeparator />
                                       {Object.keys(columnVisibility).map((col) => (
                                           <DropdownMenuCheckboxItem
@@ -1007,6 +1024,23 @@ export default function StartNavigationPage() {
                               <Button variant={showCompletedToday ? "default" : "outline"} size="sm" className={cn("h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all", showCompletedToday ? "bg-green-600 text-white" : "border-slate-200 bg-white")} onClick={() => setShowCompletedToday(!showCompletedToday)}>{showCompletedToday ? <CheckCircle2 className="h-3 w-3" /> : <History className="h-3 w-3" />}{showCompletedToday ? 'TOON OPENSTAAND' : 'VANDAAG AFGEMELD'}</Button>
                           </div>
                       </div>
+
+                      {showAssignmentInfo && uniqueAssignees.length > 0 && (
+                        <div className="bg-blue-50 border-b px-4 py-2.5 flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
+                            <div className="flex items-center gap-2">
+                                <User className="h-3.5 w-3.5 text-blue-600" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Route voor medewerker(s):</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                                {uniqueAssignees.map(name => (
+                                    <Badge key={name} variant="outline" className="bg-white border-blue-200 text-blue-700 text-[9px] font-black uppercase px-2.5 h-5 shadow-sm">
+                                        {name}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                      )}
+
                       <ScrollArea className="flex-1">
                           <Table className="min-w-[1400px]">
                               <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
