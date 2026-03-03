@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -52,7 +53,8 @@ import {
   Eye,
   ArrowUp,
   ArrowDown,
-  User
+  User,
+  Search
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -86,6 +88,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Input } from '@/components/ui/input';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -128,7 +131,7 @@ const useInternalIsMobile = (width: number = 768) => {
     const check = () => setIsMobile(window.innerWidth < width);
     check();
     window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    return () => window.removeObserver('resize', check);
   }, [width]);
   return isMobile;
 };
@@ -728,6 +731,9 @@ export default function StartNavigationPage() {
   const [showAssignmentInfo, setShowAssignmentInfo] = React.useState(false);
   const [hasResumed, setHasResumed] = React.useState(false);
 
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
+
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({
     intakenummer: true,
@@ -757,6 +763,11 @@ export default function StartNavigationPage() {
     setColumnVisibility(next);
     localStorage.setItem('nav_col_visibility', JSON.stringify(next));
   };
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
@@ -816,6 +827,16 @@ export default function StartNavigationPage() {
         pool = rawMeldingen.filter(m => m.behandelaar === userName);
     }
 
+    // Apply search filter
+    if (debouncedSearchQuery) {
+        const q = debouncedSearchQuery.toLowerCase();
+        pool = pool.filter(m => 
+            m.intakenummer.toLowerCase().includes(q) || 
+            (m.straatnaam || '').toLowerCase().includes(q) ||
+            (m.plaats || '').toLowerCase().includes(q)
+        );
+    }
+
     if (pool.length === 0) return [];
 
     const result: Melding[] = [];
@@ -836,7 +857,7 @@ export default function StartNavigationPage() {
     }
 
     return result;
-  }, [rawMeldingen, routeType, isPrivileged, profile, userLocation, currentActiveSortBase]);
+  }, [rawMeldingen, routeType, isPrivileged, profile, userLocation, currentActiveSortBase, debouncedSearchQuery]);
 
   const handleStartRit = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
@@ -995,9 +1016,16 @@ export default function StartNavigationPage() {
               {isMeldingenType && (
                   <div className="flex-1 overflow-hidden flex flex-col bg-white border-t-4 border-slate-900 animate-in slide-in-from-bottom duration-500">
                       <div className="p-3 bg-slate-50 border-b flex items-center justify-between shrink-0">
-                          <div className="flex items-center gap-3">
-                              <div className="bg-primary/10 p-1.5 rounded-lg">{showCompletedToday ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <Zap className="h-3.5 w-3.5 text-primary" />}</div>
-                              <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">{showCompletedToday ? 'Vandaag Afgemeld' : 'Optimale Route Volgorde'}</h3>
+                          <div className="flex items-center gap-3 flex-1 max-w-sm">
+                              <div className="relative w-full">
+                                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                  <Input 
+                                      placeholder="Zoek op nummer of adres..." 
+                                      className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white shadow-sm"
+                                      value={searchQuery}
+                                      onChange={(e) => setSearchQuery(e.target.value)}
+                                  />
+                              </div>
                           </div>
                           <div className="flex items-center gap-2">
                               <Button 
