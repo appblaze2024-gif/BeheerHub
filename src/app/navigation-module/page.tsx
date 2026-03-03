@@ -1079,17 +1079,17 @@ export default function StartNavigationPage() {
                       )}
 
                       <div className="flex-1 overflow-auto bg-white custom-scrollbar">
-                          <Table className="min-w-[1400px]">
+                          <Table className="min-w-[1200px]">
                               <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
                                   <TableRow className="h-10 hover:bg-transparent">
-                                      {columnVisibility.intakenummer && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-32 sticky left-0 bg-slate-100 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Intakenr.</TableHead>}
-                                      {columnVisibility.adres && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-64">Adres</TableHead>}
-                                      {columnVisibility.omschrijving && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-80">Omschrijving</TableHead>}
-                                      {columnVisibility.hoofdtype && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Hoofdtype</TableHead>}
-                                      {columnVisibility.subcategorie && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-48">Subtype</TableHead>}
-                                      {columnVisibility.werkgebied && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Werkgebied</TableHead>}
-                                      {columnVisibility.toegewezen && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Toegewezen</TableHead>}
-                                      {columnVisibility.afstand && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3 w-24 sticky right-0 bg-slate-100 z-20 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Afstand</TableHead>}
+                                      {columnVisibility.intakenummer && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-28 sticky left-0 bg-slate-100 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Intakenr.</TableHead>}
+                                      {columnVisibility.adres && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-48">Adres</TableHead>}
+                                      {columnVisibility.omschrijving && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-64">Omschrijving</TableHead>}
+                                      {columnVisibility.hoofdtype && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-32">Hoofdtype</TableHead>}
+                                      {columnVisibility.subcategorie && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Subtype</TableHead>}
+                                      {columnVisibility.werkgebied && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-32">Werkgebied</TableHead>}
+                                      {columnVisibility.toegewezen && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-32">Toegewezen</TableHead>}
+                                      {columnVisibility.afstand && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3 w-20 sticky right-0 bg-slate-100 z-20 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Afstand</TableHead>}
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1113,45 +1113,45 @@ export default function StartNavigationPage() {
                                                                       <Bell className="h-3 w-3 text-slate-600" />
                                                                   </span>
                                                               )}
-                                                              {m.intakenummer}
+                                                              <span className="truncate w-20">{m.intakenummer}</span>
                                                           </div>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.adres && (
-                                                      <TableCell className="text-[10px] font-bold border-r px-3 py-1 whitespace-nowrap">
-                                                          <div className="flex flex-col">
-                                                              <span>{m.straatnaam} {m.huisnummer}</span>
-                                                              <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">{m.plaats}</span>
+                                                      <TableCell className="text-[10px] font-bold border-r px-3 py-1 whitespace-nowrap overflow-hidden">
+                                                          <div className="flex flex-col truncate w-40">
+                                                              <span className="truncate">{m.straatnaam} {m.huisnummer}</span>
+                                                              <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none truncate">{m.plaats}</span>
                                                           </div>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.omschrijving && (
-                                                      <TableCell className="text-[10px] font-medium border-r px-3 py-1 text-slate-600 italic whitespace-nowrap">
-                                                          <span className="truncate block max-w-[250px] md:max-w-[400px]">"{m.extra_informatie || 'Geen omschrijving'}"</span>
+                                                      <TableCell className="text-[10px] font-medium border-r px-3 py-1 text-slate-600 italic whitespace-nowrap overflow-hidden">
+                                                          <span className="truncate block w-56">"{m.extra_informatie || 'Geen omschrijving'}"</span>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.hoofdtype && (
-                                                      <TableCell className="text-[9px] font-black border-r text-slate-500 uppercase tracking-tight px-3 py-1 whitespace-nowrap">
-                                                          {m.hoofdcategorie}
+                                                      <TableCell className="text-[9px] font-black border-r text-slate-500 uppercase tracking-tight px-3 py-1 whitespace-nowrap overflow-hidden">
+                                                          <span className="truncate block w-24">{m.hoofdcategorie}</span>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.subcategorie && (
-                                                      <TableCell className="text-[9px] font-black border-r text-slate-900 uppercase tracking-tight px-3 py-1 whitespace-nowrap">
-                                                          {m.subcategorie}
+                                                      <TableCell className="text-[9px] font-black border-r text-slate-900 uppercase tracking-tight px-3 py-1 whitespace-nowrap overflow-hidden">
+                                                          <span className="truncate block w-32">{m.subcategorie}</span>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.werkgebied && (
-                                                      <TableCell className="text-[9px] font-black border-r px-3 py-1 whitespace-nowrap">
-                                                          <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200">
+                                                      <TableCell className="text-[9px] font-black border-r px-3 py-1 whitespace-nowrap overflow-hidden">
+                                                          <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200 max-w-[100px] truncate block">
                                                               {m.werkgebied || m.wijk || '-'}
                                                           </Badge>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.toegewezen && (
-                                                      <TableCell className="text-[9px] font-black border-r px-3 py-1 whitespace-nowrap">
-                                                          <div className="flex items-center gap-2">
-                                                              <User className="h-3 w-3 text-slate-400" />
-                                                              <span className="truncate max-w-[120px] text-slate-700">{m.behandelaar || '-'}</span>
+                                                      <TableCell className="text-[9px] font-black border-r px-3 py-1 whitespace-nowrap overflow-hidden">
+                                                          <div className="flex items-center gap-2 truncate w-24">
+                                                              <User className="h-3 w-3 text-slate-400 shrink-0" />
+                                                              <span className="truncate text-slate-700">{m.behandelaar || '-'}</span>
                                                           </div>
                                                       </TableCell>
                                                   )}
