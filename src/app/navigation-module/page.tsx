@@ -38,7 +38,9 @@ import {
   User,
   Package,
   Paperclip,
-  ChevronRight
+  ChevronRight,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -541,6 +543,10 @@ export default function StartNavigationPage() {
   const [speedKmh, setSpeedKmh] = React.useState(0);
   const [isPaused, setIsPaused] = React.useState(false);
 
+  // Zoom control logic
+  const navZoomRef = React.useRef(18);
+  const [navZoom, setNavZoomState] = React.useState(18);
+
   const mapRef = React.useRef<MapRef>(null);
   const simAnimationRef = React.useRef<number | null>(null);
   const simStateRef = React.useRef({ distanceTravelled: 0, currentSpeedMs: 0 });
@@ -549,6 +555,22 @@ export default function StartNavigationPage() {
     setIsHeaderVisible(false);
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
+
+  React.useEffect(() => {
+    const savedZoom = localStorage.getItem('beheerhub_nav_zoom');
+    if (savedZoom) {
+        const parsed = parseFloat(savedZoom);
+        setNavZoomState(parsed);
+        navZoomRef.current = parsed;
+    }
+  }, []);
+
+  const updateNavZoom = (newZoom: number) => {
+    setNavZoomState(newZoom);
+    navZoomRef.current = newZoom;
+    localStorage.setItem('beheerhub_nav_zoom', newZoom.toString());
+    mapRef.current?.getMap().easeTo({ zoom: newZoom, duration: 200 });
+  };
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
@@ -575,7 +597,7 @@ export default function StartNavigationPage() {
                     mapRef.current.getMap().easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
-                        zoom: 18,
+                        zoom: navZoomRef.current,
                         pitch: 60,
                         duration: 1000,
                         padding: { bottom: 450 }
@@ -687,7 +709,7 @@ export default function StartNavigationPage() {
             
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
-                zoom: 18, 
+                zoom: navZoomRef.current, 
                 pitch: 60, 
                 bearing: heading, 
                 duration: 2000,
@@ -702,7 +724,7 @@ export default function StartNavigationPage() {
             toast({ title: "GPS signaal zwak", description: "Navigatie start vanaf basislocatie Rijsenhout." });
             mapRef.current?.getMap().flyTo({ 
                 center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
-                zoom: 18, 
+                zoom: navZoomRef.current, 
                 pitch: 60, 
                 duration: 2000,
                 padding: { bottom: 450 }
@@ -714,7 +736,7 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         const first = currentRouteGeometry?.coordinates[0];
-        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 18, pitch: 60, duration: 2000, padding: { bottom: 450 } });
+        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: navZoomRef.current, pitch: 60, duration: 2000, padding: { bottom: 450 } });
         setTimeout(startSimulation, 2000);
     }
   };
@@ -757,7 +779,7 @@ export default function StartNavigationPage() {
                 center: [lng, lat], 
                 bearing: head,
                 pitch: 60,
-                zoom: 18,
+                zoom: navZoomRef.current,
                 padding: { bottom: 450 }
             });
         }
@@ -829,7 +851,7 @@ export default function StartNavigationPage() {
                     const target = userLocation || SIMULATION_START_LOCATION;
                     mapRef.current?.getMap().flyTo({ 
                         center: [target.longitude, target.latitude], 
-                        zoom: 18, 
+                        zoom: navigationState === 'navigating' ? navZoomRef.current : 18, 
                         pitch: navigationState === 'navigating' ? 60 : 0, 
                         duration: 1500,
                         padding: { bottom: navigationState === 'navigating' ? 450 : 0 }
@@ -858,6 +880,27 @@ export default function StartNavigationPage() {
                 )}
             </div>
         </div>
+
+        {navigationState === 'navigating' && (
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 pointer-events-auto">
+                <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100"
+                    onClick={() => updateNavZoom(Math.min(navZoom + 0.5, 22))}
+                >
+                    <Plus className="h-6 w-6 text-slate-600" />
+                </Button>
+                <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100"
+                    onClick={() => updateNavZoom(Math.max(navZoom - 0.5, 10))}
+                >
+                    <Minus className="h-6 w-6 text-slate-600" />
+                </Button>
+            </div>
+        )}
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
