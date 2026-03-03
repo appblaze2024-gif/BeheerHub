@@ -534,10 +534,10 @@ export default function StartNavigationPage() {
 
   // Navigation logic states
   const [smoothLocation, setSmoothLocation] = React.useState<any>({ ...SIMULATION_START_LOCATION, heading: 0 });
+  const lastHeadingRef = React.useRef(0);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [distanceRemaining, setDistanceRemaining] = React.useState(0);
   const [speedKmh, setSpeedKmh] = React.useState(0);
-  const [heading, setHeading] = React.useState(0);
   const [isPaused, setIsPaused] = React.useState(false);
 
   const mapRef = React.useRef<MapRef>(null);
@@ -562,15 +562,18 @@ export default function StartNavigationPage() {
             setUserLocation(loc);
             
             if (!isSimulationMode) {
-                setSmoothLocation({ ...loc, heading: pos.coords.heading || smoothLocation.heading || 0 });
+                const heading = pos.coords.heading !== null ? pos.coords.heading : lastHeadingRef.current;
+                lastHeadingRef.current = heading;
+                
+                setSmoothLocation({ ...loc, heading: heading });
                 if (pos.coords.speed !== null) {
                     setSpeedKmh(Math.round(pos.coords.speed * 3.6));
                 }
 
                 if (navigationState === 'navigating' && mapRef.current) {
-                    mapRef.current.getMap().flyTo({
+                    mapRef.current.getMap().easeTo({
                         center: [loc.longitude, loc.latitude],
-                        bearing: pos.coords.heading || 0,
+                        bearing: heading,
                         zoom: 18,
                         pitch: 60,
                         duration: 1000
@@ -581,7 +584,7 @@ export default function StartNavigationPage() {
         null, { enableHighAccuracy: true }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, smoothLocation.heading]);
+  }, [navigationState, isSimulationMode]);
 
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -634,7 +637,6 @@ export default function StartNavigationPage() {
         const data = await res.json();
         if (data.routes?.[0]) {
             setCurrentRouteGeometry(data.routes[0].geometry);
-            // distanceRemaining used in HUD should reflect distance to NEXT mission (leg 0)
             setDistanceRemaining(Math.round(data.routes[0].legs[0]?.distance || 0));
             
             if (zoomToFit && mapRef.current) {
@@ -651,7 +653,6 @@ export default function StartNavigationPage() {
     } catch (e) { console.error("Route fetch error:", e); }
   }, [sortedMissions, userLocation]);
 
-  // Periodic route update during active navigation
   React.useEffect(() => {
     if (navigationState !== 'navigating' || isSimulationMode) return;
     const interval = setInterval(() => {
@@ -672,7 +673,9 @@ export default function StartNavigationPage() {
         navigator.geolocation.getCurrentPosition((pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
-            setSmoothLocation({ ...loc, heading: pos.coords.heading || 0 });
+            const heading = pos.coords.heading || 0;
+            lastHeadingRef.current = heading;
+            setSmoothLocation({ ...loc, heading: heading });
             setIsSimulationMode(false);
             setNavigationState('navigating');
             setIsListExpanded(false);
@@ -682,7 +685,7 @@ export default function StartNavigationPage() {
                 center: [loc.longitude, loc.latitude], 
                 zoom: 18, 
                 pitch: 60, 
-                bearing: pos.coords.heading || 0, 
+                bearing: heading, 
                 duration: 2000 
             });
             fetchRoute();
@@ -730,9 +733,9 @@ export default function StartNavigationPage() {
         const ahead = turf.along(line, simStateRef.current.distanceTravelled + 2, { units: 'meters' });
         const [lng, lat] = curr.geometry.coordinates;
         const head = (turf.bearing(curr, ahead) + 360) % 360;
+        lastHeadingRef.current = head;
         setSmoothLocation({ latitude: lat, longitude: lng, heading: head });
         setSpeedKmh(Math.round(speedMs * 3.6));
-        setHeading(head);
         if (mapRef.current) mapRef.current.getMap().jumpTo({ center: [lng, lat], bearing: head });
         simAnimationRef.current = requestAnimationFrame(animate);
     };
@@ -754,7 +757,13 @@ export default function StartNavigationPage() {
                 mapboxAccessToken={MAPBOX_TOKEN}
             >
                 {smoothLocation && (
-                    <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center" rotation={smoothLocation.heading}>
+                    <Marker 
+                        longitude={smoothLocation.longitude} 
+                        latitude={smoothLocation.latitude} 
+                        anchor="center" 
+                        rotation={smoothLocation.heading}
+                        rotationAlignment="map"
+                    >
                         <div className="relative flex items-center justify-center w-12 h-12">
                             <svg viewBox="0 0 100 100" className="h-10 w-10 text-primary drop-shadow-2xl">
                                 <path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" />
@@ -824,7 +833,6 @@ export default function StartNavigationPage() {
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto ring-1 ring-black/5">
                     <CardContent className="p-6 flex items-center justify-between gap-8">
                         <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-8">
-                            {/* ETA calculation: assuming 40 km/h avg speed if speed is low/gps locked */}
                             <p className="text-4xl font-black text-slate-900 tracking-tighter">
                                 {formatDate(addSeconds(new Date(), (distanceRemaining / (speedKmh > 5 ? speedKmh / 3.6 : 11.1))), 'HH:mm')}
                             </p>
