@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -17,7 +16,6 @@ import {
   Loader2,
   Clock,
   Navigation,
-  RefreshCw,
   Search,
   Camera,
   MessageSquare,
@@ -70,14 +68,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import Image from 'next/image';
-import { translateText } from '@/ai/flows/translate-text-flow';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import Image from 'next/image';
+import { translateText } from '@/ai/flows/translate-text-flow';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -121,7 +119,7 @@ const translationLanguages = [
 ];
 
 /**
- * Geïntegreerde Werkbon Component - FULL SCREEN
+ * Integrated Werkbon Component - FULL SCREEN
  */
 function IntegratedWerkbonOverlay({ 
     meldingId, 
@@ -203,8 +201,11 @@ function IntegratedWerkbonOverlay({
                 workStartedAt: null, 
             });
             onCompleted(melding.id);
-            onClose();
-        } catch (error) { toast({ variant: "destructive", title: 'Fout bij afronden' }); } finally { setIsSubmitting(false); }
+        } catch (error) { 
+            toast({ variant: "destructive", title: 'Fout bij afronden' }); 
+        } finally { 
+            setIsSubmitting(false); 
+        }
     };
 
     const handleFileUpload = React.useCallback(async (files: FileList | File[], type: 'documents' | 'afhandeling_fotos') => {
@@ -1036,6 +1037,8 @@ export default function StartNavigationPage() {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
                         fetchRoute();
+                        // If we are in navigating mode, keep it going. 
+                        // If we were in setup, the map FitBounds will center on the next mission automatically.
                     }} 
                 />
             </div>
