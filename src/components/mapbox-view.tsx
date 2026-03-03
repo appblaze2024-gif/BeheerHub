@@ -87,10 +87,8 @@ export function MapboxView({
     
     const getPriority = (obj: MapObject) => {
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-        
         const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
         const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
-        
         if (isPrullenbakMeerlanden) return 3;
         if (isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond')) return 2;
         return 1;
@@ -99,20 +97,15 @@ export function MapboxView({
     objects.forEach(obj => {
       const key = `${obj.latitude.toFixed(5)}_${obj.longitude.toFixed(5)}`;
       const existing = locationMap.get(key);
-      
       if (!existing || getPriority(obj) > getPriority(existing)) {
         locationMap.set(key, obj);
       }
     });
-    
     return Array.from(locationMap.values());
   }, [objects]);
 
   const geojson: turf.FeatureCollection<turf.Geometry> = React.useMemo(() => {
-    return {
-      type: 'FeatureCollection',
-      features: wijkPolygons,
-    };
+    return { type: 'FeatureCollection', features: wijkPolygons };
   }, [wijkPolygons]);
 
   const mapRef = React.useRef<any>(null);
@@ -120,9 +113,7 @@ export function MapboxView({
 
   React.useEffect(() => {
     if (!containerRef.current) return;
-    const observer = new ResizeObserver(() => {
-      mapRef.current?.getMap().resize();
-    });
+    const observer = new ResizeObserver(() => { mapRef.current?.getMap().resize(); });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
@@ -146,23 +137,14 @@ export function MapboxView({
       try {
         const featureCollection = { type: 'FeatureCollection', features: wijkPolygons };
         if (featureCollection.features.length === 0) return;
-        
         const bbox = turf.bbox(featureCollection);
         if (bbox[0] !== Infinity) {
           map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
           return;
         }
-      } catch (e) {
-        console.error("Error fitting bounds:", e);
-      }
+      } catch (e) {}
     } else if (longitude && latitude) {
-      map.flyTo({ center: [longitude, latitude], zoom: 19});
-    } else if (!longitude && !latitude && !uniqueObjects.length) {
-         map.flyTo({
-            center: [5.2913, 52.1326],
-            zoom: 7,
-            duration: 1000
-        });
+      map.jumpTo({ center: [longitude, latitude], zoom: 19 });
     }
   }, [wijkPolygons, longitude, latitude, highlightedObject, uniqueObjects]);
 
@@ -174,77 +156,30 @@ export function MapboxView({
         const isSelected = selectedObjects.some(so => so.id === obj.id);
         const isHighlighted = highlightedObject?.id === obj.id;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
-        
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-        const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
-        const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
-        
-        const useRecyclingBin = isPrullenbakMeerlanden;
-        const useWasteBin = isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond');
-                              
+        const useRecyclingBin = typeStr.includes('prullenbakken (data meerlanden)');
+        const useWasteBin = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark') || typeStr.includes('container') || typeStr.includes('ondergrond');
         const Icon = Trash2;
 
         return (
-            <Marker
-              key={`obj-${obj.id}`}
-              longitude={obj.longitude}
-              latitude={obj.latitude}
-              anchor="center"
-              onClick={e => {
+            <Marker key={`obj-${obj.id}`} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={e => {
                 if (interactive) {
                   e.originalEvent.stopPropagation();
-                  if (onObjectSelect) {
-                      onObjectSelect(obj, !isSelected);
-                  } else {
-                      setSelectedPin(obj);
-                  }
+                  if (onObjectSelect) onObjectSelect(obj, !isSelected);
+                  else setSelectedPin(obj);
                 }
               }}
               onMouseEnter={() => interactive && setHoveredPin(obj)}
               onMouseLeave={() => interactive && setHoveredPin(null)}
             >
               <div className="relative flex items-center justify-center w-8 h-8">
-                {isHighlighted && (
-                  <div className="absolute w-6 h-6 rounded-full bg-black/70 animate-pulse" />
-                )}
+                {isHighlighted && <div className="absolute w-6 h-6 rounded-full bg-black/70 animate-pulse" />}
                 {useRecyclingBin ? (
-                  <img 
-                    src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" 
-                    alt="recycling bin"
-                    className={cn(
-                      "relative h-7 w-7 transition-transform",
-                      isSelected && "scale-125",
-                      interactive && "cursor-pointer"
-                    )}
-                    style={{
-                      filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
-                    }}
-                  />
+                  <img src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" alt="recycling bin" className={cn("relative h-7 w-7 transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
                 ) : useWasteBin ? (
-                  <img 
-                    src="https://i.ibb.co/FbgGHW1G/waste-bin.png" 
-                    alt="container"
-                    className={cn(
-                      "relative h-7 w-7 transition-transform",
-                      isSelected && "scale-125",
-                      interactive && "cursor-pointer"
-                    )}
-                    style={{
-                      filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
-                    }}
-                  />
+                  <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className={cn("relative h-7 w-7 transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
                 ) : (
-                  <Icon 
-                    className={cn(
-                        "relative h-5 w-5 stroke-white stroke-[1.5] transition-transform",
-                        isSelected && "scale-125",
-                        interactive && "cursor-pointer"
-                    )} 
-                    style={{
-                        fill: isSelected ? 'hsl(48, 96%, 56%)' : color,
-                        filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
-                    }}
-                  />
+                  <Icon className={cn("relative h-5 w-5 stroke-white stroke-[1.5] transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ fill: isSelected ? 'hsl(48, 96%, 56%)' : color, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
                 )}
               </div>
             </Marker>
@@ -256,35 +191,25 @@ export function MapboxView({
         markerElements.push(
             <Marker key="main-location" longitude={longitude} latitude={latitude} anchor="center">
                 <div className="relative flex items-center justify-center pointer-events-none">
-                    {/* Zwarte ronde om de icoon heen */}
                     <div className="absolute h-12 w-12 rounded-full border-[3px] border-black animate-pulse opacity-80" />
-                    
-                    {/* Wolkje met containernummer */}
                     {mainLocationLabel && (
                         <div className="absolute bottom-full mb-4 bg-black/90 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl z-[100] border border-white/20 whitespace-nowrap animate-in zoom-in-95 duration-200">
                             {mainLocationLabel}
                             <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-black/90" />
                         </div>
                     )}
-                    
-                    {/* Kleine stip in het midden */}
                     <div className="h-1.5 w-1.5 rounded-full bg-black border border-white shadow-sm" />
                 </div>
             </Marker>
         );
     }
-    
     return markerElements;
   }, [uniqueObjects, longitude, latitude, mainLocationLabel, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive]);
 
   const pinToShow = hoveredPin || selectedPin;
 
   return (
-    <div 
-        ref={containerRef} 
-        className={cn("w-full h-full", !interactive && "pointer-events-none")}
-        style={{ touchAction: 'none' }}
-    >
+    <div ref={containerRef} className="w-full h-full" style={{ touchAction: 'none' }}>
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}
@@ -304,18 +229,13 @@ export function MapboxView({
                 <Layer {...polygonOutlineLayer} />
             </Source>
         )}
-
         {markers}
-
         {pinToShow && !highlightedObject && interactive && (
           <Popup
             anchor="top"
             longitude={Number(pinToShow.longitude)}
             latitude={Number(pinToShow.latitude)}
-            onClose={() => {
-              if (pinToShow === selectedPin) setSelectedPin(null);
-              if (pinToShow === hoveredPin) setHoveredPin(null);
-            }}
+            onClose={() => { if (pinToShow === selectedPin) setSelectedPin(null); if (pinToShow === hoveredPin) setHoveredPin(null); }}
             closeOnClick={false}
             closeButton={!hoveredPin}
           >

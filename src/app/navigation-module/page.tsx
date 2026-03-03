@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
-import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc } from '@/firebase';
+import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +42,6 @@ import {
   Minus,
   Settings,
   Sliders,
-  Table as TableIcon,
   AlertCircle,
   RefreshCw,
   Layout,
@@ -51,7 +50,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -98,11 +97,11 @@ const DEFAULT_COLUMNS = {
 
 const COLUMN_LABELS: Record<string, string> = {
     intakenummer: 'Nummer',
-    locatie: 'Locatie (Adres)',
+    locatie: 'Locatie',
     memo: 'Omschrijving',
     hoofdcategorie: 'Hoofdtype',
     subcategorie: 'Subtype',
-    werkgebied: 'Werkgebied',
+    werkgebied: 'Gebied',
     afstand: 'Afstand'
 };
 
@@ -133,6 +132,15 @@ const getMeldingAgeColor = (datum?: string) => {
         return 'bg-red-600'; 
     } catch (e) { return 'bg-slate-400'; }
 };
+
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
 
 function IntegratedWerkbonOverlay({ 
     meldingId, 
@@ -542,15 +550,6 @@ function IntegratedWerkbonOverlay({
     );
 }
 
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
-
 export default function StartNavigationPage() {
   const firestore = useFirestore();
   const { user } = useUser();
@@ -647,9 +646,7 @@ export default function StartNavigationPage() {
   const onMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      handleResize(moveEvent.clientY);
-    };
+    const onMouseMove = (moveEvent: MouseEvent) => { handleResize(moveEvent.clientY); };
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
@@ -664,9 +661,7 @@ export default function StartNavigationPage() {
 
   const onTouchStart = (e: React.TouchEvent) => {
     setIsResizing(true);
-    const onTouchMove = (moveEvent: TouchEvent) => {
-      handleResize(moveEvent.touches[0].clientY);
-    };
+    const onTouchMove = (moveEvent: TouchEvent) => { handleResize(moveEvent.touches[0].clientY); };
     const onTouchEnd = () => {
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
@@ -714,46 +709,6 @@ export default function StartNavigationPage() {
     }
   };
 
-  React.useEffect(() => {
-    if (!navigator.geolocation) return;
-    const watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-            setUserLocation(loc);
-            
-            if (!isSimulationMode) {
-                const heading = pos.coords.heading !== null ? pos.coords.heading : lastHeadingRef.current;
-                lastHeadingRef.current = heading;
-                setSmoothLocation({ ...loc, heading: heading });
-                if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
-
-                if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
-                    const map = mapRef.current.getMap();
-                    map.jumpTo({
-                        center: [loc.longitude, loc.latitude],
-                        bearing: heading,
-                        zoom: Number(navZoomRef.current) || 18,
-                        pitch: Number(navPitchRef.current) || 60,
-                        padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
-                    });
-
-                    if (currentRouteGeometry) {
-                        try {
-                            const line = turf.lineString(currentRouteGeometry.coordinates);
-                            const currPt = turf.nearestPointOnLine(line, turf.point([loc.longitude, loc.latitude]));
-                            const forwardPart = turf.lineSlice(currPt, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
-                            setDisplayedRouteGeometry(forwardPart);
-                        } catch (e) { }
-                    }
-                }
-            }
-        },
-        (err) => console.error("WatchPosition error:", err),
-        { enableHighAccuracy: true, maximumAge: 1000 }
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode]);
-
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']));
@@ -775,9 +730,7 @@ export default function StartNavigationPage() {
   const filteredMeldingen = React.useMemo(() => {
     if (!rawMeldingen) return [];
     let pool = [...rawMeldingen].filter(m => !completedObjects.includes(m.id));
-    if (showTodayCompleted && rawCompletedToday) {
-        pool = [...pool, ...rawCompletedToday];
-    }
+    if (showTodayCompleted && rawCompletedToday) { pool = [...pool, ...rawCompletedToday]; }
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
         pool = pool.filter(m => m.behandelaar === userName);
@@ -843,11 +796,60 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, navigationState, fetchRoute, rawMeldingen]);
 
+  // Active Real Tracking logic
+  React.useEffect(() => {
+    if (!navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+            const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            setUserLocation(loc);
+            
+            if (!isSimulationMode) {
+                const rawHeading = pos.coords.heading !== null ? pos.coords.heading : lastHeadingRef.current;
+                let activeLoc = { ...loc, heading: rawHeading };
+
+                // SNAP TO ROAD logic
+                if (currentRouteGeometry) {
+                    try {
+                        const line = turf.lineString(currentRouteGeometry.coordinates);
+                        const currPt = turf.point([loc.longitude, loc.latitude]);
+                        const snapped = turf.nearestPointOnLine(line, currPt);
+                        
+                        activeLoc.longitude = snapped.geometry.coordinates[0];
+                        activeLoc.latitude = snapped.geometry.coordinates[1];
+
+                        // Calculate forward part of route
+                        const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
+                        setDisplayedRouteGeometry(forwardPart);
+                    } catch (e) {}
+                }
+
+                setSmoothLocation(activeLoc);
+                lastHeadingRef.current = activeLoc.heading;
+                if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
+
+                if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
+                    const map = mapRef.current.getMap();
+                    map.jumpTo({
+                        center: [activeLoc.longitude, activeLoc.latitude],
+                        bearing: activeLoc.heading,
+                        zoom: Number(navZoomRef.current) || 18,
+                        pitch: Number(navPitchRef.current) || 60,
+                        padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
+                    });
+                }
+            }
+        },
+        (err) => console.error("WatchPosition error:", err),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode]);
+
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
     if (!simulate) {
         setIsLocating(true);
-        
         const beginNavigation = (loc: { latitude: number, longitude: number }, heading: number) => {
             setSmoothLocation({ ...loc, heading });
             setIsSimulationMode(false);
@@ -866,18 +868,15 @@ export default function StartNavigationPage() {
             fetchRoute();
         };
 
-        if (userLocation) {
-            beginNavigation(userLocation, lastHeadingRef.current || 0);
-        } else {
+        if (userLocation) { beginNavigation(userLocation, lastHeadingRef.current || 0); } 
+        else {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
                     setUserLocation(loc);
                     beginNavigation(loc, pos.coords.heading || 0);
                 },
-                (err) => {
-                    beginNavigation(SIMULATION_START_LOCATION, 0);
-                },
+                (err) => { beginNavigation(SIMULATION_START_LOCATION, 0); },
                 { enableHighAccuracy: true, timeout: 5000 }
             );
         }
@@ -901,34 +900,21 @@ export default function StartNavigationPage() {
     simStateRef.current = { distanceTravelled: 0, currentSpeedMs: 0 };
     
     const animate = () => {
-        if (isPaused || activeWerkbonId) { 
-            simAnimationRef.current = requestAnimationFrame(animate); 
-            return; 
-        }
-        
+        if (isPaused || activeWerkbonId) { simAnimationRef.current = requestAnimationFrame(animate); return; }
         const speedMs = 13.8;
         simStateRef.current.distanceTravelled += speedMs * 0.016;
-        
-        if (simStateRef.current.distanceTravelled >= totalDist) {
-            setSpeedKmh(0);
-            return;
-        }
-        
+        if (simStateRef.current.distanceTravelled >= totalDist) { setSpeedKmh(0); return; }
         const curr = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
         const [lng, lat] = curr.geometry.coordinates;
-        
         const aheadDist = Math.min(simStateRef.current.distanceTravelled + 2, totalDist);
         const ahead = turf.along(line, aheadDist, { units: 'meters' });
         const head = (turf.bearing(curr, ahead) + 360) % 360;
         lastHeadingRef.current = head;
-        
         const forwardPart = turf.lineSlice(curr, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
         setDisplayedRouteGeometry(forwardPart);
-        
         const base = { latitude: lat, longitude: lng, heading: head };
         setSmoothLocation(base);
         setSpeedKmh(Math.round(speedMs * 3.6));
-        
         if (mapRef.current && !isManualMode) {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
@@ -958,7 +944,7 @@ export default function StartNavigationPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
-        {isLocating && <LoadingScreen message="Huidige locatie bepalen..." className="fixed inset-0 z-[1000]" />}
+        {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
         {isStartingSimulation && <LoadingScreen message="Simulator voorbereiden..." className="fixed inset-0 z-[1000]" />}
         
         <div className="absolute inset-0 z-0">
@@ -974,7 +960,7 @@ export default function StartNavigationPage() {
                 touchZoomRotate={true}
                 touchPitch={true}
                 onInteractionStateChange={(state) => {
-                    if (state.isDragging || state.isZooming || state.isRotating) {
+                    if (navigationState === 'navigating' && (state.isDragging || state.isZooming || state.isRotating)) {
                         setIsManualMode(true);
                     }
                 }}
@@ -1066,7 +1052,7 @@ export default function StartNavigationPage() {
                                 });
                             }
                         }}
-                        title="Hervat navigatie (Zoom & Graden)"
+                        title="Hervat navigatie"
                     >
                         <Navigation className="h-7 w-7 fill-current" />
                     </Button>
@@ -1131,11 +1117,7 @@ export default function StartNavigationPage() {
             style={navigationState !== 'navigating' && isListExpanded ? { height: `${listHeight}px` } : {}}
         >
             {navigationState !== 'navigating' && isListExpanded && (
-                <div 
-                    onMouseDown={onMouseDown}
-                    onTouchStart={onTouchStart}
-                    className="absolute top-0 left-0 right-0 h-4 px-2 cursor-ns-resize z-50 flex items-center justify-center -translate-y-1/2 group/handle"
-                >
+                <div onMouseDown={onMouseDown} onTouchStart={onTouchStart} className="absolute top-0 left-0 right-0 h-4 px-2 cursor-ns-resize z-50 flex items-center justify-center -translate-y-1/2 group/handle">
                     <div className="bg-slate-900 rounded-full h-7 w-7 flex flex-col items-center justify-center shadow-2xl border-2 border-white group-hover/handle:scale-110 transition-transform">
                         <ChevronUp className="h-2.5 w-2.5 text-white -mb-0.5" />
                         <ChevronDown className="h-2.5 w-2.5 text-white -mt-0.5" />
@@ -1147,42 +1129,21 @@ export default function StartNavigationPage() {
                 <div className="flex items-center gap-4 flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
                     <div className="relative w-64">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                        <Input 
-                            placeholder="Zoeken in lijst..." 
-                            className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" 
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
+                        <Input placeholder="Zoeken in lijst..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
                 </div>
                 
                 <div className="flex items-center gap-3 pointer-events-auto" onClick={e => e.stopPropagation()}>
-                    <Button 
-                        variant={showTodayCompleted ? "default" : "outline"} 
-                        size="sm" 
-                        className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200"
-                        onClick={() => setShowTodayCompleted(!showTodayCompleted)}
-                    >
+                    <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowTodayCompleted(!showTodayCompleted)}>
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> {showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}
                     </Button>
-                    <Button 
-                        variant={showAssignmentBubbles ? "default" : "outline"} 
-                        size="sm" 
-                        className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200"
-                        onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}
-                    >
+                    <Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}>
                         <User className="h-3.5 w-3.5 mr-1.5" /> {showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}
                     </Button>
                     
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"
-                            >
-                                <Layout className="h-3.5 w-3.5" /> Kolommen
-                            </Button>
+                            <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><Layout className="h-3.5 w-3.5" /> Kolommen</Button>
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md">
                             <div className="space-y-4">
@@ -1190,12 +1151,7 @@ export default function StartNavigationPage() {
                                 <div className="space-y-2">
                                     {Object.keys(DEFAULT_COLUMNS).map(colId => (
                                         <div key={colId} className="flex items-center space-x-3 p-1">
-                                            <Checkbox 
-                                                id={`col-${colId}`} 
-                                                checked={visibleColumns[colId] ?? true}
-                                                onCheckedChange={() => toggleColumnVisibility(colId)}
-                                                className="rounded-md"
-                                            />
+                                            <Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" />
                                             <Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{COLUMN_LABELS[colId]}</Label>
                                         </div>
                                     ))}
@@ -1214,11 +1170,11 @@ export default function StartNavigationPage() {
                     <TableHeader className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-300">
                         <TableRow className="h-8 hover:bg-transparent">
                             {visibleColumns.intakenummer && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Nr.</TableHead>}
-                            {visibleColumns.locatie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Locatie (Straat + Nr)</TableHead>}
-                            {visibleColumns.memo && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Memo / Omschrijving</TableHead>}
+                            {visibleColumns.locatie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Locatie</TableHead>}
+                            {visibleColumns.memo && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Omschrijving</TableHead>}
                             {visibleColumns.hoofdcategorie && <TableHead className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 h-8">Hoofdtype</TableHead>}
                             {visibleColumns.subcategorie && <TableHead className="font-black uppercase text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
-                            {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-200 px-2 h-8">Werkgebied</TableHead>}
+                            {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-200 px-2 h-8">Gebied</TableHead>}
                             {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
                         </TableRow>
                     </TableHeader>
@@ -1246,13 +1202,6 @@ export default function StartNavigationPage() {
                                 </TableRow>
                             );
                         })}
-                        {filteredMeldingen.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={7} className="h-32 text-center text-slate-300 font-bold uppercase tracking-widest text-[10px]">
-                                    Geen meldingen gevonden
-                                </TableCell>
-                            </TableRow>
-                        )}
                     </TableBody>
                 </Table>
             </ScrollArea>
