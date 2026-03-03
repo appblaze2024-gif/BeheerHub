@@ -595,12 +595,12 @@ export default function StartNavigationPage() {
             </div>
         )}
 
-        {/* Integrated Collapsible Excel List */}
+        {/* Integrated Collapsible Excel List - Square (rounded-none) */}
         <div className={cn(
-            "absolute bottom-0 left-0 right-0 z-40 transition-transform duration-500 ease-in-out bg-white border-t-4 border-slate-900 rounded-t-[2.5rem] shadow-2xl flex flex-col",
+            "absolute bottom-0 left-0 right-0 z-40 transition-transform duration-500 ease-in-out bg-white border-t-4 border-slate-900 rounded-none shadow-2xl flex flex-col",
             isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]"
         )}>
-            <div className="h-14 flex items-center justify-between px-8 cursor-pointer shrink-0" onClick={() => setIsListExpanded(!isListExpanded)}>
+            <div className="h-14 flex items-center justify-between px-8 cursor-pointer shrink-0 border-b border-slate-200" onClick={() => setIsListExpanded(!isListExpanded)}>
                 <div className="flex items-center gap-4">
                     <LayoutGrid className="h-5 w-5 text-primary" />
                     <span className="font-black uppercase text-sm tracking-tight">Meldingen ({filteredMeldingen.length})</span>
@@ -654,7 +654,7 @@ export default function StartNavigationPage() {
             </div>
             
             <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full px-4 pb-10">
+                <ScrollArea className="h-full px-0 pb-10">
                     <div className="min-w-[1200px]">
                         <Table className="border-collapse table-fixed w-full border-slate-200">
                             <TableHeader className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-200">
@@ -664,7 +664,9 @@ export default function StartNavigationPage() {
                                     {visibleColumns.omschrijving && <TableHead className="font-black uppercase text-[10px] border-r border-slate-200">Omschrijving</TableHead>}
                                     {visibleColumns.hoofdtype && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Hoofdtype</TableHead>}
                                     {visibleColumns.subtype && <TableHead className="font-black uppercase text-[10px] w-40 border-r border-slate-200">Subtype</TableHead>}
-                                    {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Werkgebied</TableHead>}
+                                    {visibleColumns.werkgebied && (
+                                        <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Werkgebied</TableHead>
+                                    )}
                                     {visibleColumns.toegewezen && <TableHead className="font-black uppercase text-[10px] w-32 border-r border-slate-200">Toegewezen</TableHead>}
                                     {visibleColumns.afstand && <TableHead className="font-black uppercase text-[10px] w-24 text-right sticky right-0 bg-slate-100 z-20 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">Afstand</TableHead>}
                                 </TableRow>
