@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -589,6 +588,7 @@ export default function StartNavigationPage() {
   const [activeWerkbonId, setActiveWerkbonId] = React.useState<string | null>(null);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isListExpanded, setIsListExpanded] = React.useState(true);
+  const [isManualMode, setIsManualMode] = React.useState(false);
 
   const [listHeight, setListHeight] = React.useState(400);
   const [isResizing, setIsResizing] = React.useState(false);
@@ -744,7 +744,7 @@ export default function StartNavigationPage() {
                 setSmoothLocation({ ...loc, heading: heading });
                 if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
 
-                if (navigationState === 'navigating' && mapRef.current) {
+                if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
                     const map = mapRef.current.getMap();
                     map.jumpTo({
                         center: [loc.longitude, loc.latitude],
@@ -769,7 +769,7 @@ export default function StartNavigationPage() {
         { enableHighAccuracy: true, maximumAge: 1000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode]);
 
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -871,6 +871,7 @@ export default function StartNavigationPage() {
             setNavigationState('navigating');
             setIsListExpanded(false);
             setIsLocating(false);
+            setIsManualMode(false);
             
             mapRef.current?.getMap().jumpTo({ 
                 center: [loc.longitude, loc.latitude], 
@@ -903,6 +904,7 @@ export default function StartNavigationPage() {
         setIsSimulationMode(true);
         setNavigationState('navigating');
         setIsListExpanded(false);
+        setIsManualMode(false);
         setTimeout(() => {
             setIsStartingSimulation(false);
             startSimulation();
@@ -945,7 +947,7 @@ export default function StartNavigationPage() {
         setSmoothLocation(base);
         setSpeedKmh(Math.round(speedMs * 3.6));
         
-        if (mapRef.current) {
+        if (mapRef.current && !isManualMode) {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
@@ -984,6 +986,11 @@ export default function StartNavigationPage() {
                 style={{ width: '100%', height: '100%' }} 
                 mapStyle={mapStyle} 
                 mapboxAccessToken={MAPBOX_TOKEN}
+                onMoveStart={(e) => {
+                    if (e.viewState.source === 'touch' || e.viewState.source === 'mouse') {
+                        setIsManualMode(true);
+                    }
+                }}
             >
                 {smoothLocation && (
                     <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center">
@@ -1053,6 +1060,19 @@ export default function StartNavigationPage() {
                 <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => updateNavZoom(Math.max(navZoom - 0.5, 10))}>
                     <Minus className="h-6 w-6 text-slate-600" />
                 </Button>
+                
+                {isManualMode && (
+                    <Button 
+                        variant="default" 
+                        size="icon" 
+                        className="h-12 w-12 rounded-full shadow-2xl bg-primary text-white mt-2 animate-bounce" 
+                        onClick={() => setIsManualMode(false)}
+                        title="Hervat navigatie (Zoom & Graden)"
+                    >
+                        <Navigation className="h-6 w-6" />
+                    </Button>
+                )}
+
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 mt-2"><Settings className="h-6 w-6 text-slate-600" /></Button>
