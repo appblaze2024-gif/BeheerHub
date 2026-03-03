@@ -29,7 +29,7 @@ import {
   LocateFixed,
   ChevronDown,
   ChevronUp,
-  X as XIcon,
+  X,
   FileText,
   Sparkles,
   Trash2,
@@ -46,7 +46,8 @@ import {
   AlertCircle,
   RefreshCw,
   Layout,
-  Zap
+  Zap,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -85,7 +86,6 @@ import { LoadingScreen } from '@/components/loading-screen';
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
-// Configuration for columns and labels
 const DEFAULT_COLUMNS = {
     intakenummer: true,
     locatie: true,
@@ -171,6 +171,7 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
+    const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
     const recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
@@ -276,12 +277,13 @@ function IntegratedWerkbonOverlay({
           const path = `meldingen/${meldingId}/${type}/${Date.now()}-${file.name}`;
           const uploadTask = uploadBytesResumable(ref(storage, path), file);
           uploadTask.on('state_changed', 
-            null,
-            null,
+            (snapshot) => setUploadProgress(prev => ({...prev, [file.name]: (snapshot.bytesTransferred / snapshot.totalBytes) * 100})),
+            () => {},
             () => getDownloadURL(uploadTask.snapshot.ref).then(url => {
                 const uploaded: UploadedFile = { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: path };
                 if (type === 'documents') setUploadedFiles(prev => [...prev, uploaded]);
                 else setAfhandelingFotos(prev => [...prev, uploaded]);
+                setUploadProgress(prev => { const n = {...prev}; delete n[file.name]; return n; });
             })
           );
         }
@@ -319,7 +321,7 @@ function IntegratedWerkbonOverlay({
         <div className="flex flex-col h-full bg-slate-50">
             <header className="h-14 lg:h-16 bg-white border-b flex items-center justify-between px-4 lg:px-6 shrink-0 shadow-sm z-10 sticky top-0">
                 <div className="flex items-center gap-3 lg:gap-4">
-                    <Button variant="ghost" size="icon" onClose={onClose} className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors">
+                    <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors">
                         <ArrowLeft className="h-6 w-6 text-slate-600" />
                     </Button>
                     <div>
@@ -495,7 +497,7 @@ function IntegratedWerkbonOverlay({
                                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sneltoetsen</span>
                                         </div>
                                         <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-tight rounded-lg border-slate-200" onClick={handleSaveQuickKey} disabled={!afhandelingBijzonderheden.trim()}>
-                                            <Plus className="h-3 w-3 mr-1.5" /> Opslaan als Sneltoets
+                                            <Plus className="h-3.5 w-3.5 mr-1.5" /> Opslaan als Sneltoets
                                         </Button>
                                     </div>
                                     
@@ -514,7 +516,7 @@ function IntegratedWerkbonOverlay({
                                                     className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                                                     onClick={(e) => { e.stopPropagation(); handleDeleteQuickKey(key); }}
                                                 >
-                                                    <XIcon className="h-2 w-2" />
+                                                    <X className="h-2 w-2" />
                                                 </button>
                                             </div>
                                         ))}
@@ -536,26 +538,104 @@ function IntegratedWerkbonOverlay({
                         <TabsContent value="Fotos" className="mt-0">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8">
                                 <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
-                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-6"><CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Brondocumenten (Foto's)</CardTitle></CardHeader>
+                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-6">
+                                        <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Brondocumenten (Foto's)</CardTitle>
+                                    </CardHeader>
                                     <CardContent className="p-4 lg:p-8">
                                         <div className="grid grid-cols-3 gap-3 lg:gap-4">
-                                            {melding.fotos?.map((p, i) => <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border-2 border-slate-50 shadow-sm"><Image src={p.url} alt="melding" fill className="object-cover" /></div>)}
-                                            {(!melding.fotos || melding.fotos.length === 0) && <div className="col-span-3 py-12 lg:py-20 text-center opacity-20"><Camera className="h-10 w-10 lg:h-12 lg:w-12 mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">Geen bronfoto's</p></div>}
+                                            {melding.fotos?.map((p, i) => (
+                                                <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border-2 border-slate-50 shadow-sm">
+                                                    <Image src={p.url} alt="melding" fill className="object-cover" />
+                                                </div>
+                                            ))}
+                                            {(!melding.fotos || melding.fotos.length === 0) && (
+                                                <div className="col-span-3 py-12 lg:py-20 text-center opacity-20">
+                                                    <Camera className="h-10 w-10 lg:h-12 lg:w-12 mx-auto mb-2" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen bronfoto's</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </CardContent>
                                 </Card>
                                 <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
-                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-6"><CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle></CardHeader>
-                                    <CardContent className="p-4 lg:p-8 space-y-4 lg:space-y-6">
-                                        <Button variant="outline" className="w-full h-12 lg:h-16 border-dashed border-2 border-slate-100 rounded-xl lg:rounded-2xl font-black uppercase tracking-widest text-[9px] lg:text-[10px]" onClick={() => document.getElementById('photo-input-integrated')?.click()}><Camera className="mr-2 h-3.5 w-3.5 lg:h-4 lg:w-4" /> Foto toevoegen</Button>
-                                        <input type="file" id="photo-input-integrated" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} multiple />
+                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-6 flex flex-row items-center justify-between">
+                                        <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle>
+                                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-none font-bold text-[9px] uppercase px-2 h-5">
+                                            {afhandelingFotos.length} Foto's
+                                        </Badge>
+                                    </CardHeader>
+                                    <CardContent className="p-4 lg:p-8 space-y-6">
+                                        <div className="flex gap-2">
+                                            <Button 
+                                                variant="outline" 
+                                                className="flex-1 h-16 lg:h-20 border-dashed border-2 border-slate-200 hover:border-primary/30 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 transition-all bg-slate-50/50" 
+                                                onClick={() => document.getElementById('camera-input-integrated')?.click()}
+                                            >
+                                                <Camera className="h-6 w-6 text-primary" /> 
+                                                <span>Foto Maken</span>
+                                            </Button>
+                                            <Button 
+                                                variant="outline" 
+                                                className="flex-1 h-16 lg:h-20 border-dashed border-2 border-slate-200 hover:border-primary/30 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 transition-all bg-slate-50/50" 
+                                                onClick={() => document.getElementById('gallery-input-integrated')?.click()}
+                                            >
+                                                <ImageIcon className="h-6 w-6 text-slate-400" /> 
+                                                <span>Album</span>
+                                            </Button>
+                                        </div>
+                                        
+                                        <input 
+                                            type="file" 
+                                            id="camera-input-integrated" 
+                                            className="hidden" 
+                                            accept="image/*" 
+                                            capture="environment" 
+                                            onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} 
+                                        />
+                                        <input 
+                                            type="file" 
+                                            id="gallery-input-integrated" 
+                                            className="hidden" 
+                                            accept="image/*" 
+                                            multiple 
+                                            onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} 
+                                        />
+
                                         <div className="grid grid-cols-3 gap-3 lg:gap-4">
                                             {afhandelingFotos.map((p, i) => (
-                                                <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border shadow-sm group">
+                                                <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border-2 border-white shadow-md group">
                                                     <Image src={p.url} alt="afhandeling" fill className="object-cover" />
+                                                    <Button 
+                                                        variant="destructive" 
+                                                        size="icon" 
+                                                        className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                                        onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
                                                 </div>
                                             ))}
+                                            {afhandelingFotos.length === 0 && (
+                                                <div className="col-span-3 py-12 text-center opacity-20">
+                                                    <ImageIcon className="h-8 w-8 mx-auto mb-2" />
+                                                    <p className="text-[9px] font-black uppercase tracking-widest">Nog geen foto's gemaakt</p>
+                                                </div>
+                                            )}
                                         </div>
+                                        
+                                        {Object.keys(uploadProgress).length > 0 && (
+                                            <div className="space-y-2">
+                                                {Object.entries(uploadProgress).map(([name, progress]) => (
+                                                    <div key={name} className="space-y-1">
+                                                        <div className="flex justify-between text-[8px] font-black uppercase">
+                                                            <span className="truncate max-w-[150px]">{name}</span>
+                                                            <span>{Math.round(progress)}%</span>
+                                                        </div>
+                                                        <Progress value={progress} className="h-1" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             </div>
@@ -928,7 +1008,7 @@ export default function StartNavigationPage() {
         setTimeout(() => {
             setIsStartingSimulation(false);
             startSimulation();
-        }, 100); // reduced delay for instant feel
+        }, 100); 
     }
   };
 
