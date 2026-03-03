@@ -33,7 +33,8 @@ import {
   Sparkles,
   Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  User
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -69,18 +70,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Separator } from '@/components/ui/separator';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
-
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
 
 const routeLayer: Layer = {
   id: 'route',
@@ -109,6 +102,15 @@ const getMeldingAgeColor = (datum?: string) => {
         return 'bg-red-600'; 
     } catch (e) { return 'bg-slate-400'; }
 };
+
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
 
 /**
  * Geïntegreerde Werkbon Component die als overlay verschijnt
@@ -554,12 +556,12 @@ export default function StartNavigationPage() {
                 </Button>
             </div>
             <div className="flex items-center gap-3 pointer-events-auto">
-                <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border-slate-100" onClick={handleLocateUser} disabled={isLocating}>
+                <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border border-slate-100" onClick={handleLocateUser} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
                 </Button>
                 {navigationState === 'setup' ? (
                     <>
-                        {isPrivileged && <Button variant="outline" className="h-12 px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border-slate-100" onClick={() => handleStartRit(true)}><Gauge className="mr-2 h-5 w-5" /> SIMULATOR</Button>}
+                        {isPrivileged && <Button variant="outline" className="h-12 px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-100" onClick={() => handleStartRit(true)}><Gauge className="mr-2 h-5 w-5" /> SIMULATOR</Button>}
                         <Button className="h-12 px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRit(false)}><Play className="mr-2 h-5 w-5 fill-current" /> START RIT</Button>
                     </>
                 ) : (
@@ -692,7 +694,7 @@ export default function StartNavigationPage() {
                                             {visibleColumns.toegewezen && (
                                                 <TableCell className="text-xs font-bold border-r border-slate-100 truncate text-slate-600">
                                                     <div className="flex items-center gap-2">
-                                                        <UserIcon className="h-3 w-3 text-slate-300" />
+                                                        <User className="h-3 w-3 text-slate-300" />
                                                         {m.behandelaar || '-'}
                                                     </div>
                                                 </TableCell>
