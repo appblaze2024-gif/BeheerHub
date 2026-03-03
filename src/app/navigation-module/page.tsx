@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
-import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +51,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -105,15 +105,6 @@ const COLUMN_LABELS: Record<string, string> = {
     werkgebied: 'Werkgebied',
     afstand: 'Afstand'
 };
-
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
 
 const routeLayer: Layer = {
   id: 'route',
@@ -392,7 +383,7 @@ function IntegratedWerkbonOverlay({
                                     </CardContent>
                                 </Card>
                                 <div className="rounded-xl lg:rounded-2xl overflow-hidden border-2 border-white shadow-2xl min-h-[300px] lg:min-h-[400px]">
-                                    <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={false} objects={nearbyObjects} />
+                                    <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={true} objects={nearbyObjects} />
                                 </div>
                             </div>
                         </TabsContent>
@@ -550,6 +541,15 @@ function IntegratedWerkbonOverlay({
         </div>
     );
 }
+
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
 
 export default function StartNavigationPage() {
   const firestore = useFirestore();
@@ -811,7 +811,6 @@ export default function StartNavigationPage() {
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     
-    // Explicitly requesting fastest route
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
     
     try {
@@ -857,7 +856,6 @@ export default function StartNavigationPage() {
             setIsLocating(false);
             setIsManualMode(false);
             
-            // Instant jump for iPad
             mapRef.current?.getMap().jumpTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: Number(navZoomRef.current) || 18, 
@@ -878,7 +876,6 @@ export default function StartNavigationPage() {
                     beginNavigation(loc, pos.coords.heading || 0);
                 },
                 (err) => {
-                    console.error("Initial location failed, using default:", err);
                     beginNavigation(SIMULATION_START_LOCATION, 0);
                 },
                 { enableHighAccuracy: true, timeout: 5000 }
@@ -971,7 +968,11 @@ export default function StartNavigationPage() {
                 style={{ width: '100%', height: '100%' }} 
                 mapStyle={mapStyle} 
                 mapboxAccessToken={MAPBOX_TOKEN}
+                dragPan={true}
+                dragRotate={true}
+                scrollZoom={true}
                 touchZoomRotate={true}
+                touchPitch={true}
                 onInteractionStateChange={(state) => {
                     if (state.isDragging || state.isZooming || state.isRotating) {
                         setIsManualMode(true);

@@ -280,7 +280,11 @@ export function MapboxView({
   const pinToShow = hoveredPin || selectedPin;
 
   return (
-    <div ref={containerRef} className={cn("w-full h-full", !interactive && "pointer-events-none")}>
+    <div 
+        ref={containerRef} 
+        className={cn("w-full h-full", !interactive && "pointer-events-none")}
+        style={{ touchAction: 'none' }}
+    >
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}
@@ -290,8 +294,8 @@ export function MapboxView({
         dragPan={interactive}
         dragRotate={interactive}
         scrollZoom={interactive}
-        touchZoom={interactive}
-        touchRotate={interactive}
+        touchZoomRotate={interactive}
+        touchPitch={interactive}
         doubleClickZoom={interactive}
       >
         {wijkPolygons.length > 0 && (
