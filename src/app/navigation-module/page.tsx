@@ -51,7 +51,8 @@ import {
   Settings2,
   Eye,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  User
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -734,6 +735,7 @@ export default function StartNavigationPage() {
     hoofdtype: true,
     subcategorie: true,
     werkgebied: true,
+    toegewezen: true,
     afstand: true
   });
 
@@ -1015,6 +1017,7 @@ export default function StartNavigationPage() {
                                       {columnVisibility.hoofdtype && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Hoofdtype</TableHead>}
                                       {columnVisibility.subcategorie && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-48">Subtype</TableHead>}
                                       {columnVisibility.werkgebied && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Werkgebied</TableHead>}
+                                      {columnVisibility.toegewezen && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Toegewezen</TableHead>}
                                       {columnVisibility.afstand && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3 w-24">Afstand</TableHead>}
                                   </TableRow>
                               </TableHeader>
@@ -1071,6 +1074,14 @@ export default function StartNavigationPage() {
                                                           <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200">
                                                               {m.werkgebied || m.wijk || '-'}
                                                           </Badge>
+                                                      </TableCell>
+                                                  )}
+                                                  {columnVisibility.toegewezen && (
+                                                      <TableCell className="text-[9px] font-black border-r px-3 py-1">
+                                                          <div className="flex items-center gap-2">
+                                                              <User className="h-3 w-3 text-slate-400" />
+                                                              <span className="truncate max-w-[120px] text-slate-700">{m.behandelaar || '-'}</span>
+                                                          </div>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.afstand && (
