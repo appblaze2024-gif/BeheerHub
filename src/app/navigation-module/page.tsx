@@ -6,6 +6,7 @@ import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNo
 import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   ArrowLeft, 
   Play, 
@@ -124,9 +125,6 @@ const translationLanguages = [
   { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
 ];
 
-/**
- * Integrated Werkbon Component - FULL SCREEN
- */
 function IntegratedWerkbonOverlay({ 
     meldingId, 
     onClose, 
