@@ -774,7 +774,7 @@ export default function StartNavigationPage() {
 
   const sortedMissions = React.useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
-    const base = userLocation || SIMULATION_START_LOCATION;
+    const base = smoothLocation || userLocation || SIMULATION_START_LOCATION;
     return [...filteredMeldingen]
         .filter(m => m.status !== 'Afgerond')
         .sort((a, b) => {
@@ -782,7 +782,7 @@ export default function StartNavigationPage() {
             const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
             return distA - distB;
         });
-  }, [filteredMeldingen, userLocation]);
+  }, [filteredMeldingen, userLocation, smoothLocation]);
 
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
@@ -961,6 +961,10 @@ export default function StartNavigationPage() {
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
                         <div className="relative flex flex-col items-center">
+                            {/* Target Ring Logic: Black ring for the next mission in the queue */}
+                            {nextMission?.id === m.id && (
+                                <div className="absolute h-12 w-12 rounded-full border-[3px] border-black animate-pulse opacity-80" />
+                            )}
                             {showAssignmentBubbles && (
                                 <div className="absolute bottom-full mb-2 bg-white/90 backdrop-blur-sm text-slate-900 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter shadow-xl border border-slate-200 whitespace-nowrap animate-in zoom-in-95 duration-200">
                                     {m.behandelaar || '??'}
@@ -1168,7 +1172,7 @@ export default function StartNavigationPage() {
                     </TableHeader>
                     <TableBody>
                         {filteredMeldingen.map(m => {
-                            const base = userLocation || SIMULATION_START_LOCATION;
+                            const base = smoothLocation || userLocation || SIMULATION_START_LOCATION;
                             const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                             const isCompleted = m.status === 'Afgerond';
                             return (
