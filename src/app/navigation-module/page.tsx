@@ -46,7 +46,8 @@ import {
   Trash2,
   Bell,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -140,7 +141,6 @@ function NavigatingView({
   const [targetLocation, setTargetLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   const [smoothLocation, setSmoothLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   
-  const [currentObjectIndex, setCurrentObjectIndex] = React.useState(0);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [currentLeg, setCurrentLeg] = React.useState<any>(null);
@@ -207,13 +207,21 @@ function NavigatingView({
 
   const totalSimDistanceRef = React.useRef(0);
 
+  // In this mode, we find the next target DYNAMICALLY based on current location
   const nextObject = React.useMemo(() => {
     const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id));
     if (remaining.length === 0) return null;
     
-    // In navigating mode, we strictly follow the passed sequence objectsOnRoute
-    return remaining[0];
-  }, [objectsOnRoute, completedObjects]);
+    // Always find the closest one to current location
+    if (!targetLocation) return remaining[0];
+
+    const currentPt = turf.point([targetLocation.longitude, targetLocation.latitude]);
+    return [...remaining].sort((a, b) => {
+        const distA = turf.distance(currentPt, turf.point([a.longitude, a.latitude]));
+        const distB = turf.distance(currentPt, turf.point([b.longitude, b.latitude]));
+        return distA - distB;
+    })[0];
+  }, [objectsOnRoute, completedObjects, targetLocation?.latitude, targetLocation?.longitude]);
 
   const currentSpeedLimit = React.useMemo(() => {
     if (!currentLeg?.annotation?.maxspeed) return 50;
@@ -339,20 +347,6 @@ function NavigatingView({
   }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
 
   React.useEffect(() => {
-    if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || arrivedObject) return;
-    
-    try {
-        const line = turf.lineString(currentRouteGeometry.coordinates);
-        const pt = turf.point([targetLocation.longitude, targetLocation.latitude]);
-        const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
-        
-        if (snapped.properties.dist! > 40) {
-            setCurrentRouteGeometry(null); 
-        }
-    } catch (e) {}
-  }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isCalculatingRoute, arrivedObject]);
-
-  React.useEffect(() => {
     if (!currentRouteGeometry || !snappedLocation) { 
       setThrottledGeometry(null); 
       return; 
@@ -455,7 +449,7 @@ function NavigatingView({
         simAnimationRef.current = requestAnimationFrame(runSimulation);
     };
     runSimulation(performance.now());
-    return () => { if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); };
+    return () => { if (simAnimationRef.current) cancelAnimationFrame(runSimulation); };
   }, [isSimulating, currentRouteGeometry, nextObject?.id]);
 
   React.useEffect(() => {
@@ -483,17 +477,6 @@ function NavigatingView({
     fetchRoute();
   }, [nextObject?.id, arrivedObject, isSimulating, isCalculatingRoute, currentRouteGeometry === null]);
   
-  const handleArrivedAction = (type: 'finish' | 'issue') => {
-    if (!arrivedObject) return;
-    const finishedId = arrivedObject.id;
-    setCompletedObjects(prev => [...prev, finishedId]);
-    setArrivedObject(null);
-    setHasReachedCurrentTarget(false);
-    setCurrentRouteGeometry(null); 
-    setCurrentLeg(null); 
-    lastFetchedTargetId.current = null;
-  };
-
   const handleJumpToArrival = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (simStateRef.current && totalSimDistanceRef.current > 0) {
@@ -510,12 +493,11 @@ function NavigatingView({
     const durationSeconds = (distanceRemainingToDestination / (currentLeg.distance || 1)) * currentLeg.duration;
     return formatDate(addSeconds(new Date(), durationSeconds), 'HH:mm');
   }, [currentLeg, distanceRemainingToDestination]);
-  const durationMin = React.useMemo(() => {
+  const durationMinLabel = React.useMemo(() => {
     if (!currentLeg?.duration) return '0';
     const durationSeconds = (distanceRemainingToDestination / (currentLeg.distance || 1)) * currentLeg.duration;
     return Math.round(durationSeconds / 60);
   }, [currentLeg, distanceRemainingToDestination]);
-  const durationMinLabel = durationMin;
   const distanceKm = React.useMemo(() => (distanceRemainingToDestination / 1000).toFixed(1), [distanceRemainingToDestination]);
 
   const isRouteFinished = React.useMemo(() => {
@@ -526,8 +508,8 @@ function NavigatingView({
     return (
         <div className="flex flex-col items-center justify-center h-full gap-4 bg-background p-6 text-center">
             <CheckCircle2 className="h-16 w-16 text-green-500" />
-            <h1 className="text-3xl font-black tracking-tight uppercase">Route Voltooid!</h1>
-            <p className="text-muted-foreground font-medium">Alle bestemmingen zijn bezocht.</p>
+            <h1 className="text-3xl font-black tracking-tight uppercase">Alle taken gereed!</h1>
+            <p className="text-muted-foreground font-medium">U heeft alle meldingen in dit gebied bezocht.</p>
             <Button onClick={onExit} size="lg" className="px-10 h-14 text-lg font-bold uppercase tracking-tighter mt-4 bg-primary text-white">Terug naar Overzicht</Button>
         </div>
     )
@@ -553,26 +535,11 @@ function NavigatingView({
             </div>
           </Marker>
         )}
-        {objectsOnRoute.map((obj, idx) => {
+        {objectsOnRoute.map((obj) => {
             if (completedObjects.includes(obj.id)) return null;
             const isTarget = nextObject?.id === obj.id;
             const inRange = isTarget && hasReachedCurrentTarget;
-            
             const isMelding = routeType === 'meldingen';
-            const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-            
-            const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
-            const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
-            
-            const useRecyclingBin = !isMelding && isPrullenbakMeerlanden;
-            const useWasteBin = !isMelding && !useRecyclingBin && (
-              isBrengpark || 
-              typeStr.includes('container') || 
-              typeStr.includes('ondergrond') ||
-              typeStr.includes('ondergr') ||
-              typeStr.includes('verzamel')
-            );
-            
             const Icon = isMelding ? Bell : Trash2;
 
             return (
@@ -581,23 +548,17 @@ function NavigatingView({
                     if (routeType === 'meldingen' || (targetLocation && turf.distance(turf.point([targetLocation.longitude, targetLocation.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }) < 150)) {
                         setArrivedObject(obj);
                     } else if (targetLocation) {
-                        toast({ title: "Te ver weg", description: `U moet binnen 150m van de ${routeType === 'prullenbak' ? 'bak' : 'locatie'} zijn om deze af te melden.`, variant: "destructive" });
+                        toast({ title: "Te ver weg", description: "U bent nog niet dichtbij genoeg.", variant: "destructive" });
                     }
                 }}>
                     <div className="relative flex flex-col items-center">
                         <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
                         <div className={cn(
                             "relative h-10 w-10 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all", 
-                            isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400", 
+                            isTarget ? "bg-red-600 scale-125 ring-4 ring-red-600/30" : "bg-slate-400", 
                             inRange && "scale-125 bg-green-600"
                         )}>
-                            {useRecyclingBin ? (
-                                <img src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" alt="recycling bin" className="h-6 w-6" />
-                            ) : useWasteBin ? (
-                                <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-6 w-6" />
-                            ) : (
-                                <Icon className="h-5 w-5 text-white stroke-[2.5]" />
-                            )}
+                            <Icon className="h-5 w-5 text-white stroke-[2.5]" />
                         </div>
                     </div>
                 </Marker>
@@ -616,7 +577,7 @@ function NavigatingView({
                 <CardContent className="p-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                         <Badge className="bg-primary text-white font-black text-xs h-6 px-3">{completedObjects.length}/{objectsOnRoute.length}</Badge>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{routeType === 'meldingen' ? 'Bonnen gereed' : 'Bakken gereed'}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gereed</span>
                     </div>
                     <div className="flex-1 max-w-[120px]">
                         <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} className="h-1.5" />
@@ -628,14 +589,14 @@ function NavigatingView({
         {gpsError && (
             <Alert variant="destructive" className="bg-red-600 text-white border-none shadow-2xl animate-in slide-in-from-top duration-300">
                 <div className="flex items-center gap-3">{gpsError === 'permission' ? <XIcon className="h-5 w-5" /> : <SignalLow className="h-5 w-5 animate-pulse" />}
-                    <div><AlertTitle className="font-black uppercase tracking-tight text-[10px] md:text-xs">{gpsError === 'permission' ? 'Locatie Toegang Geweigerd' : 'Zwak GPS Signaal'}</AlertTitle><AlertDescription className="text-[9px] md:text-[10px] opacity-90 font-bold">{gpsError === 'permission' ? 'Schakel locatietoegang in.' : 'Uw locatie wordt gezocht...'}</AlertDescription></div>
+                    <div><AlertTitle className="font-black uppercase tracking-tight text-[10px] md:text-xs">GPS Signaal</AlertTitle><AlertDescription className="text-[9px] md:text-[10px] opacity-90 font-bold">Uw locatie wordt gezocht...</AlertDescription></div>
                 </div>
             </Alert>
         )}
       </div>
 
-      <div className={cn("absolute right-4 top-20 z-[70] transition-all duration-300 flex items-center gap-3")}>
-          <div className="h-14 w-14 rounded-full bg-white border-[6px] border-red-600 flex items-center justify-center shadow-xl animate-in fade-in zoom-in duration-500"><span className="text-xl font-black text-slate-900 tabular-nums">{currentSpeedLimit}</span></div>
+      <div className="absolute right-4 top-20 z-[70] transition-all duration-300 flex items-center gap-3">
+          <div className="h-14 w-14 rounded-full bg-white border-[6px] border-red-600 flex items-center justify-center shadow-xl"><span className="text-xl font-black text-slate-900 tabular-nums">{currentSpeedLimit}</span></div>
           <div className={cn("h-14 w-14 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500", isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100")}>
               <div className="flex flex-col items-center leading-none z-10"><span className={cn("text-xl font-black tabular-nums transition-colors", isSpeeding ? "text-red-600" : "text-slate-900")}>{speedKmh}</span><span className={cn("text-[6px] font-black uppercase mt-0.5 tracking-widest", isSpeeding ? "text-red-400" : "text-slate-400")}>km/h</span></div>
           </div>
@@ -650,7 +611,7 @@ function NavigatingView({
                       </div>
                       <CardTitle className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none mb-2">Bestemming Bereikt</CardTitle>
                       <CardDescription className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                        {routeType === 'meldingen' ? 'Meldingsnummer' : 'Object ID'}: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span>
+                        {routeType === 'meldingen' ? 'Melding' : 'Object'}: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span>
                       </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-0 space-y-3 flex flex-col items-center">
@@ -671,48 +632,25 @@ function NavigatingView({
 
       <div className={cn("absolute bottom-0 left-0 right-0 z-[80] w-full flex flex-col items-center", isMobile ? "px-3 pb-3" : "px-6 pb-6")}>
         {!isFollowing && (<Button onClick={() => setIsFollowing(true)} className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center mb-4"><LocateFixed className="h-6 w-6" /></Button>)}
-        {isMobile ? (
-            <div className="w-full flex flex-col items-center gap-3">
-                <Card className={cn("w-full bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-4 px-8 transition-all duration-300 ease-in-out cursor-pointer", isDrawerExpanded ? "max-h-[300px]" : "max-h-[110px]")} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}>
-                    <div className="h.5 w-12 bg-slate-200 rounded-full mx-auto mb-3" />
-                    <div className="flex items-center justify-between">
-                        <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p></div>
-                        <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{durationMinLabel}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p></div>
-                        <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{distanceKm}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">km</p></div>
-                    </div>
-                    <div className={cn("mt-8 flex gap-4 transition-all duration-300", isDrawerExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none")}>
-                        <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full bg-blue-50 border-none shrink-0" onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }}>{isPaused ? <Play className="h-6 w-6 fill-current text-primary" /> : <Pause className="h-6 w-6 fill-current text-primary" />}</Button>
-                        {isSimulating && (
-                            <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full bg-orange-50 border-none shrink-0" onClick={handleJumpToArrival}>
-                                <FastForward className="h-6 w-6 text-orange-600 fill-current" />
-                            </Button>
-                        )}
-                        <Button variant="destructive" size="lg" className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" onClick={(e) => { e.stopPropagation(); onExit(); }}>STOP RIT</Button>
-                    </div>
-                </Card>
-            </div>
-        ) : (
-            <div className="w-full max-w-4xl flex items-end justify-between gap-4">
-                <div className="flex gap-2 p-1.5 bg-white/95 backdrop-blur-xl rounded-full shadow-2xl border border-slate-100">
-                    <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center p-0" onClick={() => setIsPaused(!isPaused)}>{isPaused ? <Play className="h-7 w-7 fill-current text-primary" /> : <Pause className="h-7 w-7 fill-current text-primary" />}</Button>
+        <div className="w-full flex flex-col items-center gap-3">
+            <Card className={cn("w-full max-w-lg bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-4 px-8 transition-all duration-300 ease-in-out cursor-pointer", isDrawerExpanded ? "max-h-[300px]" : "max-h-[110px]")} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}>
+                <div className="h-1.5 w-12 bg-slate-200 rounded-full mx-auto mb-3" />
+                <div className="flex items-center justify-between">
+                    <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p></div>
+                    <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{durationMinLabel}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p></div>
+                    <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{distanceKm}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">km</p></div>
+                </div>
+                <div className={cn("mt-8 flex gap-4 transition-all duration-300", isDrawerExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none")}>
+                    <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full bg-blue-50 border-none shrink-0" onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }}>{isPaused ? <Play className="h-6 w-6 fill-current text-primary" /> : <Pause className="h-6 w-6 fill-current text-primary" />}</Button>
                     {isSimulating && (
-                        <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full hover:bg-orange-50 transition-all flex items-center justify-center p-0" onClick={handleJumpToArrival}>
-                            <FastForward className="h-7 w-7 fill-current text-orange-600" />
+                        <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full bg-orange-50 border-none shrink-0" onClick={handleJumpToArrival}>
+                            <FastForward className="h-6 w-6 text-orange-600 fill-current" />
                         </Button>
                     )}
-                    <Button variant="destructive" size="lg" className="h-14 w-14 rounded-full shadow-xl border-none hover:scale-105 active:scale-95 transition-all flex items-center justify-center p-0" onClick={onExit}><XIcon className="h-7 w-7" /></Button>
+                    <Button variant="destructive" size="lg" className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" onClick={(e) => { e.stopPropagation(); onExit(); }}>STOP RIT</Button>
                 </div>
-                <Card className="bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden w-64 hidden md:flex">
-                    <CardContent className="p-4 space-y-2">
-                        <div className="justify-between items-end">
-                            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aankomst: {arrivalTime}</p><p className="text-lg font-black text-slate-900 leading-none">{durationMinLabel} min <span className="text-slate-300">/ {distanceKm} km</span></p></div>
-                            <div className="text-right"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Voortgang</p><p className="text-xs font-black text-primary">{completedObjects.length}/{objectsOnRoute.length}</p></div>
-                        </div>
-                        <Progress value={(completedObjects.length / (objectsOnRoute.length || 1)) * 100} className="h-1.5 bg-slate-100" />
-                    </CardContent>
-                </Card>
-            </div>
-        )}
+            </Card>
+        </div>
       </div>
     </div>
   );
@@ -743,7 +681,6 @@ export default function StartNavigationPage() {
   const [objectsOnRoute, setObjectsOnRoute] = React.useState<MapObject[]>([]);
   const [isStarting, setIsStarting] = React.useState(false);
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
-  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
   const [urlMeldingLocatie, setUrlMeldingLocatie] = React.useState<{ latitude: number; longitude: number; straat?: string } | null>(null);
   
   const [previewRouteGeometry, setPreviewRouteGeometry] = React.useState<any>(null);
@@ -751,9 +688,6 @@ export default function StartNavigationPage() {
 
   const [showCompletedToday, setShowCompletedToday] = React.useState(false);
   const [hasResumed, setHasResumed] = React.useState(false);
-
-  // Manual reordering state
-  const [customSortedIds, setCustomSortedIds] = React.useState<string[] | null>(null);
 
   const mapRef = React.useRef<MapRef>(null);
 
@@ -800,15 +734,6 @@ export default function StartNavigationPage() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  React.useEffect(() => {
-    const lat = searchParams.get('lat');
-    const lng = searchParams.get('lng');
-    const straat = searchParams.get('straat');
-    const typeFromUrl = searchParams.get('type') as any;
-    if (typeFromUrl) setRouteType(typeFromUrl);
-    if (lat && lng) setUrlMeldingLocatie({ latitude: parseFloat(lat), longitude: parseFloat(lng), straat: straat || 'Melding' });
-  }, [searchParams]);
-
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore || routeType !== 'meldingen') return null;
     return query(
@@ -844,30 +769,7 @@ export default function StartNavigationPage() {
 
   const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
 
-  const uniqueObjectsOnMap = React.useMemo(() => {
-    if (!objectsOnMap) return [];
-    const locationMap = new Map<string, MapObject>();
-    
-    const getObjectPriority = (obj: any) => {
-        const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-        const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
-        const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
-        if (isPrullenbakMeerlanden) return 3;
-        if (isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond')) return 2;
-        return 1;
-    };
-
-    objectsOnMap.forEach(obj => {
-      const key = `${obj.latitude.toFixed(5)}_${obj.longitude.toFixed(5)}`;
-      const existing = locationMap.get(key);
-      if (!existing || getObjectPriority(obj) > getObjectPriority(existing)) {
-        locationMap.set(key, obj);
-      }
-    });
-    
-    return Array.from(locationMap.values());
-  }, [objectsOnMap]);
-
+  // Strictly dynamic Nearest Neighbor sort starting from current position
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !rawMeldingen || rawMeldingen.length === 0) return [];
     
@@ -880,34 +782,15 @@ export default function StartNavigationPage() {
     if (pool.length === 0) return [];
 
     const result: Melding[] = [];
-    let currentPos = [currentActiveSortBase.longitude, currentActiveSortBase.latitude];
+    const baseLoc = userLocation || currentActiveSortBase;
+    let currentPos = [baseLoc.longitude, baseLoc.latitude];
 
     while (pool.length > 0) {
-        const sortedByAge = [...pool].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
-        const oldestTime = sortedByAge[0].createdAt?.seconds || 0;
-        const batchThreshold = 3600 * 24; 
-        const oldestBatch = pool.filter(m => (m.createdAt?.seconds || 0) <= oldestTime + batchThreshold);
-
-        const proximityThreshold = 0.8; 
-        const closeItems = pool.filter(m => {
-            const dist = turf.distance(turf.point(currentPos), turf.point([m.longitude, m.latitude]), { units: 'kilometers' });
-            return dist < proximityThreshold;
+        const nextItem = pool.reduce((prev, curr) => {
+            const distPrev = turf.distance(turf.point(currentPos), turf.point([prev.longitude, prev.latitude]));
+            const distCurr = turf.distance(turf.point(currentPos), turf.point([curr.longitude, curr.latitude]));
+            return distCurr < distPrev ? curr : prev;
         });
-
-        let nextItem: Melding;
-        if (closeItems.length > 0) {
-            nextItem = closeItems.reduce((prev, curr) => {
-                const distPrev = turf.distance(turf.point(currentPos), turf.point([prev.longitude, prev.latitude]));
-                const distCurr = turf.distance(turf.point(currentPos), turf.point([curr.longitude, curr.latitude]));
-                return distCurr < distPrev ? curr : prev;
-            });
-        } else {
-            nextItem = oldestBatch.reduce((prev, curr) => {
-                const distPrev = turf.distance(turf.point(currentPos), turf.point([prev.longitude, prev.latitude]));
-                const distCurr = turf.distance(turf.point(currentPos), turf.point([curr.longitude, curr.latitude]));
-                return distCurr < distPrev ? curr : prev;
-            });
-        }
 
         result.push(nextItem);
         currentPos = [nextItem.longitude, nextItem.latitude];
@@ -915,475 +798,135 @@ export default function StartNavigationPage() {
     }
 
     return result;
-  }, [rawMeldingen, routeType, isPrivileged, profile, currentActiveSortBase]);
-
-  const baseSortedMeldingen = React.useMemo(() => {
-    if (routeType !== 'meldingen') return [];
-    const excludeId = searchParams.get('exclude');
-    if (excludeId) {
-        return sortedMeldingen.filter(m => m.id !== excludeId);
-    }
-    return sortedMeldingen;
-  }, [sortedMeldingen, searchParams, routeType]);
-
-  // Sync customSortedIds with the automatic sort
-  React.useEffect(() => {
-    if (routeType !== 'meldingen' || !baseSortedMeldingen.length) {
-        setCustomSortedIds(null);
-        return;
-    }
-    
-    if (customSortedIds === null) {
-        setCustomSortedIds(baseSortedMeldingen.map(m => m.id));
-    } else {
-        const currentIds = baseSortedMeldingen.map(m => m.id);
-        const filteredCustom = customSortedIds.filter(id => currentIds.includes(id));
-        const newIds = currentIds.filter(id => !customSortedIds.includes(id));
-        
-        if (newIds.length > 0 || filteredCustom.length !== customSortedIds.length) {
-            setCustomSortedIds([...filteredCustom, ...newIds]);
-        }
-    }
-  }, [baseSortedMeldingen, routeType]);
-
-  const finalSortedMeldingen = React.useMemo(() => {
-    if (routeType !== 'meldingen' || !baseSortedMeldingen.length || !customSortedIds) return baseSortedMeldingen;
-    const map = new Map(baseSortedMeldingen.map(m => [m.id, m]));
-    return customSortedIds.map(id => map.get(id)).filter((m): m is Melding => !!m);
-  }, [baseSortedMeldingen, customSortedIds, routeType]);
-
-  const moveMelding = (index: number, direction: 'up' | 'down') => {
-    if (!customSortedIds) return;
-    const newIds = [...customSortedIds];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    if (targetIndex < 0 || targetIndex >= newIds.length) return;
-    
-    const temp = newIds[index];
-    newIds[index] = newIds[targetIndex];
-    newIds[targetIndex] = temp;
-    
-    setCustomSortedIds(newIds);
-  };
+  }, [rawMeldingen, routeType, isPrivileged, profile, userLocation, currentActiveSortBase]);
 
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
-    
     let startLoc = userLocation || SIMULATION_START_LOCATION;
     setIsStarting(true);
 
     if (routeType === 'meldingen') {
-        const sourceList = finalSortedMeldingen;
+        const sourceList = sortedMeldingen;
         if (sourceList.length === 0) { 
-            toast({ title: "Geen meldingen", description: "Geen aan u toegewezen meldingen gevonden." }); 
+            toast({ title: "Geen meldingen", description: "Geen openstaande meldingen voor u gevonden." }); 
             setIsStarting(false); 
             return; 
         }
-
-        const finalObjects = sourceList.map(m => ({ 
-            id: m.id, 
-            latitude: m.latitude, 
-            longitude: m.longitude, 
-            name: m.intakenummer,
-            createdAt: m.createdAt 
-        } as MapObject));
-        
-        setObjectsOnRoute(finalObjects);
+        setObjectsOnRoute(sourceList.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer } as MapObject)));
         setTripStartLocation(startLoc);
     } else if (selectedRouteIdDef && objectsOnMap) {
-        const unique = uniqueObjectsOnMap;
-        const finalObjects = unique.map(obj => ({ ...obj } as MapObject));
-        setObjectsOnRoute(finalObjects);
-        setTripStartLocation(startLoc);
-    } else if (urlMeldingLocatie) {
-        setObjectsOnRoute([{ id: 'Bestemming', latitude: urlMeldingLocatie.latitude, longitude: urlMeldingLocatie.longitude, name: urlMeldingLocatie.straat || 'Melding' }]);
+        setObjectsOnRoute(objectsOnMap.map(obj => ({ ...obj } as MapObject)));
         setTripStartLocation(startLoc);
     }
 
     setNavigationState('navigating');
     setIsStarting(false);
-  }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, finalSortedMeldingen, objectsOnMap, uniqueObjectsOnMap, toast]);
+  }, [userLocation, selectedRouteIdDef, routeType, sortedMeldingen, objectsOnMap, toast]);
 
   React.useEffect(() => {
     const isResume = searchParams.get('resume') === 'true';
     if (isResume && !hasResumed && !isLoadingProjects && projects && routeType === 'meldingen') {
-        if (finalSortedMeldingen.length > 0) {
+        if (sortedMeldingen.length > 0) {
             setHasResumed(true);
-            if (userLocation) {
-                setCurrentActiveSortBase(userLocation);
-            }
             const timer = setTimeout(() => handleStartRoute(false), 100);
             return () => clearTimeout(timer);
-        } else if (rawMeldingen && rawMeldingen.length === 0) {
-            setHasResumed(true);
         }
     }
-  }, [searchParams, hasResumed, isLoadingProjects, projects, routeType, finalSortedMeldingen, handleStartRoute, userLocation, rawMeldingen]);
+  }, [searchParams, hasResumed, isLoadingProjects, projects, routeType, sortedMeldingen, handleStartRoute]);
 
   React.useEffect(() => {
     const fetchPreview = async () => {
-        if (routeType === 'meldingen' && finalSortedMeldingen.length >= 1) {
-            const startWaypoint = `${currentActiveSortBase.longitude},${currentActiveSortBase.latitude}`;
-            const meldingWaypoints = finalSortedMeldingen.slice(0, 24).map(m => `${m.longitude},${m.latitude}`).join(';');
-            const waypoints = `${startWaypoint};${meldingWaypoints}`;
-            
+        if (routeType === 'meldingen' && sortedMeldingen.length >= 1) {
+            const baseLoc = userLocation || currentActiveSortBase;
+            const waypoints = [`${baseLoc.longitude},${baseLoc.latitude}`, ...sortedMeldingen.slice(0, 24).map(m => `${m.longitude},${m.latitude}`)].join(';');
             const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.routes && data.routes.length > 0) {
-                    setPreviewRouteGeometry(data.routes[0].geometry);
-                }
+                if (data.routes && data.routes.length > 0) setPreviewRouteGeometry(data.routes[0].geometry);
             } catch (e) {}
         } else {
             setPreviewRouteGeometry(null);
         }
     };
     fetchPreview();
-  }, [finalSortedMeldingen, routeType, currentActiveSortBase]);
-
-  React.useEffect(() => {
-    if (!mapRef.current) return;
-    const map = mapRef.current.getMap();
-
-    const fitRoute = () => {
-        if (routeType === 'meldingen' && previewRouteGeometry) {
-            try {
-                const line = turf.lineString(previewRouteGeometry.coordinates);
-                const bbox = turf.bbox(line);
-                if (bbox[0] !== Infinity) {
-                    map.fitBounds(bbox as [number, number, number, number], {
-                        padding: 80,
-                        duration: 1500
-                    });
-                }
-            } catch (e) {}
-        } else if (routeType !== 'meldingen' && routeGeoJSONFeatures) {
-            try {
-                const bbox = turf.bbox(routeGeoJSONFeatures);
-                if (bbox[0] !== Infinity) {
-                    map.fitBounds(bbox as [number, number, number, number], {
-                        padding: 80,
-                        duration: 1500
-                    });
-                }
-            } catch (e) {}
-        }
-    };
-
-    if (map.isStyleLoaded()) {
-        fitRoute();
-    } else {
-        map.on('load', fitRoute);
-    }
-  }, [previewRouteGeometry, routeGeoJSONFeatures, routeType]);
+  }, [sortedMeldingen, routeType, userLocation, currentActiveSortBase]);
 
   const isMeldingenType = routeType === 'meldingen';
-
-  if (isRecalculating) {
-      return <LoadingScreen message="BeheerHub AI optimaliseert uw route vanaf huidige locatie..." />;
-  }
-
-  const tableData = showCompletedToday ? myCompletedToday : finalSortedMeldingen;
+  const tableData = showCompletedToday ? myCompletedToday : sortedMeldingen;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {navigationState === 'navigating' ? (
-        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); setCurrentActiveSortBase(SIMULATION_START_LOCATION); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} routeType={routeType} />
+        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} routeType={routeType} />
       ) : (
         <div className="w-full h-full relative flex flex-col">
-          <div className={cn("flex flex-col flex-1 min-h-0", isMeldingenType ? "" : "relative")}>
+          <div className="flex flex-col flex-1 min-h-0">
               <div className={cn("relative overflow-hidden shrink-0", isMeldingenType ? "h-[60%]" : "h-full")}>
                   <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-                      <Button 
-                        variant="secondary" 
-                        size="icon" 
-                        className="h-10 w-10 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border-none text-slate-900 hover:bg-white" 
-                        onClick={() => router.push('/')}
-                      >
-                          <ArrowLeft className="h-5 w-5" />
-                      </Button>
+                      <Button variant="secondary" size="icon" className="h-10 w-10 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border-none text-slate-900" onClick={() => router.push('/')}><ArrowLeft className="h-5 w-5" /></Button>
                   </div>
 
                   <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
                       {profile?.role === 'Super admin' && (
-                        <Button 
-                          variant="outline"
-                          className="h-9 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl transition-all hidden sm:flex"
-                          onClick={() => handleStartRoute(true)}
-                          disabled={(routeType === 'meldingen' ? !finalSortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
-                        >
-                            <Gauge className="mr-2 h-4 w-4" /> SIMULATOR
-                        </Button>
+                        <Button variant="outline" className="h-9 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl hidden sm:flex" onClick={() => handleStartRoute(true)} disabled={(isMeldingenType ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}><Gauge className="mr-2 h-4 w-4" /> SIMULATOR</Button>
                       )}
-                      <Button 
-                        className="h-9 px-6 font-black uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl"
-                        onClick={() => handleStartRoute(false)}
-                        disabled={(routeType === 'meldingen' ? !finalSortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
-                      >
-                          {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />}
-                          START RIT
-                      </Button>
+                      <Button className="h-9 px-6 font-black uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRoute(false)} disabled={(isMeldingenType ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}>{isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} START RIT</Button>
                   </div>
 
-                  <MapGL 
-                    ref={mapRef} 
-                    initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} 
-                    style={{ width: '100%', height: '100%' }} 
-                    mapStyle={mapStyle} 
-                    mapboxAccessToken={MAPBOX_TOKEN}
-                  >
+                  <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN}>
                     {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
-                    {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
-                    {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'fill-color': '#32ADE6', 'fill-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
                     
-                    <Marker longitude={SIMULATION_START_LOCATION.longitude} latitude={SIMULATION_START_LOCATION.latitude} anchor="center">
-                        <div className="w-8 h-8 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
-                            <Home className="h-4 w-4 fill-current" />
-                        </div>
-                    </Marker>
-
-                    {routeType === 'meldingen' && !showCompletedToday && finalSortedMeldingen?.map((m, idx) => (
-                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
-                            setActivePopupMeldingId(m.id);
-                            if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
-                        }}>
-                            <div className="relative flex flex-col items-center">
-                                {isPrivileged && m.behandelaar && (
-                                    <div className="absolute -top-8 bg-white/95 backdrop-blur-sm px-2 py-0.5 rounded-md border border-slate-200 shadow-md text-[8px] font-black text-slate-900 uppercase tracking-tighter whitespace-nowrap z-10 animate-in fade-in slide-in-from-bottom-1">
-                                        {m.behandelaar}
-                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white border-r border-b border-slate-200 rotate-45" />
-                                    </div>
-                                )}
-                                <div className="w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white hover:scale-125 transition-transform cursor-pointer relative z-0">
-                                    {idx + 1}
-                                </div>
-                            </div>
+                    {isMeldingenType && !showCompletedToday && sortedMeldingen?.map((m) => (
+                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActivePopupMeldingId(m.id)}>
+                            <div className={cn("w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-lg transition-transform cursor-pointer", activePopupMeldingId === m.id ? "scale-125 ring-4 ring-red-500/30" : "hover:scale-110")} />
                         </Marker>
                     ))}
 
-                    {routeType === 'meldingen' && showCompletedToday && myCompletedToday?.map((m) => (
-                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
-                            setActivePopupMeldingId(m.id);
-                            if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
-                        }}>
-                            <div className="relative flex flex-col items-center">
-                                <div className={cn(
-                                    "w-5 h-5 bg-green-600 rounded-full border-2 border-white shadow-lg transition-all cursor-pointer relative z-0",
-                                    activePopupMeldingId === m.id ? "scale-150 ring-4 ring-green-500/30" : "hover:scale-110"
-                                )} />
-                            </div>
+                    {isMeldingenType && showCompletedToday && myCompletedToday?.map((m) => (
+                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActivePopupMeldingId(m.id)}>
+                            <div className={cn("w-5 h-5 bg-green-600 rounded-full border-2 border-white shadow-lg transition-all cursor-pointer", activePopupMeldingId === m.id ? "scale-150 ring-4 ring-green-500/30" : "hover:scale-110")} />
                         </Marker>
                     ))}
 
                     {isMeldingenType && activePopupMeldingId && (
-                        <Popup
-                            longitude={tableData.find(m => m.id === activePopupMeldingId)?.longitude || 0}
-                            latitude={tableData.find(m => m.id === activePopupMeldingId)?.latitude || 0}
-                            anchor="bottom"
-                            onClose={() => setActivePopupMeldingId(null)}
-                            closeOnClick={false}
-                            className="z-[100]"
-                        >
-                            <div className="p-2 max-w-[250px]">
-                                <div className="flex items-center gap-2 mb-1.5 border-b pb-1.5">
-                                    <Bell className="h-3 w-3 text-primary" />
-                                    <p className="font-black text-[10px] uppercase text-primary tracking-tight">Melding {tableData.find(m => m.id === activePopupMeldingId)?.intakenummer}</p>
-                                </div>
-                                <p className="text-[11px] font-bold text-slate-700 leading-relaxed italic">
-                                    "{tableData.find(m => m.id === activePopupMeldingId)?.extra_informatie || 'Geen omschrijving.'}"
-                                </p>
-                            </div>
-                        </Popup>
+                        <Popup longitude={tableData.find(m => m.id === activePopupMeldingId)?.longitude || 0} latitude={tableData.find(m => m.id === activePopupMeldingId)?.latitude || 0} anchor="bottom" onClose={() => setActivePopupMeldingId(null)} closeOnClick={false} className="z-[100]"><div className="p-2 max-w-[250px]"><div className="flex items-center gap-2 mb-1.5 border-b pb-1.5"><Bell className="h-3 w-3 text-primary" /><p className="font-black text-[10px] uppercase text-primary tracking-tight">Bon {tableData.find(m => m.id === activePopupMeldingId)?.intakenummer}</p></div><p className="text-[11px] font-bold text-slate-700 leading-relaxed italic">"{tableData.find(m => m.id === activePopupMeldingId)?.extra_informatie || 'Geen omschrijving.'}"</p></div></Popup>
                     )}
 
-                    {isMeldingenType && previewRouteGeometry && !showCompletedToday && (
-                        <Source id="preview-route" type="geojson" data={{ type: 'Feature', properties: {}, geometry: previewRouteGeometry }}>
-                            <Layer 
-                                id="preview-route-line" 
-                                type="line" 
-                                paint={{ 
-                                    'line-color': '#ef4444', 
-                                    'line-width': 4,
-                                    'line-opacity': 0.6
-                                }} 
-                            />
-                        </Source>
+                    {previewRouteGeometry && !showCompletedToday && (
+                        <Source id="preview-route" type="geojson" data={{ type: 'Feature', properties: {}, geometry: previewRouteGeometry }}><Layer id="preview-route-line" type="line" paint={{ 'line-color': '#ef4444', 'line-width': 4, 'line-opacity': 0.6 }} /></Source>
                     )}
-
-                    {routeType !== 'meldingen' && uniqueObjectsOnMap?.map(obj => {
-                        const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-                        const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
-                        const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
-                        const useRecyclingBin = isPrullenbakMeerlanden;
-                        const useWasteBin = !useRecyclingBin && (isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond') || typeStr.includes('ondergr') || typeStr.includes('verzamel'));
-                        
-                        return (
-                            <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center">
-                                {useRecyclingBin ? (
-                                    <img src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" alt="recycling bin" className="h-5 w-5 drop-shadow-md" />
-                                ) : useWasteBin ? (
-                                    <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-5 w-5 drop-shadow-md" />
-                                ) : (
-                                    <div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" />
-                                )}
-                            </Marker>
-                        );
-                    })}
                   </MapGL>
-
-                  {!isMeldingenType && (
-                    <Card className="absolute top-20 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 rounded-2xl p-4 hidden sm:block animate-in slide-in-from-left-4 duration-300">
-                        <CardHeader className="p-3 border-b bg-slate-50/50">
-                            <CardTitle className="text-sm font-black uppercase tracking-tighter">Instellingen</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-3 space-y-3">
-                            <div className="space-y-1">
-                                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
-                                <Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}>
-                                    <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Kies project" /></SelectTrigger>
-                                    <SelectContent>{projects?.filter(p => !!p.id).map(p => (<SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>))}</SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-1">
-                                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
-                                <div className="grid grid-cols-2 gap-1">
-                                    <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'veeg' ? "bg-primary border-primary text-white" : "border-slate-200")}>Veeg</Button>
-                                    <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'prullenbak' ? "bg-primary border-primary text-white" : "border-slate-200")}>Bakken</Button>
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
-                                <Select onValueChange={setSelectedRouteId} value={selectedRouteId}>
-                                    <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
-                                        {availableRoutes.filter((r: any) => !!r.id).map((r: any) => (<SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </CardContent>
-                    </Card>
-                  )}
               </div>
 
               {isMeldingenType && (
-                  <div className="flex-1 overflow-hidden flex flex-col bg-white border-t-4 border-slate-900">
+                  <div className="flex-1 overflow-hidden flex flex-col bg-white border-t-4 border-slate-900 animate-in slide-in-from-bottom duration-500">
                       <div className="p-3 bg-slate-50 border-b flex items-center justify-between shrink-0">
                           <div className="flex items-center gap-3">
-                              <div className="bg-primary/10 p-1.5 rounded-lg">
-                                {showCompletedToday ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <FileText className="h-3.5 w-3.5 text-primary" />}
-                              </div>
-                              <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">
-                                {showCompletedToday ? 'Mijn afgemelde bonnen (Vandaag)' : 'Overzicht Werkbonnen'}
-                              </h3>
+                              <div className="bg-primary/10 p-1.5 rounded-lg">{showCompletedToday ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <Zap className="h-3.5 w-3.5 text-primary" />}</div>
+                              <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">{showCompletedToday ? 'Vandaag Afgemeld' : 'Dichtstbijzijnde Werkbonnen'}</h3>
                           </div>
-                          <div className="flex items-center gap-2">
-                              {!showCompletedToday && customSortedIds && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-slate-200"
-                                  onClick={() => setCustomSortedIds(null)}
-                                >
-                                  <RefreshCw className="h-3 w-3" /> ROUTE OPTIMALISEREN
-                                </Button>
-                              )}
-                              <Button 
-                                variant={showCompletedToday ? "default" : "outline"}
-                                size="sm"
-                                className={cn(
-                                    "h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all",
-                                    showCompletedToday ? "bg-green-600 hover:bg-green-700 text-white border-green-600 shadow-lg shadow-green-600/20" : "border-slate-200"
-                                )}
-                                onClick={() => setShowCompletedToday(!showCompletedToday)}
-                              >
-                                {showCompletedToday ? <CheckCircle2 className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-                                {showCompletedToday ? 'TOON OPENSTAAND' : 'VANDAAG AFGEMELD'}
-                              </Button>
-                          </div>
+                          <Button variant={showCompletedToday ? "default" : "outline"} size="sm" className={cn("h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all", showCompletedToday ? "bg-green-600 text-white" : "border-slate-200")} onClick={() => setShowCompletedToday(!showCompletedToday)}>{showCompletedToday ? <CheckCircle2 className="h-3 w-3" /> : <History className="h-3 w-3" />}{showCompletedToday ? 'TOON OPENSTAAND' : 'VANDAAG AFGEMELD'}</Button>
                       </div>
                       <ScrollArea className="flex-1">
-                          <Table className="min-w-[1200px] border-collapse">
-                              <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
-                                  <TableRow className="h-8 hover:bg-transparent">
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-16 text-center">#</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Intakenr.</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Adresgegevens</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Omschrijving</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Hoofdtype</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Subtype</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3">Werkgebied</TableHead>
-                                  </TableRow>
-                              </TableHeader>
+                          <Table className="min-w-[1000px]">
+                              <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm"><TableRow className="h-8 hover:bg-transparent"><TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Bon</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Locatie</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Type</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3">Afstand</TableHead></TableRow></TableHeader>
                               <TableBody>
                                   {tableData.length > 0 ? (
-                                      tableData.map((m, index) => (
-                                          <TableRow 
-                                            key={m.id} 
-                                            className={cn(
-                                                "h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group",
-                                                activePopupMeldingId === m.id && "bg-blue-50/80"
-                                            )}
-                                            onClick={() => {
-                                                setActivePopupMeldingId(m.id);
-                                                if (mapRef.current) {
-                                                    mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
-                                                }
-                                            }}
-                                          >
-                                              <TableCell className="p-0 border-r bg-slate-50/50 text-primary w-16">
-                                                  {!showCompletedToday ? (
-                                                    <div className="flex flex-col items-center justify-center">
-                                                        <button 
-                                                            className="text-slate-300 hover:text-primary disabled:opacity-10 py-0.5" 
-                                                            onClick={(e) => { e.stopPropagation(); moveMelding(index, 'up'); }}
-                                                            disabled={index === 0}
-                                                        >
-                                                            <ChevronUp className="h-4 w-4" />
-                                                        </button>
-                                                        <span className="font-black text-xs leading-none my-0.5">{index + 1}</span>
-                                                        <button 
-                                                            className="text-slate-300 hover:text-primary disabled:opacity-10 py-0.5" 
-                                                            onClick={(e) => { e.stopPropagation(); moveMelding(index, 'down'); }}
-                                                            disabled={index === tableData.length - 1}
-                                                        >
-                                                            <ChevronDown className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                  ) : (
-                                                    <div className="text-center font-black text-xs">{index + 1}</div>
-                                                  )}
-                                              </TableCell>
-                                              <TableCell className="font-black text-[11px] border-r group-hover:text-primary transition-colors px-3">{m.intakenummer}</TableCell>
-                                              <TableCell className="text-[11px] font-bold border-r px-3">
-                                                  <div className="flex flex-col leading-tight">
-                                                      <span>{m.straatnaam} {m.huisnummer}</span>
-                                                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{m.postcode} {m.plaats}</span>
-                                                  </div>
-                                              </TableCell>
-                                              <TableCell className="text-[11px] font-bold border-r px-3 max-w-[250px]">
-                                                  <div className="flex items-center gap-1.5">
-                                                      <MessageSquare className="h-2.5 w-2.5 text-slate-300 shrink-0" />
-                                                      <p className="truncate text-slate-500 font-medium italic" title={m.extra_informatie}>{m.extra_informatie || '-'}</p>
-                                                  </div>
-                                              </TableCell>
-                                              <TableCell className="text-[10px] font-medium border-r text-slate-500 uppercase px-3">{m.hoofdcategorie}</TableCell>
-                                              <TableCell className="text-[10px] font-black border-r text-slate-900 uppercase tracking-tight px-3">{m.subcategorie}</TableCell>
-                                              <TableCell className="px-3">
-                                                  <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200">
-                                                      {m.werkgebied || '-'}
-                                                  </Badge>
-                                              </TableCell>
-                                          </TableRow>
-                                      ))
+                                      tableData.map((m) => {
+                                          const baseLoc = userLocation || currentActiveSortBase;
+                                          const dist = turf.distance(turf.point([baseLoc.longitude, baseLoc.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
+                                          return (
+                                              <TableRow key={m.id} className={cn("h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
+                                                  <TableCell className="font-black text-[11px] border-r group-hover:text-primary transition-colors px-3">{m.intakenummer}</TableCell>
+                                                  <TableCell className="text-[11px] font-bold border-r px-3"><div><span>{m.straatnaam} {m.huisnummer}</span><br /><span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{m.plaats}</span></div></TableCell>
+                                                  <TableCell className="text-[10px] font-black border-r text-slate-900 uppercase tracking-tight px-3">{m.subcategorie}</TableCell>
+                                                  <TableCell className="px-3"><Badge variant="outline" className="h-5 px-2 text-[9px] font-black uppercase bg-slate-50 border-slate-200">{dist} km</Badge></TableCell>
+                                              </TableRow>
+                                          )
+                                      })
                                   ) : (
-                                      <TableRow>
-                                          <TableCell colSpan={7} className="text-center py-12 text-muted-foreground opacity-30">
-                                              <LayoutGrid className="h-8 w-8 mx-auto mb-2" />
-                                              <p className="font-black uppercase tracking-widest text-[10px]">Geen {showCompletedToday ? 'afgemelde' : 'openstaande'} meldingen gevonden</p>
-                                          </TableCell>
-                                      </TableRow>
+                                      <TableRow><TableCell colSpan={4} className="text-center py-12 text-muted-foreground opacity-30"><LayoutGrid className="h-8 w-8 mx-auto mb-2" /><p className="font-black uppercase tracking-widest text-[10px]">Geen taken gevonden</p></TableCell></TableRow>
                                   )}
                               </TableBody>
                           </Table>
@@ -1393,7 +936,6 @@ export default function StartNavigationPage() {
           </div>
         </div>
       )}
-      {isPrivileged && (<RouteHistoryDialog open={isHistoryDialogOpen} onOpenChange={isHistoryDialogOpen} projectId={selectedProjectId} />)}
     </div>
   );
 }
