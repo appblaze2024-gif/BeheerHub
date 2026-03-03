@@ -737,7 +737,8 @@ export default function StartNavigationPage() {
                 }
             }
         },
-        null, { enableHighAccuracy: true }
+        (err) => console.error("WatchPosition error:", err),
+        { enableHighAccuracy: true, maximumAge: 1000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry]);
@@ -833,16 +834,19 @@ export default function StartNavigationPage() {
     if (sortedMissions.length === 0) return;
     if (!simulate) {
         setIsLocating(true);
-        navigator.geolocation.getCurrentPosition((pos) => {
-            const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        const geoOptions = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
+        
+        const startNav = (pos?: GeolocationPosition) => {
+            const loc = pos ? { latitude: pos.coords.latitude, longitude: pos.coords.longitude } : (userLocation || SIMULATION_START_LOCATION);
             setUserLocation(loc);
-            const heading = pos.coords.heading || 0;
+            const heading = pos?.coords.heading || lastHeadingRef.current || 0;
             lastHeadingRef.current = heading;
             setSmoothLocation({ ...loc, heading: heading });
             setIsSimulationMode(false);
             setNavigationState('navigating');
             setIsListExpanded(false);
             setIsLocating(false);
+            
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: Number(navZoomRef.current) || 18, 
@@ -852,12 +856,12 @@ export default function StartNavigationPage() {
                 padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
             });
             fetchRoute();
-        }, () => {
-            setIsLocating(false);
-            setNavigationState('navigating');
-            setIsListExpanded(false);
-            fetchRoute();
-        }, { enableHighAccuracy: true });
+        };
+
+        navigator.geolocation.getCurrentPosition(startNav, (err) => {
+            console.warn("Initial location failed, using last known:", err);
+            startNav();
+        }, geoOptions);
     } else {
         setIsStartingSimulation(true);
         setIsSimulationMode(true);
