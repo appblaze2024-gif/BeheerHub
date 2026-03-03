@@ -45,7 +45,8 @@ import {
   Table as TableIcon,
   AlertCircle,
   RefreshCw,
-  Layout
+  Layout,
+  Zap
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -84,7 +85,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
-// Configuration for columns and labels (Moved to top to prevent duplication errors)
+// Configuration for columns and labels
 const DEFAULT_COLUMNS = {
     intakenummer: true,
     locatie: true,
@@ -213,6 +214,28 @@ function IntegratedWerkbonOverlay({
         }
     }, [melding]);
 
+    const handleSaveQuickKey = async () => {
+        if (!user || !firestore || !afhandelingBijzonderheden.trim()) return;
+        const currentKeys = profile?.quickKeys || [];
+        if (currentKeys.includes(afhandelingBijzonderheden.trim())) {
+            toast({ title: "Bestaat al", description: "Deze tekst is al opgeslagen als sneltoets." });
+            return;
+        }
+        const updatedKeys = [afhandelingBijzonderheden.trim(), ...currentKeys].slice(0, 15);
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys });
+        toast({ title: "Sneltoets opgeslagen", description: "Tekst is toegevoegd aan uw collectie." });
+    };
+
+    const handleDeleteQuickKey = (key: string) => {
+        if (!user || !firestore) return;
+        const updatedKeys = (profile?.quickKeys || []).filter(k => k !== key);
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys });
+    };
+
+    const handleUseQuickKey = (key: string) => {
+        setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + key);
+    };
+
     const handleStartWork = async () => {
         if (!firestore || !melding) return;
         updateDocumentNonBlocking(doc(firestore, 'meldingen', melding.id), { workStartedAt: new Date().toISOString() });
@@ -266,7 +289,7 @@ function IntegratedWerkbonOverlay({
 
     const toggleListening = () => {
         if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
         if (!SpeechRecognition) return;
         const recognition = new SpeechRecognition();
         recognition.lang = sourceLang.code;
@@ -399,8 +422,8 @@ function IntegratedWerkbonOverlay({
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="Opmerkingen" className="mt-0 h-full">
-                            <Card className="rounded-xl lg:rounded-3xl border-none shadow-xl bg-white overflow-hidden h-full flex flex-col">
+                        <TabsContent value="Opmerkingen" className="mt-0 h-full flex flex-col gap-4">
+                            <Card className="rounded-xl lg:rounded-3xl border-none shadow-xl bg-white overflow-hidden flex flex-col flex-1">
                                 <CardHeader className="bg-slate-50 border-b p-4 lg:p-6 flex flex-row items-center justify-between">
                                     <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle>
                                     <div className="flex items-center gap-1.5 lg:gap-2 bg-slate-100 p-1 lg:p-1.5 rounded-xl lg:rounded-2xl border border-slate-200">
@@ -465,10 +488,44 @@ function IntegratedWerkbonOverlay({
                                         </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="p-4 lg:p-6 flex-1">
+                                <CardContent className="p-4 lg:p-6 flex-1 flex flex-col gap-4">
+                                    <div className="flex items-center justify-between border-b pb-3 shrink-0">
+                                        <div className="flex items-center gap-2">
+                                            <Zap className="h-3.5 w-3.5 text-primary" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sneltoetsen</span>
+                                        </div>
+                                        <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-tight rounded-lg border-slate-200" onClick={handleSaveQuickKey} disabled={!afhandelingBijzonderheden.trim()}>
+                                            <Plus className="h-3 w-3 mr-1.5" /> Opslaan als Sneltoets
+                                        </Button>
+                                    </div>
+                                    
+                                    <div className="flex flex-wrap gap-2 shrink-0">
+                                        {profile?.quickKeys?.map((key, i) => (
+                                            <div key={i} className="group relative flex items-center">
+                                                <Button 
+                                                    variant="secondary" 
+                                                    size="sm" 
+                                                    className="h-8 px-3 rounded-xl font-bold text-[10px] bg-white border border-slate-100 shadow-sm hover:border-primary/30 transition-all truncate max-w-[150px]"
+                                                    onClick={() => handleUseQuickKey(key)}
+                                                >
+                                                    {key}
+                                                </Button>
+                                                <button 
+                                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteQuickKey(key); }}
+                                                >
+                                                    <XIcon className="h-2 w-2" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {(!profile?.quickKeys || profile.quickKeys.length === 0) && (
+                                            <p className="text-[9px] font-bold text-slate-300 italic uppercase">Nog geen sneltoetsen opgeslagen.</p>
+                                        )}
+                                    </div>
+
                                     <Textarea 
                                         placeholder="Voeg hier bijzonderheden toe over de uitvoering of gebruik de dicteerknop..." 
-                                        className="resize-none text-[11px] lg:text-sm font-medium leading-relaxed rounded-xl lg:rounded-2xl border-slate-100 bg-slate-50 focus:ring-primary/20 h-full min-h-[300px]"
+                                        className="resize-none text-[11px] lg:text-sm font-medium leading-relaxed rounded-xl lg:rounded-2xl border-slate-100 bg-slate-50 focus:ring-primary/20 flex-1 min-h-[200px]"
                                         value={afhandelingBijzonderheden}
                                         onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
                                     />
@@ -794,7 +851,6 @@ export default function StartNavigationPage() {
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     
-    // Using driving profile for fastest car route, avoiding nothing
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypointsStr}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
     
     try {
