@@ -76,7 +76,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/menu";
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -974,7 +974,7 @@ export default function StartNavigationPage() {
                                     </div>
                                     <Slider 
                                         value={[navOffset]} 
-                                        min={100} 
+                                        min={0} 
                                         max={600} 
                                         step={10} 
                                         onValueChange={([val]) => updateNavOffset(val)}
