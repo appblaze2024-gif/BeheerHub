@@ -36,7 +36,8 @@ import {
   EyeOff,
   User,
   Package,
-  Paperclip
+  Paperclip,
+  ChevronRight
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -145,6 +146,19 @@ function IntegratedWerkbonOverlay({
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
+
+    const objectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'objects') : null, [firestore]);
+    const { data: allObjects } = useCollection<MapObject>(objectsQuery);
+
+    const nearbyObjects = React.useMemo(() => {
+        if (!allObjects || !melding) return [];
+        const issuePt = turf.point([melding.longitude, melding.latitude]);
+        return allObjects.filter(obj => {
+            if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+            const objPt = turf.point([obj.longitude, obj.latitude]);
+            return turf.distance(issuePt, objPt, { units: 'meters' }) <= 100;
+        });
+    }, [allObjects, melding]);
 
     React.useEffect(() => {
         if (melding) {
@@ -261,71 +275,138 @@ function IntegratedWerkbonOverlay({
                 <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
                     <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar">
                         <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-4">
-                                    <Card className="rounded-2xl bg-white shadow-sm border-slate-200">
-                                        <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Melding Details</CardTitle></CardHeader>
-                                        <CardContent className="p-4 space-y-4">
-                                            <div className="grid grid-cols-2 gap-4 border-b border-slate-50 pb-3">
-                                                <div>
-                                                    <p className="text-[8px] font-black uppercase text-slate-400">Intakenummer</p>
-                                                    <p className="text-xs font-black text-slate-900">{melding.intakenummer}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[8px] font-black uppercase text-slate-400">Status</p>
-                                                    <Badge className="bg-blue-500 text-white border-none font-black text-[8px] h-4">{melding.status}</Badge>
-                                                </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 h-full">
+                                <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col h-full overflow-hidden">
+                                    <CardHeader className="bg-slate-500 text-white p-4 lg:p-5 shrink-0">
+                                        <div className="flex justify-between items-start">
+                                            <div className="space-y-0.5 lg:space-y-1">
+                                                <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-blue-200">Intakenummer</p>
+                                                <CardTitle className="text-lg lg:text-xl font-black uppercase tracking-tight">{melding.intakenummer}</CardTitle>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-4 border-b border-slate-50 pb-3">
-                                                <div>
-                                                    <p className="text-[8px] font-black uppercase text-slate-400">Datum & Tijd</p>
-                                                    <p className="text-[10px] font-bold text-slate-600">{melding.datum} • {melding.tijdstip || '--:--'}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[8px] font-black uppercase text-slate-400">Wijk / Gebied</p>
-                                                    <Badge variant="outline" className="font-black text-[8px] uppercase tracking-tighter bg-slate-50 border-slate-200">{melding.werkgebied || melding.wijk || '-'}</Badge>
-                                                </div>
+                                            <Badge className="bg-blue-500 text-white border-none font-black text-[8px] lg:text-[9px] h-4 lg:h-5 px-2 lg:px-2.5">{melding.status}</Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-4 lg:p-6 space-y-4 lg:space-y-6 flex-1 flex flex-col min-h-0">
+                                        <div className="grid grid-cols-2 gap-x-4 lg:gap-x-6 gap-y-3 lg:gap-y-4 shrink-0">
+                                            <div className="space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Datum & Tijd</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.datum} • {melding.tijdstip || '--:--'}</p>
                                             </div>
-                                            <div className="space-y-1">
-                                                <p className="text-[8px] font-black uppercase text-slate-400">Locatie</p>
-                                                <p className="text-xs font-bold text-slate-900">{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</p>
+                                            <div className="space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Wijk / Werkgebied</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 uppercase truncate">{melding.werkgebied || melding.wijk || '-'}</p>
                                             </div>
-                                            <div className="space-y-1">
-                                                <p className="text-[8px] font-black uppercase text-slate-400">Omschrijving melding</p>
-                                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                    <p className="text-[10px] italic text-slate-600 font-medium leading-relaxed">"{melding.extra_informatie || 'Geen omschrijving.'}"</p>
+                                            <div className="col-span-2 space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</p>
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Categorie</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.hoofdcategorie} • {melding.subcategorie}</p>
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Soort Melder</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.soort_melder || melding.melder || 'Anoniem'}</p>
+                                            </div>
+                                            {melding.containernummer && (
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Containernummer</p>
+                                                    <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.containernummer}</p>
                                                 </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                                <div className="space-y-4">
-                                    <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden h-64">
-                                        <MapboxView latitude={melding.latitude} longitude={melding.longitude} interactive={false} />
-                                    </Card>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-h-0 flex flex-col space-y-1.5 lg:space-y-2">
+                                            <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest shrink-0">Omschrijving melding</p>
+                                            <ScrollArea className="flex-1 bg-slate-50 rounded-lg lg:rounded-xl border border-slate-100 p-3 lg:p-4">
+                                                <p className="text-[10px] lg:text-xs italic text-slate-600 font-medium leading-relaxed">
+                                                    "{melding.extra_informatie || 'Geen omschrijving opgegeven.'}"
+                                                </p>
+                                            </ScrollArea>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <div className="rounded-xl lg:rounded-2xl overflow-hidden border-2 border-white shadow-2xl min-h-[300px] lg:min-h-[400px]">
+                                    <MapboxView 
+                                      latitude={melding.latitude} 
+                                      longitude={melding.longitude} 
+                                      mainLocationLabel={melding.containernummer}
+                                      interactive={false} 
+                                      objects={nearbyObjects}
+                                    />
                                 </div>
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="Opmerkingen" className="mt-0 animate-in fade-in duration-300">
-                            <Card className="rounded-2xl bg-white shadow-sm border-slate-200 h-full flex flex-col">
-                                <CardHeader className="bg-slate-50 border-b p-4 flex flex-row items-center justify-between">
-                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</h3>
-                                    <div className="flex items-center gap-2">
-                                        <Button variant={isListening ? "destructive" : "ghost"} size="sm" onClick={toggleListening} className="h-8 font-black uppercase text-[9px] gap-2 rounded-xl">
-                                            {isListening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mic className="h-3.5 w-3.5 text-primary" />}
-                                            Dicteren
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden} className="h-8 font-black uppercase text-[9px] gap-2 text-primary rounded-xl">
-                                            {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                                            AI Verbeter
-                                        </Button>
+                        <TabsContent value="Opmerkingen" className="mt-0 h-full">
+                            <Card className="rounded-xl lg:rounded-3xl border-none shadow-xl bg-white overflow-hidden h-full flex flex-col">
+                                <CardHeader className="bg-slate-50 border-b p-4 lg:p-6 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle>
+                                    <div className="flex items-center gap-1.5 lg:gap-2 bg-slate-100 p-1 lg:p-1.5 rounded-xl lg:rounded-2xl border border-slate-200">
+                                        <div className="flex items-center gap-1 lg:gap-1.5 pr-1.5 lg:pr-2 border-r border-slate-200">
+                                            <Select value={sourceLang.code} onValueChange={(val) => setSourceLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
+                                                <SelectTrigger className="h-7 lg:h-8 w-[50px] lg:w-[60px] p-0 border-none bg-transparent shadow-none focus:ring-0">
+                                                    <div className="flex items-center justify-center w-full">
+                                                        <img src={`https://flagcdn.com/w40/${sourceLang.flag}.png`} alt={sourceLang.label} className="h-3 w-5 lg:h-4 lg:w-6 rounded-sm object-cover border border-slate-200" />
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {translationLanguages.map(l => (
+                                                        <SelectItem key={l.code} value={l.code}>
+                                                            <div className="flex items-center gap-2">
+                                                                <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
+                                                                <span className="text-xs font-bold">{l.label}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Button 
+                                                variant={isListening ? "destructive" : "ghost"} 
+                                                size="icon" 
+                                                className="rounded-full h-7 w-7 lg:h-8 lg:w-8 shadow-sm shrink-0"
+                                                onClick={toggleListening}
+                                                title={isListening ? "Stoppen" : `Dicteren in ${sourceLang.label}`}
+                                            >
+                                                {isListening ? <Loader2 className="h-3 w-3 lg:h-4 lg:w-4 animate-spin" /> : <Mic className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-primary" />}
+                                            </Button>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 lg:gap-1.5 pl-1">
+                                            <ChevronRight className="h-3 w-3 text-slate-300" />
+                                            <Select value={targetLang.code} onValueChange={(val) => setTargetLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
+                                                <SelectTrigger className="h-7 lg:h-8 w-[50px] lg:w-[60px] p-0 border-none bg-transparent shadow-none focus:ring-0">
+                                                    <div className="flex items-center justify-center w-full">
+                                                        <img src={`https://flagcdn.com/w40/${targetLang.flag}.png`} alt={targetLang.label} className="h-3 w-5 lg:h-4 lg:w-6 rounded-sm object-cover border border-slate-200" />
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {translationLanguages.map(l => (
+                                                        <SelectItem key={l.code} value={l.code}>
+                                                            <div className="flex items-center gap-2">
+                                                                <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
+                                                                <span className="text-xs font-bold">{l.label}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-7 lg:h-8 px-2 lg:px-3 font-black uppercase text-[8px] lg:text-[9px] gap-1.5 lg:gap-2 text-primary hover:bg-primary/5 rounded-lg lg:rounded-xl"
+                                                onClick={handleAITranslate}
+                                                disabled={isTranslating || !afhandelingBijzonderheden}
+                                            >
+                                                {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                                Vertaal
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="p-4 flex-1">
+                                <CardContent className="p-4 lg:p-6 flex-1">
                                     <Textarea 
-                                        placeholder="Voeg hier bijzonderheden toe over de uitvoering..." 
-                                        className="resize-none text-sm font-medium leading-relaxed rounded-xl bg-slate-50 focus:ring-primary/20 h-full min-h-[300px]"
+                                        placeholder="Voeg hier bijzonderheden toe over de uitvoering of gebruik de dicteerknop..." 
+                                        className="resize-none text-[11px] lg:text-sm font-medium leading-relaxed rounded-xl lg:rounded-2xl border-slate-100 bg-slate-50 focus:ring-primary/20 h-full min-h-[300px]"
                                         value={afhandelingBijzonderheden}
                                         onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
                                     />
@@ -333,24 +414,26 @@ function IntegratedWerkbonOverlay({
                             </Card>
                         </TabsContent>
 
-                        <TabsContent value="Fotos" className="mt-0 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Card className="rounded-2xl shadow-sm border-slate-200 bg-white overflow-hidden">
-                                    <CardHeader className="bg-slate-50 border-b p-4"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Brondocumenten (Foto's)</CardTitle></CardHeader>
-                                    <CardContent className="p-4">
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {melding.fotos?.map((p, i) => <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-50 shadow-sm"><Image src={p.url} alt="foto" fill className="object-cover" /></div>)}
-                                            {(!melding.fotos || melding.fotos.length === 0) && <div className="col-span-3 py-12 text-center opacity-20"><Camera className="h-8 w-8 mx-auto mb-2" /><p className="text-[8px] font-black uppercase">Geen bronfoto's</p></div>}
+                        <TabsContent value="Fotos" className="mt-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8">
+                                <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
+                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-6"><CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Brondocumenten (Foto's)</CardTitle></CardHeader>
+                                    <CardContent className="p-4 lg:p-8">
+                                        <div className="grid grid-cols-3 gap-3 lg:gap-4">
+                                            {melding.fotos?.map((p, i) => <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border-2 border-slate-50 shadow-sm"><Image src={p.url} alt="melding" fill className="object-cover" /></div>)}
+                                            {(!melding.fotos || melding.fotos.length === 0) && <div className="col-span-3 py-12 lg:py-20 text-center opacity-20"><Camera className="h-10 w-10 lg:h-12 lg:w-12 mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">Geen bronfoto's</p></div>}
                                         </div>
                                     </CardContent>
                                 </Card>
-                                <Card className="rounded-2xl shadow-sm border-slate-200 bg-white overflow-hidden">
-                                    <CardHeader className="bg-slate-50 border-b p-4"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle></CardHeader>
-                                    <CardContent className="p-4 space-y-4">
-                                        <Button variant="outline" className="w-full h-16 border-dashed border-2 border-slate-100 rounded-xl font-black uppercase tracking-widest text-[9px]"><Camera className="mr-2 h-4 w-4" /> Foto toevoegen</Button>
-                                        <div className="grid grid-cols-3 gap-3">
+                                <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
+                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-6"><CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle></CardHeader>
+                                    <CardContent className="p-4 lg:p-8 space-y-4 lg:space-y-6">
+                                        <Button variant="outline" className="w-full h-12 lg:h-16 border-dashed border-2 border-slate-100 rounded-xl lg:rounded-2xl font-black uppercase tracking-widest text-[9px] lg:text-[10px]"><Camera className="mr-2 h-3.5 w-3.5 lg:h-4 lg:w-4" /> Foto toevoegen</Button>
+                                        <div className="grid grid-cols-3 gap-3 lg:gap-4">
                                             {melding.afhandeling_fotos?.map((p, i) => (
-                                                <div key={i} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm"><Image src={p.url} alt="afhandeling" fill className="object-cover" /></div>
+                                                <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border shadow-sm group">
+                                                    <Image src={p.url} alt="afhandeling" fill className="object-cover" />
+                                                </div>
                                             ))}
                                         </div>
                                     </CardContent>
@@ -358,25 +441,25 @@ function IntegratedWerkbonOverlay({
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="Hoeveelheid" className="mt-0 animate-in fade-in duration-300">
-                            <Card className="rounded-2xl shadow-sm border-slate-200 bg-white overflow-hidden">
-                                <CardHeader className="bg-slate-50 border-b p-4"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verbruikte Materialen</CardTitle></CardHeader>
-                                <CardContent className="p-6 space-y-6">
-                                    <div className="grid gap-2">
+                        <TabsContent value="Hoeveelheid" className="mt-0">
+                            <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
+                                <CardHeader className="bg-slate-50 border-b p-4 lg:p-6"><CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Verbruikte Materialen</CardTitle></CardHeader>
+                                <CardContent className="p-4 lg:p-8 space-y-6 lg:space-y-8">
+                                    <div className="grid gap-2 lg:gap-3">
                                         {hoeveelheden.map(h => (
-                                            <div key={h.id} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                                                <div className="flex flex-col"><span className="text-xs font-black uppercase tracking-tight text-slate-900">{h.type}</span><span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">{h.eenheid}</span></div>
-                                                <div className="flex items-center gap-4">
-                                                    <span className="text-xl font-black text-primary leading-none">{h.aantal}</span>
-                                                    <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-full h-8 w-8" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4" /></Button>
+                                            <div key={h.id} className="flex justify-between items-center p-3 lg:p-5 bg-slate-50 border-2 border-transparent rounded-2xl lg:rounded-3xl">
+                                                <div className="flex flex-col"><span className="text-[11px] lg:text-sm font-black uppercase tracking-tight text-slate-900">{h.type}</span><span className="text-[8px] lg:text-[10px] text-slate-400 font-bold uppercase tracking-widest">{h.eenheid}</span></div>
+                                                <div className="flex items-center gap-4 lg:gap-6">
+                                                    <span className="text-2xl lg:text-3xl font-black text-primary leading-none">{h.aantal}</span>
+                                                    <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-full h-8 w-8 lg:h-10 lg:w-10" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4 lg:h-5 lg:w-5" /></Button>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                        <div className="space-y-1"><Label className="text-[8px] font-black uppercase text-slate-400">Materiaal</Label><Input placeholder="Bv. Zand..." className="h-9 font-bold text-xs" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} /></div>
-                                        <div className="space-y-1"><Label className="text-[8px] font-black uppercase text-slate-400">Aantal</Label><Input placeholder="0" type="number" className="h-9 font-bold text-xs" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} /></div>
-                                        <div className="flex items-end"><Button className="h-9 w-full font-black uppercase tracking-tight text-[10px]" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>Toevoegen</Button></div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 bg-slate-50 p-4 lg:p-6 rounded-2xl lg:rounded-3xl border-2 border-slate-100">
+                                        <div className="space-y-1"><Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Materiaal</Label><Input placeholder="Bv. Zand..." className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:text-sm" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} /></div>
+                                        <div className="space-y-1"><Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Aantal</Label><Input placeholder="0" type="number" className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:text-sm" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} /></div>
+                                        <div className="flex items-end"><Button className="h-9 lg:h-11 w-full font-black uppercase tracking-tight rounded-lg lg:rounded-xl shadow-lg shadow-primary/20 text-[10px] lg:text-xs" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>Toevoegen</Button></div>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -662,32 +745,37 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {/* Navigation Info Overlay */}
+        {/* Floating Navigation HUD Overlay - CENTER */}
         {navigationState === 'navigating' && !activeWerkbonId && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-lg animate-in slide-in-from-bottom duration-500 pointer-events-none">
-                <Card className="bg-white/95 backdrop-blur-md shadow-2xl border-none rounded-[2.5rem] overflow-hidden pointer-events-auto">
-                    <CardContent className="p-6 flex items-center justify-between gap-6">
-                        <div className="flex flex-col items-center">
-                            <p className="text-3xl font-black text-slate-900">{formatDate(addSeconds(new Date(), (distanceRemaining/5000)*3600), 'HH:mm')}</p>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p>
+            <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-top-10 duration-700 pointer-events-none">
+                <Card className="bg-slate-900/95 backdrop-blur-xl shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] border-2 border-white/10 rounded-[2.5rem] overflow-hidden pointer-events-auto ring-1 ring-white/5">
+                    <CardContent className="p-6 flex items-center justify-between gap-8">
+                        <div className="flex flex-col items-center shrink-0 border-r border-white/10 pr-8">
+                            <p className="text-4xl font-black text-white tracking-tighter">{formatDate(addSeconds(new Date(), (distanceRemaining/5000)*3600), 'HH:mm')}</p>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1">aankomst</p>
                         </div>
-                        <div className="flex-1 flex flex-col gap-2">
-                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">
-                                <span className="truncate max-w-[150px]">Volgende: {nextObject?.intakenummer}</span>
-                                <span>{(distanceRemaining/1000).toFixed(1)} km</span>
+                        <div className="flex-1 flex flex-col gap-3 min-w-0">
+                            <div className="flex justify-between items-end px-1">
+                                <div className="space-y-0.5">
+                                    <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Volgende opdracht</p>
+                                    <p className="text-lg font-black text-white uppercase tracking-tight truncate max-w-[200px]">{nextObject?.intakenummer}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-2xl font-black text-white leading-none">{(distanceRemaining/1000).toFixed(1)} <span className="text-xs text-slate-500 uppercase">km</span></p>
+                                </div>
                             </div>
-                            <Progress value={100} className="h-2 bg-slate-100" />
+                            <Progress value={100} className="h-2 bg-white/10" />
                         </div>
-                        <div className="h-16 w-16 rounded-full border-4 border-primary flex flex-col items-center justify-center bg-white shadow-lg shrink-0">
-                            <span className="text-xl font-black text-primary leading-none">{speedKmh}</span>
-                            <span className="text-[7px] font-black uppercase text-slate-400">km/h</span>
+                        <div className="h-20 w-20 rounded-full border-[6px] border-primary flex flex-col items-center justify-center bg-slate-800 shadow-[inset_0_0_20px_rgba(37,99,235,0.3)] shrink-0 ring-4 ring-white/5">
+                            <span className="text-3xl font-black text-white leading-none tracking-tighter">{speedKmh}</span>
+                            <span className="text-[8px] font-black uppercase text-primary mt-0.5">km/h</span>
                         </div>
                     </CardContent>
                 </Card>
             </div>
         )}
 
-        {/* Integrated Collapsible Excel List - Square */}
+        {/* Integrated Collapsible Excel List - SQUARE */}
         <div className={cn(
             "absolute bottom-0 left-0 right-0 z-40 transition-transform duration-500 ease-in-out bg-white border-t-4 border-slate-900 rounded-none shadow-2xl flex flex-col",
             isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]"
@@ -809,7 +897,7 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {/* Integrated Werkbon Overlay */}
+        {/* Integrated Werkbon Overlay - FULL LAYOUT */}
         {activeWerkbonId && (
             <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
                 <div className="w-full max-w-6xl h-[90vh] rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-white/20 animate-in zoom-in-95 duration-300">
