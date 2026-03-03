@@ -105,6 +105,15 @@ const COLUMN_LABELS: Record<string, string> = {
     afstand: 'Afstand'
 };
 
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
+
 const routeLayer: Layer = {
   id: 'route',
   type: 'line',
@@ -595,36 +604,11 @@ export default function StartNavigationPage() {
 
   React.useEffect(() => {
     if (profile) {
-        if (profile.navZoom !== undefined) {
-            const val = Number(profile.navZoom);
-            if (!isNaN(val)) {
-                setNavZoomState(val);
-                navZoomRef.current = val;
-            }
-        }
-        if (profile.navPitch !== undefined) {
-            const val = Number(profile.navPitch);
-            if (!isNaN(val)) {
-                setNavPitchState(val);
-                navPitchRef.current = val;
-            }
-        }
-        if (profile.navOffset !== undefined) {
-            const val = Number(profile.navOffset);
-            if (!isNaN(val)) {
-                setNavOffsetState(val);
-                navOffsetRef.current = val;
-            }
-        }
-        if (profile.navListHeight !== undefined) {
-            const val = Number(profile.navListHeight);
-            if (!isNaN(val)) {
-                setListHeight(val);
-            }
-        }
-        if (profile.navColumns) {
-            setVisibleColumns(profile.navColumns);
-        }
+        if (profile.navZoom !== undefined) setNavZoomState(Number(profile.navZoom));
+        if (profile.navPitch !== undefined) setNavPitchState(Number(profile.navPitch));
+        if (profile.navOffset !== undefined) setNavOffsetState(Number(profile.navOffset));
+        if (profile.navListHeight !== undefined) setListHeight(Number(profile.navListHeight));
+        if (profile.navColumns) setVisibleColumns(profile.navColumns);
     }
   }, [profile]);
 
@@ -642,9 +626,7 @@ export default function StartNavigationPage() {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       setIsResizing(false);
-      if (user && firestore) {
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
-      }
+      if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
     };
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
@@ -657,9 +639,7 @@ export default function StartNavigationPage() {
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
       setIsResizing(false);
-      if (user && firestore) {
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
-      }
+      if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
     };
     document.addEventListener('touchmove', onTouchMove);
     document.addEventListener('touchend', onTouchEnd);
@@ -667,7 +647,6 @@ export default function StartNavigationPage() {
 
   const updateNavZoom = (newZoom: number) => {
     const val = Number(newZoom);
-    if (isNaN(val)) return;
     setNavZoomState(val);
     navZoomRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val });
@@ -676,7 +655,6 @@ export default function StartNavigationPage() {
 
   const updateNavPitch = (newPitch: number) => {
     const val = Number(newPitch);
-    if (isNaN(val)) return;
     setNavPitchState(val);
     navPitchRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val });
@@ -685,7 +663,6 @@ export default function StartNavigationPage() {
 
   const updateNavOffset = (newOffset: number) => {
     const val = Number(newOffset);
-    if (isNaN(val)) return;
     setNavOffsetState(val);
     navOffsetRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val });
@@ -695,9 +672,7 @@ export default function StartNavigationPage() {
   const toggleColumnVisibility = (colId: string) => {
     const next = { ...visibleColumns, [colId]: !visibleColumns[colId] };
     setVisibleColumns(next);
-    if (user && firestore) {
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next });
-    }
+    if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next });
   };
 
   const meldingenQuery = useMemoFirebase(() => {
@@ -710,18 +685,14 @@ export default function StartNavigationPage() {
   const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
   const completedTodayQuery = useMemoFirebase(() => {
       if (!firestore) return null;
-      return query(
-          collection(firestore, 'meldingen'),
-          where('status', '==', 'Afgerond'),
-          where('afhandeling_datum', '==', todayStr)
-      );
+      return query(collection(firestore, 'meldingen'), where('status', '==', 'Afgerond'), where('afhandeling_datum', '==', todayStr));
   }, [firestore, todayStr]);
   const { data: rawCompletedToday } = useCollection<Melding>(completedTodayQuery);
 
   const filteredMeldingen = React.useMemo(() => {
     if (!rawMeldingen) return [];
     let pool = [...rawMeldingen].filter(m => !completedObjects.includes(m.id));
-    if (showTodayCompleted && rawCompletedToday) { pool = [...pool, ...rawCompletedToday]; }
+    if (showTodayCompleted && rawCompletedToday) pool = [...pool, ...rawCompletedToday];
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
         pool = pool.filter(m => m.behandelaar === userName);
@@ -735,7 +706,7 @@ export default function StartNavigationPage() {
 
   const sortedMissions = React.useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
-    const base = smoothLocation || userLocation || SIMULATION_START_LOCATION;
+    const base = userLocation || SIMULATION_START_LOCATION;
     return [...filteredMeldingen]
         .filter(m => m.status !== 'Afgerond')
         .sort((a, b) => {
@@ -743,7 +714,7 @@ export default function StartNavigationPage() {
             const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
             return distA - distB;
         });
-  }, [filteredMeldingen, userLocation, smoothLocation]);
+  }, [filteredMeldingen, userLocation]);
 
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
@@ -751,7 +722,7 @@ export default function StartNavigationPage() {
         setDisplayedRouteGeometry(null);
         return;
     }
-    const startPos = (navigationState === 'navigating' ? smoothLocation : (userLocation || SIMULATION_START_LOCATION));
+    const startPos = userLocation || SIMULATION_START_LOCATION;
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     
@@ -768,15 +739,12 @@ export default function StartNavigationPage() {
                 const line = turf.lineString(geometry.coordinates);
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
-                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: 60, 
-                        duration: 0 
-                    });
+                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
                 }
             }
         }
     } catch (e) { console.error("Route error:", e); }
-  }, [sortedMissions, userLocation, navigationState, smoothLocation]);
+  }, [sortedMissions, userLocation]);
 
   React.useEffect(() => {
     if (sortedMissions.length > 0) {
@@ -787,7 +755,6 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, navigationState, fetchRoute, rawMeldingen]);
 
-  // Active Real Tracking logic
   React.useEffect(() => {
     if (!navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
@@ -799,7 +766,6 @@ export default function StartNavigationPage() {
                 const rawHeading = pos.coords.heading !== null ? pos.coords.heading : lastHeadingRef.current;
                 let activeLoc = { ...loc, heading: rawHeading };
 
-                // SNAP TO ROAD logic
                 if (currentRouteGeometry) {
                     try {
                         const line = turf.lineString(currentRouteGeometry.coordinates);
@@ -809,16 +775,12 @@ export default function StartNavigationPage() {
                         activeLoc.longitude = snapped.geometry.coordinates[0];
                         activeLoc.latitude = snapped.geometry.coordinates[1];
 
-                        // Calculate visual heading based on movement over the line if GPS heading is poor
-                        if (pos.coords.heading === null) {
+                        if (pos.coords.heading === null && smoothLocation) {
                             const prevPt = turf.point([smoothLocation.longitude, smoothLocation.latitude]);
                             const distance = turf.distance(prevPt, snapped, { units: 'meters' });
-                            if (distance > 1) {
-                                activeLoc.heading = (turf.bearing(prevPt, snapped) + 360) % 360;
-                            }
+                            if (distance > 1) activeLoc.heading = (turf.bearing(prevPt, snapped) + 360) % 360;
                         }
 
-                        // Calculate forward part of route
                         const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
                         setDisplayedRouteGeometry(forwardPart);
                     } catch (e) {}
@@ -833,9 +795,9 @@ export default function StartNavigationPage() {
                     map.jumpTo({
                         center: [activeLoc.longitude, activeLoc.latitude],
                         bearing: activeLoc.heading,
-                        zoom: Number(navZoomRef.current) || 18,
-                        pitch: Number(navPitchRef.current) || 60,
-                        padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
+                        zoom: navZoom,
+                        pitch: navPitch,
+                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
                     });
                 }
             }
@@ -844,7 +806,7 @@ export default function StartNavigationPage() {
         { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, smoothLocation]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, smoothLocation, navZoom, navPitch, navOffset]);
 
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
@@ -861,16 +823,16 @@ export default function StartNavigationPage() {
             if (mapRef.current) {
                 mapRef.current.getMap().jumpTo({ 
                     center: [loc.longitude, loc.latitude], 
-                    zoom: Number(navZoomRef.current) || 18, 
-                    pitch: Number(navPitchRef.current) || 60, 
+                    zoom: navZoom, 
+                    pitch: navPitch, 
                     bearing: heading, 
-                    padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
+                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
                 });
             }
             fetchRoute();
         };
 
-        if (userLocation) { beginNavigation(userLocation, lastHeadingRef.current || 0); } 
+        if (userLocation) beginNavigation(userLocation, lastHeadingRef.current || 0);
         else {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -921,9 +883,9 @@ export default function StartNavigationPage() {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
-                pitch: Number(navPitchRef.current) || 60,
-                zoom: Number(navZoomRef.current) || 18,
-                padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
+                pitch: navPitch,
+                zoom: navZoom,
+                padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -932,7 +894,7 @@ export default function StartNavigationPage() {
   };
 
   const nextMission = sortedMissions[0];
-  const distToNextKm = nextMission ? turf.distance(
+  const distToNextKm = nextMission && smoothLocation ? turf.distance(
       turf.point([smoothLocation.longitude, smoothLocation.latitude]),
       turf.point([nextMission.longitude, nextMission.latitude]),
       { units: 'kilometers' }
@@ -1048,10 +1010,10 @@ export default function StartNavigationPage() {
                                 const map = mapRef.current.getMap();
                                 map.jumpTo({
                                     center: [smoothLocation.longitude, smoothLocation.latitude],
-                                    zoom: Number(navZoomRef.current) || 18,
-                                    pitch: Number(navPitchRef.current) || 60,
+                                    zoom: navZoom,
+                                    pitch: navPitch,
                                     bearing: smoothLocation.heading || 0,
-                                    padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
+                                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
                                 });
                             }
                         }}
@@ -1183,7 +1145,7 @@ export default function StartNavigationPage() {
                     </TableHeader>
                     <TableBody>
                         {filteredMeldingen.map(m => {
-                            const base = smoothLocation || userLocation || SIMULATION_START_LOCATION;
+                            const base = userLocation || SIMULATION_START_LOCATION;
                             const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                             const isCompleted = m.status === 'Afgerond';
                             return (
