@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1028,14 +1027,16 @@ export default function StartNavigationPage() {
                               </div>
                           </div>
                           <div className="flex items-center gap-2">
-                              <Button 
-                                variant={showAssignmentInfo ? "default" : "outline"} 
-                                size="sm" 
-                                className={cn("h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all", showAssignmentInfo ? "bg-blue-600 text-white" : "border-slate-200 bg-white")} 
-                                onClick={() => setShowAssignmentInfo(!showAssignmentInfo)}
-                              >
-                                  <User className="h-3 w-3" /> TOEGEWEZEN
-                              </Button>
+                              {isPrivileged && (
+                                <Button 
+                                  variant={showAssignmentInfo ? "default" : "outline"} 
+                                  size="sm" 
+                                  className={cn("h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all", showAssignmentInfo ? "bg-blue-600 text-white" : "border-slate-200 bg-white")} 
+                                  onClick={() => setShowAssignmentInfo(!showAssignmentInfo)}
+                                >
+                                    <User className="h-3 w-3" /> TOEGEWEZEN
+                                </Button>
+                              )}
                               <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                       <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-slate-200 bg-white">
