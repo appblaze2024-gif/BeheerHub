@@ -560,8 +560,15 @@ export default function StartNavigationPage() {
         (pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
+            
             if (!isSimulationMode) {
                 setSmoothLocation({ ...loc, heading: pos.coords.heading || smoothLocation.heading || 0 });
+                
+                // Update actuele snelheid van GPS
+                if (pos.coords.speed !== null) {
+                    setSpeedKmh(Math.round(pos.coords.speed * 3.6));
+                }
+
                 if (navigationState === 'navigating' && mapRef.current) {
                     mapRef.current.getMap().flyTo({
                         center: [loc.longitude, loc.latitude],
@@ -649,8 +656,10 @@ export default function StartNavigationPage() {
 
   const handleStartRit = (simulate = false) => {
     if (filteredMeldingen.length === 0) { toast({ title: "Geen opdrachten beschikbaar" }); return; }
+    
     if (!simulate) {
         setIsLocating(true);
+        // FORCE GPS CHECK
         navigator.geolocation.getCurrentPosition((pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
@@ -659,15 +668,33 @@ export default function StartNavigationPage() {
             setNavigationState('navigating');
             setIsListExpanded(false);
             setIsLocating(false);
-            mapRef.current?.getMap().flyTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: 60, bearing: pos.coords.heading || 0, duration: 2000 });
+            
+            // Fly to location
+            mapRef.current?.getMap().flyTo({ 
+                center: [loc.longitude, loc.latitude], 
+                zoom: 18, 
+                pitch: 60, 
+                bearing: pos.coords.heading || 0, 
+                duration: 2000 
+            });
+            
+            // Re-fetch route from exact GPS point
             fetchRoute();
-            toast({ title: "Route gestart" });
+            toast({ title: "Route gestart vanaf GPS" });
         }, () => {
+            // FALLBACK TO BASE
             setIsLocating(false);
             setNavigationState('navigating');
             setIsListExpanded(false);
-            mapRef.current?.getMap().flyTo({ center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], zoom: 18, pitch: 60, duration: 2000 });
-        }, { enableHighAccuracy: true });
+            toast({ title: "GPS niet gevonden", description: "Startend vanaf basislocatie Rijsenhout." });
+            mapRef.current?.getMap().flyTo({ 
+                center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
+                zoom: 18, 
+                pitch: 60, 
+                duration: 2000 
+            });
+            fetchRoute();
+        }, { enableHighAccuracy: true, timeout: 5000 });
     } else {
         setIsSimulationMode(true);
         setNavigationState('navigating');
@@ -686,7 +713,7 @@ export default function StartNavigationPage() {
     const animate = () => {
         if (isPaused || activeWerkbonId) { simAnimationRef.current = requestAnimationFrame(animate); return; }
         const deltaTime = 0.016; 
-        const speedMs = 13.8; 
+        const speedMs = 13.8; // ~50 km/h
         simStateRef.current.distanceTravelled += speedMs * deltaTime;
         if (simStateRef.current.distanceTravelled >= totalDist) {
             const final = currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1];
@@ -792,7 +819,10 @@ export default function StartNavigationPage() {
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto ring-1 ring-black/5">
                     <CardContent className="p-6 flex items-center justify-between gap-8">
                         <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-8">
-                            <p className="text-4xl font-black text-slate-900 tracking-tighter">{formatDate(addSeconds(new Date(), (distanceRemaining/5000)*3600), 'HH:mm')}</p>
+                            {/* ETA berekening: we gaan uit van gemiddeld 40 km/u (11.1 m/s) als we geen snelheid hebben */}
+                            <p className="text-4xl font-black text-slate-900 tracking-tighter">
+                                {formatDate(addSeconds(new Date(), (distanceRemaining / (speedKmh > 5 ? speedKmh / 3.6 : 11.1))), 'HH:mm')}
+                            </p>
                             <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1">aankomst</p>
                         </div>
                         <div className="flex-1 flex flex-col gap-3 min-w-0">
