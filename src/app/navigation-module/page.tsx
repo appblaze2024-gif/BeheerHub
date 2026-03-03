@@ -36,8 +36,6 @@ import {
   EyeOff,
   User,
   Package,
-  Paperclip,
-  ChevronRight,
   Plus,
   Minus,
   Settings,
@@ -46,11 +44,12 @@ import {
   RefreshCw,
   Layout,
   Zap,
-  ImageIcon
+  ImageIcon,
+  ChevronRight
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -676,20 +675,6 @@ export default function StartNavigationPage() {
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next });
   };
 
-  const meldingenQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']));
-  }, [firestore]);
-
-  const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
-
-  const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
-  const completedTodayQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return query(collection(firestore, 'meldingen'), where('status', '==', 'Afgerond'), where('afhandeling_datum', '==', todayStr));
-  }, [firestore, todayStr]);
-  const { data: rawCompletedToday } = useCollection<Melding>(completedTodayQuery);
-
   const filteredMeldingen = React.useMemo(() => {
     if (!rawMeldingen) return [];
     let pool = [...rawMeldingen].filter(m => !completedObjects.includes(m.id));
@@ -725,7 +710,6 @@ export default function StartNavigationPage() {
     }
     const startPos = userLocation || SIMULATION_START_LOCATION;
     
-    // Alleen opnieuw berekenen als we verplaatst zijn of opdrachten zijn veranderd
     if (!zoomToFit && lastRouteCalculationLocationRef.current) {
         const dist = turf.distance(
             turf.point([startPos.longitude, startPos.latitude]),
@@ -768,7 +752,6 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, navigationState, fetchRoute, rawMeldingen]);
 
-  // HOOGFREQUENTE GPS UPDATES (ELKE SECONDE)
   React.useEffect(() => {
     if (!navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
@@ -822,7 +805,6 @@ export default function StartNavigationPage() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, smoothLocation, navZoom, navPitch, navOffset]);
 
-  // HEARTBEAT TIMER VOOR SECONDE UPDATES OP IPAD
   React.useEffect(() => {
     if (navigationState !== 'navigating' || isSimulationMode) return;
 
@@ -931,12 +913,7 @@ export default function StartNavigationPage() {
       turf.point([nextMission.longitude, nextMission.latitude]),
       { units: 'kilometers' }
   ) : 0;
-  const etaSeconds = (distToNextKm * 1000) / 13.8;
-
-  React.useEffect(() => {
-    const handler = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
-    return () => clearTimeout(handler);
-  }, [searchQuery]);
+  const etaSeconds = (distToNextKm * 1000) / (speedKmh > 5 ? (speedKmh / 3.6) : 13.8);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
@@ -975,12 +952,6 @@ export default function StartNavigationPage() {
                         <div className="relative flex items-center justify-center w-14 h-14">
                             {nextMission?.id === m.id && (
                                 <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
-                            )}
-                            {showAssignmentBubbles && (
-                                <div className="absolute bottom-full mb-3 bg-white/90 backdrop-blur-sm text-slate-900 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter shadow-xl border border-slate-200 whitespace-nowrap animate-in zoom-in-95 duration-200">
-                                    {m.behandelaar || '??'}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-white/90" />
-                                </div>
                             )}
                             <div className={cn(
                                 "w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer z-10", 
