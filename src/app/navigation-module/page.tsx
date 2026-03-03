@@ -34,11 +34,13 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  User
+  User,
+  Package,
+  Paperclip
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -113,7 +115,7 @@ const translationLanguages = [
 ];
 
 /**
- * Geïntegreerde Werkbon Component die als overlay verschijnt
+ * Geïntegreerde Werkbon Component met de ORIGINELE layout
  */
 function IntegratedWerkbonOverlay({ 
     meldingId, 
@@ -136,6 +138,9 @@ function IntegratedWerkbonOverlay({
     const [sourceLang, setSourceLang] = React.useState(translationLanguages[0]);
     const [targetLang, setTargetLang] = React.useState(translationLanguages[0]);
     const [isTranslating, setIsTranslating] = React.useState(false);
+    const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
+    const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
+    const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     const recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
@@ -144,6 +149,7 @@ function IntegratedWerkbonOverlay({
     React.useEffect(() => {
         if (melding) {
             setAfhandelingBijzonderheden(melding.afhandeling_bijzonderheden || '');
+            setHoeveelheden(melding.hoeveelheden || []);
         }
     }, [melding]);
 
@@ -167,6 +173,7 @@ function IntegratedWerkbonOverlay({
                 afhandeling_tijdstip: formatDate(new Date(), 'HH:mm'),
                 afgehandeld_door: finisher,
                 afhandeling_bijzonderheden: afhandelingBijzonderheden || null,
+                hoeveelheden: hoeveelheden,
                 gewerkteMinuten: minutesWorked,
                 workStartedAt: null, 
             });
@@ -204,122 +211,205 @@ function IntegratedWerkbonOverlay({
     if (isLoading || !melding) return <div className="p-12 flex justify-center h-full items-center"><Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" /></div>;
 
     return (
-        <div className="flex flex-col h-full bg-white">
-            <header className="h-16 border-b bg-slate-50 px-6 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-4">
+        <div className="flex flex-col h-full bg-slate-50">
+            <header className="h-14 lg:h-16 bg-white border-b flex items-center justify-between px-4 lg:px-6 shrink-0 shadow-sm z-10 sticky top-0">
+                <div className="flex items-center gap-3 lg:gap-4">
                     <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors">
-                        <XIcon className="h-6 w-6 text-slate-600" />
+                        <ArrowLeft className="h-6 w-6 text-slate-600" />
                     </Button>
                     <div>
                         <h3 className="text-lg font-black uppercase tracking-tight leading-none text-slate-900">{melding.intakenummer}</h3>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{melding.subcategorie}</p>
                     </div>
                 </div>
-                {melding.workStartedAt ? (
-                    <Button className="bg-orange-600 hover:bg-orange-700 h-11 font-black uppercase px-8 text-xs rounded-xl shadow-lg shadow-orange-600/20" onClick={handleAfronden} disabled={isSubmitting}>
-                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                        AFHANDELEN
-                    </Button>
-                ) : (
-                    <Button className="bg-green-600 hover:bg-green-700 h-11 font-black uppercase px-8 text-xs rounded-xl shadow-lg shadow-green-600/20" onClick={handleStartWork}>
-                        START WERK
-                    </Button>
-                )}
+                <div className="flex items-center gap-2 lg:gap-3">
+                    {melding.workStartedAt ? (
+                        <Button className="bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-tight h-9 lg:h-11 px-4 lg:px-8 rounded-lg lg:rounded-xl shadow-lg shadow-orange-600/20 text-xs lg:text-sm" onClick={handleAfronden} disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-3 w-3 lg:h-4 lg:w-4 animate-spin" /> : <Check className="mr-2 h-3 w-3 lg:h-4 lg:w-4" />}
+                            AFHANDELEN
+                        </Button>
+                    ) : (
+                        <Button className="bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-tight h-9 lg:h-11 px-4 lg:px-8 rounded-lg lg:rounded-xl shadow-lg shadow-green-600/20 text-xs lg:text-sm" onClick={handleStartWork}>
+                            START WERK
+                        </Button>
+                    )}
+                </div>
             </header>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                <TabsList className="bg-white border-b h-12 px-6 justify-start gap-10">
-                    <TabsTrigger value="Werkzaamheden" className="text-[11px] font-black uppercase tracking-widest border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary h-full rounded-none"><FileText className="h-4 w-4 mr-2" /> Werkgegevens</TabsTrigger>
-                    <TabsTrigger value="Opmerkingen" className="text-[11px] font-black uppercase tracking-widest border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary h-full rounded-none"><MessageSquare className="h-4 w-4 mr-2" /> Uitvoering Notitie</TabsTrigger>
-                    <TabsTrigger value="Fotos" className="text-[11px] font-black uppercase tracking-widest border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary h-full rounded-none"><Camera className="h-4 w-4 mr-2" /> Bijlagen & Foto's</TabsTrigger>
-                </TabsList>
+                <div className="px-4 lg:px-6 pt-2 lg:pt-4 overflow-x-auto no-scrollbar bg-white shrink-0 border-b">
+                    <TabsList className="w-max inline-flex h-10 lg:h-12">
+                        <TabsTrigger value="Werkzaamheden" className="gap-1.5 lg:gap-2 shrink-0 px-3 lg:px-4">
+                            <FileText className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                            <span className="text-[10px] lg:text-[11px]">Werkzaamheden</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="Opmerkingen" className="gap-1.5 lg:gap-2 shrink-0 px-3 lg:px-4">
+                            <MessageSquare className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                            <span className="text-[10px] lg:text-[11px]">Opmerkingen</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="Fotos" className="gap-1.5 lg:gap-2 shrink-0 px-3 lg:px-4">
+                            <Camera className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                            <span className="text-[10px] lg:text-[11px]">Foto's</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="Hoeveelheid" className="gap-1.5 lg:gap-2 shrink-0 px-3 lg:px-4">
+                            <Package className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                            <span className="text-[10px] lg:text-[11px]">Hoeveelheid</span>
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
+                
+                <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+                    <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar">
+                        <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-4">
+                                    <Card className="rounded-2xl bg-white shadow-sm border-slate-200">
+                                        <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Melding Details</CardTitle></CardHeader>
+                                        <CardContent className="p-4 space-y-4">
+                                            <div className="grid grid-cols-2 gap-4 border-b border-slate-50 pb-3">
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-slate-400">Intakenummer</p>
+                                                    <p className="text-xs font-black text-slate-900">{melding.intakenummer}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-slate-400">Status</p>
+                                                    <Badge className="bg-blue-500 text-white border-none font-black text-[8px] h-4">{melding.status}</Badge>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 border-b border-slate-50 pb-3">
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-slate-400">Datum & Tijd</p>
+                                                    <p className="text-[10px] font-bold text-slate-600">{melding.datum} • {melding.tijdstip || '--:--'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-slate-400">Wijk / Gebied</p>
+                                                    <Badge variant="outline" className="font-black text-[8px] uppercase tracking-tighter bg-slate-50 border-slate-200">{melding.werkgebied || melding.wijk || '-'}</Badge>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black uppercase text-slate-400">Locatie</p>
+                                                <p className="text-xs font-bold text-slate-900">{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black uppercase text-slate-400">Omschrijving melding</p>
+                                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                    <p className="text-[10px] italic text-slate-600 font-medium leading-relaxed">"{melding.extra_informatie || 'Geen omschrijving.'}"</p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                                <div className="space-y-4">
+                                    <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden h-64">
+                                        <MapboxView latitude={melding.latitude} longitude={melding.longitude} interactive={false} />
+                                    </Card>
+                                </div>
+                            </div>
+                        </TabsContent>
 
-                <ScrollArea className="flex-1">
-                    <div className="p-8 max-w-4xl mx-auto space-y-10">
-                        <TabsContent value="Werkzaamheden" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Locatie & Adres</p>
-                                    <p className="text-base font-black text-slate-900">{melding.straatnaam} {melding.huisnummer}</p>
-                                    <p className="text-xs font-bold text-slate-500 uppercase">{melding.postcode} {melding.plaats}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Wijk / Gebied</p>
-                                    <Badge variant="outline" className="font-black uppercase text-[10px] bg-slate-50 border-slate-200">
-                                        <LayoutGrid className="h-3 w-3 mr-1.5 text-primary" />
-                                        {melding.werkgebied || melding.wijk || '-'}
-                                    </Badge>
-                                </div>
-                                <div className="col-span-full space-y-3">
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Melding Omschrijving</p>
-                                    <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100 shadow-inner">
-                                        <p className="text-sm font-medium italic text-slate-600 leading-relaxed">
-                                            "{melding.extra_informatie || 'Geen gedetailleerde omschrijving opgegeven.'}"
-                                        </p>
+                        <TabsContent value="Opmerkingen" className="mt-0 animate-in fade-in duration-300">
+                            <Card className="rounded-2xl bg-white shadow-sm border-slate-200 h-full flex flex-col">
+                                <CardHeader className="bg-slate-50 border-b p-4 flex flex-row items-center justify-between">
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</h3>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant={isListening ? "destructive" : "ghost"} size="sm" onClick={toggleListening} className="h-8 font-black uppercase text-[9px] gap-2 rounded-xl">
+                                            {isListening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mic className="h-3.5 w-3.5 text-primary" />}
+                                            Dicteren
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden} className="h-8 font-black uppercase text-[9px] gap-2 text-primary rounded-xl">
+                                            {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                            AI Verbeter
+                                        </Button>
                                     </div>
-                                </div>
+                                </CardHeader>
+                                <CardContent className="p-4 flex-1">
+                                    <Textarea 
+                                        placeholder="Voeg hier bijzonderheden toe over de uitvoering..." 
+                                        className="resize-none text-sm font-medium leading-relaxed rounded-xl bg-slate-50 focus:ring-primary/20 h-full min-h-[300px]"
+                                        value={afhandelingBijzonderheden}
+                                        onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
+                                    />
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="Fotos" className="mt-0 animate-in fade-in duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Card className="rounded-2xl shadow-sm border-slate-200 bg-white overflow-hidden">
+                                    <CardHeader className="bg-slate-50 border-b p-4"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Brondocumenten (Foto's)</CardTitle></CardHeader>
+                                    <CardContent className="p-4">
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {melding.fotos?.map((p, i) => <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-50 shadow-sm"><Image src={p.url} alt="foto" fill className="object-cover" /></div>)}
+                                            {(!melding.fotos || melding.fotos.length === 0) && <div className="col-span-3 py-12 text-center opacity-20"><Camera className="h-8 w-8 mx-auto mb-2" /><p className="text-[8px] font-black uppercase">Geen bronfoto's</p></div>}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card className="rounded-2xl shadow-sm border-slate-200 bg-white overflow-hidden">
+                                    <CardHeader className="bg-slate-50 border-b p-4"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle></CardHeader>
+                                    <CardContent className="p-4 space-y-4">
+                                        <Button variant="outline" className="w-full h-16 border-dashed border-2 border-slate-100 rounded-xl font-black uppercase tracking-widest text-[9px]"><Camera className="mr-2 h-4 w-4" /> Foto toevoegen</Button>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {melding.afhandeling_fotos?.map((p, i) => (
+                                                <div key={i} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm"><Image src={p.url} alt="afhandeling" fill className="object-cover" /></div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="Opmerkingen" className="mt-0 space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                            <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-2xl border w-fit">
-                                <Button 
-                                    variant={isListening ? "destructive" : "ghost"} 
-                                    size="sm" 
-                                    onClick={toggleListening} 
-                                    className="h-9 font-black uppercase text-[10px] px-4 gap-2 rounded-xl"
-                                >
-                                    {isListening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />} 
-                                    {isListening ? "AAN HET LUISTEREN..." : "DICHTEER NOTITIE"}
-                                </Button>
-                                <Separator orientation="vertical" className="h-6" />
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    onClick={handleAITranslate} 
-                                    disabled={isTranslating || !afhandelingBijzonderheden} 
-                                    className="h-9 font-black uppercase text-[10px] px-4 gap-2 rounded-xl text-primary"
-                                >
-                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} 
-                                    AI VERTAAL / VERBETER
-                                </Button>
-                            </div>
-                            <Textarea 
-                                placeholder="Typ hier de bijzonderheden van de uitvoering..." 
-                                className="min-h-[300px] text-sm font-medium leading-relaxed rounded-[2rem] bg-slate-50 border-slate-200 focus:ring-primary/20 p-6" 
-                                value={afhandelingBijzonderheden}
-                                onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
-                            />
-                        </TabsContent>
-
-                        <TabsContent value="Fotos" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2">
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Gevonden Foto's ({melding.fotos?.length || 0})</h4>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                    {melding.fotos?.map((p, i) => (
-                                        <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-slate-100 shadow-sm bg-slate-50">
-                                            <Image src={p.url} alt="foto" fill className="object-cover" />
-                                        </div>
-                                    ))}
-                                    {(!melding.fotos || melding.fotos.length === 0) && (
-                                        <div className="col-span-full py-12 text-center border-2 border-dashed rounded-3xl opacity-20">
-                                            <Camera className="h-10 w-10 mx-auto mb-2" />
-                                            <p className="text-[10px] font-black uppercase">Geen foto's bijgevoegd</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <Separator />
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Actie: Foto Toevoegen</h4>
-                                <Button variant="outline" className="w-full h-24 border-dashed border-2 rounded-3xl flex flex-col gap-2 font-black uppercase text-[10px] text-slate-400 hover:bg-slate-50 hover:border-primary/20 transition-all">
-                                    <Camera className="h-8 w-8 text-slate-200" />
-                                    MAAK OF UPLOAD FOTO
-                                </Button>
-                            </div>
+                        <TabsContent value="Hoeveelheid" className="mt-0 animate-in fade-in duration-300">
+                            <Card className="rounded-2xl shadow-sm border-slate-200 bg-white overflow-hidden">
+                                <CardHeader className="bg-slate-50 border-b p-4"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verbruikte Materialen</CardTitle></CardHeader>
+                                <CardContent className="p-6 space-y-6">
+                                    <div className="grid gap-2">
+                                        {hoeveelheden.map(h => (
+                                            <div key={h.id} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                                                <div className="flex flex-col"><span className="text-xs font-black uppercase tracking-tight text-slate-900">{h.type}</span><span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">{h.eenheid}</span></div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-xl font-black text-primary leading-none">{h.aantal}</span>
+                                                    <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-full h-8 w-8" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4" /></Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                        <div className="space-y-1"><Label className="text-[8px] font-black uppercase text-slate-400">Materiaal</Label><Input placeholder="Bv. Zand..." className="h-9 font-bold text-xs" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} /></div>
+                                        <div className="space-y-1"><Label className="text-[8px] font-black uppercase text-slate-400">Aantal</Label><Input placeholder="0" type="number" className="h-9 font-bold text-xs" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} /></div>
+                                        <div className="flex items-end"><Button className="h-9 w-full font-black uppercase tracking-tight text-[10px]" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>Toevoegen</Button></div>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </TabsContent>
                     </div>
-                </ScrollArea>
+                    
+                    {/* Media Sidebar */}
+                    <div className="w-full lg:w-[350px] bg-slate-50 lg:border-l shrink-0 flex flex-col min-h-0 overflow-hidden">
+                        <div className="p-5 border-b bg-white flex items-center justify-between">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">BIJLAGEN</h3>
+                            <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold h-5 px-2">PDF/DOC</Badge>
+                        </div>
+                        <ScrollArea className="flex-1 p-5">
+                            <div className="space-y-3">
+                                {melding.files?.map(f => (
+                                    <div key={f.storagePath} className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 shadow-sm group">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="bg-blue-100 p-2 rounded-lg"><Paperclip className="h-4 w-4 text-blue-600" /></div>
+                                            <p className="text-[10px] font-black truncate text-slate-900 uppercase">{f.name}</p>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 rounded-full" asChild><a href={f.url} target="_blank" rel="noreferrer"><Check className="h-4 w-4" /></a></Button>
+                                    </div>
+                                ))}
+                                {(!melding.files || melding.files.length === 0) && (
+                                    <div className="py-12 flex flex-col items-center justify-center text-slate-300">
+                                        <Paperclip className="h-8 w-8 opacity-20 mb-2" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Geen bestanden</p>
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </div>
+                </main>
             </Tabs>
         </div>
     );
@@ -385,7 +475,9 @@ export default function StartNavigationPage() {
         (pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
-            if (navigationState !== 'navigating') setSmoothLocation({ ...loc, heading: pos.coords.heading || 0 });
+            if (navigationState !== 'navigating') {
+                setSmoothLocation({ ...loc, heading: pos.coords.heading || 0 });
+            }
         },
         null, { enableHighAccuracy: true }
     );
@@ -429,8 +521,8 @@ export default function StartNavigationPage() {
 
   const fetchRoute = React.useCallback(async () => {
     if (!nextObject || !userLocation) return;
-    const start = userLocation;
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start.longitude},${start.latitude};${nextObject.longitude},${nextObject.latitude}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+    const startPos = userLocation;
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startPos.longitude},${startPos.latitude};${nextObject.longitude},${nextObject.latitude}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
     try {
         const res = await fetch(url);
         const data = await res.json();
@@ -595,7 +687,7 @@ export default function StartNavigationPage() {
             </div>
         )}
 
-        {/* Integrated Collapsible Excel List - Square (rounded-none) */}
+        {/* Integrated Collapsible Excel List - Square */}
         <div className={cn(
             "absolute bottom-0 left-0 right-0 z-40 transition-transform duration-500 ease-in-out bg-white border-t-4 border-slate-900 rounded-none shadow-2xl flex flex-col",
             isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]"
@@ -720,7 +812,7 @@ export default function StartNavigationPage() {
         {/* Integrated Werkbon Overlay */}
         {activeWerkbonId && (
             <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-                <div className="w-full max-w-4xl h-[85vh] rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-white/20 animate-in zoom-in-95 duration-300">
+                <div className="w-full max-w-6xl h-[90vh] rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-white/20 animate-in zoom-in-95 duration-300">
                     <IntegratedWerkbonOverlay 
                         meldingId={activeWerkbonId} 
                         onClose={() => setActiveWerkbonId(null)} 
