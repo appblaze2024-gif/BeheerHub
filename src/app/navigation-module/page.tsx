@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -520,17 +521,9 @@ export default function StartNavigationPage() {
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isListExpanded, setIsListExpanded] = React.useState(true);
 
-  // Column visibility state
-  const [visibleColumns] = React.useState<Record<string, boolean>>({
-    intakenr: true,
-    adres: true,
-    omschrijving: true,
-    hoofdtype: true,
-    subtype: true,
-    werkgebied: true,
-    toegewezen: true,
-    afstand: true
-  });
+  // New states for toggles
+  const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
+  const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
 
   // Persistent Display Settings
   const navZoomRef = React.useRef(18);
@@ -609,7 +602,7 @@ export default function StartNavigationPage() {
     setNavOffsetState(val);
     navOffsetRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val });
-    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: val, left: 0, right: 0 }, duration: 200 });
+    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: Math.max(0, val), left: 0, right: 0 }, duration: 200 });
   };
 
   React.useEffect(() => {
@@ -632,7 +625,7 @@ export default function StartNavigationPage() {
                         zoom: Number(navZoomRef.current) || 18,
                         pitch: Number(navPitchRef.current) || 60,
                         duration: 1000,
-                        padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
+                        padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
                     });
                 }
             }
@@ -649,9 +642,27 @@ export default function StartNavigationPage() {
 
   const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
 
+  const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
+  const completedTodayQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return query(
+          collection(firestore, 'meldingen'),
+          where('status', '==', 'Afgerond'),
+          where('afhandeling_datum', '==', todayStr)
+      );
+  }, [firestore, todayStr]);
+  const { data: rawCompletedToday } = useCollection<Melding>(completedTodayQuery);
+
   const filteredMeldingen = React.useMemo(() => {
     if (!rawMeldingen) return [];
+    
+    // Combine active pool with today's completed if requested
     let pool = [...rawMeldingen].filter(m => !completedObjects.includes(m.id));
+    
+    if (showTodayCompleted && rawCompletedToday) {
+        pool = [...pool, ...rawCompletedToday];
+    }
+
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
         pool = pool.filter(m => m.behandelaar === userName);
@@ -661,16 +672,18 @@ export default function StartNavigationPage() {
         pool = pool.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
     }
     return pool;
-  }, [rawMeldingen, isPrivileged, profile, debouncedSearchQuery, completedObjects]);
+  }, [rawMeldingen, rawCompletedToday, showTodayCompleted, isPrivileged, profile, debouncedSearchQuery, completedObjects]);
 
   const sortedMissions = React.useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
     const base = userLocation || SIMULATION_START_LOCATION;
-    return [...filteredMeldingen].sort((a, b) => {
-        const distA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]));
-        const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
-        return distA - distB;
-    });
+    return [...filteredMeldingen]
+        .filter(m => m.status !== 'Afgerond') // Only route to active missions
+        .sort((a, b) => {
+            const distA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]));
+            const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
+            return distA - distB;
+        });
   }, [filteredMeldingen, userLocation]);
 
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
@@ -695,7 +708,7 @@ export default function StartNavigationPage() {
                 const line = turf.lineString(data.routes[0].geometry.coordinates);
                 const bbox = turf.bbox(line);
                 mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                    padding: { top: 150, bottom: 450, left: 150, right: 150 }, 
+                    padding: { top: 150, bottom: 550, left: 150, right: 150 }, 
                     duration: 1500 
                 });
             }
@@ -703,20 +716,14 @@ export default function StartNavigationPage() {
     } catch (e) { console.error("Route error:", e); }
   }, [sortedMissions, userLocation]);
 
-  // Zoom uit bij laden
   React.useEffect(() => {
     if (navigationState === 'setup' && sortedMissions.length > 0) {
         fetchRoute(true);
     }
   }, [sortedMissions.length, navigationState, fetchRoute]);
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
   const handleStartRit = (simulate = false) => {
-    if (filteredMeldingen.length === 0) return;
+    if (sortedMissions.length === 0) return;
     
     if (!simulate) {
         setIsLocating(true);
@@ -737,7 +744,7 @@ export default function StartNavigationPage() {
                 pitch: Number(navPitchRef.current) || 60, 
                 bearing: heading, 
                 duration: 2000,
-                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
+                padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
             });
             fetchRoute();
         }, () => {
@@ -788,7 +795,7 @@ export default function StartNavigationPage() {
                 bearing: head,
                 pitch: Number(navPitchRef.current) || 60,
                 zoom: Number(navZoomRef.current) || 18,
-                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
+                padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -817,8 +824,19 @@ export default function StartNavigationPage() {
                 )}
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
-                        <div className={cn("w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer", getMeldingAgeColor(m.datum))}>
-                            <Bell className="h-4 w-4 text-white" />
+                        <div className="relative flex flex-col items-center">
+                            {showAssignmentBubbles && (
+                                <div className="absolute bottom-full mb-2 bg-white/90 backdrop-blur-sm text-slate-900 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter shadow-xl border border-slate-200 whitespace-nowrap animate-in zoom-in-95 duration-200">
+                                    {m.behandelaar || '??'}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-white/90" />
+                                </div>
+                            )}
+                            <div className={cn(
+                                "w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer", 
+                                m.status === 'Afgerond' ? 'bg-green-500' : getMeldingAgeColor(m.datum)
+                            )}>
+                                {m.status === 'Afgerond' ? <Check className="h-4 w-4 text-white" /> : <Bell className="h-4 w-4 text-white" />}
+                            </div>
                         </div>
                     </Marker>
                 ))}
@@ -842,7 +860,7 @@ export default function StartNavigationPage() {
                         zoom: navigationState === 'navigating' ? Number(navZoomRef.current) || 18 : 18, 
                         pitch: navigationState === 'navigating' ? Number(navPitchRef.current) || 60 : 0, 
                         duration: 1500,
-                        padding: { top: 0, bottom: navigationState === 'navigating' ? Number(navOffsetRef.current) || 0 : 0, left: 0, right: 0 }
+                        padding: { top: 0, bottom: navigationState === 'navigating' ? Math.max(0, Number(navOffsetRef.current) || 0) : 0, left: 0, right: 0 }
                     });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
@@ -861,7 +879,7 @@ export default function StartNavigationPage() {
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().setPitch(0);
                         mapRef.current?.getMap().setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
-                        fetchRoute(true); // Zoom uit naar volledige route
+                        fetchRoute(true); 
                     }}>STOP RIT</Button>
                 )}
             </div>
@@ -932,20 +950,20 @@ export default function StartNavigationPage() {
                 <div className="flex items-center gap-4 flex-1 justify-end">
                     <div className="flex items-center gap-2 mr-2 pointer-events-auto" onClick={e => e.stopPropagation()}>
                         <Button 
-                            variant="outline" 
+                            variant={showTodayCompleted ? "default" : "outline"} 
                             size="sm" 
                             className="h-7 text-[9px] font-black uppercase tracking-widest border-slate-200"
-                            onClick={() => router.push('/issues/archive')}
+                            onClick={() => setShowTodayCompleted(!showTodayCompleted)}
                         >
-                            <History className="h-3 w-3 mr-1.5" /> Archief
+                            <CheckCircle2 className="h-3 w-3 mr-1.5" /> {showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}
                         </Button>
                         <Button 
-                            variant="outline" 
+                            variant={showAssignmentBubbles ? "default" : "outline"} 
                             size="sm" 
                             className="h-7 text-[9px] font-black uppercase tracking-widest border-slate-200"
-                            onClick={() => router.push('/issues/portal')}
+                            onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}
                         >
-                            <LayoutGrid className="h-3 w-3 mr-1.5" /> Portaal
+                            <User className="h-3 w-3 mr-1.5" /> {showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}
                         </Button>
                     </div>
 
@@ -966,24 +984,25 @@ export default function StartNavigationPage() {
                 <Table className="min-w-[1200px] border-collapse border-slate-200 text-[10px]">
                     <TableHeader className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-300">
                         <TableRow className="h-8 hover:bg-transparent">
-                            {visibleColumns.intakenr && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Nr.</TableHead>}
-                            {visibleColumns.adres && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Locatie (Straat + Nr)</TableHead>}
-                            {visibleColumns.omschrijving && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Memo / Omschrijving</TableHead>}
-                            {visibleColumns.hoofdtype && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Hoofdtype</TableHead>}
-                            {visibleColumns.subtype && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
-                            {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Werkgebied</TableHead>}
-                            {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
+                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Nr.</TableHead>
+                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Locatie (Straat + Nr)</TableHead>
+                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Memo / Omschrijving</TableHead>
+                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Hoofdtype</TableHead>
+                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>
+                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Werkgebied</TableHead>
+                            <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredMeldingen.map(m => {
                             const base = userLocation || SIMULATION_START_LOCATION;
                             const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
+                            const isCompleted = m.status === 'Afgerond';
                             return (
-                                <TableRow key={m.id} className="h-8 hover:bg-blue-50 transition-colors cursor-pointer border-b border-slate-100" onClick={() => setActiveWerkbonId(m.id)}>
+                                <TableRow key={m.id} className={cn("h-8 transition-colors cursor-pointer border-b border-slate-100", isCompleted ? "bg-green-50/50 opacity-60" : "hover:bg-blue-50")} onClick={() => setActiveWerkbonId(m.id)}>
                                     <TableCell className="font-black text-[10px] border-r border-slate-100 px-2 py-1">
                                         <div className="flex items-center gap-2">
-                                            <div className={cn("h-1.5 w-1.5 rounded-full", getMeldingAgeColor(m.datum))} />
+                                            <div className={cn("h-1.5 w-1.5 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
                                             {m.intakenummer}
                                         </div>
                                     </TableCell>
@@ -999,7 +1018,7 @@ export default function StartNavigationPage() {
                         {filteredMeldingen.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={7} className="h-32 text-center text-slate-300 font-bold uppercase tracking-widest text-[10px]">
-                                    Geen actieve meldingen gevonden
+                                    Geen meldingen gevonden
                                 </TableCell>
                             </TableRow>
                         )}
