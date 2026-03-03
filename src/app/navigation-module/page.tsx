@@ -777,7 +777,7 @@ export default function StartNavigationPage() {
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: 40, 
+                        padding: 120, // Increased padding to zoom out further
                         duration: 1500 
                     });
                 }
