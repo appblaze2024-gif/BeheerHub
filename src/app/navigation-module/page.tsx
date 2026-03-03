@@ -76,7 +76,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/menu";
+} from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -582,7 +582,7 @@ export default function StartNavigationPage() {
             setNavPitchState(profile.navPitch);
             navPitchRef.current = profile.navPitch;
         }
-        if (profile.navOffset) {
+        if (profile.navOffset !== undefined) {
             setNavOffsetState(profile.navOffset);
             navOffsetRef.current = profile.navOffset;
         }
