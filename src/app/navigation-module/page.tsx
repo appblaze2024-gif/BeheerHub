@@ -86,6 +86,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 // Basislocatie: Aarbergerweg 5-7, Rijsenhout
@@ -119,17 +120,8 @@ const getMeldingAgeColor = (datum?: string) => {
     } catch (e) { return 'bg-slate-400'; }
 };
 
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
-
 /**
- * Geïntegreerde Werkbon Component met de ORIGINELE layout
+ * Geïntegreerde Werkbon Component - NU VOLLEDIG SCHERM
  */
 function IntegratedWerkbonOverlay({ 
     meldingId, 
@@ -141,6 +133,7 @@ function IntegratedWerkbonOverlay({
     onCompleted: (id: string) => void 
 }) {
     const firestore = useFirestore();
+    const app = useFirebaseApp();
     const { user } = useUser();
     const { profile } = useProfile();
     const { toast } = useToast();
@@ -155,6 +148,8 @@ function IntegratedWerkbonOverlay({
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
+    const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
+    const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
@@ -177,6 +172,8 @@ function IntegratedWerkbonOverlay({
         if (melding) {
             setAfhandelingBijzonderheden(melding.afhandeling_bijzonderheden || '');
             setHoeveelheden(melding.hoeveelheden || []);
+            setAfhandelingFotos(melding.afhandeling_fotos || []);
+            setUploadedFiles(melding.files || []);
         }
     }, [melding]);
 
@@ -201,6 +198,7 @@ function IntegratedWerkbonOverlay({
                 afgehandeld_door: finisher,
                 afhandeling_bijzonderheden: afhandelingBijzonderheden || null,
                 hoeveelheden: hoeveelheden,
+                afhandeling_fotos: afhandelingFotos,
                 gewerkteMinuten: minutesWorked,
                 workStartedAt: null, 
             });
@@ -208,6 +206,24 @@ function IntegratedWerkbonOverlay({
             onClose();
         } catch (error) { toast({ variant: "destructive", title: 'Fout bij afronden' }); } finally { setIsSubmitting(false); }
     };
+
+    const handleFileUpload = React.useCallback(async (files: FileList | File[], type: 'documents' | 'afhandeling_fotos') => {
+        if (!files || !meldingId || !app) return;
+        const storage = getStorage(app);
+        for (const file of Array.from(files)) {
+          const path = `meldingen/${meldingId}/${type}/${Date.now()}-${file.name}`;
+          const uploadTask = uploadBytesResumable(ref(storage, path), file);
+          uploadTask.on('state_changed', 
+            null,
+            null,
+            () => getDownloadURL(uploadTask.snapshot.ref).then(url => {
+                const uploaded: UploadedFile = { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: path };
+                if (type === 'documents') setUploadedFiles(prev => [...prev, uploaded]);
+                else setAfhandelingFotos(prev => [...prev, uploaded]);
+            })
+          );
+        }
+    }, [meldingId, app]);
 
     const toggleListening = () => {
         if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
@@ -441,9 +457,10 @@ function IntegratedWerkbonOverlay({
                                 <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
                                     <CardHeader className="bg-slate-50 border-b p-4 lg:p-6"><CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle></CardHeader>
                                     <CardContent className="p-4 lg:p-8 space-y-4 lg:space-y-6">
-                                        <Button variant="outline" className="w-full h-12 lg:h-16 border-dashed border-2 border-slate-100 rounded-xl lg:rounded-2xl font-black uppercase tracking-widest text-[9px] lg:text-[10px]"><Camera className="mr-2 h-3.5 w-3.5 lg:h-4 lg:w-4" /> Foto toevoegen</Button>
+                                        <Button variant="outline" className="w-full h-12 lg:h-16 border-dashed border-2 border-slate-100 rounded-xl lg:rounded-2xl font-black uppercase tracking-widest text-[9px] lg:text-[10px]" onClick={() => document.getElementById('photo-input-integrated')?.click()}><Camera className="mr-2 h-3.5 w-3.5 lg:h-4 lg:w-4" /> Foto toevoegen</Button>
+                                        <input type="file" id="photo-input-integrated" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} multiple />
                                         <div className="grid grid-cols-3 gap-3 lg:gap-4">
-                                            {melding.afhandeling_fotos?.map((p, i) => (
+                                            {afhandelingFotos.map((p, i) => (
                                                 <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border shadow-sm group">
                                                     <Image src={p.url} alt="afhandeling" fill className="object-cover" />
                                                 </div>
@@ -487,7 +504,7 @@ function IntegratedWerkbonOverlay({
                         </div>
                         <ScrollArea className="flex-1 p-5">
                             <div className="space-y-3">
-                                {melding.files?.map((f, i) => (
+                                {uploadedFiles.map((f, i) => (
                                     <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 shadow-sm group">
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className="bg-blue-100 p-2 rounded-lg"><Paperclip className="h-4 w-4 text-blue-600" /></div>
@@ -496,7 +513,7 @@ function IntegratedWerkbonOverlay({
                                         <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 rounded-full" asChild><a href={f.url} target="_blank" rel="noreferrer"><Check className="h-4 w-4" /></a></Button>
                                     </div>
                                 ))}
-                                {(!melding.files || melding.files.length === 0) && (
+                                {(!uploadedFiles || uploadedFiles.length === 0) && (
                                     <div className="py-12 flex flex-col items-center justify-center text-slate-300">
                                         <Paperclip className="h-8 w-8 opacity-20 mb-2" />
                                         <p className="text-[10px] font-black uppercase tracking-widest">Geen bestanden</p>
@@ -510,6 +527,15 @@ function IntegratedWerkbonOverlay({
         </div>
     );
 }
+
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
 
 export default function StartNavigationPage() {
   const firestore = useFirestore();
@@ -544,15 +570,6 @@ export default function StartNavigationPage() {
     afstand: true
   });
 
-  // Navigation logic states
-  const [smoothLocation, setSmoothLocation] = React.useState<any>({ ...SIMULATION_START_LOCATION, heading: 0 });
-  const lastHeadingRef = React.useRef(0);
-  const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
-  const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
-  const [distanceRemaining, setDistanceRemaining] = React.useState(0);
-  const [speedKmh, setSpeedKmh] = React.useState(0);
-  const [isPaused, setIsPaused] = React.useState(false);
-
   // Persistent Display Settings
   const navZoomRef = React.useRef(18);
   const [navZoom, setNavZoomState] = React.useState(18);
@@ -562,6 +579,15 @@ export default function StartNavigationPage() {
   
   const navOffsetRef = React.useRef(450);
   const [navOffset, setNavOffsetState] = React.useState(450);
+
+  // Navigation logic states
+  const [smoothLocation, setSmoothLocation] = React.useState<any>({ ...SIMULATION_START_LOCATION, heading: 0 });
+  const lastHeadingRef = React.useRef(0);
+  const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
+  const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
+  const [distanceRemaining, setDistanceRemaining] = React.useState(0);
+  const [speedKmh, setSpeedKmh] = React.useState(0);
+  const [isPaused, setIsPaused] = React.useState(false);
 
   const mapRef = React.useRef<MapRef>(null);
   const simAnimationRef = React.useRef<number | null>(null);
@@ -631,11 +657,6 @@ export default function StartNavigationPage() {
   };
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  React.useEffect(() => {
     if (!navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -652,13 +673,17 @@ export default function StartNavigationPage() {
                 }
 
                 if (navigationState === 'navigating' && mapRef.current) {
+                    const safeZoom = Number(navZoomRef.current) || 18;
+                    const safePitch = Number(navPitchRef.current) || 60;
+                    const safeOffset = Number(navOffsetRef.current) || 0;
+
                     mapRef.current.getMap().easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
-                        zoom: Number(navZoomRef.current) || 18,
-                        pitch: Number(navPitchRef.current) || 60,
+                        zoom: safeZoom,
+                        pitch: safePitch,
                         duration: 1000,
-                        padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
+                        padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
                     });
                 }
             }
@@ -673,7 +698,7 @@ export default function StartNavigationPage() {
     return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']));
   }, [firestore]);
 
-  const { data: rawMeldingen, isLoading } = useCollection<Melding>(meldingenQuery);
+  const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
 
   const filteredMeldingen = React.useMemo(() => {
     if (!rawMeldingen) return [];
@@ -737,18 +762,6 @@ export default function StartNavigationPage() {
     } catch (e) { console.error("Route fetch error:", e); }
   }, [sortedMissions, userLocation]);
 
-  React.useEffect(() => {
-    if (navigationState !== 'navigating' || isSimulationMode) return;
-    const interval = setInterval(() => {
-        fetchRoute();
-    }, 15000); 
-    return () => clearInterval(interval);
-  }, [navigationState, isSimulationMode, fetchRoute]);
-
-  React.useEffect(() => {
-    if (sortedMissions.length > 0 && !currentRouteGeometry) fetchRoute(true);
-  }, [sortedMissions, fetchRoute, currentRouteGeometry]);
-
   const handleStartRit = (simulate = false) => {
     if (filteredMeldingen.length === 0) { toast({ title: "Geen opdrachten beschikbaar" }); return; }
     
@@ -765,13 +778,17 @@ export default function StartNavigationPage() {
             setIsListExpanded(false);
             setIsLocating(false);
             
+            const safeZoom = Number(navZoomRef.current) || 18;
+            const safePitch = Number(navPitchRef.current) || 60;
+            const safeOffset = Number(navOffsetRef.current) || 0;
+
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
-                zoom: Number(navZoomRef.current) || 18, 
-                pitch: Number(navPitchRef.current) || 60, 
+                zoom: safeZoom, 
+                pitch: safePitch, 
                 bearing: heading, 
                 duration: 2000,
-                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
+                padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
             });
             fetchRoute();
             toast({ title: "Navigatie gestart" });
@@ -780,13 +797,18 @@ export default function StartNavigationPage() {
             setNavigationState('navigating');
             setIsListExpanded(false);
             toast({ title: "GPS signaal zwak", description: "Navigatie start vanaf basislocatie Rijsenhout." });
+            
+            const safeZoom = Number(navZoomRef.current) || 18;
+            const safePitch = Number(navPitchRef.current) || 60;
+            const safeOffset = Number(navOffsetRef.current) || 0;
+
             mapRef.current?.getMap().flyTo({ 
                 center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
-                zoom: Number(navZoomRef.current) || 18, 
-                pitch: Number(navPitchRef.current) || 60, 
+                zoom: safeZoom, 
+                pitch: safePitch, 
                 bearing: 0, 
                 duration: 2000,
-                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
+                padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
             });
             fetchRoute();
         }, { enableHighAccuracy: true, timeout: 5000 });
@@ -795,13 +817,19 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         const first = currentRouteGeometry?.coordinates[0];
-        if (first) mapRef.current?.getMap().flyTo({ 
-            center: [first[0], first[1]], 
-            zoom: Number(navZoomRef.current) || 18, 
-            pitch: Number(navPitchRef.current) || 60, 
-            duration: 2000, 
-            padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 } 
-        });
+        if (first) {
+            const safeZoom = Number(navZoomRef.current) || 18;
+            const safePitch = Number(navPitchRef.current) || 60;
+            const safeOffset = Number(navOffsetRef.current) || 0;
+
+            mapRef.current?.getMap().flyTo({ 
+                center: [first[0], first[1]], 
+                zoom: safeZoom, 
+                pitch: safePitch, 
+                duration: 2000, 
+                padding: { top: 0, bottom: safeOffset, left: 0, right: 0 } 
+            });
+        }
         setTimeout(startSimulation, 2000);
     }
   };
@@ -831,7 +859,6 @@ export default function StartNavigationPage() {
         const head = (turf.bearing(curr, ahead) + 360) % 360;
         lastHeadingRef.current = head;
         
-        // Update displayed route to only show the part in front of the user
         const forwardPart = turf.lineSlice(curr, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
         setDisplayedRouteGeometry(forwardPart.geometry);
         
@@ -840,12 +867,16 @@ export default function StartNavigationPage() {
         setSpeedKmh(Math.round(speedMs * 3.6));
         
         if (mapRef.current) {
+            const safeZoom = Number(navZoomRef.current) || 18;
+            const safePitch = Number(navPitchRef.current) || 60;
+            const safeOffset = Number(navOffsetRef.current) || 0;
+
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
-                pitch: Number(navPitchRef.current) || 60,
-                zoom: Number(navZoomRef.current) || 18,
-                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
+                pitch: safePitch,
+                zoom: safeZoom,
+                padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -913,14 +944,16 @@ export default function StartNavigationPage() {
                 <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border border-slate-100" onClick={() => {
                     const target = userLocation || SIMULATION_START_LOCATION;
                     const isNavigating = navigationState === 'navigating';
+                    const safeZoom = isNavigating ? (Number(navZoomRef.current) || 18) : 18;
+                    const safePitch = isNavigating ? (Number(navPitchRef.current) || 60) : 0;
+                    const safeOffset = isNavigating ? (Number(navOffsetRef.current) || 0) : 0;
+
                     mapRef.current?.getMap().flyTo({ 
                         center: [target.longitude, target.latitude], 
-                        zoom: isNavigating ? (Number(navZoomRef.current) || 18) : 18, 
-                        pitch: isNavigating ? (Number(navPitchRef.current) || 60) : 0, 
+                        zoom: safeZoom, 
+                        pitch: safePitch, 
                         duration: 1500,
-                        padding: isNavigating 
-                            ? { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 } 
-                            : { top: 0, bottom: 0, left: 0, right: 0 }
+                        padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }
                     });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
@@ -1137,19 +1170,17 @@ export default function StartNavigationPage() {
         </div>
 
         {activeWerkbonId && (
-            <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-                <div className="w-full max-w-6xl h-[90vh] rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-white/20 animate-in zoom-in-95 duration-300">
-                    <IntegratedWerkbonOverlay 
-                        meldingId={activeWerkbonId} 
-                        onClose={() => setActiveWerkbonId(null)} 
-                        onCompleted={(id) => {
-                            setCompletedObjects(prev => [...prev, id]);
-                            setActiveWerkbonId(null);
-                            fetchRoute();
-                            toast({ title: "Melding afgerond", description: "Route wordt herberekend..." });
-                        }} 
-                    />
-                </div>
+            <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-300">
+                <IntegratedWerkbonOverlay 
+                    meldingId={activeWerkbonId} 
+                    onClose={() => setActiveWerkbonId(null)} 
+                    onCompleted={(id) => {
+                        setCompletedObjects(prev => [...prev, id]);
+                        setActiveWerkbonId(null);
+                        fetchRoute();
+                        toast({ title: "Melding afgerond", description: "Route wordt herberekend..." });
+                    }} 
+                />
             </div>
         )}
     </div>
