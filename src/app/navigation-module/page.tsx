@@ -7,6 +7,8 @@ import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/fir
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { 
   ArrowLeft, 
   Play, 
@@ -40,7 +42,8 @@ import {
   Settings,
   Sliders,
   Table as TableIcon,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -65,8 +68,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
 import {
   Popover,
   PopoverContent,
@@ -95,14 +96,6 @@ const routeLayerCasing: Layer = {
   source: 'route-line',
   layout: { 'line-join': 'round', 'line-cap': 'round' },
   paint: { 'line-color': '#1e40af', 'line-width': 12, 'line-opacity': 0.2 },
-};
-
-const traversedRouteLayer: Layer = {
-  id: 'traversed-route',
-  type: 'line',
-  source: 'traversed-route-line',
-  layout: { 'line-join': 'round', 'line-cap': 'round' },
-  paint: { 'line-color': '#94a3b8', 'line-width': 8, 'line-opacity': 0.5 },
 };
 
 const getMeldingAgeColor = (datum?: string) => {
@@ -560,7 +553,6 @@ export default function StartNavigationPage() {
   const lastHeadingRef = React.useRef(0);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
-  const [traversedRouteGeometry, setTraversedRouteGeometry] = React.useState<any>(null);
   const [distanceRemaining, setDistanceRemaining] = React.useState(0);
   const [speedKmh, setSpeedKmh] = React.useState(0);
   const [isPaused, setIsPaused] = React.useState(false);
@@ -624,7 +616,6 @@ export default function StartNavigationPage() {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       setIsResizing(false);
-      // Save height to Firestore
       if (user && firestore) {
         updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
       }
@@ -642,7 +633,6 @@ export default function StartNavigationPage() {
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
       setIsResizing(false);
-      // Save height to Firestore
       if (user && firestore) {
         updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
       }
@@ -702,17 +692,12 @@ export default function StartNavigationPage() {
                         padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
                     });
 
-                    // Update route slicing for real navigation
                     if (currentRouteGeometry) {
                         try {
                             const line = turf.lineString(currentRouteGeometry.coordinates);
                             const currPt = turf.nearestPointOnLine(line, turf.point([loc.longitude, loc.latitude]));
-                            
                             const forwardPart = turf.lineSlice(currPt, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
                             setDisplayedRouteGeometry(forwardPart);
-                            
-                            const backwardPart = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), currPt, line);
-                            setTraversedRouteGeometry(backwardPart);
                         } catch (e) { }
                     }
                 }
@@ -743,14 +728,10 @@ export default function StartNavigationPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!rawMeldingen) return [];
-    
-    // Combine active pool with today's completed if requested
     let pool = [...rawMeldingen].filter(m => !completedObjects.includes(m.id));
-    
     if (showTodayCompleted && rawCompletedToday) {
         pool = [...pool, ...rawCompletedToday];
     }
-
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
         pool = pool.filter(m => m.behandelaar === userName);
@@ -766,7 +747,7 @@ export default function StartNavigationPage() {
     if (filteredMeldingen.length === 0) return [];
     const base = userLocation || SIMULATION_START_LOCATION;
     return [...filteredMeldingen]
-        .filter(m => m.status !== 'Afgerond') // Only route to active missions
+        .filter(m => m.status !== 'Afgerond')
         .sort((a, b) => {
             const distA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]));
             const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
@@ -778,16 +759,12 @@ export default function StartNavigationPage() {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
-        setTraversedRouteGeometry(null);
         return;
     }
-    
-    // Capture current start position
     const startPos = (navigationState === 'navigating' ? smoothLocation : (userLocation || SIMULATION_START_LOCATION));
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypointsStr}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
-    
     try {
         const res = await fetch(url);
         const data = await res.json();
@@ -795,8 +772,6 @@ export default function StartNavigationPage() {
             const geometry = data.routes[0].geometry;
             setCurrentRouteGeometry(geometry);
             setDisplayedRouteGeometry(turf.feature(geometry));
-            setTraversedRouteGeometry(null);
-            
             if (zoomToFit && mapRef.current) {
                 const line = turf.lineString(geometry.coordinates);
                 const bbox = turf.bbox(line);
@@ -811,20 +786,17 @@ export default function StartNavigationPage() {
     } catch (e) { console.error("Route error:", e); }
   }, [sortedMissions, userLocation, navigationState, smoothLocation]);
 
-  // Effect to automatically update route line when missions change
   React.useEffect(() => {
     if (sortedMissions.length > 0) {
         fetchRoute(navigationState === 'setup');
     } else if (rawMeldingen && sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
-        setTraversedRouteGeometry(null);
     }
   }, [sortedMissions, navigationState, fetchRoute, rawMeldingen]);
 
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
-    
     if (!simulate) {
         setIsLocating(true);
         navigator.geolocation.getCurrentPosition((pos) => {
@@ -837,7 +809,6 @@ export default function StartNavigationPage() {
             setNavigationState('navigating');
             setIsListExpanded(false);
             setIsLocating(false);
-            
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: Number(navZoomRef.current) || 18, 
@@ -872,33 +843,23 @@ export default function StartNavigationPage() {
     simStateRef.current = { distanceTravelled: 0, currentSpeedMs: 0 };
     const animate = () => {
         if (isPaused || activeWerkbonId) { simAnimationRef.current = requestAnimationFrame(animate); return; }
-        const speedMs = 13.8; // ~50 km/h
+        const speedMs = 13.8;
         simStateRef.current.distanceTravelled += speedMs * 0.016;
-        
         if (simStateRef.current.distanceTravelled >= totalDist) {
             setSpeedKmh(0);
             return;
         }
-
         const curr = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
         const [lng, lat] = curr.geometry.coordinates;
-        
-        // Use coordinates ahead to get heading
         const aheadDist = Math.min(simStateRef.current.distanceTravelled + 2, totalDist);
         const ahead = turf.along(line, aheadDist, { units: 'meters' });
         const head = (turf.bearing(curr, ahead) + 360) % 360;
         lastHeadingRef.current = head;
-        
         const forwardPart = turf.lineSlice(curr, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
         setDisplayedRouteGeometry(forwardPart);
-
-        const backwardPart = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), curr, line);
-        setTraversedRouteGeometry(backwardPart);
-        
         setDistanceRemaining(Math.max(0, Math.round(totalDist - simStateRef.current.distanceTravelled)));
         setSmoothLocation({ latitude: lat, longitude: lng, heading: head });
         setSpeedKmh(Math.round(speedMs * 3.6));
-        
         if (mapRef.current) {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
@@ -956,9 +917,6 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 ))}
-                <Source id="traversed-route-line" type="geojson" data={traversedRouteGeometry || { type: 'FeatureCollection', features: [] }}>
-                    <Layer {...traversedRouteLayer} />
-                </Source>
                 <Source id="route-line" type="geojson" data={displayedRouteGeometry || { type: 'FeatureCollection', features: [] }}>
                     <Layer {...routeLayerCasing} />
                     <Layer {...routeLayer} />
@@ -1066,7 +1024,6 @@ export default function StartNavigationPage() {
             )}
             style={navigationState !== 'navigating' && isListExpanded ? { height: `${listHeight}px` } : {}}
         >
-            {/* Drag Handle */}
             {navigationState !== 'navigating' && isListExpanded && (
                 <div 
                     onMouseDown={onMouseDown}
