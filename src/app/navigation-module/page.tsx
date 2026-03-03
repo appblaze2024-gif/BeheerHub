@@ -76,6 +76,7 @@ import Image from 'next/image';
 import { translateText } from '@/ai/flows/translate-text-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { LoadingScreen } from '@/components/loading-screen';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -530,6 +531,7 @@ export default function StartNavigationPage() {
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
+  const [isStartingSimulation, setIsStartingSimulation] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
   const [isLocating, setIsLocating] = React.useState(false);
@@ -707,10 +709,10 @@ export default function StartNavigationPage() {
                             const currPt = turf.nearestPointOnLine(line, turf.point([loc.longitude, loc.latitude]));
                             
                             const forwardPart = turf.lineSlice(currPt, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
-                            setDisplayedRouteGeometry(forwardPart.geometry);
+                            setDisplayedRouteGeometry(forwardPart);
                             
                             const backwardPart = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), currPt, line);
-                            setTraversedRouteGeometry(backwardPart.geometry);
+                            setTraversedRouteGeometry(backwardPart);
                         } catch (e) { }
                     }
                 }
@@ -790,16 +792,17 @@ export default function StartNavigationPage() {
         const res = await fetch(url);
         const data = await res.json();
         if (data.routes?.[0]) {
-            setCurrentRouteGeometry(data.routes[0].geometry);
-            setDisplayedRouteGeometry(data.routes[0].geometry);
+            const geometry = data.routes[0].geometry;
+            setCurrentRouteGeometry(geometry);
+            setDisplayedRouteGeometry(turf.feature(geometry));
             setTraversedRouteGeometry(null);
             
             if (zoomToFit && mapRef.current) {
-                const line = turf.lineString(data.routes[0].geometry.coordinates);
+                const line = turf.lineString(geometry.coordinates);
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: { top: 60, bottom: 80, left: 60, right: 60 }, 
+                        padding: 40, 
                         duration: 1500 
                     });
                 }
@@ -851,10 +854,14 @@ export default function StartNavigationPage() {
             fetchRoute();
         }, { enableHighAccuracy: true });
     } else {
+        setIsStartingSimulation(true);
         setIsSimulationMode(true);
         setNavigationState('navigating');
         setIsListExpanded(false);
-        setTimeout(startSimulation, 2000);
+        setTimeout(() => {
+            setIsStartingSimulation(false);
+            startSimulation();
+        }, 2000);
     }
   };
 
@@ -883,10 +890,10 @@ export default function StartNavigationPage() {
         lastHeadingRef.current = head;
         
         const forwardPart = turf.lineSlice(curr, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
-        setDisplayedRouteGeometry(forwardPart.geometry);
+        setDisplayedRouteGeometry(forwardPart);
 
         const backwardPart = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), curr, line);
-        setTraversedRouteGeometry(backwardPart.geometry);
+        setTraversedRouteGeometry(backwardPart);
         
         setDistanceRemaining(Math.max(0, Math.round(totalDist - simStateRef.current.distanceTravelled)));
         setSmoothLocation({ latitude: lat, longitude: lng, heading: head });
@@ -913,6 +920,8 @@ export default function StartNavigationPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
+        {isStartingSimulation && <LoadingScreen message="Simulator voorbereiden..." className="fixed inset-0 z-[1000]" />}
+        
         <div className="absolute inset-0 z-0">
             <MapGL 
                 ref={mapRef} 
@@ -947,16 +956,13 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 ))}
-                {traversedRouteGeometry && (
-                    <Source id="traversed-route-line" type="geojson" data={traversedRouteGeometry}>
-                        <Layer {...traversedRouteLayer} />
-                    </Source>
-                )}
-                {displayedRouteGeometry && (
-                    <Source id="route-line" type="geojson" data={displayedRouteGeometry}>
-                        <Layer {...routeLayerCasing} /><Layer {...routeLayer} />
-                    </Source>
-                )}
+                <Source id="traversed-route-line" type="geojson" data={traversedRouteGeometry || { type: 'FeatureCollection', features: [] }}>
+                    <Layer {...traversedRouteLayer} />
+                </Source>
+                <Source id="route-line" type="geojson" data={displayedRouteGeometry || { type: 'FeatureCollection', features: [] }}>
+                    <Layer {...routeLayerCasing} />
+                    <Layer {...routeLayer} />
+                </Source>
             </MapGL>
         </div>
 
