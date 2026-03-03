@@ -84,7 +84,7 @@ const routeLayer: Layer = {
   type: 'line',
   source: 'route-line',
   layout: { 'line-join': 'round', 'line-cap': 'round' },
-  paint: { 'line-color': '#2563eb', 'line-width': 10, 'line-opacity': 1 },
+  paint: { 'line-color': '#2563eb', 'line-width': 8, 'line-opacity': 0.8 },
 };
 
 const routeLayerCasing: Layer = {
@@ -92,7 +92,7 @@ const routeLayerCasing: Layer = {
   type: 'line',
   source: 'route-line',
   layout: { 'line-join': 'round', 'line-cap': 'round' },
-  paint: { 'line-color': '#1e40af', 'line-width': 16, 'line-opacity': 0.2 },
+  paint: { 'line-color': '#1e40af', 'line-width': 12, 'line-opacity': 0.2 },
 };
 
 const getMeldingAgeColor = (datum?: string) => {
@@ -655,6 +655,10 @@ export default function StartNavigationPage() {
             setNavigationState('navigating');
             setIsListExpanded(false);
             setIsLocating(false);
+            
+            // Real navigation zoom
+            mapRef.current?.getMap().flyTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: 60, bearing: pos.coords.heading || 0, duration: 2000 });
+            
             fetchRoute(); // Re-calculate from new GPS position
             toast({ title: "Route gestart", description: "Navigeren vanaf huidige locatie." });
         }, (err) => {
@@ -667,6 +671,13 @@ export default function StartNavigationPage() {
         setIsSimulationMode(true);
         setNavigationState('navigating');
         setIsListExpanded(false);
+        
+        // Initial sim zoom
+        const first = currentRouteGeometry?.coordinates[0];
+        if (first) {
+            mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 18, pitch: 60, duration: 2000 });
+        }
+        
         startSimulation();
     }
   };
@@ -699,6 +710,11 @@ export default function StartNavigationPage() {
         setSpeedKmh(Math.round(speedMs * 3.6));
         setHeading(head);
         
+        // Follow cam
+        if (mapRef.current) {
+            mapRef.current.getMap().jumpTo({ center: [lng, lat], bearing: head });
+        }
+        
         simAnimationRef.current = requestAnimationFrame(animate);
     };
     simAnimationRef.current = requestAnimationFrame(animate);
@@ -709,7 +725,7 @@ export default function StartNavigationPage() {
     navigator.geolocation.getCurrentPosition((pos) => {
         const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
         setUserLocation(loc);
-        mapRef.current?.getMap().flyTo({ center: [loc.longitude, loc.latitude], zoom: 16 });
+        mapRef.current?.getMap().flyTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: navigationState === 'navigating' ? 60 : 0, duration: 1500 });
         setIsLocating(false);
     }, () => setIsLocating(false), { enableHighAccuracy: true });
   };
@@ -757,7 +773,7 @@ export default function StartNavigationPage() {
                     </Marker>
                 ))}
 
-                {/* Navigation Line (Blue line from issue to issue) */}
+                {/* Navigation Line */}
                 {currentRouteGeometry && (
                     <Source id="route-line" type="geojson" data={currentRouteGeometry}>
                         <Layer {...routeLayerCasing} /><Layer {...routeLayer} />
@@ -786,7 +802,7 @@ export default function StartNavigationPage() {
                         </Button>
                     </>
                 ) : (
-                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl border-none" onClick={() => { setNavigationState('setup'); setIsListExpanded(true); if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); }}>STOP RIT</Button>
+                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl border-none" onClick={() => { setNavigationState('setup'); setIsListExpanded(true); if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); mapRef.current?.getMap().setPitch(0); }}>STOP RIT</Button>
                 )}
             </div>
         </div>
