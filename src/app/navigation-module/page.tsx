@@ -199,7 +199,7 @@ function IntegratedWerkbonOverlay({
 
     const toggleListening = () => {
         if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
         if (!SpeechRecognition) return;
         const recognition = new SpeechRecognition();
         recognition.lang = sourceLang.code;
@@ -593,40 +593,59 @@ export default function StartNavigationPage() {
     return pool;
   }, [rawMeldingen, isPrivileged, profile, debouncedSearchQuery, completedObjects]);
 
-  const nextObject = React.useMemo(() => {
-    if (filteredMeldingen.length === 0) return null;
+  const sortedMissions = React.useMemo(() => {
+    if (filteredMeldingen.length === 0) return [];
     const base = userLocation || SIMULATION_START_LOCATION;
     return [...filteredMeldingen].sort((a, b) => {
         const distA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]));
         const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
         return distA - distB;
-    })[0];
+    });
   }, [filteredMeldingen, userLocation]);
 
   const fetchRoute = React.useCallback(async () => {
+    if (sortedMissions.length === 0) return;
     const startPos = userLocation || SIMULATION_START_LOCATION;
-    if (!nextObject) return;
     
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startPos.longitude},${startPos.latitude};${nextObject.longitude},${nextObject.latitude}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+    // Build waypoints string (start + up to 24 missions)
+    const waypoints = [
+        [startPos.longitude, startPos.latitude],
+        ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])
+    ];
+    
+    const waypointsStr = waypoints.map(w => w.join(',')).join(';');
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypointsStr}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+    
     try {
         const res = await fetch(url);
         const data = await res.json();
         if (data.routes?.[0]) {
             setCurrentRouteGeometry(data.routes[0].geometry);
             setDistanceRemaining(Math.round(data.routes[0].distance));
+            
+            // Auto-zoom to the entire route if we just loaded or started
+            if (mapRef.current) {
+                const line = turf.lineString(data.routes[0].geometry.coordinates);
+                const bbox = turf.bbox(line);
+                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 80, duration: 1500 });
+            }
         }
-    } catch (e) {}
-  }, [nextObject, userLocation]);
+    } catch (e) {
+        console.error("Route fetch error:", e);
+    }
+  }, [sortedMissions, userLocation]);
 
+  // Initial load: Fetch the multi-point route and zoom
   React.useEffect(() => {
-    if (navigationState === 'navigating') fetchRoute();
-  }, [nextObject?.id, navigationState, fetchRoute]);
+    if (sortedMissions.length > 0 && !currentRouteGeometry) {
+        fetchRoute();
+    }
+  }, [sortedMissions, fetchRoute, currentRouteGeometry]);
 
   const handleStartRit = (simulate = false) => {
     if (filteredMeldingen.length === 0) { toast({ title: "Geen opdrachten beschikbaar" }); return; }
     
     if (!simulate) {
-        // Zoek apparaatlocatie bij start
         setIsLocating(true);
         navigator.geolocation.getCurrentPosition((pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
@@ -636,6 +655,7 @@ export default function StartNavigationPage() {
             setNavigationState('navigating');
             setIsListExpanded(false);
             setIsLocating(false);
+            fetchRoute(); // Re-calculate from new GPS position
             toast({ title: "Route gestart", description: "Navigeren vanaf huidige locatie." });
         }, (err) => {
             setIsLocating(false);
@@ -737,8 +757,8 @@ export default function StartNavigationPage() {
                     </Marker>
                 ))}
 
-                {/* Navigation Line */}
-                {currentRouteGeometry && navigationState === 'navigating' && (
+                {/* Navigation Line (Blue line from issue to issue) */}
+                {currentRouteGeometry && (
                     <Source id="route-line" type="geojson" data={currentRouteGeometry}>
                         <Layer {...routeLayerCasing} /><Layer {...routeLayer} />
                     </Source>
@@ -766,7 +786,7 @@ export default function StartNavigationPage() {
                         </Button>
                     </>
                 ) : (
-                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl border-none" onClick={() => { setNavigationState('setup'); setIsListExpanded(true); setCurrentRouteGeometry(null); if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); }}>STOP RIT</Button>
+                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl border-none" onClick={() => { setNavigationState('setup'); setIsListExpanded(true); if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); }}>STOP RIT</Button>
                 )}
             </div>
         </div>
@@ -784,7 +804,7 @@ export default function StartNavigationPage() {
                             <div className="flex justify-between items-end px-1">
                                 <div className="space-y-0.5">
                                     <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Volgende opdracht</p>
-                                    <p className="text-lg font-black text-slate-900 uppercase tracking-tight truncate max-w-[200px]">{nextObject?.intakenummer}</p>
+                                    <p className="text-lg font-black text-slate-900 uppercase tracking-tight truncate max-w-[200px]">{sortedMissions[0]?.intakenummer}</p>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-2xl font-black text-slate-900 leading-none">{(distanceRemaining/1000).toFixed(1)} <span className="text-xs text-slate-500 uppercase">km</span></p>
@@ -934,6 +954,7 @@ export default function StartNavigationPage() {
                             setCompletedObjects(prev => [...prev, id]);
                             setActiveWerkbonId(null);
                             if (navigationState === 'navigating') {
+                                fetchRoute(); // Update multi-point route after completion
                                 toast({ title: "Melding afgerond", description: "Route naar volgende punt wordt berekend..." });
                             }
                         }} 
