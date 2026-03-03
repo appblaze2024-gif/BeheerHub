@@ -926,13 +926,23 @@ export default function StartNavigationPage() {
                       <div className="p-3 bg-slate-50 border-b flex items-center justify-between shrink-0">
                           <div className="flex items-center gap-3">
                               <div className="bg-primary/10 p-1.5 rounded-lg">{showCompletedToday ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <Zap className="h-3.5 w-3.5 text-primary" />}</div>
-                              <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">{showCompletedToday ? 'Vandaag Afgemeld' : 'Dichtstbijzijnde Werkbonnen'}</h3>
+                              <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">{showCompletedToday ? 'Vandaag Afgemeld' : 'Optimale Route Volgorde'}</h3>
                           </div>
                           <Button variant={showCompletedToday ? "default" : "outline"} size="sm" className={cn("h-8 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all", showCompletedToday ? "bg-green-600 text-white" : "border-slate-200")} onClick={() => setShowCompletedToday(!showCompletedToday)}>{showCompletedToday ? <CheckCircle2 className="h-3 w-3" /> : <History className="h-3 w-3" />}{showCompletedToday ? 'TOON OPENSTAAND' : 'VANDAAG AFGEMELD'}</Button>
                       </div>
                       <ScrollArea className="flex-1">
-                          <Table className="min-w-[1000px]">
-                              <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm"><TableRow className="h-8 hover:bg-transparent"><TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Bon</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Locatie</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Type</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3">Afstand</TableHead></TableRow></TableHeader>
+                          <Table className="min-w-[1400px]">
+                              <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                                  <TableRow className="h-8 hover:bg-transparent">
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Intakenr.</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Adres</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Omschrijving</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Hoofdtype</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Subtype</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Werkgebied</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3">Afstand</TableHead>
+                                  </TableRow>
+                              </TableHeader>
                               <TableBody>
                                   {tableData.length > 0 ? (
                                       tableData.map((m) => {
@@ -941,14 +951,34 @@ export default function StartNavigationPage() {
                                           return (
                                               <TableRow key={m.id} className={cn("h-10 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
                                                   <TableCell className="font-black text-[10px] border-r group-hover:text-primary transition-colors px-3 py-1">{m.intakenummer}</TableCell>
-                                                  <TableCell className="text-[10px] font-bold border-r px-3 py-1"><div><span>{m.straatnaam} {m.huisnummer}</span><br /><span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">{m.plaats}</span></div></TableCell>
-                                                  <TableCell className="text-[9px] font-black border-r text-slate-900 uppercase tracking-tight px-3 py-1">{m.subcategorie}</TableCell>
-                                                  <TableCell className="px-3 py-1"><Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200">{dist} km</Badge></TableCell>
+                                                  <TableCell className="text-[10px] font-bold border-r px-3 py-1">
+                                                      <div className="flex flex-col">
+                                                          <span className="truncate max-w-[200px]">{m.straatnaam} {m.huisnummer}</span>
+                                                          <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">{m.plaats}</span>
+                                                      </div>
+                                                  </TableCell>
+                                                  <TableCell className="text-[10px] font-medium border-r px-3 py-1 truncate max-w-[250px] text-slate-600 italic">
+                                                      "{m.extra_informatie || 'Geen omschrijving'}"
+                                                  </TableCell>
+                                                  <TableCell className="text-[9px] font-black border-r text-slate-500 uppercase tracking-tight px-3 py-1">
+                                                      {m.hoofdcategorie}
+                                                  </TableCell>
+                                                  <TableCell className="text-[9px] font-black border-r text-slate-900 uppercase tracking-tight px-3 py-1">
+                                                      {m.subcategorie}
+                                                  </TableCell>
+                                                  <TableCell className="text-[9px] font-black border-r px-3 py-1">
+                                                      <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200">
+                                                          {m.werkgebied || m.wijk || '-'}
+                                                      </Badge>
+                                                  </TableCell>
+                                                  <TableCell className="px-3 py-1">
+                                                      <span className="text-[10px] font-black tabular-nums">{dist} km</span>
+                                                  </TableCell>
                                               </TableRow>
                                           )
                                       })
                                   ) : (
-                                      <TableRow><TableCell colSpan={4} className="text-center py-12 text-muted-foreground opacity-30"><LayoutGrid className="h-8 w-8 mx-auto mb-2" /><p className="font-black uppercase tracking-widest text-[10px]">Geen taken gevonden</p></TableCell></TableRow>
+                                      <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground opacity-30"><LayoutGrid className="h-8 w-8 mx-auto mb-2" /><p className="font-black uppercase tracking-widest text-[10px]">Geen taken gevonden</p></TableCell></TableRow>
                                   )}
                               </TableBody>
                           </Table>
