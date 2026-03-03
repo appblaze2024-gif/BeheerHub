@@ -66,7 +66,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RouteHistoryDialog } from '@/components/route-history-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
-import { addSeconds, format as formatDate } from 'date-fns';
+import { addSeconds, format as formatDate, differenceInCalendarDays } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import {
   Table,
@@ -100,7 +100,7 @@ const routeLayer: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#ef4444', 
+    'line-color': '#3b82f6', // Blauwe lijn
     'line-width': 8,
     'line-opacity': 0.9,
   },
@@ -115,7 +115,7 @@ const routeLayerCasing: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#991b1b', 
+    'line-color': '#1d4ed8', // Donkerder blauwe rand
     'line-width': 12,
     'line-opacity': 0.2,
   },
@@ -130,6 +130,22 @@ const useInternalIsMobile = (width: number = 768) => {
     return () => window.removeEventListener('resize', check);
   }, [width]);
   return isMobile;
+};
+
+// Helper om kleur op basis van ouderdom te bepalen
+const getMeldingAgeColor = (datum?: string) => {
+    if (!datum) return 'bg-slate-400';
+    try {
+        const d = new Date(datum);
+        const diffDays = Math.abs(differenceInCalendarDays(new Date(), d));
+        
+        if (diffDays <= 1) return 'bg-slate-400'; // 1 dag: grijs
+        if (diffDays === 2) return 'bg-yellow-400'; // 2 dagen: geel
+        if (diffDays === 3) return 'bg-orange-500'; // 3 dagen: oranje
+        return 'bg-red-600'; // 4+ dagen: rood
+    } catch (e) {
+        return 'bg-slate-400';
+    }
 };
 
 function NavigatingView({ 
@@ -561,6 +577,7 @@ function NavigatingView({
             const inRange = isTarget && hasReachedCurrentTarget;
             const isMelding = routeType === 'meldingen';
             const Icon = isMelding ? Bell : Trash2;
+            const colorClass = getMeldingAgeColor((obj as any).datum);
 
             return (
                 <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={(e) => {
@@ -575,10 +592,11 @@ function NavigatingView({
                         <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
                         <div className={cn(
                             "relative h-10 w-10 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all", 
-                            isTarget ? "bg-red-600 scale-125 ring-4 ring-red-600/30" : "bg-slate-400", 
-                            inRange && "scale-125 bg-green-600"
+                            isTarget ? "scale-125 ring-4 ring-slate-900/20" : "bg-slate-400", 
+                            colorClass,
+                            inRange && "scale-125 ring-4 ring-green-500/30"
                         )}>
-                            <Icon className="h-5 w-5 text-white stroke-[2.5]" />
+                            <Icon className="h-5 w-5 text-slate-200 stroke-[2.5]" />
                         </div>
                     </div>
                 </Marker>
@@ -599,7 +617,7 @@ function NavigatingView({
                         <Badge className="bg-primary text-white font-black text-xs h-6 px-3">{completedObjects.length}/{objectsOnRoute.length}</Badge>
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gereed</span>
                     </div>
-                    <div className="flex-1 max-w-[120px]">
+                    <div className="flex-1 max-w-[1200px]">
                         <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} className="h-1.5" />
                     </div>
                 </CardContent>
@@ -828,7 +846,7 @@ export default function StartNavigationPage() {
             setIsStarting(false); 
             return; 
         }
-        setObjectsOnRoute(sortedMeldingen.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer } as MapObject)));
+        setObjectsOnRoute(sortedMeldingen.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer, datum: m.datum } as MapObject)));
         setTripStartLocation(startLoc);
     }
 
@@ -921,13 +939,20 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                     
-                    {isMeldingenType && !showCompletedToday && sortedMeldingen?.map((m, i) => (
-                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActivePopupMeldingId(m.id)}>
-                            <div className={cn("w-7 h-7 bg-red-600 rounded-full border-2 border-white shadow-lg transition-transform cursor-pointer flex items-center justify-center text-white font-black text-[10px]", activePopupMeldingId === m.id ? "scale-125 ring-4 ring-red-500/30" : "hover:scale-110")}>
-                                <Bell className="h-3 w-3" />
-                            </div>
-                        </Marker>
-                    ))}
+                    {isMeldingenType && !showCompletedToday && sortedMeldingen?.map((m, i) => {
+                        const colorClass = getMeldingAgeColor(m.datum);
+                        return (
+                            <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActivePopupMeldingId(m.id)}>
+                                <div className={cn(
+                                    "w-7 h-7 rounded-full border-2 border-white shadow-lg transition-transform cursor-pointer flex items-center justify-center font-black text-[10px]", 
+                                    colorClass,
+                                    activePopupMeldingId === m.id ? "scale-125 ring-4 ring-slate-900/20" : "hover:scale-110"
+                                )}>
+                                    <Bell className="h-3 w-3 text-slate-200" />
+                                </div>
+                            </Marker>
+                        );
+                    })}
 
                     {isMeldingenType && showCompletedToday && myCompletedToday?.map((m) => (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActivePopupMeldingId(m.id)}>
@@ -940,7 +965,9 @@ export default function StartNavigationPage() {
                     )}
 
                     {previewRouteGeometry && !showCompletedToday && (
-                        <Source id="preview-route" type="geojson" data={{ type: 'Feature', properties: {}, geometry: previewRouteGeometry }}><Layer id="preview-route-line" type="line" paint={{ 'line-color': '#ef4444', 'line-width': 4, 'line-opacity': 0.6 }} /></Source>
+                        <Source id="preview-route" type="geojson" data={{ type: 'Feature', properties: {}, geometry: previewRouteGeometry }}>
+                            <Layer id="preview-route-line" type="line" paint={{ 'line-color': '#3b82f6', 'line-width': 4, 'line-opacity': 0.6 }} />
+                        </Source>
                     )}
                   </MapGL>
               </div>
@@ -995,12 +1022,22 @@ export default function StartNavigationPage() {
                                       tableData.map((m, idx) => {
                                           const baseLoc = userLocation || currentActiveSortBase;
                                           const dist = turf.distance(turf.point([baseLoc.longitude, baseLoc.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
+                                          const ageColor = getMeldingAgeColor(m.datum);
+                                          
                                           return (
                                               <TableRow key={m.id} className={cn("h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
                                                   {columnVisibility.intakenummer && (
                                                       <TableCell className="font-black text-[10px] border-r group-hover:text-primary transition-colors px-3 py-1">
                                                           <div className="flex items-center gap-2">
-                                                              {!showCompletedToday && <span className="h-5 w-5 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0"><Bell className="h-3 w-3" /></span>}
+                                                              {!showCompletedToday && (
+                                                                  <span className={cn(
+                                                                      "h-5 w-5 rounded-md flex items-center justify-center shrink-0", 
+                                                                      ageColor,
+                                                                      "bg-opacity-80"
+                                                                  )}>
+                                                                      <Bell className="h-3 w-3 text-slate-200" />
+                                                                  </span>
+                                                              )}
                                                               {m.intakenummer}
                                                           </div>
                                                       </TableCell>
