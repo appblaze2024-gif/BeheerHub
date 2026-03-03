@@ -219,12 +219,11 @@ function NavigatingView({
 
   const totalSimDistanceRef = React.useRef(0);
 
-  // In this mode, we find the next target DYNAMICALLY based on current location
+  // Find next target dynamically based on proximity
   const nextObject = React.useMemo(() => {
     const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id));
     if (remaining.length === 0) return null;
     
-    // Always find the closest one to current location
     if (!targetLocation) return remaining[0];
 
     const currentPt = turf.point([targetLocation.longitude, targetLocation.latitude]);
@@ -529,6 +528,15 @@ function NavigatingView({
 
   return (
     <div className="w-full h-full relative bg-slate-100 overflow-hidden">
+      {isCalculatingRoute && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-white/40 backdrop-blur-sm pointer-events-none">
+          <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">Route berekenen...</p>
+          </div>
+        </div>
+      )}
+
       <MapGL
         ref={mapRef}
         {...viewState}
@@ -695,6 +703,7 @@ export default function StartNavigationPage() {
   
   const [previewRouteGeometry, setPreviewRouteGeometry] = React.useState<any>(null);
   const [activePopupMeldingId, setActivePopupMeldingId] = React.useState<string | null>(null);
+  const [isPreviewCalculating, setIsPreviewCalculating] = React.useState(false);
 
   const [showCompletedToday, setShowCompletedToday] = React.useState(false);
   const [hasResumed, setHasResumed] = React.useState(false);
@@ -733,19 +742,6 @@ export default function StartNavigationPage() {
 
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
   
-  const availableRoutes = React.useMemo(() => {
-      if (!selectedProject) return [];
-      if (routeType === 'veeg') return selectedProject.veegroutes || [];
-      if (routeType === 'prullenbak') return selectedProject.prullenbakkenroutes || [];
-      return [];
-  }, [selectedProject, routeType]);
-
-  const selectedRouteIdDef = React.useMemo(() => {
-    if (!selectedRouteId || selectedRouteId === '--nieuwe-route--' || !selectedProject) return null;
-    const allRoutes = [...(selectedProject.veegroutes || []), ...(selectedProject.prullenbakkenroutes || [])];
-    return allRoutes.find(r => r.id === selectedRouteId) || null;
-  }, [selectedRouteId, selectedProject]);
-
   React.useEffect(() => {
     if (navigationState === 'navigating') setIsHeaderVisible(false);
     else setIsHeaderVisible(true);
@@ -790,15 +786,6 @@ export default function StartNavigationPage() {
     return completedMeldingenFromDb.filter(m => m.afgehandeld_door === myName);
   }, [completedMeldingenFromDb, profile]);
 
-  const objectsOnRouteQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedRouteIdDef) return null;
-    return query(collection(firestore, 'objects'), where('locatieWerkgebieden', 'array-contains', selectedRouteIdDef.naam));
-  }, [firestore, selectedRouteIdDef?.naam]);
-
-  const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
-
-  const [handmatigeVolgorde, setHandmatigeVolgorde] = React.useState<string[]>([]);
-
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !rawMeldingen || rawMeldingen.length === 0) return [];
     
@@ -814,21 +801,7 @@ export default function StartNavigationPage() {
     const baseLoc = userLocation || currentActiveSortBase;
     let currentPos = [baseLoc.longitude, baseLoc.latitude];
 
-    // Respect handmatige volgorde first for already sorted items
-    const manualItems = handmatigeVolgorde
-        .map(id => pool.find(m => m.id === id))
-        .filter((m): m is Melding => !!m);
-    
-    const remainingPool = pool.filter(m => !handmatigeVolgorde.includes(m.id));
-
-    // For new items, add them using nearest neighbor logic at the end
-    result.push(...manualItems);
-    if (result.length > 0) {
-        const last = result[result.length - 1];
-        currentPos = [last.longitude, last.latitude];
-    }
-
-    let tempPool = [...remainingPool];
+    let tempPool = [...pool];
     while (tempPool.length > 0) {
         const nextItem = tempPool.reduce((prev, curr) => {
             const distPrev = turf.distance(turf.point(currentPos), turf.point([prev.longitude, prev.latitude]));
@@ -842,17 +815,7 @@ export default function StartNavigationPage() {
     }
 
     return result;
-  }, [rawMeldingen, routeType, isPrivileged, profile, userLocation, currentActiveSortBase, handmatigeVolgorde]);
-
-  const moveItem = (index: number, direction: 'up' | 'down') => {
-    const newItems = [...sortedMeldingen];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newItems.length) return;
-    
-    const [moved] = newItems.splice(index, 1);
-    newItems.splice(targetIndex, 0, moved);
-    setHandmatigeVolgorde(newItems.map(m => m.id));
-  };
+  }, [rawMeldingen, routeType, isPrivileged, profile, userLocation, currentActiveSortBase]);
 
   const handleStartRit = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
@@ -860,22 +823,18 @@ export default function StartNavigationPage() {
     setIsStarting(true);
 
     if (routeType === 'meldingen') {
-        const sourceList = sortedMeldingen;
-        if (sourceList.length === 0) { 
+        if (sortedMeldingen.length === 0) { 
             toast({ title: "Geen meldingen", description: "Geen openstaande meldingen voor u gevonden." }); 
             setIsStarting(false); 
             return; 
         }
-        setObjectsOnRoute(sourceList.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer } as MapObject)));
-        setTripStartLocation(startLoc);
-    } else if (selectedRouteIdDef && objectsOnMap) {
-        setObjectsOnRoute(objectsOnMap.map(obj => ({ ...obj } as MapObject)));
+        setObjectsOnRoute(sortedMeldingen.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer } as MapObject)));
         setTripStartLocation(startLoc);
     }
 
     setNavigationState('navigating');
     setIsStarting(false);
-  }, [userLocation, selectedRouteIdDef, routeType, sortedMeldingen, objectsOnMap, toast]);
+  }, [userLocation, routeType, sortedMeldingen, toast]);
 
   React.useEffect(() => {
     const isResume = searchParams.get('resume') === 'true';
@@ -891,6 +850,7 @@ export default function StartNavigationPage() {
   React.useEffect(() => {
     const fetchPreview = async () => {
         if (routeType === 'meldingen' && sortedMeldingen.length >= 1) {
+            setIsPreviewCalculating(true);
             const baseLoc = userLocation || currentActiveSortBase;
             const waypoints = [`${baseLoc.longitude},${baseLoc.latitude}`, ...sortedMeldingen.slice(0, 24).map(m => `${m.longitude},${m.latitude}`)].join(';');
             const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
@@ -909,7 +869,9 @@ export default function StartNavigationPage() {
                         });
                     }
                 }
-            } catch (e) {}
+            } catch (e) {} finally {
+                setIsPreviewCalculating(false);
+            }
         } else {
             setPreviewRouteGeometry(null);
         }
@@ -929,15 +891,24 @@ export default function StartNavigationPage() {
         <div className="w-full h-full relative flex flex-col">
           <div className="flex flex-col flex-1 min-h-0">
               <div className={cn("relative overflow-hidden shrink-0 transition-all duration-500 ease-in-out", isMeldingenType ? "h-[50%] lg:h-[60%]" : "h-full")}>
+                  {isPreviewCalculating && (
+                    <div className="absolute inset-0 z-[100] flex items-center justify-center bg-white/40 backdrop-blur-sm pointer-events-none">
+                      <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">Snelste route berekenen...</p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
                       <Button variant="secondary" size="icon" className="h-10 w-10 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border-none text-slate-900" onClick={() => router.push('/')}><ArrowLeft className="h-5 w-5" /></Button>
                   </div>
 
                   <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
                       {profile?.role === 'Super admin' && (
-                        <Button variant="outline" className="h-9 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl hidden sm:flex" onClick={() => handleStartRit(true)} disabled={(isMeldingenType ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}><Gauge className="mr-2 h-4 w-4" /> SIMULATOR</Button>
+                        <Button variant="outline" className="h-9 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl hidden sm:flex" onClick={() => handleStartRit(true)} disabled={!sortedMeldingen.length || isStarting}><Gauge className="mr-2 h-4 w-4" /> SIMULATOR</Button>
                       )}
-                      <Button className="h-9 px-6 font-black uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRit(false)} disabled={(isMeldingenType ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}>{isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} START RIT</Button>
+                      <Button className="h-9 px-6 font-black uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRit(false)} disabled={!sortedMeldingen.length || isStarting}>{isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} START RIT</Button>
                   </div>
 
                   <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN}>
@@ -953,7 +924,7 @@ export default function StartNavigationPage() {
                     {isMeldingenType && !showCompletedToday && sortedMeldingen?.map((m, i) => (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActivePopupMeldingId(m.id)}>
                             <div className={cn("w-7 h-7 bg-red-600 rounded-full border-2 border-white shadow-lg transition-transform cursor-pointer flex items-center justify-center text-white font-black text-[10px]", activePopupMeldingId === m.id ? "scale-125 ring-4 ring-red-500/30" : "hover:scale-110")}>
-                                {i + 1}
+                                <Bell className="h-3 w-3" />
                             </div>
                         </Marker>
                     ))}
@@ -1010,7 +981,6 @@ export default function StartNavigationPage() {
                           <Table className="min-w-[1400px]">
                               <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
                                   <TableRow className="h-8 hover:bg-transparent">
-                                      {!showCompletedToday && <TableHead className="w-12 border-r border-slate-200" />}
                                       {columnVisibility.intakenummer && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-32">Intakenr.</TableHead>}
                                       {columnVisibility.adres && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-64">Adres</TableHead>}
                                       {columnVisibility.omschrijving && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-80">Omschrijving</TableHead>}
@@ -1027,18 +997,10 @@ export default function StartNavigationPage() {
                                           const dist = turf.distance(turf.point([baseLoc.longitude, baseLoc.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                                           return (
                                               <TableRow key={m.id} className={cn("h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
-                                                  {!showCompletedToday && (
-                                                      <TableCell className="p-0 border-r w-12 bg-slate-50/30">
-                                                          <div className="flex flex-col items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-white shadow-sm" onClick={(e) => { e.stopPropagation(); moveItem(idx, 'up'); }}><ArrowUp className="h-3 w-3" /></Button>
-                                                              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-white shadow-sm" onClick={(e) => { e.stopPropagation(); moveItem(idx, 'down'); }}><ArrowDown className="h-3 w-3" /></Button>
-                                                          </div>
-                                                      </TableCell>
-                                                  )}
                                                   {columnVisibility.intakenummer && (
                                                       <TableCell className="font-black text-[10px] border-r group-hover:text-primary transition-colors px-3 py-1">
                                                           <div className="flex items-center gap-2">
-                                                              {!showCompletedToday && <span className="h-5 w-5 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">{idx + 1}</span>}
+                                                              {!showCompletedToday && <span className="h-5 w-5 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0"><Bell className="h-3 w-3" /></span>}
                                                               {m.intakenummer}
                                                           </div>
                                                       </TableCell>
