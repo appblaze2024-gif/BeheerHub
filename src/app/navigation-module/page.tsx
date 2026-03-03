@@ -45,7 +45,7 @@ import {
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -299,7 +299,7 @@ function IntegratedWerkbonOverlay({
                     </TabsList>
                 </div>
                 
-                <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+                <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar">
                         <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 h-full">
@@ -492,33 +492,6 @@ function IntegratedWerkbonOverlay({
                                 </CardContent>
                             </Card>
                         </TabsContent>
-                    </div>
-                    
-                    {/* Media Sidebar */}
-                    <div className="w-full lg:w-[350px] bg-slate-50 lg:border-l shrink-0 flex flex-col min-h-0 overflow-hidden">
-                        <div className="p-5 border-b bg-white flex items-center justify-between">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">BIJLAGEN</h3>
-                            <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold h-5 px-2">PDF/DOC</Badge>
-                        </div>
-                        <ScrollArea className="flex-1 p-5">
-                            <div className="space-y-3">
-                                {uploadedFiles.map((f, i) => (
-                                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 shadow-sm group">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className="bg-blue-100 p-2 rounded-lg"><Paperclip className="h-4 w-4 text-blue-600" /></div>
-                                            <p className="text-[10px] font-black truncate text-slate-900 uppercase">{f.name}</p>
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 rounded-full" asChild><a href={f.url} target="_blank" rel="noreferrer"><Check className="h-4 w-4" /></a></Button>
-                                    </div>
-                                ))}
-                                {(!uploadedFiles || uploadedFiles.length === 0) && (
-                                    <div className="py-12 flex flex-col items-center justify-center text-slate-300">
-                                        <Paperclip className="h-8 w-8 opacity-20 mb-2" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest">Geen bestanden</p>
-                                    </div>
-                                )}
-                            </div>
-                        </ScrollArea>
                     </div>
                 </main>
             </Tabs>
