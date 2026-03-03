@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   ArrowLeft, 
   Play, 
@@ -43,7 +44,8 @@ import {
   Sliders,
   Table as TableIcon,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Layout
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -81,6 +83,26 @@ import { LoadingScreen } from '@/components/loading-screen';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
+
+const DEFAULT_COLUMNS = {
+    intakenummer: true,
+    locatie: true,
+    memo: true,
+    hoofdcategorie: true,
+    subcategorie: true,
+    werkgebied: true,
+    afstand: true
+};
+
+const COLUMN_LABELS: Record<string, string> = {
+    intakenummer: 'Nummer',
+    locatie: 'Locatie (Adres)',
+    memo: 'Omschrijving',
+    hoofdcategorie: 'Hoofdtype',
+    subcategorie: 'Subtype',
+    werkgebied: 'Werkgebied',
+    afstand: 'Afstand'
+};
 
 const routeLayer: Layer = {
   id: 'route',
@@ -536,9 +558,10 @@ export default function StartNavigationPage() {
   const [listHeight, setListHeight] = React.useState(400);
   const [isResizing, setIsResizing] = React.useState(false);
 
-  // New states for toggles
+  // Persistence for UI Settings
   const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
+  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(DEFAULT_COLUMNS);
 
   // Persistent Display Settings
   const navZoomRef = React.useRef(18);
@@ -595,6 +618,9 @@ export default function StartNavigationPage() {
             if (!isNaN(val)) {
                 setListHeight(val);
             }
+        }
+        if (profile.navColumns) {
+            setVisibleColumns(profile.navColumns);
         }
     }
   }, [profile]);
@@ -666,6 +692,14 @@ export default function StartNavigationPage() {
     navOffsetRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val });
     mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: Math.max(0, val), left: 0, right: 0 }, duration: 200 });
+  };
+
+  const toggleColumnVisibility = (colId: string) => {
+    const next = { ...visibleColumns, [colId]: !visibleColumns[colId] };
+    setVisibleColumns(next);
+    if (user && firestore) {
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next });
+    }
   };
 
   React.useEffect(() => {
@@ -1037,37 +1071,67 @@ export default function StartNavigationPage() {
             )}
 
             <div className="h-12 flex items-center justify-between px-6 cursor-pointer shrink-0 border-b bg-slate-50" onClick={() => setIsListExpanded(!isListExpanded)}>
-                <div className="flex items-center gap-3"><TableIcon className="h-4 w-4 text-primary" /><span className="font-black uppercase text-[11px] tracking-tight">Opdrachtenlijst ({filteredMeldingen.length})</span></div>
-                
-                <div className="flex items-center gap-4 flex-1 justify-end">
-                    <div className="flex items-center gap-2 mr-2 pointer-events-auto" onClick={e => e.stopPropagation()}>
-                        <Button 
-                            variant={showTodayCompleted ? "default" : "outline"} 
-                            size="sm" 
-                            className="h-7 text-[9px] font-black uppercase tracking-widest border-slate-200"
-                            onClick={() => setShowTodayCompleted(!showTodayCompleted)}
-                        >
-                            <CheckCircle2 className="h-3 w-3 mr-1.5" /> {showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}
-                        </Button>
-                        <Button 
-                            variant={showAssignmentBubbles ? "default" : "outline"} 
-                            size="sm" 
-                            className="h-7 text-[9px] font-black uppercase tracking-widest border-slate-200"
-                            onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}
-                        >
-                            <User className="h-3 w-3 mr-1.5" /> {showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}
-                        </Button>
-                    </div>
-
-                    <div className="relative w-48 pointer-events-auto" onClick={e => e.stopPropagation()}>
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                <div className="flex items-center gap-4 flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
+                    <div className="relative w-64">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                         <Input 
-                            placeholder="Snelzoeken..." 
-                            className="h-7 pl-7 text-[10px] font-bold rounded-lg border-slate-200 bg-white" 
+                            placeholder="Zoeken in lijst..." 
+                            className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" 
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                         />
                     </div>
+                </div>
+                
+                <div className="flex items-center gap-3 pointer-events-auto" onClick={e => e.stopPropagation()}>
+                    <Button 
+                        variant={showTodayCompleted ? "default" : "outline"} 
+                        size="sm" 
+                        className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200"
+                        onClick={() => setShowTodayCompleted(!showTodayCompleted)}
+                    >
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> {showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}
+                    </Button>
+                    <Button 
+                        variant={showAssignmentBubbles ? "default" : "outline"} 
+                        size="sm" 
+                        className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200"
+                        onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}
+                    >
+                        <User className="h-3.5 w-3.5 mr-1.5" /> {showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}
+                    </Button>
+                    
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"
+                            >
+                                <Layout className="h-3.5 w-3.5" /> Kolommen
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md">
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p>
+                                <div className="space-y-2">
+                                    {Object.keys(DEFAULT_COLUMNS).map(colId => (
+                                        <div key={colId} className="flex items-center space-x-3 p-1">
+                                            <Checkbox 
+                                                id={`col-${colId}`} 
+                                                checked={visibleColumns[colId] ?? true}
+                                                onCheckedChange={() => toggleColumnVisibility(colId)}
+                                                className="rounded-md"
+                                            />
+                                            <Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{COLUMN_LABELS[colId]}</Label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+
+                    <div className="h-8 w-px bg-slate-200 mx-1" />
                     {isListExpanded ? <ChevronDown className="h-5 w-5 text-slate-300" /> : <ChevronUp className="h-5 w-5 text-slate-300" />}
                 </div>
             </div>
@@ -1076,13 +1140,13 @@ export default function StartNavigationPage() {
                 <Table className="min-w-[1200px] border-collapse border-slate-200 text-[10px]">
                     <TableHeader className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-300">
                         <TableRow className="h-8 hover:bg-transparent">
-                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Nr.</TableHead>
-                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Locatie (Straat + Nr)</TableHead>
-                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Memo / Omschrijving</TableHead>
-                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Hoofdtype</TableHead>
-                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>
-                            <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Werkgebied</TableHead>
-                            <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>
+                            {visibleColumns.intakenummer && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Nr.</TableHead>}
+                            {visibleColumns.locatie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Locatie (Straat + Nr)</TableHead>}
+                            {visibleColumns.memo && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Memo / Omschrijving</TableHead>}
+                            {visibleColumns.hoofdcategorie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Hoofdtype</TableHead>}
+                            {visibleColumns.subcategorie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
+                            {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Werkgebied</TableHead>}
+                            {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1092,18 +1156,20 @@ export default function StartNavigationPage() {
                             const isCompleted = m.status === 'Afgerond';
                             return (
                                 <TableRow key={m.id} className={cn("h-8 transition-colors cursor-pointer border-b border-slate-100", isCompleted ? "bg-green-50/50 opacity-60" : "hover:bg-blue-50")} onClick={() => setActiveWerkbonId(m.id)}>
-                                    <TableCell className="font-black text-[10px] border-r border-slate-100 px-2 py-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className={cn("h-1.5 w-1.5 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
-                                            {m.intakenummer}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[200px]">{m.straatnaam} {m.huisnummer}</TableCell>
-                                    <TableCell className="font-medium italic text-slate-500 border-r border-slate-100 px-2 py-1 truncate max-w-[350px]">"{m.extra_informatie || '-'}"</TableCell>
-                                    <TableCell className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 py-1">{m.hoofdcategorie}</TableCell>
-                                    <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[150px]">{m.subcategorie}</TableCell>
-                                    <TableCell className="font-black uppercase text-primary border-r border-slate-100 px-2 py-1">{m.werkgebied || m.wijk || '-'}</TableCell>
-                                    <TableCell className="text-right font-black text-primary px-2 py-1">{dist}</TableCell>
+                                    {visibleColumns.intakenummer && (
+                                        <TableCell className="font-black text-[10px] border-r border-slate-100 px-2 py-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className={cn("h-1.5 w-1.5 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
+                                                {m.intakenummer}
+                                            </div>
+                                        </TableCell>
+                                    )}
+                                    {visibleColumns.locatie && <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[200px]">{m.straatnaam} {m.huisnummer}</TableCell>}
+                                    {visibleColumns.memo && <TableCell className="font-medium italic text-slate-500 border-r border-slate-100 px-2 py-1 truncate max-w-[350px]">"{m.extra_informatie || '-'}"</TableCell>}
+                                    {visibleColumns.hoofdcategorie && <TableCell className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 py-1">{m.hoofdcategorie}</TableCell>}
+                                    {visibleColumns.subcategorie && <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[150px]">{m.subcategorie}</TableCell>}
+                                    {visibleColumns.werkgebied && <TableCell className="font-black uppercase text-primary border-r border-slate-100 px-2 py-1">{m.werkgebied || m.wijk || '-'}</TableCell>}
+                                    {visibleColumns.afstand && <TableCell className="text-right font-black text-primary px-2 py-1">{dist}</TableCell>}
                                 </TableRow>
                             );
                         })}
