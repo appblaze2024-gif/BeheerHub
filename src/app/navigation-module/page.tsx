@@ -574,46 +574,59 @@ export default function StartNavigationPage() {
   // Load saved settings from profile on mount
   React.useEffect(() => {
     if (profile) {
-        if (profile.navZoom) {
-            setNavZoomState(profile.navZoom);
-            navZoomRef.current = profile.navZoom;
+        if (profile.navZoom !== undefined && profile.navZoom !== null) {
+            const val = Number(profile.navZoom);
+            if (!isNaN(val)) {
+                setNavZoomState(val);
+                navZoomRef.current = val;
+            }
         }
-        if (profile.navPitch) {
-            setNavPitchState(profile.navPitch);
-            navPitchRef.current = profile.navPitch;
+        if (profile.navPitch !== undefined && profile.navPitch !== null) {
+            const val = Number(profile.navPitch);
+            if (!isNaN(val)) {
+                setNavPitchState(val);
+                navPitchRef.current = val;
+            }
         }
-        if (profile.navOffset !== undefined) {
-            setNavOffsetState(profile.navOffset);
-            navOffsetRef.current = profile.navOffset;
+        if (profile.navOffset !== undefined && profile.navOffset !== null) {
+            const val = Number(profile.navOffset);
+            if (!isNaN(val)) {
+                const safeVal = Math.max(0, val);
+                setNavOffsetState(safeVal);
+                navOffsetRef.current = safeVal;
+            }
         }
     }
   }, [profile]);
 
   const updateNavZoom = (newZoom: number) => {
-    setNavZoomState(newZoom);
-    navZoomRef.current = newZoom;
+    const safeZoom = Number(newZoom) || 18;
+    setNavZoomState(safeZoom);
+    navZoomRef.current = safeZoom;
     if (user && firestore) {
-      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: newZoom });
+      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: safeZoom });
     }
-    mapRef.current?.getMap().easeTo({ zoom: newZoom, duration: 200 });
+    mapRef.current?.getMap().easeTo({ zoom: safeZoom, duration: 200 });
   };
 
   const updateNavPitch = (newPitch: number) => {
-    setNavPitchState(newPitch);
-    navPitchRef.current = newPitch;
+    const safePitch = Number(newPitch) || 60;
+    setNavPitchState(safePitch);
+    navPitchRef.current = safePitch;
     if (user && firestore) {
-      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: newPitch });
+      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: safePitch });
     }
-    mapRef.current?.getMap().easeTo({ pitch: newPitch, duration: 200 });
+    mapRef.current?.getMap().easeTo({ pitch: safePitch, duration: 200 });
   };
 
   const updateNavOffset = (newOffset: number) => {
-    setNavOffsetState(newOffset);
-    navOffsetRef.current = newOffset;
+    const safeOffset = Math.max(0, Number(newOffset) || 0);
+    setNavOffsetState(safeOffset);
+    navOffsetRef.current = safeOffset;
     if (user && firestore) {
-      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: newOffset });
+      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: safeOffset });
     }
-    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: newOffset, left: 0, right: 0 }, duration: 200 });
+    mapRef.current?.getMap().easeTo({ padding: { top: 0, bottom: safeOffset, left: 0, right: 0 }, duration: 200 });
   };
 
   React.useEffect(() => {
@@ -641,10 +654,10 @@ export default function StartNavigationPage() {
                     mapRef.current.getMap().easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
-                        zoom: navZoomRef.current,
-                        pitch: navPitchRef.current,
+                        zoom: Number(navZoomRef.current) || 18,
+                        pitch: Number(navPitchRef.current) || 60,
                         duration: 1000,
-                        padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 }
+                        padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
                     });
                 }
             }
@@ -753,11 +766,11 @@ export default function StartNavigationPage() {
             
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
-                zoom: navZoomRef.current, 
-                pitch: navPitchRef.current, 
+                zoom: Number(navZoomRef.current) || 18, 
+                pitch: Number(navPitchRef.current) || 60, 
                 bearing: heading, 
                 duration: 2000,
-                padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 }
+                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
             });
             fetchRoute();
             toast({ title: "Navigatie gestart" });
@@ -768,11 +781,11 @@ export default function StartNavigationPage() {
             toast({ title: "GPS signaal zwak", description: "Navigatie start vanaf basislocatie Rijsenhout." });
             mapRef.current?.getMap().flyTo({ 
                 center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
-                zoom: navZoomRef.current, 
-                pitch: navPitchRef.current, 
+                zoom: Number(navZoomRef.current) || 18, 
+                pitch: Number(navPitchRef.current) || 60, 
                 bearing: 0, 
                 duration: 2000,
-                padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 }
+                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
             });
             fetchRoute();
         }, { enableHighAccuracy: true, timeout: 5000 });
@@ -783,10 +796,10 @@ export default function StartNavigationPage() {
         const first = currentRouteGeometry?.coordinates[0];
         if (first) mapRef.current?.getMap().flyTo({ 
             center: [first[0], first[1]], 
-            zoom: navZoomRef.current, 
-            pitch: navPitchRef.current, 
+            zoom: Number(navZoomRef.current) || 18, 
+            pitch: Number(navPitchRef.current) || 60, 
             duration: 2000, 
-            padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 } 
+            padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 } 
         });
         setTimeout(startSimulation, 2000);
     }
@@ -829,9 +842,9 @@ export default function StartNavigationPage() {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
-                pitch: navPitchRef.current,
-                zoom: navZoomRef.current,
-                padding: { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 }
+                pitch: Number(navPitchRef.current) || 60,
+                zoom: Number(navZoomRef.current) || 18,
+                padding: { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -898,13 +911,14 @@ export default function StartNavigationPage() {
             <div className="flex items-center gap-3 pointer-events-auto">
                 <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border border-slate-100" onClick={() => {
                     const target = userLocation || SIMULATION_START_LOCATION;
+                    const isNavigating = navigationState === 'navigating';
                     mapRef.current?.getMap().flyTo({ 
                         center: [target.longitude, target.latitude], 
-                        zoom: navigationState === 'navigating' ? navZoomRef.current : 18, 
-                        pitch: navigationState === 'navigating' ? navPitchRef.current : 0, 
+                        zoom: isNavigating ? (Number(navZoomRef.current) || 18) : 18, 
+                        pitch: isNavigating ? (Number(navPitchRef.current) || 60) : 0, 
                         duration: 1500,
-                        padding: navigationState === 'navigating' 
-                            ? { top: 0, bottom: navOffsetRef.current, left: 0, right: 0 } 
+                        padding: isNavigating 
+                            ? { top: 0, bottom: Number(navOffsetRef.current) || 0, left: 0, right: 0 } 
                             : { top: 0, bottom: 0, left: 0, right: 0 }
                     });
                 }} disabled={isLocating}>
@@ -938,7 +952,7 @@ export default function StartNavigationPage() {
                     variant="secondary" 
                     size="icon" 
                     className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100"
-                    onClick={() => updateNavZoom(Math.min(navZoom + 0.5, 22))}
+                    onClick={() => updateNavZoom(Math.min(Number(navZoom) + 0.5, 22))}
                 >
                     <Plus className="h-6 w-6 text-slate-600" />
                 </Button>
@@ -946,7 +960,7 @@ export default function StartNavigationPage() {
                     variant="secondary" 
                     size="icon" 
                     className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100"
-                    onClick={() => updateNavZoom(Math.max(navZoom - 0.5, 10))}
+                    onClick={() => updateNavZoom(Math.max(Number(navZoom) - 0.5, 10))}
                 >
                     <Minus className="h-6 w-6 text-slate-600" />
                 </Button>
@@ -972,10 +986,10 @@ export default function StartNavigationPage() {
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte (Auto Positie)</Label>
-                                        <span className="text-[10px] font-bold text-primary">{navOffset}px</span>
+                                        <span className="text-[10px] font-bold text-primary">{Math.round(Number(navOffset) || 0)}px</span>
                                     </div>
                                     <Slider 
-                                        value={[navOffset]} 
+                                        value={[Number(navOffset) || 0]} 
                                         min={0} 
                                         max={600} 
                                         step={10} 
@@ -987,10 +1001,10 @@ export default function StartNavigationPage() {
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <Label className="text-[10px] font-black uppercase text-slate-400">Kanteling (Perspectief)</Label>
-                                        <span className="text-[10px] font-bold text-primary">{navPitch}°</span>
+                                        <span className="text-[10px] font-bold text-primary">{Math.round(Number(navPitch) || 0)}°</span>
                                     </div>
                                     <Slider 
-                                        value={[navPitch]} 
+                                        value={[Number(navPitch) || 0]} 
                                         min={0} 
                                         max={85} 
                                         step={1} 
