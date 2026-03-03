@@ -1014,19 +1014,19 @@ export default function StartNavigationPage() {
 
               {isMeldingenType && (
                   <div className="flex-1 overflow-hidden flex flex-col bg-white border-t-4 border-slate-900 animate-in slide-in-from-bottom duration-500">
-                      <div className="p-3 bg-slate-50 border-b flex items-center justify-between shrink-0">
-                          <div className="flex items-center gap-3 flex-1 max-w-sm">
+                      <div className="p-3 bg-slate-50 border-b flex items-center justify-between shrink-0 gap-4">
+                          <div className="flex items-center gap-3 flex-1 max-w-[200px] md:max-w-xs">
                               <div className="relative w-full">
                                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                                   <Input 
-                                      placeholder="Zoek op nummer of adres..." 
+                                      placeholder="Zoek bon of adres..." 
                                       className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white shadow-sm"
                                       value={searchQuery}
                                       onChange={(e) => setSearchQuery(e.target.value)}
                                   />
                               </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
                               {isPrivileged && (
                                 <Button 
                                   variant={showAssignmentInfo ? "default" : "outline"} 
@@ -1078,10 +1078,10 @@ export default function StartNavigationPage() {
                         </div>
                       )}
 
-                      <ScrollArea className="flex-1">
+                      <div className="flex-1 overflow-auto bg-white custom-scrollbar">
                           <Table className="min-w-[1400px]">
                               <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
-                                  <TableRow className="h-8 hover:bg-transparent">
+                                  <TableRow className="h-10 hover:bg-transparent">
                                       {columnVisibility.intakenummer && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-32">Intakenr.</TableHead>}
                                       {columnVisibility.adres && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-64">Adres</TableHead>}
                                       {columnVisibility.omschrijving && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-80">Omschrijving</TableHead>}
@@ -1102,7 +1102,7 @@ export default function StartNavigationPage() {
                                           return (
                                               <TableRow key={m.id} className={cn("h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
                                                   {columnVisibility.intakenummer && (
-                                                      <TableCell className="font-black text-[10px] border-r group-hover:text-primary transition-colors px-3 py-1">
+                                                      <TableCell className="font-black text-[10px] border-r group-hover:text-primary transition-colors px-3 py-1 whitespace-nowrap">
                                                           <div className="flex items-center gap-2">
                                                               {!showCompletedToday && (
                                                                   <span className={cn(
@@ -1118,37 +1118,37 @@ export default function StartNavigationPage() {
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.adres && (
-                                                      <TableCell className="text-[10px] font-bold border-r px-3 py-1">
+                                                      <TableCell className="text-[10px] font-bold border-r px-3 py-1 whitespace-nowrap">
                                                           <div className="flex flex-col">
-                                                              <span className="truncate max-w-[200px]">{m.straatnaam} {m.huisnummer}</span>
+                                                              <span>{m.straatnaam} {m.huisnummer}</span>
                                                               <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">{m.plaats}</span>
                                                           </div>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.omschrijving && (
-                                                      <TableCell className="text-[10px] font-medium border-r px-3 py-1 truncate max-w-[250px] text-slate-600 italic">
-                                                          "{m.extra_informatie || 'Geen omschrijving'}"
+                                                      <TableCell className="text-[10px] font-medium border-r px-3 py-1 text-slate-600 italic whitespace-nowrap">
+                                                          <span className="truncate block max-w-[250px] md:max-w-[400px]">"{m.extra_informatie || 'Geen omschrijving'}"</span>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.hoofdtype && (
-                                                      <TableCell className="text-[9px] font-black border-r text-slate-500 uppercase tracking-tight px-3 py-1">
+                                                      <TableCell className="text-[9px] font-black border-r text-slate-500 uppercase tracking-tight px-3 py-1 whitespace-nowrap">
                                                           {m.hoofdcategorie}
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.subcategorie && (
-                                                      <TableCell className="text-[9px] font-black border-r text-slate-900 uppercase tracking-tight px-3 py-1">
+                                                      <TableCell className="text-[9px] font-black border-r text-slate-900 uppercase tracking-tight px-3 py-1 whitespace-nowrap">
                                                           {m.subcategorie}
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.werkgebied && (
-                                                      <TableCell className="text-[9px] font-black border-r px-3 py-1">
+                                                      <TableCell className="text-[9px] font-black border-r px-3 py-1 whitespace-nowrap">
                                                           <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200">
                                                               {m.werkgebied || m.wijk || '-'}
                                                           </Badge>
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.toegewezen && (
-                                                      <TableCell className="text-[9px] font-black border-r px-3 py-1">
+                                                      <TableCell className="text-[9px] font-black border-r px-3 py-1 whitespace-nowrap">
                                                           <div className="flex items-center gap-2">
                                                               <User className="h-3 w-3 text-slate-400" />
                                                               <span className="truncate max-w-[120px] text-slate-700">{m.behandelaar || '-'}</span>
@@ -1156,7 +1156,7 @@ export default function StartNavigationPage() {
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.afstand && (
-                                                      <TableCell className="px-3 py-1">
+                                                      <TableCell className="px-3 py-1 whitespace-nowrap">
                                                           <span className="text-[10px] font-black tabular-nums">{dist} km</span>
                                                       </TableCell>
                                                   )}
@@ -1168,7 +1168,7 @@ export default function StartNavigationPage() {
                                   )}
                               </TableBody>
                           </Table>
-                      </ScrollArea>
+                      </div>
                   </div>
               )}
           </div>
