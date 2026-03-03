@@ -739,7 +739,7 @@ export default function StartNavigationPage() {
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: { top: 150, bottom: 550, left: 150, right: 150 }, 
+                        padding: { top: 80, bottom: 350, left: 80, right: 80 }, 
                         duration: 1500 
                     });
                 }
@@ -814,8 +814,11 @@ export default function StartNavigationPage() {
         }
 
         const curr = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
-        const ahead = turf.along(line, simStateRef.current.distanceTravelled + 2, { units: 'meters' });
         const [lng, lat] = curr.geometry.coordinates;
+        
+        // Use coordinates ahead to get heading
+        const aheadDist = Math.min(simStateRef.current.distanceTravelled + 2, totalDist);
+        const ahead = turf.along(line, aheadDist, { units: 'meters' });
         const head = (turf.bearing(curr, ahead) + 360) % 360;
         lastHeadingRef.current = head;
         
