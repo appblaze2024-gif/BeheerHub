@@ -130,7 +130,7 @@ const useInternalIsMobile = (width: number = 768) => {
     const check = () => setIsMobile(window.innerWidth < width);
     check();
     window.addEventListener('resize', check);
-    return () => window.removeObserver('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, [width]);
   return isMobile;
 };
@@ -1082,14 +1082,14 @@ export default function StartNavigationPage() {
                           <Table className="min-w-[1400px]">
                               <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
                                   <TableRow className="h-10 hover:bg-transparent">
-                                      {columnVisibility.intakenummer && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-32">Intakenr.</TableHead>}
+                                      {columnVisibility.intakenummer && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-32 sticky left-0 bg-slate-100 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Intakenr.</TableHead>}
                                       {columnVisibility.adres && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-64">Adres</TableHead>}
                                       {columnVisibility.omschrijving && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-80">Omschrijving</TableHead>}
                                       {columnVisibility.hoofdtype && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Hoofdtype</TableHead>}
                                       {columnVisibility.subcategorie && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-48">Subtype</TableHead>}
                                       {columnVisibility.werkgebied && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Werkgebied</TableHead>}
                                       {columnVisibility.toegewezen && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-40">Toegewezen</TableHead>}
-                                      {columnVisibility.afstand && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3 w-24">Afstand</TableHead>}
+                                      {columnVisibility.afstand && <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3 w-24 sticky right-0 bg-slate-100 z-20 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Afstand</TableHead>}
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1102,7 +1102,7 @@ export default function StartNavigationPage() {
                                           return (
                                               <TableRow key={m.id} className={cn("h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
                                                   {columnVisibility.intakenummer && (
-                                                      <TableCell className="font-black text-[10px] border-r group-hover:text-primary transition-colors px-3 py-1 whitespace-nowrap">
+                                                      <TableCell className="font-black text-[10px] border-r group-hover:text-primary transition-colors px-3 py-1 whitespace-nowrap sticky left-0 bg-white group-hover:bg-blue-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                           <div className="flex items-center gap-2">
                                                               {!showCompletedToday && (
                                                                   <span className={cn(
@@ -1156,7 +1156,7 @@ export default function StartNavigationPage() {
                                                       </TableCell>
                                                   )}
                                                   {columnVisibility.afstand && (
-                                                      <TableCell className="px-3 py-1 whitespace-nowrap">
+                                                      <TableCell className="px-3 py-1 whitespace-nowrap sticky right-0 bg-white group-hover:bg-blue-50 z-10 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                           <span className="text-[10px] font-black tabular-nums">{dist} km</span>
                                                       </TableCell>
                                                   )}
