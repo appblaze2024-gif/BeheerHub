@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -513,6 +512,7 @@ function IntegratedWerkbonOverlay({
 
 export default function StartNavigationPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const router = useRouter();
   const { profile } = useProfile();
   const { toast } = useToast();
@@ -571,48 +571,48 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
-  // Load saved settings on mount
+  // Load saved settings from profile on mount
   React.useEffect(() => {
-    const savedZoom = localStorage.getItem('beheerhub_nav_zoom');
-    if (savedZoom) {
-        const parsed = parseFloat(savedZoom);
-        setNavZoomState(parsed);
-        navZoomRef.current = parsed;
+    if (profile) {
+        if (profile.navZoom) {
+            setNavZoomState(profile.navZoom);
+            navZoomRef.current = profile.navZoom;
+        }
+        if (profile.navPitch) {
+            setNavPitchState(profile.navPitch);
+            navPitchRef.current = profile.navPitch;
+        }
+        if (profile.navOffset) {
+            setNavOffsetState(profile.navOffset);
+            navOffsetRef.current = profile.navOffset;
+        }
     }
-    
-    const savedPitch = localStorage.getItem('beheerhub_nav_pitch');
-    if (savedPitch) {
-        const parsed = parseFloat(savedPitch);
-        setNavPitchState(parsed);
-        navPitchRef.current = parsed;
-    }
-    
-    const savedOffset = localStorage.getItem('beheerhub_nav_offset');
-    if (savedOffset) {
-        const parsed = parseFloat(savedOffset);
-        setNavOffsetState(parsed);
-        navOffsetRef.current = parsed;
-    }
-  }, []);
+  }, [profile]);
 
   const updateNavZoom = (newZoom: number) => {
     setNavZoomState(newZoom);
     navZoomRef.current = newZoom;
-    localStorage.setItem('beheerhub_nav_zoom', newZoom.toString());
+    if (user && firestore) {
+      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: newZoom });
+    }
     mapRef.current?.getMap().easeTo({ zoom: newZoom, duration: 200 });
   };
 
   const updateNavPitch = (newPitch: number) => {
     setNavPitchState(newPitch);
     navPitchRef.current = newPitch;
-    localStorage.setItem('beheerhub_nav_pitch', newPitch.toString());
+    if (user && firestore) {
+      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: newPitch });
+    }
     mapRef.current?.getMap().easeTo({ pitch: newPitch, duration: 200 });
   };
 
   const updateNavOffset = (newOffset: number) => {
     setNavOffsetState(newOffset);
     navOffsetRef.current = newOffset;
-    localStorage.setItem('beheerhub_nav_offset', newOffset.toString());
+    if (user && firestore) {
+      updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: newOffset });
+    }
     mapRef.current?.getMap().easeTo({ padding: { bottom: newOffset }, duration: 200 });
   };
 

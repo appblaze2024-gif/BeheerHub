@@ -29,6 +29,9 @@ export type UserProfile = {
   schouwenMapStyle?: string;
   lastSelectedProjectId?: string | null;
   nfcTagId?: string;
+  navZoom?: number;
+  navPitch?: number;
+  navOffset?: number;
 };
 
 export interface Message {
