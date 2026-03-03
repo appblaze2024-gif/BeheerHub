@@ -85,7 +85,7 @@ import { MapboxView } from '@/components/mapbox-view';
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
-const DEFAULT_COLUMNS = {
+const ROUTE_COLUMNS = {
     intakenummer: true,
     locatie: true,
     memo: true,
@@ -95,7 +95,7 @@ const DEFAULT_COLUMNS = {
     afstand: true
 };
 
-const COLUMN_LABELS: Record<string, string> = {
+const ROUTE_COLUMN_LABELS: Record<string, string> = {
     intakenummer: 'Nummer',
     locatie: 'Locatie',
     memo: 'Omschrijving',
@@ -577,7 +577,7 @@ export default function StartNavigationPage() {
 
   const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
-  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(DEFAULT_COLUMNS);
+  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(ROUTE_COLUMNS);
 
   const navZoomRef = React.useRef(18);
   const [navZoom, setNavZoomState] = React.useState(18);
@@ -596,6 +596,7 @@ export default function StartNavigationPage() {
   const mapRef = React.useRef<MapRef>(null);
   const simAnimationRef = React.useRef<number | null>(null);
   const simStateRef = React.useRef({ distanceTravelled: 0, currentSpeedMs: 0 });
+  const lastRouteCalculationLocationRef = React.useRef<{latitude: number, longitude: number} | null>(null);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -723,6 +724,18 @@ export default function StartNavigationPage() {
         return;
     }
     const startPos = userLocation || SIMULATION_START_LOCATION;
+    
+    // Alleen opnieuw berekenen als we verplaatst zijn of opdrachten zijn veranderd
+    if (!zoomToFit && lastRouteCalculationLocationRef.current) {
+        const dist = turf.distance(
+            turf.point([startPos.longitude, startPos.latitude]),
+            turf.point([lastRouteCalculationLocationRef.current.longitude, lastRouteCalculationLocationRef.current.latitude]),
+            { units: 'meters' }
+        );
+        if (dist < 50) return; 
+    }
+
+    lastRouteCalculationLocationRef.current = startPos;
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     
@@ -755,6 +768,7 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, navigationState, fetchRoute, rawMeldingen]);
 
+  // HOOGFREQUENTE GPS UPDATES (ELKE SECONDE)
   React.useEffect(() => {
     if (!navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
@@ -807,6 +821,24 @@ export default function StartNavigationPage() {
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, smoothLocation, navZoom, navPitch, navOffset]);
+
+  // HEARTBEAT TIMER VOOR SECONDE UPDATES OP IPAD
+  React.useEffect(() => {
+    if (navigationState !== 'navigating' || isSimulationMode) return;
+
+    const interval = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+          setUserLocation(loc);
+        },
+        (err) => {},
+        { enableHighAccuracy: true }
+      );
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [navigationState, isSimulationMode]);
 
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
@@ -1114,10 +1146,10 @@ export default function StartNavigationPage() {
                             <div className="space-y-4">
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p>
                                 <div className="space-y-2">
-                                    {Object.keys(DEFAULT_COLUMNS).map(colId => (
+                                    {Object.keys(ROUTE_COLUMNS).map(colId => (
                                         <div key={colId} className="flex items-center space-x-3 p-1">
                                             <Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" />
-                                            <Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{COLUMN_LABELS[colId]}</Label>
+                                            <Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{ROUTE_COLUMN_LABELS[colId]}</Label>
                                         </div>
                                     ))}
                                 </div>
