@@ -40,7 +40,8 @@ import {
   Minus,
   Settings,
   Sliders,
-  Table as TableIcon
+  Table as TableIcon,
+  History
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -927,7 +928,27 @@ export default function StartNavigationPage() {
         )}>
             <div className="h-12 flex items-center justify-between px-6 cursor-pointer shrink-0 border-b bg-slate-50" onClick={() => setIsListExpanded(!isListExpanded)}>
                 <div className="flex items-center gap-3"><TableIcon className="h-4 w-4 text-primary" /><span className="font-black uppercase text-[11px] tracking-tight">Opdrachtenlijst ({filteredMeldingen.length})</span></div>
-                <div className="flex items-center gap-4">
+                
+                <div className="flex items-center gap-4 flex-1 justify-end">
+                    <div className="flex items-center gap-2 mr-2 pointer-events-auto" onClick={e => e.stopPropagation()}>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-[9px] font-black uppercase tracking-widest border-slate-200"
+                            onClick={() => router.push('/issues/archive')}
+                        >
+                            <History className="h-3 w-3 mr-1.5" /> Archief
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-[9px] font-black uppercase tracking-widest border-slate-200"
+                            onClick={() => router.push('/issues/portal')}
+                        >
+                            <LayoutGrid className="h-3 w-3 mr-1.5" /> Portaal
+                        </Button>
+                    </div>
+
                     <div className="relative w-48 pointer-events-auto" onClick={e => e.stopPropagation()}>
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
                         <Input 
