@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, Popup, type MapRef } from 'react-map-gl';
-import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc } from '@/firebase';
 import { collection, query, where, doc, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -641,6 +641,7 @@ export default function StartNavigationPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
   const [showAssignmentInfo, setShowAssignmentInfo] = React.useState(false);
   const [isLocating, setIsLocating] = React.useState(false);
+  const [activeWerkbonId, setActiveWerkbonId] = React.useState<string | null>(null);
 
   const mapRef = React.useRef<MapRef>(null);
 
