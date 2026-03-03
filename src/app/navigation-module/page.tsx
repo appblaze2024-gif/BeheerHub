@@ -51,7 +51,6 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { MapboxView } from '@/components/mapbox-view';
 import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
@@ -987,7 +986,7 @@ export default function StartNavigationPage() {
                 mapStyle={mapStyle} 
                 mapboxAccessToken={MAPBOX_TOKEN}
                 onMoveStart={(e) => {
-                    if (e.viewState.source === 'touch' || e.viewState.source === 'mouse') {
+                    if (e.originalEvent) {
                         setIsManualMode(true);
                     }
                 }}
@@ -1065,11 +1064,23 @@ export default function StartNavigationPage() {
                     <Button 
                         variant="default" 
                         size="icon" 
-                        className="h-12 w-12 rounded-full shadow-2xl bg-primary text-white mt-2 animate-bounce" 
-                        onClick={() => setIsManualMode(false)}
+                        className="h-14 w-14 rounded-full shadow-2xl bg-primary text-white mt-2 animate-bounce border-4 border-white flex items-center justify-center pointer-events-auto" 
+                        onClick={() => {
+                            setIsManualMode(false);
+                            if (mapRef.current && smoothLocation) {
+                                const map = mapRef.current.getMap();
+                                map.jumpTo({
+                                    center: [smoothLocation.longitude, smoothLocation.latitude],
+                                    zoom: Number(navZoomRef.current) || 18,
+                                    pitch: Number(navPitchRef.current) || 60,
+                                    bearing: smoothLocation.heading || 0,
+                                    padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
+                                });
+                            }
+                        }}
                         title="Hervat navigatie (Zoom & Graden)"
                     >
-                        <Navigation className="h-6 w-6" />
+                        <Navigation className="h-7 w-7 fill-current" />
                     </Button>
                 )}
 
@@ -1217,8 +1228,8 @@ export default function StartNavigationPage() {
                             {visibleColumns.intakenummer && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Nr.</TableHead>}
                             {visibleColumns.locatie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Locatie (Straat + Nr)</TableHead>}
                             {visibleColumns.memo && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Memo / Omschrijving</TableHead>}
-                            {visibleColumns.hoofdcategorie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Hoofdtype</TableHead>}
-                            {visibleColumns.subcategorie && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
+                            {visibleColumns.hoofdcategorie && <TableHead className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 h-8">Hoofdtype</TableHead>}
+                            {visibleColumns.subcategorie && <TableHead className="font-black uppercase text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
                             {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-200 px-2 h-8">Werkgebied</TableHead>}
                             {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
                         </TableRow>
