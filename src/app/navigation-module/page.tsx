@@ -576,9 +576,9 @@ export default function StartNavigationPage() {
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
                         zoom: 19,
-                        pitch: 75,
+                        pitch: 65, // Less sharp tilt
                         duration: 1000,
-                        padding: { bottom: 300 } // Offset to keep marker in lower third
+                        padding: { bottom: 400 } // Icon further down
                     });
                 }
             }
@@ -688,10 +688,10 @@ export default function StartNavigationPage() {
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: 19, 
-                pitch: 75, 
+                pitch: 65, 
                 bearing: heading, 
                 duration: 2000,
-                padding: { bottom: 300 }
+                padding: { bottom: 400 }
             });
             fetchRoute();
             toast({ title: "Navigatie gestart" });
@@ -703,9 +703,9 @@ export default function StartNavigationPage() {
             mapRef.current?.getMap().flyTo({ 
                 center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
                 zoom: 19, 
-                pitch: 75, 
+                pitch: 65, 
                 duration: 2000,
-                padding: { bottom: 300 }
+                padding: { bottom: 400 }
             });
             fetchRoute();
         }, { enableHighAccuracy: true, timeout: 5000 });
@@ -714,7 +714,7 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         const first = currentRouteGeometry?.coordinates[0];
-        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 19, pitch: 75, duration: 2000, padding: { bottom: 300 } });
+        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 19, pitch: 65, duration: 2000, padding: { bottom: 400 } });
         setTimeout(startSimulation, 2000);
     }
   };
@@ -756,9 +756,9 @@ export default function StartNavigationPage() {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
-                pitch: 75,
+                pitch: 65,
                 zoom: 19,
-                padding: { bottom: 300 }
+                padding: { bottom: 400 }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -788,8 +788,8 @@ export default function StartNavigationPage() {
                         rotation={smoothLocation.heading}
                         rotationAlignment="map"
                     >
-                        <div className="relative flex items-center justify-center w-16 h-16 transition-all duration-300">
-                            <svg viewBox="0 0 100 100" className="h-12 w-12 text-primary drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                        <div className="relative flex items-center justify-center w-20 h-20 transition-all duration-300">
+                            <svg viewBox="0 0 100 100" className="h-14 w-14 text-primary drop-shadow-[0_15px_15px_rgba(0,0,0,0.6)]">
                                 <path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" />
                             </svg>
                         </div>
@@ -830,9 +830,9 @@ export default function StartNavigationPage() {
                     mapRef.current?.getMap().flyTo({ 
                         center: [target.longitude, target.latitude], 
                         zoom: 19, 
-                        pitch: navigationState === 'navigating' ? 75 : 0, 
+                        pitch: navigationState === 'navigating' ? 65 : 0, 
                         duration: 1500,
-                        padding: { bottom: navigationState === 'navigating' ? 300 : 0 }
+                        padding: { bottom: navigationState === 'navigating' ? 400 : 0 }
                     });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
