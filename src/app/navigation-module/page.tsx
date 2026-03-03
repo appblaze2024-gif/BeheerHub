@@ -949,7 +949,7 @@ export default function StartNavigationPage() {
                                           const baseLoc = userLocation || currentActiveSortBase;
                                           const dist = turf.distance(turf.point([baseLoc.longitude, baseLoc.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                                           return (
-                                              <TableRow key={m.id} className={cn("h-10 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
+                                              <TableRow key={m.id} className={cn("h-14 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group", activePopupMeldingId === m.id && "bg-blue-50/80")} onClick={() => { setActivePopupMeldingId(m.id); if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 }); }}>
                                                   <TableCell className="font-black text-[10px] border-r group-hover:text-primary transition-colors px-3 py-1">{m.intakenummer}</TableCell>
                                                   <TableCell className="text-[10px] font-bold border-r px-3 py-1">
                                                       <div className="flex flex-col">
