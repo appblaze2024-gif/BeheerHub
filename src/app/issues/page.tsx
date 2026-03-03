@@ -288,6 +288,9 @@ export default function IssuesPage() {
     setIsSubmitting(true);
     
     const mId = selectedMelding.id;
+    const mLat = selectedMelding.latitude;
+    const mLng = selectedMelding.longitude;
+
     let minutesWorked = selectedMelding.gewerkteMinuten || 0;
     if (selectedMelding.workStartedAt) {
       minutesWorked += Math.round((Date.now() - new Date(selectedMelding.workStartedAt).getTime()) / (1000 * 60));
@@ -306,8 +309,8 @@ export default function IssuesPage() {
         });
         toast({ title: 'Werkbon afgerond' });
         setSelectedMeldingId(null);
-        // Redirect directly to navigation module with resume flag and exclude the completed ID
-        router.push(`/navigation-module?type=meldingen&resume=true&exclude=${mId}`);
+        // Redirect directly to navigation module with resume flag, exclude the completed ID, and pass the last location
+        router.push(`/navigation-module?type=meldingen&resume=true&exclude=${mId}&lastLat=${mLat}&lastLng=${mLng}`);
     } catch (error) { 
         toast({ variant: "destructive", title: 'Fout bij afronden' }); 
     } finally { 

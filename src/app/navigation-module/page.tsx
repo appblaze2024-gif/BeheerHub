@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -735,6 +734,10 @@ export default function StartNavigationPage() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
 
+  const excludeId = searchParams.get('exclude');
+  const lastLat = searchParams.get('lastLat');
+  const lastLng = searchParams.get('lastLng');
+
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({
     intakenummer: true,
@@ -823,9 +826,15 @@ export default function StartNavigationPage() {
     if (routeType !== 'meldingen' || !rawMeldingen || rawMeldingen.length === 0) return [];
     
     let pool = [...rawMeldingen];
+    
+    // EXCLUDE the one we just finished to ensure it doesn't reappear before DB update syncs
+    if (excludeId) {
+        pool = pool.filter(m => m.id !== excludeId);
+    }
+
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
-        pool = rawMeldingen.filter(m => m.behandelaar === userName);
+        pool = pool.filter(m => m.behandelaar === userName);
     }
 
     // Apply search filter
@@ -841,7 +850,9 @@ export default function StartNavigationPage() {
     if (pool.length === 0) return [];
 
     const result: Melding[] = [];
-    const baseLoc = userLocation || currentActiveSortBase;
+    
+    // Determine starting position: current GPS > last completed task location > fallback simulation location
+    const baseLoc = userLocation || (lastLat && lastLng ? { latitude: parseFloat(lastLat), longitude: parseFloat(lastLng) } : currentActiveSortBase);
     let currentPos = [baseLoc.longitude, baseLoc.latitude];
 
     let tempPool = [...pool];
@@ -858,11 +869,11 @@ export default function StartNavigationPage() {
     }
 
     return result;
-  }, [rawMeldingen, routeType, isPrivileged, profile, userLocation, currentActiveSortBase, debouncedSearchQuery]);
+  }, [rawMeldingen, routeType, isPrivileged, profile, userLocation, currentActiveSortBase, debouncedSearchQuery, excludeId, lastLat, lastLng]);
 
   const handleStartRit = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
-    let startLoc = userLocation || SIMULATION_START_LOCATION;
+    let startLoc = userLocation || (lastLat && lastLng ? { latitude: parseFloat(lastLat), longitude: parseFloat(lastLng) } : SIMULATION_START_LOCATION);
     setIsStarting(true);
 
     if (routeType === 'meldingen') {
@@ -877,7 +888,7 @@ export default function StartNavigationPage() {
 
     setNavigationState('navigating');
     setIsStarting(false);
-  }, [userLocation, routeType, sortedMeldingen, toast]);
+  }, [userLocation, routeType, sortedMeldingen, toast, lastLat, lastLng]);
 
   const handleLocateUser = () => {
     if (!navigator.geolocation) {
@@ -907,20 +918,23 @@ export default function StartNavigationPage() {
 
   React.useEffect(() => {
     const isResume = searchParams.get('resume') === 'true';
-    if (isResume && !hasResumed && !isLoadingProjects && projects && routeType === 'meldingen') {
+    if (isResume && !hasResumed && !isLoadingProjects && projects && routeType === 'meldingen' && rawMeldingen) {
         if (sortedMeldingen.length > 0) {
             setHasResumed(true);
             const timer = setTimeout(() => handleStartRit(false), 100);
             return () => clearTimeout(timer);
+        } else if (rawMeldingen.length === 0 || (excludeId && rawMeldingen.filter(m => m.id !== excludeId).length === 0)) {
+            // Pool is empty, nothing to resume to
+            setHasResumed(true);
         }
     }
-  }, [searchParams, hasResumed, isLoadingProjects, projects, routeType, sortedMeldingen, handleStartRit]);
+  }, [searchParams, hasResumed, isLoadingProjects, projects, routeType, sortedMeldingen, handleStartRit, rawMeldingen, excludeId]);
 
   React.useEffect(() => {
     const fetchPreview = async () => {
         if (routeType === 'meldingen' && sortedMeldingen.length >= 1) {
             setIsPreviewCalculating(true);
-            const baseLoc = userLocation || currentActiveSortBase;
+            const baseLoc = userLocation || (lastLat && lastLng ? { latitude: parseFloat(lastLat), longitude: parseFloat(lastLng) } : currentActiveSortBase);
             const waypoints = [`${baseLoc.longitude},${baseLoc.latitude}`, ...sortedMeldingen.slice(0, 24).map(m => `${m.longitude},${m.latitude}`)].join(';');
             const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
             try {
@@ -946,11 +960,11 @@ export default function StartNavigationPage() {
         }
     };
     fetchPreview();
-  }, [sortedMeldingen, routeType, userLocation, currentActiveSortBase]);
+  }, [sortedMeldingen, routeType, userLocation, currentActiveSortBase, lastLat, lastLng]);
 
   const isMeldingenType = routeType === 'meldingen';
   const tableData = showCompletedToday ? myCompletedToday : sortedMeldingen;
-  const startMarkerLocation = userLocation || SIMULATION_START_LOCATION;
+  const startMarkerLocation = userLocation || (lastLat && lastLng ? { latitude: parseFloat(lastLat), longitude: parseFloat(lastLng) } : SIMULATION_START_LOCATION);
 
   const uniqueAssignees = React.useMemo(() => {
     const assignees = new Set<string>();
@@ -960,10 +974,14 @@ export default function StartNavigationPage() {
     return Array.from(assignees).sort();
   }, [tableData]);
 
+  const isResuming = searchParams.get('resume') === 'true' && !hasResumed;
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {navigationState === 'navigating' ? (
         <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); }} initialUserLocation={tripStartLocation} isSimulationMode={isSimulationMode} routeType={routeType} />
+      ) : isResuming ? (
+        <LoadingScreen message="Volgende opdracht voorbereiden..." />
       ) : (
         <div className="w-full h-full relative flex flex-col">
           <div className="flex flex-col flex-1 min-h-0">
@@ -978,7 +996,7 @@ export default function StartNavigationPage() {
                   )}
 
                   <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-                      <Button variant="secondary" size="icon" className="h-10 w-10 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border-none text-slate-900" onClick={() => router.push('/')}><ArrowLeft className="h-5 w-5" /></Button>
+                      <Button variant="secondary" size="icon" className="h-10 w-10 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border-none text-slate-900" onClick={() => router.push('/')}><ArrowLeft className="h-4 w-4" /></Button>
                   </div>
 
                   <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
@@ -1132,7 +1150,7 @@ export default function StartNavigationPage() {
                               <TableBody>
                                   {tableData.length > 0 ? (
                                       tableData.map((m, idx) => {
-                                          const baseLoc = userLocation || currentActiveSortBase;
+                                          const baseLoc = userLocation || (lastLat && lastLng ? { latitude: parseFloat(lastLat), longitude: parseFloat(lastLng) } : currentActiveSortBase);
                                           const dist = turf.distance(turf.point([baseLoc.longitude, baseLoc.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                                           const ageColor = getMeldingAgeColor(m.datum);
                                           
