@@ -49,7 +49,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -611,6 +611,28 @@ export default function StartNavigationPage() {
         if (profile.navColumns) setVisibleColumns(profile.navColumns);
     }
   }, [profile]);
+
+  const meldingenQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'meldingen'),
+      where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw'])
+    );
+  }, [firestore]);
+
+  const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+
+  const completedTodayQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const today = formatDate(new Date(), 'yyyy-MM-dd');
+    return query(
+      collection(firestore, 'meldingen'),
+      where('status', '==', 'Afgerond'),
+      where('afhandeling_datum', '==', today)
+    );
+  }, [firestore]);
+
+  const { data: rawCompletedToday } = useCollection<Melding>(completedTodayQuery);
 
   const handleResize = (clientY: number) => {
     const newHeight = window.innerHeight - clientY;
