@@ -76,6 +76,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+// Basislocatie: Aarbergerweg 5-7, Rijsenhout
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
 const routeLayer: Layer = {
@@ -531,7 +532,7 @@ export default function StartNavigationPage() {
   });
 
   // Navigation logic states
-  const [smoothLocation, setSmoothLocation] = React.useState<any>(null);
+  const [smoothLocation, setSmoothLocation] = React.useState<any>({ ...SIMULATION_START_LOCATION, heading: 0 });
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [distanceRemaining, setDistanceRemaining] = React.useState(0);
   const [speedKmh, setSpeedKmh] = React.useState(0);
@@ -603,8 +604,9 @@ export default function StartNavigationPage() {
   }, [filteredMeldingen, userLocation]);
 
   const fetchRoute = React.useCallback(async () => {
-    if (!nextObject || !userLocation) return;
-    const startPos = userLocation;
+    const startPos = userLocation || SIMULATION_START_LOCATION;
+    if (!nextObject) return;
+    
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startPos.longitude},${startPos.latitude};${nextObject.longitude},${nextObject.latitude}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
     try {
         const res = await fetch(url);
@@ -622,10 +624,31 @@ export default function StartNavigationPage() {
 
   const handleStartRit = (simulate = false) => {
     if (filteredMeldingen.length === 0) { toast({ title: "Geen opdrachten beschikbaar" }); return; }
-    setIsSimulationMode(simulate);
-    setNavigationState('navigating');
-    setIsListExpanded(false);
-    if (simulate) startSimulation();
+    
+    if (!simulate) {
+        // Zoek apparaatlocatie bij start
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            setUserLocation(loc);
+            setSmoothLocation({ ...loc, heading: pos.coords.heading || 0 });
+            setIsSimulationMode(false);
+            setNavigationState('navigating');
+            setIsListExpanded(false);
+            setIsLocating(false);
+            toast({ title: "Route gestart", description: "Navigeren vanaf huidige locatie." });
+        }, (err) => {
+            setIsLocating(false);
+            toast({ variant: 'destructive', title: "GPS Fout", description: "Kon uw locatie niet bepalen. Route start vanaf basis." });
+            setNavigationState('navigating');
+            setIsListExpanded(false);
+        }, { enableHighAccuracy: true });
+    } else {
+        setIsSimulationMode(true);
+        setNavigationState('navigating');
+        setIsListExpanded(false);
+        startSimulation();
+    }
   };
 
   const startSimulation = () => {
@@ -683,7 +706,7 @@ export default function StartNavigationPage() {
         <div className="absolute inset-0 z-0">
             <MapGL 
                 ref={mapRef} 
-                initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 7 }} 
+                initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 15 }} 
                 style={{ width: '100%', height: '100%' }} 
                 mapStyle={mapStyle} 
                 mapboxAccessToken={MAPBOX_TOKEN}
@@ -737,7 +760,10 @@ export default function StartNavigationPage() {
                 {navigationState === 'setup' ? (
                     <>
                         {isPrivileged && <Button variant="outline" className="h-12 px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-100" onClick={() => handleStartRit(true)}><Gauge className="mr-2 h-5 w-5" /> SIMULATOR</Button>}
-                        <Button className="h-12 px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRit(false)}><Play className="mr-2 h-5 w-5 fill-current" /> START RIT</Button>
+                        <Button className="h-12 px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRit(false)}>
+                            {isLocating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5 fill-current" />}
+                            START RIT
+                        </Button>
                     </>
                 ) : (
                     <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl border-none" onClick={() => { setNavigationState('setup'); setIsListExpanded(true); setCurrentRouteGeometry(null); if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); }}>STOP RIT</Button>
