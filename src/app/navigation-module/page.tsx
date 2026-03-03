@@ -275,7 +275,7 @@ function IntegratedWerkbonOverlay({
                         </Button>
                     ) : (
                         <Button className="bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-tight h-9 lg:h-11 px-4 lg:px-8 rounded-lg lg:rounded-xl shadow-lg shadow-green-600/20 text-xs lg:text-sm" onClick={handleStartWork}>
-                            START WERK
+                            AFHANDELEN
                         </Button>
                     )}
                 </div>
@@ -824,11 +824,10 @@ export default function StartNavigationPage() {
                 mapboxAccessToken={MAPBOX_TOKEN}
             >
                 {smoothLocation && (
-                    <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center" rotation={smoothLocation.heading} rotationAlignment="map">
-                        <div className="relative flex items-center justify-center w-20 h-20">
-                            <svg viewBox="0 0 100 100" className="h-14 w-14 text-primary drop-shadow-[0_15px_15px_rgba(0,0,0,0.6)]">
-                                <path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" />
-                            </svg>
+                    <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center">
+                        <div className="relative flex items-center justify-center w-16 h-16">
+                            <div className="absolute h-10 w-10 bg-primary/20 rounded-full animate-ping" />
+                            <div className="h-6 w-6 rounded-full bg-primary border-4 border-white shadow-2xl relative z-10" />
                         </div>
                     </Marker>
                 )}
