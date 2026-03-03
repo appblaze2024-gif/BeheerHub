@@ -769,7 +769,14 @@ export default function StartNavigationPage() {
                         </Button>
                     </>
                 ) : (
-                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl border-none" onClick={() => { setNavigationState('setup'); setIsListExpanded(true); if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); mapRef.current?.getMap().setPitch(0); }}>STOP RIT</Button>
+                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl border-none" onClick={() => { 
+                        setNavigationState('setup'); 
+                        setIsListExpanded(true); 
+                        if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
+                        mapRef.current?.getMap().setPitch(0);
+                        mapRef.current?.getMap().setBearing(0);
+                        fetchRoute(true); // Zoom out to show full route
+                    }}>STOP RIT</Button>
                 )}
             </div>
         </div>
@@ -804,9 +811,9 @@ export default function StartNavigationPage() {
         )}
 
         <div className={cn(
-            "absolute bottom-0 left-0 right-0 z-40 transition-transform duration-500 ease-in-out bg-white border-t-4 border-slate-900 rounded-none shadow-2xl flex flex-col",
+            "absolute bottom-0 left-0 right-0 z-40 transition-all duration-500 ease-in-out bg-white border-t-4 border-slate-900 rounded-none shadow-2xl flex flex-col",
             navigationState === 'navigating' 
-                ? "h-0 translate-y-full pointer-events-none" 
+                ? "h-0 translate-y-full opacity-0 pointer-events-none" 
                 : (isListExpanded ? "h-[45%]" : "h-14 translate-y-[calc(100%-3.5rem)]")
         )}>
             <div className="h-14 flex items-center justify-between px-8 cursor-pointer shrink-0 border-b border-slate-200" onClick={() => setIsListExpanded(!isListExpanded)}>
