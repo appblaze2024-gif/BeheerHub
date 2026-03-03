@@ -536,6 +536,7 @@ export default function StartNavigationPage() {
   const [smoothLocation, setSmoothLocation] = React.useState<any>({ ...SIMULATION_START_LOCATION, heading: 0 });
   const lastHeadingRef = React.useRef(0);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
+  const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
   const [distanceRemaining, setDistanceRemaining] = React.useState(0);
   const [speedKmh, setSpeedKmh] = React.useState(0);
   const [isPaused, setIsPaused] = React.useState(false);
@@ -575,7 +576,7 @@ export default function StartNavigationPage() {
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
                         zoom: 18,
-                        pitch: 60,
+                        pitch: 75,
                         duration: 1000
                     });
                 }
@@ -624,6 +625,7 @@ export default function StartNavigationPage() {
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
+        setDisplayedRouteGeometry(null);
         setDistanceRemaining(0);
         return;
     }
@@ -637,6 +639,7 @@ export default function StartNavigationPage() {
         const data = await res.json();
         if (data.routes?.[0]) {
             setCurrentRouteGeometry(data.routes[0].geometry);
+            setDisplayedRouteGeometry(data.routes[0].geometry);
             setDistanceRemaining(Math.round(data.routes[0].legs[0]?.distance || 0));
             
             if (zoomToFit && mapRef.current) {
@@ -657,7 +660,7 @@ export default function StartNavigationPage() {
     if (navigationState !== 'navigating' || isSimulationMode) return;
     const interval = setInterval(() => {
         fetchRoute();
-    }, 30000); 
+    }, 15000); 
     return () => clearInterval(interval);
   }, [navigationState, isSimulationMode, fetchRoute]);
 
@@ -684,7 +687,7 @@ export default function StartNavigationPage() {
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: 18, 
-                pitch: 60, 
+                pitch: 75, 
                 bearing: heading, 
                 duration: 2000 
             });
@@ -698,7 +701,7 @@ export default function StartNavigationPage() {
             mapRef.current?.getMap().flyTo({ 
                 center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
                 zoom: 18, 
-                pitch: 60, 
+                pitch: 75, 
                 duration: 2000 
             });
             fetchRoute();
@@ -708,7 +711,7 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         const first = currentRouteGeometry?.coordinates[0];
-        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 18, pitch: 60, duration: 2000 });
+        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: 18, pitch: 75, duration: 2000 });
         setTimeout(startSimulation, 2000);
     }
   };
@@ -723,20 +726,37 @@ export default function StartNavigationPage() {
         const deltaTime = 0.016; 
         const speedMs = 13.8; // ~50 km/h
         simStateRef.current.distanceTravelled += speedMs * deltaTime;
+        
         if (simStateRef.current.distanceTravelled >= totalDist) {
             const final = currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1];
             setSmoothLocation({ latitude: final[1], longitude: final[0], heading: 0 });
             setSpeedKmh(0);
+            setDisplayedRouteGeometry(null);
             return;
         }
+
         const curr = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
         const ahead = turf.along(line, simStateRef.current.distanceTravelled + 2, { units: 'meters' });
         const [lng, lat] = curr.geometry.coordinates;
         const head = (turf.bearing(curr, ahead) + 360) % 360;
         lastHeadingRef.current = head;
+        
+        // Update displayed route to only show the part in front of the user
+        const forwardPart = turf.lineSlice(curr, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
+        setDisplayedRouteGeometry(forwardPart.geometry);
+        
+        setDistanceRemaining(Math.max(0, Math.round(totalDist - simStateRef.current.distanceTravelled)));
         setSmoothLocation({ latitude: lat, longitude: lng, heading: head });
         setSpeedKmh(Math.round(speedMs * 3.6));
-        if (mapRef.current) mapRef.current.getMap().jumpTo({ center: [lng, lat], bearing: head });
+        
+        if (mapRef.current) {
+            mapRef.current.getMap().jumpTo({ 
+                center: [lng, lat], 
+                bearing: head,
+                pitch: 75,
+                zoom: 18
+            });
+        }
         simAnimationRef.current = requestAnimationFrame(animate);
     };
     simAnimationRef.current = requestAnimationFrame(animate);
@@ -786,8 +806,8 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 ))}
-                {currentRouteGeometry && (
-                    <Source id="route-line" type="geojson" data={currentRouteGeometry}>
+                {displayedRouteGeometry && (
+                    <Source id="route-line" type="geojson" data={displayedRouteGeometry}>
                         <Layer {...routeLayerCasing} /><Layer {...routeLayer} />
                     </Source>
                 )}
@@ -803,7 +823,12 @@ export default function StartNavigationPage() {
             <div className="flex items-center gap-3 pointer-events-auto">
                 <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md text-primary border border-slate-100" onClick={() => {
                     const target = userLocation || SIMULATION_START_LOCATION;
-                    mapRef.current?.getMap().flyTo({ center: [target.longitude, target.latitude], zoom: 18, pitch: navigationState === 'navigating' ? 60 : 0, duration: 1500 });
+                    mapRef.current?.getMap().flyTo({ 
+                        center: [target.longitude, target.latitude], 
+                        zoom: 18, 
+                        pitch: navigationState === 'navigating' ? 75 : 0, 
+                        duration: 1500 
+                    });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
                 </Button>
