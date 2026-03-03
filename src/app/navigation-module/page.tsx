@@ -572,7 +572,6 @@ export default function StartNavigationPage() {
   const lastHeadingRef = React.useRef(0);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
-  const [distanceRemaining, setDistanceRemaining] = React.useState(0);
   const [speedKmh, setSpeedKmh] = React.useState(0);
   const [isPaused, setIsPaused] = React.useState(false);
 
@@ -906,8 +905,8 @@ export default function StartNavigationPage() {
         const forwardPart = turf.lineSlice(curr, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
         setDisplayedRouteGeometry(forwardPart);
         
-        setDistanceRemaining(Math.max(0, Math.round(totalDist - simStateRef.current.distanceTravelled)));
-        setSmoothLocation({ latitude: lat, longitude: lng, heading: head });
+        const base = { latitude: lat, longitude: lng, heading: head };
+        setSmoothLocation(base);
         setSpeedKmh(Math.round(speedMs * 3.6));
         
         if (mapRef.current) {
@@ -960,19 +959,19 @@ export default function StartNavigationPage() {
                 )}
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
-                        <div className="relative flex flex-col items-center">
-                            {/* Target Ring Logic: Black ring for the next mission in the queue */}
+                        <div className="relative flex items-center justify-center w-14 h-14">
+                            {/* Modern Target Ring: perfectly centered and aligned */}
                             {nextMission?.id === m.id && (
-                                <div className="absolute h-12 w-12 rounded-full border-[3px] border-black animate-pulse opacity-80" />
+                                <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
                             )}
                             {showAssignmentBubbles && (
-                                <div className="absolute bottom-full mb-2 bg-white/90 backdrop-blur-sm text-slate-900 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter shadow-xl border border-slate-200 whitespace-nowrap animate-in zoom-in-95 duration-200">
+                                <div className="absolute bottom-full mb-3 bg-white/90 backdrop-blur-sm text-slate-900 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter shadow-xl border border-slate-200 whitespace-nowrap animate-in zoom-in-95 duration-200">
                                     {m.behandelaar || '??'}
                                     <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-white/90" />
                                 </div>
                             )}
                             <div className={cn(
-                                "w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer", 
+                                "w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer z-10", 
                                 m.status === 'Afgerond' ? 'bg-green-500' : getMeldingAgeColor(m.datum)
                             )}>
                                 {m.status === 'Afgerond' ? <Check className="h-4 w-4 text-white" /> : <Bell className="h-4 w-4 text-white" />}
@@ -1056,7 +1055,7 @@ export default function StartNavigationPage() {
                         </div>
                         <div className="flex-1 flex flex-col gap-3 min-w-0">
                             <div className="space-y-0.5">
-                                <p className="text-[9px] font-black uppercase text-slate-500">Volgende</p>
+                                <p className="text-[9px] font-black uppercase text-slate-500">Volgende Bestemming</p>
                                 <p className="text-lg font-black text-slate-900 uppercase truncate">{nextMission?.intakenummer || 'Geen doel'}</p>
                             </div>
                             <Progress value={100} className="h-2 bg-slate-100" />
@@ -1222,3 +1221,13 @@ export default function StartNavigationPage() {
     </div>
   );
 }
+
+const DEFAULT_COLUMNS = {
+    intakenummer: true,
+    locatie: true,
+    memo: true,
+    hoofdcategorie: true,
+    subcategorie: true,
+    werkgebied: true,
+    afstand: true
+};
