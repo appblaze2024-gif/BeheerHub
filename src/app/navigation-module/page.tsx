@@ -133,15 +133,6 @@ const getMeldingAgeColor = (datum?: string) => {
     } catch (e) { return 'bg-slate-400'; }
 };
 
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
-
 function IntegratedWerkbonOverlay({ 
     meldingId, 
     onClose, 
@@ -778,7 +769,7 @@ export default function StartNavigationPage() {
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: 250, 
+                        padding: 60, 
                         duration: 0 
                     });
                 }
@@ -867,13 +858,15 @@ export default function StartNavigationPage() {
             setIsLocating(false);
             setIsManualMode(false);
             
-            mapRef.current?.getMap().jumpTo({ 
-                center: [loc.longitude, loc.latitude], 
-                zoom: Number(navZoomRef.current) || 18, 
-                pitch: Number(navPitchRef.current) || 60, 
-                bearing: heading, 
-                padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
-            });
+            if (mapRef.current) {
+                mapRef.current.getMap().jumpTo({ 
+                    center: [loc.longitude, loc.latitude], 
+                    zoom: Number(navZoomRef.current) || 18, 
+                    pitch: Number(navPitchRef.current) || 60, 
+                    bearing: heading, 
+                    padding: { top: 0, bottom: Math.max(0, Number(navOffsetRef.current) || 0), left: 0, right: 0 }
+                });
+            }
             fetchRoute();
         };
 
@@ -956,7 +949,7 @@ export default function StartNavigationPage() {
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
         {isStartingSimulation && <LoadingScreen message="Simulator voorbereiden..." className="fixed inset-0 z-[1000]" />}
         
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0" style={{ touchAction: 'none' }}>
             <MapGL 
                 ref={mapRef} 
                 initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 13 }} 
@@ -968,6 +961,7 @@ export default function StartNavigationPage() {
                 scrollZoom={true}
                 touchZoomRotate={true}
                 touchPitch={true}
+                doubleClickZoom={true}
                 onInteractionStateChange={(state) => {
                     if (navigationState === 'navigating' && (state.isDragging || state.isZooming || state.isRotating)) {
                         setIsManualMode(true);
@@ -1071,7 +1065,7 @@ export default function StartNavigationPage() {
                     <PopoverTrigger asChild>
                         <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 mt-2"><Settings className="h-6 w-6 text-slate-600" /></Button>
                     </PopoverTrigger>
-                    <PopoverContent side="left" className="w-80 p-6 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-md">
+                    <PopoverContent side="left" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md">
                         <div className="space-y-6">
                             <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
                             <div className="space-y-4">
