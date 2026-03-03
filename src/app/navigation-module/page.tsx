@@ -84,6 +84,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
+// Configuration for columns and labels (Moved to top to prevent duplication errors)
 const DEFAULT_COLUMNS = {
     intakenummer: true,
     locatie: true,
@@ -103,6 +104,15 @@ const COLUMN_LABELS: Record<string, string> = {
     werkgebied: 'Werkgebied',
     afstand: 'Afstand'
 };
+
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
 
 const routeLayer: Layer = {
   id: 'route',
@@ -783,7 +793,10 @@ export default function StartNavigationPage() {
     const startPos = (navigationState === 'navigating' ? smoothLocation : (userLocation || SIMULATION_START_LOCATION));
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypointsStr}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+    
+    // Using driving profile for fastest car route, avoiding nothing
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypointsStr}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
+    
     try {
         const res = await fetch(url);
         const data = await res.json();
