@@ -3,7 +3,7 @@
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc } from '@/firebase';
-import { collection, query, where, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -976,7 +976,7 @@ export default function StartNavigationPage() {
                                     </div>
                                     <Slider 
                                         value={[navOffset]} 
-                                        min={-100} 
+                                        min={0} 
                                         max={600} 
                                         step={10} 
                                         onValueChange={([val]) => updateNavOffset(val)}
