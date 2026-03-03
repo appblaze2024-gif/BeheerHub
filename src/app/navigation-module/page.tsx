@@ -977,7 +977,6 @@ export default function StartNavigationPage() {
                         setIsManualMode(true);
                     }
                 }}
-                onMoveStart={() => setIsManualMode(true)}
             >
                 {smoothLocation && (
                     <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center">
