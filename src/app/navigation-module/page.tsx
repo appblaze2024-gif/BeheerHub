@@ -5,7 +5,6 @@ import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc } from '@/firebase';
 import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft, 
@@ -40,20 +39,18 @@ import {
   Settings,
   Sliders,
   Table as TableIcon,
-  History,
   AlertCircle
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
-import { LoadingScreen } from '@/components/loading-screen';
-import { addSeconds, format as formatDate, differenceInCalendarDays } from 'date-fns';
+import { addSeconds, format as formatDate, differenceInCalendarDays, parse } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import {
   Table,
@@ -157,6 +154,7 @@ function IntegratedWerkbonOverlay({
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
+    const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
     const recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
@@ -181,6 +179,22 @@ function IntegratedWerkbonOverlay({
             setHoeveelheden(melding.hoeveelheden || []);
             setAfhandelingFotos(melding.afhandeling_fotos || []);
             setUploadedFiles(melding.files || []);
+        }
+    }, [melding]);
+
+    React.useEffect(() => {
+        if (!melding) { setElapsedTime("0 uur en 0 minuten"); return; }
+        if (melding.workStartedAt) {
+          const interval = setInterval(() => {
+            const startTime = new Date(melding.workStartedAt!).getTime();
+            const now = Date.now();
+            const minutes = Math.floor((now - startTime) / (1000 * 60)) + (melding.gewerkteMinuten || 0);
+            setElapsedTime(`${Math.floor(minutes / 60)} uur en ${minutes % 60} minuten`);
+          }, 1000);
+          return () => clearInterval(interval);
+        } else {
+          const min = melding.gewerkteMinuten || 0;
+          setElapsedTime(`${Math.floor(min / 60)} uur en ${min % 60} minuten`);
         }
     }, [melding]);
 
@@ -237,7 +251,7 @@ function IntegratedWerkbonOverlay({
 
     const toggleListening = () => {
         if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) return;
         const recognition = new SpeechRecognition();
         recognition.lang = sourceLang.code;
@@ -332,8 +346,8 @@ function IntegratedWerkbonOverlay({
                                                 <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.datum} • {melding.tijdstip || '--:--'}</p>
                                             </div>
                                             <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Wijk / Werkgebied</p>
-                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 uppercase truncate">{melding.werkgebied || melding.wijk || '-'}</p>
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Werktijd</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{elapsedTime}</p>
                                             </div>
                                             <div className="col-span-2 space-y-0.5">
                                                 <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
@@ -344,15 +358,9 @@ function IntegratedWerkbonOverlay({
                                                 <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.hoofdcategorie} • {melding.subcategorie}</p>
                                             </div>
                                             <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Soort Melder</p>
-                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.soort_melder || melding.melder || 'Anoniem'}</p>
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Wijk</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.werkgebied || melding.wijk || '-'}</p>
                                             </div>
-                                            {melding.containernummer && (
-                                                <div className="space-y-0.5">
-                                                    <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Containernummer</p>
-                                                    <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.containernummer}</p>
-                                                </div>
-                                            )}
                                         </div>
                                         <div className="flex-1 min-h-0 flex flex-col space-y-1.5 lg:space-y-2">
                                             <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest shrink-0">Omschrijving melding</p>
@@ -739,7 +747,7 @@ export default function StartNavigationPage() {
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: { top: 80, bottom: 350, left: 80, right: 80 }, 
+                        padding: { top: 60, bottom: 180, left: 60, right: 60 }, 
                         duration: 1500 
                     });
                 }
@@ -845,6 +853,11 @@ export default function StartNavigationPage() {
     };
     simAnimationRef.current = requestAnimationFrame(animate);
   };
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
