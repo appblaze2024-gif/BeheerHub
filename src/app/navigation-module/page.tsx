@@ -40,7 +40,9 @@ import {
   Paperclip,
   ChevronRight,
   Plus,
-  Minus
+  Minus,
+  Settings,
+  Sliders
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -77,6 +79,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 // Basislocatie: Aarbergerweg 5-7, Rijsenhout
@@ -543,9 +552,15 @@ export default function StartNavigationPage() {
   const [speedKmh, setSpeedKmh] = React.useState(0);
   const [isPaused, setIsPaused] = React.useState(false);
 
-  // Zoom control logic
+  // Persistent Display Settings
   const navZoomRef = React.useRef(18);
   const [navZoom, setNavZoomState] = React.useState(18);
+  
+  const navPitchRef = React.useRef(60);
+  const [navPitch, setNavPitchState] = React.useState(60);
+  
+  const navOffsetRef = React.useRef(450);
+  const [navOffset, setNavOffsetState] = React.useState(450);
 
   const mapRef = React.useRef<MapRef>(null);
   const simAnimationRef = React.useRef<number | null>(null);
@@ -556,12 +571,27 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
+  // Load saved settings on mount
   React.useEffect(() => {
     const savedZoom = localStorage.getItem('beheerhub_nav_zoom');
     if (savedZoom) {
         const parsed = parseFloat(savedZoom);
         setNavZoomState(parsed);
         navZoomRef.current = parsed;
+    }
+    
+    const savedPitch = localStorage.getItem('beheerhub_nav_pitch');
+    if (savedPitch) {
+        const parsed = parseFloat(savedPitch);
+        setNavPitchState(parsed);
+        navPitchRef.current = parsed;
+    }
+    
+    const savedOffset = localStorage.getItem('beheerhub_nav_offset');
+    if (savedOffset) {
+        const parsed = parseFloat(savedOffset);
+        setNavOffsetState(parsed);
+        navOffsetRef.current = parsed;
     }
   }, []);
 
@@ -570,6 +600,20 @@ export default function StartNavigationPage() {
     navZoomRef.current = newZoom;
     localStorage.setItem('beheerhub_nav_zoom', newZoom.toString());
     mapRef.current?.getMap().easeTo({ zoom: newZoom, duration: 200 });
+  };
+
+  const updateNavPitch = (newPitch: number) => {
+    setNavPitchState(newPitch);
+    navPitchRef.current = newPitch;
+    localStorage.setItem('beheerhub_nav_pitch', newPitch.toString());
+    mapRef.current?.getMap().easeTo({ pitch: newPitch, duration: 200 });
+  };
+
+  const updateNavOffset = (newOffset: number) => {
+    setNavOffsetState(newOffset);
+    navOffsetRef.current = newOffset;
+    localStorage.setItem('beheerhub_nav_offset', newOffset.toString());
+    mapRef.current?.getMap().easeTo({ padding: { bottom: newOffset }, duration: 200 });
   };
 
   React.useEffect(() => {
@@ -598,9 +642,9 @@ export default function StartNavigationPage() {
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
                         zoom: navZoomRef.current,
-                        pitch: 60,
+                        pitch: navPitchRef.current,
                         duration: 1000,
-                        padding: { bottom: 450 }
+                        padding: { bottom: navOffsetRef.current }
                     });
                 }
             }
@@ -710,10 +754,10 @@ export default function StartNavigationPage() {
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: navZoomRef.current, 
-                pitch: 60, 
+                pitch: navPitchRef.current, 
                 bearing: heading, 
                 duration: 2000,
-                padding: { bottom: 450 }
+                padding: { bottom: navOffsetRef.current }
             });
             fetchRoute();
             toast({ title: "Navigatie gestart" });
@@ -725,9 +769,10 @@ export default function StartNavigationPage() {
             mapRef.current?.getMap().flyTo({ 
                 center: [SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude], 
                 zoom: navZoomRef.current, 
-                pitch: 60, 
+                pitch: navPitchRef.current, 
+                bearing: 0, 
                 duration: 2000,
-                padding: { bottom: 450 }
+                padding: { bottom: navOffsetRef.current }
             });
             fetchRoute();
         }, { enableHighAccuracy: true, timeout: 5000 });
@@ -736,7 +781,13 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         const first = currentRouteGeometry?.coordinates[0];
-        if (first) mapRef.current?.getMap().flyTo({ center: [first[0], first[1]], zoom: navZoomRef.current, pitch: 60, duration: 2000, padding: { bottom: 450 } });
+        if (first) mapRef.current?.getMap().flyTo({ 
+            center: [first[0], first[1]], 
+            zoom: navZoomRef.current, 
+            pitch: navPitchRef.current, 
+            duration: 2000, 
+            padding: { bottom: navOffsetRef.current } 
+        });
         setTimeout(startSimulation, 2000);
     }
   };
@@ -778,9 +829,9 @@ export default function StartNavigationPage() {
             mapRef.current.getMap().jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
-                pitch: 60,
+                pitch: navPitchRef.current,
                 zoom: navZoomRef.current,
-                padding: { bottom: 450 }
+                padding: { bottom: navOffsetRef.current }
             });
         }
         simAnimationRef.current = requestAnimationFrame(animate);
@@ -789,8 +840,6 @@ export default function StartNavigationPage() {
   };
 
   const toggleColumn = (col: string) => setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }));
-
-  if (isLoading) return <LoadingScreen />;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
@@ -852,9 +901,9 @@ export default function StartNavigationPage() {
                     mapRef.current?.getMap().flyTo({ 
                         center: [target.longitude, target.latitude], 
                         zoom: navigationState === 'navigating' ? navZoomRef.current : 18, 
-                        pitch: navigationState === 'navigating' ? 60 : 0, 
+                        pitch: navigationState === 'navigating' ? navPitchRef.current : 0, 
                         duration: 1500,
-                        padding: { bottom: navigationState === 'navigating' ? 450 : 0 }
+                        padding: { bottom: navigationState === 'navigating' ? navOffsetRef.current : 0 }
                     });
                 }} disabled={isLocating}>
                     {isLocating ? <Loader2 className="h-6 w-6 animate-spin" /> : <LocateFixed className="h-6 w-6" />}
@@ -899,6 +948,64 @@ export default function StartNavigationPage() {
                 >
                     <Minus className="h-6 w-6 text-slate-600" />
                 </Button>
+                
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button 
+                            variant="secondary" 
+                            size="icon" 
+                            className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 mt-2"
+                        >
+                            <Settings className="h-6 w-6 text-slate-600" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent side="left" className="w-80 p-6 rounded-3xl shadow-2xl border-none bg-white/95 backdrop-blur-md">
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-2 border-b pb-3">
+                                <Sliders className="h-4 w-4 text-primary" />
+                                <h4 className="font-black uppercase text-xs tracking-tight">Weergave Instellingen</h4>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte (Auto Positie)</Label>
+                                        <span className="text-[10px] font-bold text-primary">{navOffset}px</span>
+                                    </div>
+                                    <Slider 
+                                        value={[navOffset]} 
+                                        min={100} 
+                                        max={600} 
+                                        step={10} 
+                                        onValueChange={([val]) => updateNavOffset(val)}
+                                    />
+                                    <p className="text-[8px] text-slate-400 font-medium italic">Schuif om de auto hoger of lager op het scherm te plaatsen.</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <Label className="text-[10px] font-black uppercase text-slate-400">Kanteling (Perspectief)</Label>
+                                        <span className="text-[10px] font-bold text-primary">{navPitch}°</span>
+                                    </div>
+                                    <Slider 
+                                        value={[navPitch]} 
+                                        min={0} 
+                                        max={85} 
+                                        step={1} 
+                                        onValueChange={([val]) => updateNavPitch(val)}
+                                    />
+                                    <p className="text-[8px] text-slate-400 font-medium italic">Pas de diepte van de 3D-weergave aan.</p>
+                                </div>
+                            </div>
+                            
+                            <Button variant="outline" className="w-full h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200" onClick={() => {
+                                updateNavZoom(18);
+                                updateNavPitch(60);
+                                updateNavOffset(450);
+                            }}>Reset naar Standaard</Button>
+                        </div>
+                    </PopoverContent>
+                </Popover>
             </div>
         )}
 
