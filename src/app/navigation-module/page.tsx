@@ -132,15 +132,6 @@ const getMeldingAgeColor = (datum?: string) => {
     } catch (e) { return 'bg-slate-400'; }
 };
 
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
-
 function IntegratedWerkbonOverlay({ 
     meldingId, 
     onClose, 
@@ -960,7 +951,6 @@ export default function StartNavigationPage() {
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
                         <div className="relative flex items-center justify-center w-14 h-14">
-                            {/* Modern Target Ring: perfectly centered and aligned */}
                             {nextMission?.id === m.id && (
                                 <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
                             )}
@@ -1221,13 +1211,3 @@ export default function StartNavigationPage() {
     </div>
   );
 }
-
-const DEFAULT_COLUMNS = {
-    intakenummer: true,
-    locatie: true,
-    memo: true,
-    hoofdcategorie: true,
-    subcategorie: true,
-    werkgebied: true,
-    afstand: true
-};
