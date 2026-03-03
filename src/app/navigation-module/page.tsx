@@ -828,7 +828,8 @@ export default function StartNavigationPage() {
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypointsStr}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
+    // Explicitly requesting fastest route
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
     
     try {
         const res = await fetch(url);
@@ -873,6 +874,7 @@ export default function StartNavigationPage() {
             setIsLocating(false);
             setIsManualMode(false);
             
+            // Instant jump for iPad
             mapRef.current?.getMap().jumpTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: Number(navZoomRef.current) || 18, 
@@ -986,11 +988,13 @@ export default function StartNavigationPage() {
                 style={{ width: '100%', height: '100%' }} 
                 mapStyle={mapStyle} 
                 mapboxAccessToken={MAPBOX_TOKEN}
+                touchZoomRotate={true}
                 onInteractionStateChange={(state) => {
                     if (state.isDragging || state.isZooming || state.isRotating) {
                         setIsManualMode(true);
                     }
                 }}
+                onMoveStart={() => setIsManualMode(true)}
             >
                 {smoothLocation && (
                     <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center">
