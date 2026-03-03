@@ -954,12 +954,20 @@ export default function StartNavigationPage() {
                         const colorClass = getMeldingAgeColor(m.datum);
                         return (
                             <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActivePopupMeldingId(m.id)}>
-                                <div className={cn(
-                                    "w-7 h-7 rounded-full border-2 border-white shadow-lg transition-transform cursor-pointer flex items-center justify-center font-black text-[10px]", 
-                                    colorClass,
-                                    activePopupMeldingId === m.id ? "scale-125 ring-4 ring-slate-900/20" : "hover:scale-110"
-                                )}>
-                                    <Bell className="h-3 w-3 text-slate-600" />
+                                <div className="relative flex flex-col items-center">
+                                    {showAssignmentInfo && m.behandelaar && (
+                                        <div className="absolute bottom-full mb-3 bg-black/90 backdrop-blur-sm text-white px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-2xl z-[100] border border-white/20 whitespace-nowrap animate-in zoom-in-95 duration-200">
+                                            {m.behandelaar}
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-black/90" />
+                                        </div>
+                                    )}
+                                    <div className={cn(
+                                        "w-7 h-7 rounded-full border-2 border-white shadow-lg transition-transform cursor-pointer flex items-center justify-center font-black text-[10px]", 
+                                        colorClass,
+                                        activePopupMeldingId === m.id ? "scale-125 ring-4 ring-slate-900/20" : "hover:scale-110"
+                                    )}>
+                                        <Bell className="h-3 w-3 text-slate-600" />
+                                    </div>
                                 </div>
                             </Marker>
                         );
