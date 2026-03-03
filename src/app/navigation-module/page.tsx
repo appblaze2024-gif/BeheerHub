@@ -1142,7 +1142,8 @@ export default function StartNavigationPage() {
                                                   )}
                                                   {columnVisibility.werkgebied && (
                                                       <TableCell className="text-[9px] font-black border-r px-3 py-1 whitespace-nowrap overflow-hidden">
-                                                          <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200 max-w-[100px] truncate block">
+                                                          <Badge variant="outline" className="h-6 px-2.5 text-[10px] font-black uppercase bg-blue-50 border-blue-200 text-blue-700 shadow-sm flex items-center gap-1.5 w-fit">
+                                                              <LayoutGrid className="h-3 w-3 text-blue-400" />
                                                               {m.werkgebied || m.wijk || '-'}
                                                           </Badge>
                                                       </TableCell>
