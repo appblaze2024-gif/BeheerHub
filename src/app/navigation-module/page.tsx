@@ -100,9 +100,9 @@ const routeLayer: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#3b82f6', // Blauwe lijn
-    'line-width': 8,
-    'line-opacity': 0.9,
+    'line-color': '#2563eb', // Krachtig blauw (Echte navigatielijn)
+    'line-width': 10,
+    'line-opacity': 1,
   },
 };
 
@@ -115,8 +115,8 @@ const routeLayerCasing: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#1d4ed8', // Donkerder blauwe rand
-    'line-width': 12,
+    'line-color': '#1e40af', // Diep blauwe omlijning
+    'line-width': 16,
     'line-opacity': 0.2,
   },
 };
@@ -596,7 +596,7 @@ function NavigatingView({
                             colorClass,
                             inRange && "scale-125 ring-4 ring-green-500/30"
                         )}>
-                            <Icon className="h-5 w-5 text-slate-200 stroke-[2.5]" />
+                            <Icon className="h-5 w-5 text-slate-600 stroke-[2.5]" />
                         </div>
                     </div>
                 </Marker>
@@ -904,7 +904,7 @@ export default function StartNavigationPage() {
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {navigationState === 'navigating' ? (
-        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} routeType={routeType} />
+        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); }} initialUserLocation={tripStartLocation} isSimulationMode={isSimulationMode} routeType={routeType} />
       ) : (
         <div className="w-full h-full relative flex flex-col">
           <div className="flex flex-col flex-1 min-h-0">
@@ -948,7 +948,7 @@ export default function StartNavigationPage() {
                                     colorClass,
                                     activePopupMeldingId === m.id ? "scale-125 ring-4 ring-slate-900/20" : "hover:scale-110"
                                 )}>
-                                    <Bell className="h-3 w-3 text-slate-200" />
+                                    <Bell className="h-3 w-3 text-slate-600" />
                                 </div>
                             </Marker>
                         );
@@ -966,7 +966,8 @@ export default function StartNavigationPage() {
 
                     {previewRouteGeometry && !showCompletedToday && (
                         <Source id="preview-route" type="geojson" data={{ type: 'Feature', properties: {}, geometry: previewRouteGeometry }}>
-                            <Layer id="preview-route-line" type="line" paint={{ 'line-color': '#3b82f6', 'line-width': 4, 'line-opacity': 0.6 }} />
+                            <Layer id="preview-route-line-casing" type="line" paint={{ 'line-color': '#1e40af', 'line-width': 8, 'line-opacity': 0.2 }} />
+                            <Layer id="preview-route-line" type="line" paint={{ 'line-color': '#2563eb', 'line-width': 4, 'line-opacity': 0.6 }} />
                         </Source>
                     )}
                   </MapGL>
@@ -1035,7 +1036,7 @@ export default function StartNavigationPage() {
                                                                       ageColor,
                                                                       "bg-opacity-80"
                                                                   )}>
-                                                                      <Bell className="h-3 w-3 text-slate-200" />
+                                                                      <Bell className="h-3 w-3 text-slate-600" />
                                                                   </span>
                                                               )}
                                                               {m.intakenummer}
