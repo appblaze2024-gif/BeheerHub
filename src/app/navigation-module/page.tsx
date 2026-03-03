@@ -554,16 +554,13 @@ export default function StartNavigationPage() {
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isListExpanded, setIsListExpanded] = React.useState(true);
 
-  // Height and Resizing states
   const [listHeight, setListHeight] = React.useState(400);
   const [isResizing, setIsResizing] = React.useState(false);
 
-  // Persistence for UI Settings
   const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
   const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(DEFAULT_COLUMNS);
 
-  // Persistent Display Settings
   const navZoomRef = React.useRef(18);
   const [navZoom, setNavZoomState] = React.useState(18);
   const navPitchRef = React.useRef(60);
@@ -571,7 +568,6 @@ export default function StartNavigationPage() {
   const navOffsetRef = React.useRef(450);
   const [navOffset, setNavOffsetState] = React.useState(450);
 
-  // Navigation logic states
   const [smoothLocation, setSmoothLocation] = React.useState<any>({ ...SIMULATION_START_LOCATION, heading: 0 });
   const lastHeadingRef = React.useRef(0);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
@@ -589,7 +585,6 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
-  // Load saved settings from profile
   React.useEffect(() => {
     if (profile) {
         if (profile.navZoom !== undefined) {
@@ -625,7 +620,6 @@ export default function StartNavigationPage() {
     }
   }, [profile]);
 
-  // Resizing logic
   const handleResize = (clientY: number) => {
     const newHeight = window.innerHeight - clientY;
     const clampedHeight = Math.max(56, Math.min(newHeight, window.innerHeight * 0.85));
@@ -834,14 +828,9 @@ export default function StartNavigationPage() {
     if (sortedMissions.length === 0) return;
     if (!simulate) {
         setIsLocating(true);
-        const geoOptions = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
         
-        const startNav = (pos?: GeolocationPosition) => {
-            const loc = pos ? { latitude: pos.coords.latitude, longitude: pos.coords.longitude } : (userLocation || SIMULATION_START_LOCATION);
-            setUserLocation(loc);
-            const heading = pos?.coords.heading || lastHeadingRef.current || 0;
-            lastHeadingRef.current = heading;
-            setSmoothLocation({ ...loc, heading: heading });
+        const beginNavigation = (loc: { latitude: number, longitude: number }, heading: number) => {
+            setSmoothLocation({ ...loc, heading });
             setIsSimulationMode(false);
             setNavigationState('navigating');
             setIsListExpanded(false);
@@ -858,10 +847,24 @@ export default function StartNavigationPage() {
             fetchRoute();
         };
 
-        navigator.geolocation.getCurrentPosition(startNav, (err) => {
-            console.warn("Initial location failed, using last known:", err);
-            startNav();
-        }, geoOptions);
+        // If background watch has a position, use it
+        if (userLocation) {
+            beginNavigation(userLocation, lastHeadingRef.current || 0);
+        } else {
+            // Force a lookup
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+                    setUserLocation(loc);
+                    beginNavigation(loc, pos.coords.heading || 0);
+                },
+                (err) => {
+                    console.error("Initial location failed, using default:", err);
+                    beginNavigation(SIMULATION_START_LOCATION, 0);
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        }
     } else {
         setIsStartingSimulation(true);
         setIsSimulationMode(true);
@@ -930,6 +933,7 @@ export default function StartNavigationPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
+        {isLocating && <LoadingScreen message="Huidige locatie bepalen..." className="fixed inset-0 z-[1000]" />}
         {isStartingSimulation && <LoadingScreen message="Simulator voorbereiden..." className="fixed inset-0 z-[1000]" />}
         
         <div className="absolute inset-0 z-0">
