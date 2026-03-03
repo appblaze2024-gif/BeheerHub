@@ -711,7 +711,6 @@ export default function StartNavigationPage() {
 
                 if (navigationState === 'navigating' && mapRef.current) {
                     const map = mapRef.current.getMap();
-                    // FAST NAVIGATION EASE: Reduced duration for snappier tracking
                     map.easeTo({
                         center: [loc.longitude, loc.latitude],
                         bearing: heading,
@@ -806,7 +805,6 @@ export default function StartNavigationPage() {
                 const line = turf.lineString(geometry.coordinates);
                 const bbox = turf.bbox(line);
                 if (bbox[0] !== Infinity) {
-                    // Optimized zoom: Fast and clear
                     mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
                         padding: 250, 
                         duration: 800 
@@ -838,7 +836,6 @@ export default function StartNavigationPage() {
             setIsListExpanded(false);
             setIsLocating(false);
             
-            // SNAPPY TRANSITION: Reduced duration from 2000 to 800
             mapRef.current?.getMap().flyTo({ 
                 center: [loc.longitude, loc.latitude], 
                 zoom: Number(navZoomRef.current) || 18, 
@@ -926,6 +923,14 @@ export default function StartNavigationPage() {
     };
     simAnimationRef.current = requestAnimationFrame(animate);
   };
+
+  const nextMission = sortedMissions[0];
+  const distToNextKm = nextMission ? turf.distance(
+      turf.point([smoothLocation.longitude, smoothLocation.latitude]),
+      turf.point([nextMission.longitude, nextMission.latitude]),
+      { units: 'kilometers' }
+  ) : 0;
+  const etaSeconds = (distToNextKm * 1000) / 13.8;
 
   React.useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
@@ -1039,13 +1044,16 @@ export default function StartNavigationPage() {
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
                     <CardContent className="p-6 flex items-center justify-between gap-8">
                         <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-8">
-                            <p className="text-4xl font-black text-slate-900">{formatDate(addSeconds(new Date(), (distanceRemaining / 13.8)), 'HH:mm')}</p>
+                            <p className="text-4xl font-black text-slate-900">{formatDate(addSeconds(new Date(), etaSeconds), 'HH:mm')}</p>
                             <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">aankomst</p>
+                            <div className="mt-2 px-3 py-0.5 bg-primary/10 rounded-full">
+                                <p className="text-[10px] font-black text-primary">{distToNextKm.toFixed(1)} km</p>
+                            </div>
                         </div>
                         <div className="flex-1 flex flex-col gap-3 min-w-0">
                             <div className="space-y-0.5">
                                 <p className="text-[9px] font-black uppercase text-slate-500">Volgende</p>
-                                <p className="text-lg font-black text-slate-900 uppercase truncate">{sortedMissions[0]?.intakenummer}</p>
+                                <p className="text-lg font-black text-slate-900 uppercase truncate">{nextMission?.intakenummer || 'Geen doel'}</p>
                             </div>
                             <Progress value={100} className="h-2 bg-slate-100" />
                         </div>
