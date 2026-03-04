@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -85,7 +84,7 @@ import { MapboxView } from '@/components/mapbox-view';
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
-const ROUTE_COLUMNS = {
+const ROUTE_COLUMNS_CONFIG = {
     intakenummer: true,
     locatie: true,
     memo: true,
@@ -95,7 +94,7 @@ const ROUTE_COLUMNS = {
     afstand: true
 };
 
-const ROUTE_COLUMN_LABELS: Record<string, string> = {
+const ROUTE_COLUMN_LABELS_CONFIG: Record<string, string> = {
     intakenummer: 'Nummer',
     locatie: 'Locatie',
     memo: 'Omschrijving',
@@ -120,6 +119,15 @@ const routeLayerCasing: Layer = {
   layout: { 'line-join': 'round', 'line-cap': 'round' },
   paint: { 'line-color': '#1e40af', 'line-width': 12, 'line-opacity': 0.2 },
 };
+
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
 
 const getMeldingAgeColor = (datum?: string) => {
     if (!datum) return 'bg-slate-400';
@@ -523,7 +531,7 @@ export default function StartNavigationPage() {
 
   const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
-  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(ROUTE_COLUMNS);
+  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(ROUTE_COLUMNS_CONFIG);
 
   const [navZoom, setNavZoomState] = React.useState(18);
   const [navPitch, setNavPitchState] = React.useState(60);
@@ -607,7 +615,7 @@ export default function StartNavigationPage() {
         });
   }, [filteredMeldingen, userLocation]);
 
-  // ROUTE FETCHING (With 50m Off-route Detection)
+  // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
@@ -649,7 +657,6 @@ export default function StartNavigationPage() {
     const distanceToRoute = turf.pointToLineDistance(pt, line, { units: 'meters' });
 
     if (distanceToRoute > 50) {
-        console.log("Off-route detected (50m+). Rerouting...");
         fetchRoute(false);
     }
   }, [userLocation, currentRouteGeometry, navigationState, fetchRoute]);
@@ -665,6 +672,19 @@ export default function StartNavigationPage() {
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            const currentSpeed = pos.coords.speed || 0;
+            const isStationary = currentSpeed < 0.55; // ~2 km/h
+
+            // Anti-jitter: If stationary and moved less than 3 meters, ignore the update
+            if (smoothLocation && isStationary) {
+                const distMoved = turf.distance(
+                    turf.point([smoothLocation.longitude, smoothLocation.latitude]),
+                    turf.point([loc.longitude, loc.latitude]),
+                    { units: 'meters' }
+                );
+                if (distMoved < 3) return; 
+            }
+
             setUserLocation(loc);
             
             if (!isSimulationMode) {
@@ -712,7 +732,7 @@ export default function StartNavigationPage() {
         { enableHighAccuracy: true, maximumAge: 0, timeout: Infinity }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, smoothLocation]);
 
   // INTERFACE HANDLERS
   const handleResize = (clientY: number) => {
@@ -964,7 +984,7 @@ export default function StartNavigationPage() {
                     <Button 
                         variant="default" 
                         size="icon" 
-                        className="h-14 w-14 rounded-full shadow-2xl bg-primary text-white mt-2 animate-bounce border-4 border-white flex items-center justify-center pointer-events-auto" 
+                        className="h-14 w-14 rounded-full shadow-2xl bg-primary text-white mt-2 border-4 border-white flex items-center justify-center pointer-events-auto" 
                         onClick={() => {
                             setIsManualMode(false);
                             if (mapRef.current && smoothLocation) {
@@ -1076,10 +1096,10 @@ export default function StartNavigationPage() {
                             <div className="space-y-4">
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p>
                                 <div className="space-y-2">
-                                    {Object.keys(ROUTE_COLUMNS).map(colId => (
+                                    {Object.keys(ROUTE_COLUMNS_CONFIG).map(colId => (
                                         <div key={colId} className="flex items-center space-x-3 p-1">
                                             <Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" />
-                                            <Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{ROUTE_COLUMN_LABELS[colId]}</Label>
+                                            <Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{ROUTE_COLUMN_LABELS_CONFIG[colId]}</Label>
                                         </div>
                                     ))}
                                 </div>
