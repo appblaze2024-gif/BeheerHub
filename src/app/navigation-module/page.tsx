@@ -166,7 +166,7 @@ function IntegratedWerkbonOverlay({
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     
-    // Fixed: State for material input
+    // Fixed: Defined state for materials list
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     
@@ -687,6 +687,17 @@ export default function StartNavigationPage() {
         setIsCalculatingRoute(false);
     }
   }, [sortedMissions, userLocation, navigationState]);
+
+  // EFFECT: Watch for mission completion to trigger instant reroute
+  const lastMissionIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const currentFirstId = sortedMissions[0]?.id || null;
+    if (navigationState === 'navigating' && currentFirstId !== lastMissionIdRef.current) {
+        setCurrentRouteGeometry(null); // Clear old line
+        fetchRoute();
+        lastMissionIdRef.current = currentFirstId;
+    }
+  }, [sortedMissions, navigationState, fetchRoute]);
 
   // Check if off-route (> 50m)
   React.useEffect(() => {
