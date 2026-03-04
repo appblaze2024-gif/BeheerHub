@@ -641,7 +641,7 @@ export default function StartNavigationPage() {
         });
   }, [filteredMeldingen, userLocation]);
 
-  // ROUTE FETCHING - MODIFIED FOR DYNAMIC POINT-TO-POINT
+  // ROUTE FETCHING - MODIFIED FOR STRICT POINT-TO-POINT IN NAV MODE
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
@@ -653,7 +653,7 @@ export default function StartNavigationPage() {
     const startPos = userLocation || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
-    // Point-to-point if navigating (only current to nearest), full sequence if in setup
+    // CRITICAL: Point-to-point if navigating (only current to nearest), full sequence if in setup
     const missionPoints = navigationState === 'navigating' 
         ? [sortedMissions[0]] 
         : sortedMissions.slice(0, 24);
@@ -869,6 +869,9 @@ export default function StartNavigationPage() {
             setIsLocating(false);
             setIsManualMode(false);
             
+            // Clear current route to force fresh single-line recalculation
+            setCurrentRouteGeometry(null);
+            
             if (mapRef.current) {
                 mapRef.current.getMap().jumpTo({ 
                     center: [loc.longitude, loc.latitude], 
@@ -899,6 +902,7 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         setIsManualMode(false);
+        setCurrentRouteGeometry(null); // Force single line
         setTimeout(() => {
             setIsStartingSimulation(false);
             startSimulation();
@@ -1227,6 +1231,7 @@ export default function StartNavigationPage() {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
                         // Trigger immediate route update after completion from CURRENT position
+                        setCurrentRouteGeometry(null); // Clear to force fresh single line
                         setTimeout(() => fetchRoute(), 100);
                     }} 
                 />
