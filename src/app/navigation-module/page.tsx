@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -49,7 +50,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project, UserProfile } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -104,15 +105,6 @@ const ROUTE_COLUMN_LABELS: Record<string, string> = {
     afstand: 'Afstand'
 };
 
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
-
 const routeLayer: Layer = {
   id: 'route',
   type: 'line',
@@ -164,8 +156,6 @@ function IntegratedWerkbonOverlay({
     const [targetLang, setTargetLang] = React.useState(translationLanguages[0]);
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
-    const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
-    const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
@@ -535,11 +525,8 @@ export default function StartNavigationPage() {
   const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
   const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(ROUTE_COLUMNS);
 
-  const navZoomRef = React.useRef(18);
   const [navZoom, setNavZoomState] = React.useState(18);
-  const navPitchRef = React.useRef(60);
   const [navPitch, setNavPitchState] = React.useState(60);
-  const navOffsetRef = React.useRef(450);
   const [navOffset, setNavOffsetState] = React.useState(450);
 
   const [smoothLocation, setSmoothLocation] = React.useState<any>(null);
@@ -578,7 +565,7 @@ export default function StartNavigationPage() {
     );
   }, [firestore]);
 
-  const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+  const { data: rawMeldingen } = useCollection<Melding>(meldingenQuery);
 
   const completedTodayQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -620,71 +607,7 @@ export default function StartNavigationPage() {
         });
   }, [filteredMeldingen, userLocation]);
 
-  // GPS ENGINE
-  React.useEffect(() => {
-    if (!navigator.geolocation) return;
-    
-    // Continuous watch with maximum frequency and accuracy
-    const watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-            setUserLocation(loc);
-            
-            if (!isSimulationMode) {
-                let activeLoc = { ...loc, heading: lastHeadingRef.current };
-
-                // Snapping logic to keep the user on the road
-                if (currentRouteGeometry) {
-                    try {
-                        const line = turf.lineString(currentRouteGeometry.coordinates);
-                        const currPt = turf.point([loc.longitude, loc.latitude]);
-                        const snapped = turf.nearestPointOnLine(line, currPt);
-                        
-                        activeLoc.longitude = snapped.geometry.coordinates[0];
-                        activeLoc.latitude = snapped.geometry.coordinates[1];
-
-                        // Calculate look-ahead heading for perfectly straight camera
-                        const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
-                        const distAlong = turf.length(alongRoute, { units: 'meters' });
-                        const ahead = turf.along(line, distAlong + 10, { units: 'meters' });
-                        const calculatedHeading = (turf.bearing(snapped, ahead) + 360) % 360;
-                        activeLoc.heading = calculatedHeading;
-                        lastHeadingRef.current = calculatedHeading;
-
-                        const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
-                        setDisplayedRouteGeometry(forwardPart);
-                    } catch (e) {}
-                }
-
-                setSmoothLocation(activeLoc);
-                if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
-
-                // Linear camera tracking - easeTo provides smoother transition than jumpTo
-                if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
-                    const map = mapRef.current.getMap();
-                    map.easeTo({
-                        center: [activeLoc.longitude, activeLoc.latitude],
-                        bearing: activeLoc.heading,
-                        zoom: navZoom,
-                        pitch: navPitch,
-                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                        duration: 1000, // Sync with 1Hz typical GPS update
-                        easing: (t) => t // Linear easing for gliding effect
-                    });
-                }
-            }
-        },
-        (err) => console.error("GPS Error:", err),
-        { 
-            enableHighAccuracy: true, 
-            maximumAge: 0, 
-            timeout: Infinity // Keep asking for signal
-        }
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset]);
-
-  // ROUTE FETCHING (Optimized to prevent overheating)
+  // ROUTE FETCHING (With 50m Off-route Detection)
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
@@ -692,22 +615,11 @@ export default function StartNavigationPage() {
         return;
     }
     const startPos = userLocation || SIMULATION_START_LOCATION;
-    
-    // Only re-calculate if we moved significantly (>50m) to save CPU/Battery
-    if (!zoomToFit && lastRouteCalculationLocationRef.current) {
-        const dist = turf.distance(
-            turf.point([startPos.longitude, startPos.latitude]),
-            turf.point([lastRouteCalculationLocationRef.current.longitude, lastRouteCalculationLocationRef.current.latitude]),
-            { units: 'meters' }
-        );
-        if (dist < 50) return; 
-    }
-
     lastRouteCalculationLocationRef.current = startPos;
+
     const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     
-    // Fastest route profile
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
     
     try {
@@ -728,13 +640,79 @@ export default function StartNavigationPage() {
     } catch (e) { console.error("Route error:", e); }
   }, [sortedMissions, userLocation]);
 
+  // Check if off-route (> 50m)
   React.useEffect(() => {
-    if (sortedMissions.length > 0) fetchRoute(navigationState === 'setup');
-    else if (rawMeldingen && sortedMissions.length === 0) {
-        setCurrentRouteGeometry(null);
-        setDisplayedRouteGeometry(null);
+    if (navigationState !== 'navigating' || !userLocation || !currentRouteGeometry) return;
+
+    const pt = turf.point([userLocation.longitude, userLocation.latitude]);
+    const line = turf.lineString(currentRouteGeometry.coordinates);
+    const distanceToRoute = turf.pointToLineDistance(pt, line, { units: 'meters' });
+
+    if (distanceToRoute > 50) {
+        console.log("Off-route detected (50m+). Rerouting...");
+        fetchRoute(false);
     }
-  }, [sortedMissions, navigationState, fetchRoute, rawMeldingen]);
+  }, [userLocation, currentRouteGeometry, navigationState, fetchRoute]);
+
+  React.useEffect(() => {
+    if (sortedMissions.length > 0 && !currentRouteGeometry) fetchRoute(navigationState === 'setup');
+  }, [sortedMissions, navigationState, fetchRoute, currentRouteGeometry]);
+
+  // GPS ENGINE
+  React.useEffect(() => {
+    if (!navigator.geolocation) return;
+    
+    const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+            const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            setUserLocation(loc);
+            
+            if (!isSimulationMode) {
+                let activeLoc = { ...loc, heading: lastHeadingRef.current };
+
+                if (currentRouteGeometry) {
+                    try {
+                        const line = turf.lineString(currentRouteGeometry.coordinates);
+                        const currPt = turf.point([loc.longitude, loc.latitude]);
+                        const snapped = turf.nearestPointOnLine(line, currPt);
+                        
+                        activeLoc.longitude = snapped.geometry.coordinates[0];
+                        activeLoc.latitude = snapped.geometry.coordinates[1];
+
+                        const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
+                        const distAlong = turf.length(alongRoute, { units: 'meters' });
+                        const ahead = turf.along(line, distAlong + 10, { units: 'meters' });
+                        const calculatedHeading = (turf.bearing(snapped, ahead) + 360) % 360;
+                        activeLoc.heading = calculatedHeading;
+                        lastHeadingRef.current = calculatedHeading;
+
+                        const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
+                        setDisplayedRouteGeometry(forwardPart);
+                    } catch (e) {}
+                }
+
+                setSmoothLocation(activeLoc);
+                if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
+
+                if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
+                    const map = mapRef.current.getMap();
+                    map.easeTo({
+                        center: [activeLoc.longitude, activeLoc.latitude],
+                        bearing: activeLoc.heading,
+                        zoom: navZoom,
+                        pitch: navPitch,
+                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+                        duration: 1000, 
+                        easing: (t) => t 
+                    });
+                }
+            }
+        },
+        (err) => console.error("GPS Error:", err),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: Infinity }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset]);
 
   // INTERFACE HANDLERS
   const handleResize = (clientY: number) => {
@@ -773,7 +751,6 @@ export default function StartNavigationPage() {
   const updateNavZoom = (newZoom: number) => {
     const val = Number(newZoom);
     setNavZoomState(val);
-    navZoomRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val });
     mapRef.current?.getMap().jumpTo({ zoom: val });
   };
@@ -781,7 +758,6 @@ export default function StartNavigationPage() {
   const updateNavPitch = (newPitch: number) => {
     const val = Number(newPitch);
     setNavPitchState(val);
-    navPitchRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val });
     mapRef.current?.getMap().jumpTo({ pitch: val });
   };
@@ -789,7 +765,6 @@ export default function StartNavigationPage() {
   const updateNavOffset = (newOffset: number) => {
     const val = Number(newOffset);
     setNavOffsetState(val);
-    navOffsetRef.current = val;
     if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val });
     mapRef.current?.getMap().jumpTo({ padding: { top: 0, bottom: Math.max(0, val), left: 0, right: 0 } });
   };
@@ -917,7 +892,6 @@ export default function StartNavigationPage() {
                 touchPitch={true}
                 doubleClickZoom={true}
                 onInteractionStateChange={(state) => {
-                    // Manual mode active when user manipulates the map
                     if (navigationState === 'navigating' && (state.isDragging || state.isZooming || state.isRotating)) {
                         setIsManualMode(true);
                     }
