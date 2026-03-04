@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -79,7 +80,6 @@ import { translateText } from '@/ai/flows/translate-text-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
-import { MapboxView } from '@/components/mapbox-view';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -491,9 +491,28 @@ function IntegratedWerkbonOverlay({
                                         ))}
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 bg-slate-50 p-4 lg:p-6 rounded-2xl lg:rounded-3xl border-2 border-slate-100">
-                                        <div className="space-y-1"><Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Materiaal</Label><Input placeholder="Bv. Zand..." className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:text-sm" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} /></div>
-                                        <div className="space-y-1"><Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Aantal</Label><Input placeholder="0" type="number" className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:text-sm" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} /></div>
-                                        <div className="flex items-end"><Button className="h-9 lg:h-11 w-full font-black uppercase tracking-tight rounded-lg lg:rounded-xl shadow-lg shadow-primary/20 text-[10px] lg:text-xs" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>Toevoegen</Button></div>
+                                        <div className="space-y-1">
+                                            <Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Materiaal</Label>
+                                            <Input placeholder="Bv. Zand..." className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:text-sm" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Aantal</Label>
+                                            <Input placeholder="0" type="number" className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:text-sm" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} />
+                                        </div>
+                                        <div className="flex items-end">
+                                            <Button 
+                                                className="h-9 lg:h-11 w-full font-black uppercase tracking-tight rounded-lg lg:rounded-xl shadow-lg shadow-primary/20 text-[10px] lg:text-xs" 
+                                                onClick={() => { 
+                                                    if(newHoeveelheidType && newHoeveelheidAantal) { 
+                                                        setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); 
+                                                        setNewHoeveelheidType(''); 
+                                                        setNewHoeveelheidAantal(''); 
+                                                    } 
+                                                }}
+                                            >
+                                                Toevoegen
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -666,6 +685,28 @@ export default function StartNavigationPage() {
   React.useEffect(() => {
     if (sortedMissions.length > 0 && !currentRouteGeometry) fetchRoute(navigationState === 'setup');
   }, [sortedMissions, navigationState, fetchRoute, currentRouteGeometry]);
+
+  // AUTO-RECENTER LOGIC: After 10s of manual mode, return to follow-mode
+  React.useEffect(() => {
+    if (!isManualMode || navigationState !== 'navigating') return;
+
+    const timer = setTimeout(() => {
+        setIsManualMode(false);
+        if (mapRef.current && smoothLocation) {
+            const map = mapRef.current.getMap();
+            map.easeTo({
+                center: [smoothLocation.longitude, smoothLocation.latitude],
+                zoom: navZoom,
+                pitch: navPitch,
+                bearing: smoothLocation.heading || 0,
+                padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+                duration: 1000
+            });
+        }
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [isManualMode, navigationState, smoothLocation, navZoom, navPitch, navOffset]);
 
   // GPS ENGINE
   React.useEffect(() => {
@@ -889,11 +930,6 @@ export default function StartNavigationPage() {
       { units: 'kilometers' }
   ) : 0;
   const etaSeconds = (distToNextKm * 1000) / (speedKmh > 5 ? (speedKmh / 3.6) : 13.8);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
@@ -1164,7 +1200,8 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
-                        fetchRoute();
+                        // Trigger immediate route update after completion
+                        setTimeout(() => fetchRoute(), 100);
                     }} 
                 />
             </div>
