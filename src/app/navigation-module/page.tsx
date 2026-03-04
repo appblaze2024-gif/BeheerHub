@@ -49,7 +49,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -811,12 +811,15 @@ export default function StartNavigationPage() {
 
                 if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
                     const map = mapRef.current.getMap();
-                    map.jumpTo({
+                    // Smooth linear movement for iPad
+                    map.easeTo({
                         center: [activeLoc.longitude, activeLoc.latitude],
                         bearing: activeLoc.heading,
                         zoom: navZoom,
                         pitch: navPitch,
-                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
+                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+                        duration: 1000,
+                        easing: (t) => t
                     });
                 }
             }
@@ -826,23 +829,6 @@ export default function StartNavigationPage() {
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, smoothLocation, navZoom, navPitch, navOffset]);
-
-  React.useEffect(() => {
-    if (navigationState !== 'navigating' || isSimulationMode) return;
-
-    const interval = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-          setUserLocation(loc);
-        },
-        (err) => {},
-        { enableHighAccuracy: true }
-      );
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [navigationState, isSimulationMode]);
 
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
