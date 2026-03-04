@@ -166,7 +166,6 @@ function IntegratedWerkbonOverlay({
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     
-    // Fixed state for material items
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     
@@ -550,6 +549,7 @@ export default function StartNavigationPage() {
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isListExpanded, setIsListExpanded] = React.useState(true);
   const [isManualMode, setIsManualMode] = React.useState(false);
+  const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
 
   const [listHeight, setListHeight] = React.useState(400);
   const [isResizing, setIsResizing] = React.useState(false);
@@ -640,17 +640,27 @@ export default function StartNavigationPage() {
         });
   }, [filteredMeldingen, userLocation]);
 
-  // ROUTE FETCHING
+  // ROUTE FETCHING - MODIFIED FOR DYNAMIC POINT-TO-POINT
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
         return;
     }
+    
+    setIsCalculatingRoute(true);
     const startPos = userLocation || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
-    const waypoints = [[startPos.longitude, startPos.latitude], ...sortedMissions.slice(0, 24).map(m => [m.longitude, m.latitude])];
+    // Point-to-point if navigating (only current to nearest), full sequence if in setup
+    const missionPoints = navigationState === 'navigating' 
+        ? [sortedMissions[0]] 
+        : sortedMissions.slice(0, 24);
+
+    const waypoints = [
+        [startPos.longitude, startPos.latitude], 
+        ...missionPoints.map(m => [m.longitude, m.latitude])
+    ];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
@@ -670,8 +680,12 @@ export default function StartNavigationPage() {
                 }
             }
         }
-    } catch (e) { console.error("Route error:", e); }
-  }, [sortedMissions, userLocation]);
+    } catch (e) { 
+        console.error("Route error:", e); 
+    } finally {
+        setIsCalculatingRoute(false);
+    }
+  }, [sortedMissions, userLocation, navigationState]);
 
   // Check if off-route (> 50m)
   React.useEffect(() => {
@@ -940,6 +954,13 @@ export default function StartNavigationPage() {
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
         {isStartingSimulation && <LoadingScreen message="Simulator voorbereiden..." className="fixed inset-0 z-[1000]" />}
         
+        {isCalculatingRoute && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-6 py-2 rounded-full shadow-2xl flex items-center gap-3 border-2 border-primary animate-in fade-in duration-300">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Route herberekenen...</span>
+            </div>
+        )}
+
         <div className="absolute inset-0 z-0" style={{ touchAction: 'none' }}>
             <MapGL 
                 ref={mapRef} 
@@ -1022,7 +1043,7 @@ export default function StartNavigationPage() {
                     <Minus className="h-6 w-6 text-slate-600" />
                 </Button>
                 
-                {isManualMode && (
+                {(isManualMode || navZoom < 17) && (
                     <Button 
                         variant="default" 
                         size="icon" 
@@ -1037,7 +1058,7 @@ export default function StartNavigationPage() {
                                     pitch: navPitch,
                                     bearing: smoothLocation.heading || 0,
                                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                                    duration: 0
+                                    duration: 800
                                 });
                             }
                         }}
@@ -1067,31 +1088,6 @@ export default function StartNavigationPage() {
                         </div>
                     </PopoverContent>
                 </Popover>
-            </div>
-        )}
-
-        {isManualMode && navigationState === 'navigating' && (
-            <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-500">
-                <Button 
-                    onClick={() => {
-                        setIsManualMode(false);
-                        if (mapRef.current && smoothLocation) {
-                            const map = mapRef.current.getMap();
-                            map.easeTo({
-                                center: [smoothLocation.longitude, smoothLocation.latitude],
-                                zoom: navZoom,
-                                pitch: navPitch,
-                                bearing: smoothLocation.heading || 0,
-                                padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                                duration: 800
-                            });
-                        }
-                    }}
-                    className="h-12 px-8 font-black uppercase bg-primary text-white shadow-2xl rounded-full gap-3 border-4 border-white scale-110"
-                >
-                    <Navigation className="h-5 w-5 fill-current" />
-                    Hervat Navigatie
-                </Button>
             </div>
         )}
 
@@ -1229,7 +1225,7 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
-                        // Trigger immediate route update after completion
+                        // Trigger immediate route update after completion from CURRENT position
                         setTimeout(() => fetchRoute(), 100);
                     }} 
                 />
