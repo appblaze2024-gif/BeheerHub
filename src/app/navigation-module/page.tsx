@@ -104,15 +104,6 @@ const ROUTE_COLUMN_LABELS: Record<string, string> = {
     afstand: 'Afstand'
 };
 
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
-
 const routeLayer: Layer = {
   id: 'route',
   type: 'line',
@@ -196,28 +187,6 @@ function IntegratedWerkbonOverlay({
         }
     }, [melding]);
 
-    const handleSaveQuickKey = async () => {
-        if (!user || !firestore || !afhandelingBijzonderheden.trim()) return;
-        const currentKeys = profile?.quickKeys || [];
-        if (currentKeys.includes(afhandelingBijzonderheden.trim())) {
-            toast({ title: "Bestaat al", description: "Deze tekst is al opgeslagen als sneltoets." });
-            return;
-        }
-        const updatedKeys = [afhandelingBijzonderheden.trim(), ...currentKeys].slice(0, 15);
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys });
-        toast({ title: "Sneltoets opgeslagen", description: "Tekst is toegevoegd aan uw collectie." });
-    };
-
-    const handleDeleteQuickKey = (key: string) => {
-        if (!user || !firestore) return;
-        const updatedKeys = (profile?.quickKeys || []).filter(k => k !== key);
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys });
-    };
-
-    const handleUseQuickKey = (key: string) => {
-        setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + key);
-    };
-
     const handleStartWork = async () => {
         if (!firestore || !melding) return;
         updateDocumentNonBlocking(doc(firestore, 'meldingen', melding.id), { workStartedAt: new Date().toISOString() });
@@ -272,7 +241,7 @@ function IntegratedWerkbonOverlay({
 
     const toggleListening = () => {
         if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) return;
         const recognition = new SpeechRecognition();
         recognition.lang = sourceLang.code;
@@ -398,7 +367,7 @@ function IntegratedWerkbonOverlay({
                         <TabsContent value="Opmerkingen" className="mt-0 h-full space-y-6">
                             <Card className="rounded-xl lg:rounded-2xl border-none shadow-xl bg-white overflow-hidden shrink-0">
                                 <CardHeader className="bg-slate-50 border-b p-4 lg:p-5 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities & Sneltoetsen</CardTitle>
+                                    <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle>
                                     <div className="flex items-center gap-1.5 lg:gap-2 bg-slate-100 p-1 lg:p-1.5 rounded-xl lg:rounded-2xl border border-slate-200">
                                         <div className="flex items-center gap-1 lg:gap-1.5 pr-1.5 lg:pr-2 border-r border-slate-200">
                                             <Select value={sourceLang.code} onValueChange={(val) => setSourceLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
@@ -455,28 +424,6 @@ function IntegratedWerkbonOverlay({
                                         value={afhandelingBijzonderheden}
                                         onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
                                     />
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex items-center justify-between border-b pb-2">
-                                            <div className="flex items-center gap-2">
-                                                <Zap className="h-3.5 w-3.5 text-primary" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sneltoetsen</span>
-                                            </div>
-                                            <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-tight rounded-lg border-slate-200" onClick={handleSaveQuickKey} disabled={!afhandelingBijzonderheden.trim()}>
-                                                <Plus className="h-3.5 w-3.5 mr-1.5" /> Opslaan
-                                            </Button>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {profile?.quickKeys?.map((key, i) => (
-                                                <div key={i} className="group relative flex items-center">
-                                                    <Button variant="secondary" size="sm" className="h-8 px-3 rounded-xl font-bold text-[10px] bg-slate-100 border border-slate-200 shadow-sm hover:border-primary/30 transition-all truncate max-w-[150px]" onClick={() => handleUseQuickKey(key)}>{key}</Button>
-                                                    <button className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" onClick={(e) => { e.stopPropagation(); handleDeleteQuickKey(key); }}><X className="h-2 w-2" /></button>
-                                                </div>
-                                            ))}
-                                            {(!profile?.quickKeys || profile.quickKeys.length === 0) && (
-                                                <p className="text-[9px] font-bold text-slate-300 italic uppercase">Geen sneltoetsen.</p>
-                                            )}
-                                        </div>
-                                    </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -549,6 +496,15 @@ function IntegratedWerkbonOverlay({
     );
 }
 
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
+
 export default function StartNavigationPage() {
   const firestore = useFirestore();
   const { user } = useUser();
@@ -585,7 +541,7 @@ export default function StartNavigationPage() {
   const navOffsetRef = React.useRef(450);
   const [navOffset, setNavOffsetState] = React.useState(450);
 
-  const [smoothLocation, setSmoothLocation] = React.useState<any>({ ...SIMULATION_START_LOCATION, heading: 0 });
+  const [smoothLocation, setSmoothLocation] = React.useState<any>(null);
   const lastHeadingRef = React.useRef(0);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
@@ -782,8 +738,7 @@ export default function StartNavigationPage() {
             setUserLocation(loc);
             
             if (!isSimulationMode) {
-                const rawHeading = pos.coords.heading !== null ? pos.coords.heading : lastHeadingRef.current;
-                let activeLoc = { ...loc, heading: rawHeading };
+                let activeLoc = { ...loc, heading: lastHeadingRef.current };
 
                 if (currentRouteGeometry) {
                     try {
@@ -794,11 +749,13 @@ export default function StartNavigationPage() {
                         activeLoc.longitude = snapped.geometry.coordinates[0];
                         activeLoc.latitude = snapped.geometry.coordinates[1];
 
-                        if (pos.coords.heading === null && smoothLocation) {
-                            const prevPt = turf.point([smoothLocation.longitude, smoothLocation.latitude]);
-                            const distance = turf.distance(prevPt, snapped, { units: 'meters' });
-                            if (distance > 1) activeLoc.heading = (turf.bearing(prevPt, snapped) + 360) % 360;
-                        }
+                        // Calculate predictive heading for straight view
+                        const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
+                        const distAlong = turf.length(alongRoute, { units: 'meters' });
+                        const ahead = turf.along(line, distAlong + 5, { units: 'meters' });
+                        const calculatedHeading = (turf.bearing(snapped, ahead) + 360) % 360;
+                        activeLoc.heading = calculatedHeading;
+                        lastHeadingRef.current = calculatedHeading;
 
                         const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
                         setDisplayedRouteGeometry(forwardPart);
@@ -806,12 +763,10 @@ export default function StartNavigationPage() {
                 }
 
                 setSmoothLocation(activeLoc);
-                lastHeadingRef.current = activeLoc.heading;
                 if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
 
                 if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
                     const map = mapRef.current.getMap();
-                    // Smooth linear movement for iPad
                     map.easeTo({
                         center: [activeLoc.longitude, activeLoc.latitude],
                         bearing: activeLoc.heading,
@@ -828,7 +783,7 @@ export default function StartNavigationPage() {
         { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, smoothLocation, navZoom, navPitch, navOffset]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset]);
 
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
@@ -892,7 +847,7 @@ export default function StartNavigationPage() {
         if (simStateRef.current.distanceTravelled >= totalDist) { setSpeedKmh(0); return; }
         const curr = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
         const [lng, lat] = curr.geometry.coordinates;
-        const aheadDist = Math.min(simStateRef.current.distanceTravelled + 2, totalDist);
+        const aheadDist = Math.min(simStateRef.current.distanceTravelled + 5, totalDist);
         const ahead = turf.along(line, aheadDist, { units: 'meters' });
         const head = (turf.bearing(curr, ahead) + 360) % 360;
         lastHeadingRef.current = head;
@@ -1019,12 +974,13 @@ export default function StartNavigationPage() {
                             setIsManualMode(false);
                             if (mapRef.current && smoothLocation) {
                                 const map = mapRef.current.getMap();
-                                map.jumpTo({
+                                map.easeTo({
                                     center: [smoothLocation.longitude, smoothLocation.latitude],
                                     zoom: navZoom,
                                     pitch: navPitch,
                                     bearing: smoothLocation.heading || 0,
-                                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
+                                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+                                    duration: 0
                                 });
                             }
                         }}
