@@ -166,7 +166,7 @@ function IntegratedWerkbonOverlay({
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     
-    // Fixed: Defined missing state for materiaalinvoer
+    // Fixed: State for material input
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     
@@ -641,7 +641,7 @@ export default function StartNavigationPage() {
         });
   }, [filteredMeldingen, userLocation]);
 
-  // ROUTE FETCHING - MODIFIED FOR STRICT POINT-TO-POINT IN NAV MODE
+  // ROUTE FETCHING - STRIKT POINT-TO-POINT IN NAV MODE
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
@@ -727,7 +727,7 @@ export default function StartNavigationPage() {
     return () => clearTimeout(timer);
   }, [isManualMode, navigationState, smoothLocation, navZoom, navPitch, navOffset]);
 
-  // GPS ENGINE - Optimized to prevent flickering
+  // GPS ENGINE - Persistent stream to avoid flickering
   React.useEffect(() => {
     if (!navigator.geolocation) return;
     
