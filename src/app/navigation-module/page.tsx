@@ -724,14 +724,14 @@ export default function StartNavigationPage() {
                         zoom: navZoom,
                         pitch: navPitch,
                         padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                        duration: 1000, 
+                        duration: 500, // Reduced for tighter real-time tracking
                         easing: (t) => t 
                     });
                 }
             }
         },
         (err) => console.error("GPS Error:", err),
-        { enableHighAccuracy: true, maximumAge: 0, timeout: Infinity }
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, smoothLocation]);
