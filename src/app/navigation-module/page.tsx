@@ -166,7 +166,7 @@ function IntegratedWerkbonOverlay({
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     
-    // State for materials inputs
+    // Fixed: Added missing state for materials
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     
@@ -254,7 +254,7 @@ function IntegratedWerkbonOverlay({
 
     const toggleListening = () => {
         if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) return;
         const recognition = new SpeechRecognition();
         recognition.lang = sourceLang.code;
@@ -653,7 +653,7 @@ export default function StartNavigationPage() {
     const startPos = userLocation || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
-    // CRITICAL: Point-to-point if navigating, full sequence if in setup
+    // Point-to-point if navigating, full sequence if in setup
     const missionPoints = navigationState === 'navigating' 
         ? [sortedMissions[0]] 
         : sortedMissions.slice(0, 24);
@@ -673,11 +673,17 @@ export default function StartNavigationPage() {
             const geometry = data.routes[0].geometry;
             setCurrentRouteGeometry(geometry);
             setDisplayedRouteGeometry(turf.feature(geometry));
+            
             if (zoomToFit && mapRef.current) {
-                const line = turf.lineString(geometry.coordinates);
-                const bbox = turf.bbox(line);
+                // Fixed: Fit bounds to include user location + all visible mission points
+                const points = [
+                    [startPos.longitude, startPos.latitude],
+                    ...filteredMeldingen.map(m => [m.longitude, m.latitude])
+                ];
+                const collection = turf.featureCollection(points.map(p => turf.point(p)));
+                const bbox = turf.bbox(collection);
                 if (bbox[0] !== Infinity) {
-                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
+                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 80, duration: 1000 });
                 }
             }
         }
@@ -686,7 +692,7 @@ export default function StartNavigationPage() {
     } finally {
         setIsCalculatingRoute(false);
     }
-  }, [sortedMissions, userLocation, navigationState]);
+  }, [sortedMissions, userLocation, navigationState, filteredMeldingen]);
 
   // WATCH FOR MISSION COMPLETION
   const lastMissionIdRef = React.useRef<string | null>(null);
@@ -738,73 +744,60 @@ export default function StartNavigationPage() {
     return () => clearTimeout(timer);
   }, [isManualMode, navigationState, smoothLocation, navZoom, navPitch, navOffset]);
 
-  // GPS ENGINE
+  // STABLE GPS ENGINE (Eliminate Flickering)
   React.useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || isSimulationMode) return;
     
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-            const currentSpeed = pos.coords.speed || 0;
-            const isStationary = currentSpeed < 0.55; 
-
-            if (smoothLocation && isStationary) {
-                const distMoved = turf.distance(
-                    turf.point([smoothLocation.longitude, smoothLocation.latitude]),
-                    turf.point([loc.longitude, loc.latitude]),
-                    { units: 'meters' }
-                );
-                if (distMoved < 3) return; 
-            }
-
             setUserLocation(loc);
             
-            if (!isSimulationMode) {
-                let activeLoc = { ...loc, heading: lastHeadingRef.current };
+            // Calculate snapping and heading only if we have a route
+            let activeLoc = { ...loc, heading: lastHeadingRef.current };
 
-                if (currentRouteGeometry) {
-                    try {
-                        const line = turf.lineString(currentRouteGeometry.coordinates);
-                        const currPt = turf.point([loc.longitude, loc.latitude]);
-                        const snapped = turf.nearestPointOnLine(line, currPt);
-                        
-                        activeLoc.longitude = snapped.geometry.coordinates[0];
-                        activeLoc.latitude = snapped.geometry.coordinates[1];
+            if (currentRouteGeometry) {
+                try {
+                    const line = turf.lineString(currentRouteGeometry.coordinates);
+                    const currPt = turf.point([loc.longitude, loc.latitude]);
+                    const snapped = turf.nearestPointOnLine(line, currPt);
+                    
+                    activeLoc.longitude = snapped.geometry.coordinates[0];
+                    activeLoc.latitude = snapped.geometry.coordinates[1];
 
-                        const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
-                        const distAlong = turf.length(alongRoute, { units: 'meters' });
-                        const ahead = turf.along(line, distAlong + 10, { units: 'meters' });
-                        const calculatedHeading = (turf.bearing(snapped, ahead) + 360) % 360;
-                        activeLoc.heading = calculatedHeading;
-                        lastHeadingRef.current = calculatedHeading;
+                    const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
+                    const distAlong = turf.length(alongRoute, { units: 'meters' });
+                    const ahead = turf.along(line, distAlong + 10, { units: 'meters' });
+                    const calculatedHeading = (turf.bearing(snapped, ahead) + 360) % 360;
+                    activeLoc.heading = calculatedHeading;
+                    lastHeadingRef.current = calculatedHeading;
 
-                        const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
-                        setDisplayedRouteGeometry(forwardPart);
-                    } catch (e) {}
-                }
+                    const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
+                    setDisplayedRouteGeometry(forwardPart);
+                } catch (e) {}
+            }
 
-                setSmoothLocation(activeLoc);
-                if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
+            setSmoothLocation(activeLoc);
+            if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
 
-                if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
-                    const map = mapRef.current.getMap();
-                    map.easeTo({
-                        center: [activeLoc.longitude, activeLoc.latitude],
-                        bearing: activeLoc.heading,
-                        zoom: navZoom,
-                        pitch: navPitch,
-                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                        duration: 500, 
-                        easing: (t) => t 
-                    });
-                }
+            if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
+                const map = mapRef.current.getMap();
+                map.easeTo({
+                    center: [activeLoc.longitude, activeLoc.latitude],
+                    bearing: activeLoc.heading,
+                    zoom: navZoom,
+                    pitch: navPitch,
+                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+                    duration: 500, 
+                    easing: (t) => t 
+                });
             }
         },
         (err) => console.error("GPS Error:", err),
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, smoothLocation]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset]);
 
   // INTERFACE HANDLERS
   const handleResize = (clientY: number) => {
@@ -989,6 +982,7 @@ export default function StartNavigationPage() {
                 touchPitch={true}
                 doubleClickZoom={true}
                 onInteractionStateChange={(state) => {
+                    // Detect manual interaction to show the "Resume" button
                     if (navigationState === 'navigating' && (state.isDragging || state.isZooming || state.isRotating)) {
                         setIsManualMode(true);
                     }
@@ -1002,7 +996,6 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 )}
-                {/* Alleen markers tonen die NIET voltooid zijn, of ALLE markers in setup mode */}
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
                         <div className="relative flex items-center justify-center w-14 h-14">
@@ -1043,7 +1036,7 @@ export default function StartNavigationPage() {
                         setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
-                        setCurrentRouteGeometry(null); // Forceer herberekening voor setup view
+                        setCurrentRouteGeometry(null);
                         fetchRoute(true); 
                     }}>STOP RIT</Button>
                 )}
