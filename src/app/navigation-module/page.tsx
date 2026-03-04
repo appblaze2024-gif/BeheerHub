@@ -164,6 +164,8 @@ function IntegratedWerkbonOverlay({
     const [targetLang, setTargetLang] = React.useState(translationLanguages[0]);
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
+    const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
+    const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
@@ -984,7 +986,7 @@ export default function StartNavigationPage() {
                     <Button 
                         variant="default" 
                         size="icon" 
-                        className="h-14 w-14 rounded-full shadow-2xl bg-primary text-white mt-2 border-4 border-white flex items-center justify-center pointer-events-auto" 
+                        className="h-14 w-14 rounded-full shadow-2xl bg-primary text-white mt-2 border-4 border-white flex items-center justify-center pointer-events-auto animate-in fade-in" 
                         onClick={() => {
                             setIsManualMode(false);
                             if (mapRef.current && smoothLocation) {
