@@ -164,8 +164,11 @@ function IntegratedWerkbonOverlay({
     const [targetLang, setTargetLang] = React.useState(translationLanguages[0]);
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
+    
+    // Fixed state definitions for materials
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
+    
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
@@ -598,11 +601,11 @@ export default function StartNavigationPage() {
 
   const completedTodayQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const today = formatDate(new Date(), 'yyyy-MM-dd');
+    const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
     return query(
       collection(firestore, 'meldingen'),
       where('status', '==', 'Afgerond'),
-      where('afhandeling_datum', '==', today)
+      where('afhandeling_datum', '==', todayStr)
     );
   }, [firestore]);
 
@@ -765,7 +768,7 @@ export default function StartNavigationPage() {
                         zoom: navZoom,
                         pitch: navPitch,
                         padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                        duration: 500, // Reduced for tighter real-time tracking
+                        duration: 500, 
                         easing: (t) => t 
                     });
                 }
@@ -1063,6 +1066,31 @@ export default function StartNavigationPage() {
                         </div>
                     </PopoverContent>
                 </Popover>
+            </div>
+        )}
+
+        {isManualMode && navigationState === 'navigating' && (
+            <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-500">
+                <Button 
+                    onClick={() => {
+                        setIsManualMode(false);
+                        if (mapRef.current && smoothLocation) {
+                            const map = mapRef.current.getMap();
+                            map.easeTo({
+                                center: [smoothLocation.longitude, smoothLocation.latitude],
+                                zoom: navZoom,
+                                pitch: navPitch,
+                                bearing: smoothLocation.heading || 0,
+                                padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+                                duration: 800
+                            });
+                        }
+                    }}
+                    className="h-12 px-8 font-black uppercase bg-primary text-white shadow-2xl rounded-full gap-3 border-4 border-white scale-110"
+                >
+                    <Navigation className="h-5 w-5 fill-current" />
+                    Hervat Navigatie
+                </Button>
             </div>
         )}
 
