@@ -641,7 +641,7 @@ export default function StartNavigationPage() {
         });
   }, [filteredMeldingen, userLocation]);
 
-  // ROUTE FETCHING - STRIKT POINT-TO-POINT IN NAV MODE
+  // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
@@ -653,7 +653,7 @@ export default function StartNavigationPage() {
     const startPos = userLocation || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
-    // CRITICAL: Point-to-point if navigating (only current to nearest), full sequence if in setup
+    // CRITICAL: Point-to-point if navigating, full sequence if in setup
     const missionPoints = navigationState === 'navigating' 
         ? [sortedMissions[0]] 
         : sortedMissions.slice(0, 24);
@@ -688,12 +688,12 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, userLocation, navigationState]);
 
-  // EFFECT: Watch for mission completion to trigger instant reroute
+  // WATCH FOR MISSION COMPLETION
   const lastMissionIdRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     const currentFirstId = sortedMissions[0]?.id || null;
     if (navigationState === 'navigating' && currentFirstId !== lastMissionIdRef.current) {
-        setCurrentRouteGeometry(null); // Clear old line
+        setCurrentRouteGeometry(null); 
         fetchRoute();
         lastMissionIdRef.current = currentFirstId;
     }
@@ -716,7 +716,7 @@ export default function StartNavigationPage() {
     if (sortedMissions.length > 0 && !currentRouteGeometry) fetchRoute(navigationState === 'setup');
   }, [sortedMissions, navigationState, fetchRoute, currentRouteGeometry]);
 
-  // AUTO-RECENTER LOGIC: After 10s of manual mode, return to follow-mode
+  // AUTO-RECENTER LOGIC (10s)
   React.useEffect(() => {
     if (!isManualMode || navigationState !== 'navigating') return;
 
@@ -738,7 +738,7 @@ export default function StartNavigationPage() {
     return () => clearTimeout(timer);
   }, [isManualMode, navigationState, smoothLocation, navZoom, navPitch, navOffset]);
 
-  // GPS ENGINE - Persistent stream to avoid flickering
+  // GPS ENGINE
   React.useEffect(() => {
     if (!navigator.geolocation) return;
     
@@ -746,9 +746,8 @@ export default function StartNavigationPage() {
         (pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             const currentSpeed = pos.coords.speed || 0;
-            const isStationary = currentSpeed < 0.55; // ~2 km/h
+            const isStationary = currentSpeed < 0.55; 
 
-            // Anti-jitter: If stationary and moved less than 3 meters, ignore the update
             if (smoothLocation && isStationary) {
                 const distMoved = turf.distance(
                     turf.point([smoothLocation.longitude, smoothLocation.latitude]),
@@ -880,7 +879,6 @@ export default function StartNavigationPage() {
             setIsLocating(false);
             setIsManualMode(false);
             
-            // Clear current route to force fresh single-line recalculation
             setCurrentRouteGeometry(null);
             
             if (mapRef.current) {
@@ -913,7 +911,7 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         setIsManualMode(false);
-        setCurrentRouteGeometry(null); // Force single line
+        setCurrentRouteGeometry(null); 
         setTimeout(() => {
             setIsStartingSimulation(false);
             startSimulation();
@@ -1004,6 +1002,7 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 )}
+                {/* Alleen markers tonen die NIET voltooid zijn, of ALLE markers in setup mode */}
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
                         <div className="relative flex items-center justify-center w-14 h-14">
@@ -1044,6 +1043,7 @@ export default function StartNavigationPage() {
                         setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
+                        setCurrentRouteGeometry(null); // Forceer herberekening voor setup view
                         fetchRoute(true); 
                     }}>STOP RIT</Button>
                 )}
@@ -1241,8 +1241,7 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
-                        // Trigger immediate route update after completion from CURRENT position
-                        setCurrentRouteGeometry(null); // Clear to force fresh single line
+                        setCurrentRouteGeometry(null); 
                         setTimeout(() => fetchRoute(), 100);
                     }} 
                 />
