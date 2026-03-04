@@ -166,6 +166,7 @@ function IntegratedWerkbonOverlay({
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     
+    // Fixed: Defined missing state for materiaalinvoer
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     
@@ -726,7 +727,7 @@ export default function StartNavigationPage() {
     return () => clearTimeout(timer);
   }, [isManualMode, navigationState, smoothLocation, navZoom, navPitch, navOffset]);
 
-  // GPS ENGINE
+  // GPS ENGINE - Optimized to prevent flickering
   React.useEffect(() => {
     if (!navigator.geolocation) return;
     
