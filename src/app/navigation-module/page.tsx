@@ -1155,10 +1155,10 @@ export default function StartNavigationPage() {
                             if (mapRef.current && smoothLocation) {
                                 const map = mapRef.current.getMap();
                                 map.easeTo({
-                                    center: [smoothLocation.longitude, smoothLocation.latitude],
+                                    center: [currentPos.longitude, currentPos.latitude],
                                     zoom: navZoom,
                                     pitch: navPitch,
-                                    bearing: smoothLocation.heading || 0,
+                                    bearing: currentPos.heading || 0,
                                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
                                     duration: 800
                                 });
