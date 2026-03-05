@@ -78,7 +78,6 @@ import { translateText } from '@/ai/flows/translate-text-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
-import { MapboxView } from '@/components/mapbox-view';
 import { Separator } from '@/components/ui/separator';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -703,9 +702,9 @@ export default function StartNavigationPage() {
             const bbox = turf.bbox(coll);
             if (bbox[0] !== Infinity) {
                 mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                    padding: 100, 
+                    padding: 150, // Increased padding to zoom out more in setup/stop
                     duration: 2000,
-                    maxZoom: 16 
+                    maxZoom: 15 // Slightly lower max zoom for overview
                 });
             }
         }
