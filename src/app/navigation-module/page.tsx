@@ -26,15 +26,10 @@ import {
   Mic,
   Check,
   LayoutGrid,
-  Bell,
-  LocateFixed,
-  ChevronDown,
-  ChevronUp,
   X,
   FileText,
   Sparkles,
   Trash2,
-  EyeOff,
   User,
   Package,
   Plus,
@@ -44,13 +39,14 @@ import {
   AlertCircle,
   RefreshCw,
   Layout,
-  Zap,
   ImageIcon,
-  ChevronRight
+  ChevronRight,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -582,6 +578,7 @@ export default function StartNavigationPage() {
   const { profile } = useProfile();
   const { toast } = useToast();
   const { setIsHeaderVisible } = useNavigationUI();
+  const searchParams = useSearchParams();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
@@ -625,11 +622,7 @@ export default function StartNavigationPage() {
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
-    return () => {
-        setIsHeaderVisible(true);
-        if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current);
-        if (smoothAnimationRef.current) cancelAnimationFrame(smoothAnimationRef.current);
-    };
+    return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
   React.useEffect(() => {
@@ -641,6 +634,25 @@ export default function StartNavigationPage() {
         if (profile.navColumns) setVisibleColumns(profile.navColumns);
     }
   }, [profile]);
+
+  // Handle Resume Logic
+  React.useEffect(() => {
+    const resume = searchParams.get('resume');
+    const exclude = searchParams.get('exclude');
+    const lastLat = searchParams.get('lastLat');
+    const lastLng = searchParams.get('lastLng');
+
+    if (resume === 'true') {
+        if (exclude) setCompletedObjects(prev => [...new Set([...prev, exclude])]);
+        if (lastLat && lastLng) {
+            const loc = { latitude: parseFloat(lastLat), longitude: parseFloat(lastLng) };
+            setUserLocation(loc);
+            setSmoothLocation(loc);
+        }
+        setNavigationState('navigating');
+        setIsListExpanded(false);
+    }
+  }, [searchParams]);
 
   // DATA QUERIES
   const meldingenQuery = useMemoFirebase(() => {
@@ -695,7 +707,7 @@ export default function StartNavigationPage() {
 
   // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
-    // NEW: If in setup mode, we NEVER want to show lines
+    // If in setup mode, we NEVER want to show lines
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
@@ -756,7 +768,7 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, userLocation, navigationState, filteredMeldingen]);
 
-  // Initial Fit All (Setup mode)
+  // Initial Fit All
   React.useEffect(() => {
     if (navigationState === 'setup' && filteredMeldingen.length > 0 && mapRef.current && !isLocating) {
         fetchRoute(true);
@@ -796,34 +808,29 @@ export default function StartNavigationPage() {
     return () => clearTimeout(timer);
   }, [isManualMode, navigationState, smoothLocation, navZoom, navPitch, navOffset]);
 
-  // STABLE GPS ENGINE WITH ROAD SNAPPING AND REROUTING
+  // STABLE GPS ENGINE
   React.useEffect(() => {
     if (!navigator.geolocation || isSimulationMode) return;
     
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
-            const rawLoc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-            setUserLocation(rawLoc);
+            const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            setUserLocation(loc);
             
-            // 1. Instant Rerouting Check
+            // Rerouting check
             if (navigationState === 'navigating' && currentRouteGeometry && !isCalculatingRoute) {
                 const line = turf.lineString(currentRouteGeometry.coordinates);
-                const rawPt = turf.point([rawLoc.longitude, rawLoc.latitude]);
+                const rawPt = turf.point([loc.longitude, loc.latitude]);
                 const distanceOffRoute = turf.pointToLineDistance(rawPt, line, { units: 'meters' });
-                
-                // If more than 30 meters off route, recalculate immediately
-                if (distanceOffRoute > 30) {
-                    fetchRoute();
-                }
+                if (distanceOffRoute > 30) fetchRoute();
             }
 
-            // 2. Road Snapping & Heading
-            let activeLoc = { ...rawLoc, heading: lastHeadingRef.current };
+            let activeLoc = { ...loc, heading: lastHeadingRef.current };
 
             if (currentRouteGeometry) {
                 try {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
-                    const currPt = turf.point([rawLoc.longitude, rawLoc.latitude]);
+                    const currPt = turf.point([loc.longitude, loc.latitude]);
                     const snapped = turf.nearestPointOnLine(line, currPt);
                     
                     activeLoc.longitude = snapped.geometry.coordinates[0];
@@ -841,53 +848,27 @@ export default function StartNavigationPage() {
                 } catch (e) {}
             }
 
-            // 3. Smooth Gliding Animation
-            if (!smoothLocation) {
-                setSmoothLocation(activeLoc);
-            } else {
-                if (smoothAnimationRef.current) cancelAnimationFrame(smoothAnimationRef.current);
-                
-                const startPos = { ...smoothLocation };
-                const endPos = { ...activeLoc };
-                let startTime: number | null = null;
-                const duration = 500; // Match GPS update frequency
-
-                const animateSmooth = (time: number) => {
-                    if (!startTime) startTime = time;
-                    const elapsed = time - startTime;
-                    const t = Math.min(elapsed / duration, 1);
-                    
-                    const currentPos = {
-                        latitude: startPos.latitude + (endPos.latitude - startPos.latitude) * t,
-                        longitude: startPos.longitude + (endPos.longitude - startPos.longitude) * t,
-                        heading: startPos.heading + (endPos.heading - startPos.heading) * t
-                    };
-                    
-                    setSmoothLocation(currentPos);
-
-                    if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
-                        const map = mapRef.current.getMap();
-                        map.jumpTo({
-                            center: [currentPos.longitude, currentPos.latitude],
-                            bearing: currentPos.heading,
-                            zoom: navZoom,
-                            pitch: navPitch,
-                            padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
-                        });
-                    }
-
-                    if (t < 1) smoothAnimationRef.current = requestAnimationFrame(animateSmooth);
-                };
-                smoothAnimationRef.current = requestAnimationFrame(animateSmooth);
-            }
-
+            setSmoothLocation(activeLoc);
             if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
+
+            if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
+                const map = mapRef.current.getMap();
+                map.easeTo({
+                    center: [activeLoc.longitude, activeLoc.latitude],
+                    bearing: activeLoc.heading,
+                    zoom: navZoom,
+                    pitch: navPitch,
+                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+                    duration: 500, 
+                    easing: (t) => t 
+                });
+            }
         },
         (err) => console.error("GPS Error:", err),
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, isCalculatingRoute, fetchRoute, smoothLocation]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
 
   // INTERFACE HANDLERS
   const handleResize = (clientY: number) => {
@@ -1045,6 +1026,12 @@ export default function StartNavigationPage() {
   ) : 0;
   const etaSeconds = (distToNextKm * 1000) / (speedKmh > 5 ? (speedKmh / 3.6) : 13.8);
 
+  // CRITICAL: Compute route data to ensure cleanup works instantly
+  const activeRouteData = React.useMemo(() => {
+    if (navigationState !== 'navigating') return { type: 'FeatureCollection', features: [] };
+    return displayedRouteGeometry || { type: 'FeatureCollection', features: [] };
+  }, [navigationState, displayedRouteGeometry]);
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
@@ -1087,7 +1074,7 @@ export default function StartNavigationPage() {
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
                         <div className="relative flex items-center justify-center w-14 h-14">
-                            {nextMission?.id === m.id && (
+                            {nextMission?.id === m.id && navigationState === 'navigating' && (
                                 <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
                             )}
                             <div className={cn(
@@ -1107,7 +1094,7 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 ))}
-                <Source id="route-line" type="geojson" data={displayedRouteGeometry || { type: 'FeatureCollection', features: [] }}>
+                <Source id="route-line" type="geojson" data={activeRouteData}>
                     <Layer {...routeLayerCasing} />
                     <Layer {...routeLayer} />
                 </Source>
