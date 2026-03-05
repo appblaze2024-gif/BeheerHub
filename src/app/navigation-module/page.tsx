@@ -4,7 +4,7 @@
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc } from '@/firebase';
-import { collection, doc, query, where, writeBatch, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -167,7 +167,6 @@ function IntegratedWerkbonOverlay({
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     const [newQuickKey, setNewQuickKey] = React.useState('');
-    
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     
@@ -696,9 +695,36 @@ export default function StartNavigationPage() {
 
   // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
+    // If in setup mode, we don't show lines anymore
+    if (navigationState === 'setup') {
+        setCurrentRouteGeometry(null);
+        setDisplayedRouteGeometry(null);
+        
+        // Still fit to bounds if requested
+        if (zoomToFit && mapRef.current) {
+            const startPos = userLocation || SIMULATION_START_LOCATION;
+            const points = [
+                [startPos.longitude, startPos.latitude],
+                ...filteredMeldingen.map(m => [m.longitude, m.latitude])
+            ];
+            const coll = turf.featureCollection(points.map(p => turf.point(p)));
+            const bbox = turf.bbox(coll);
+            if (bbox[0] !== Infinity) {
+                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
+                    padding: 100, 
+                    duration: 2000,
+                    maxZoom: 16 
+                });
+            }
+        }
+        setIsCalculatingRoute(false);
+        return;
+    }
+
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
+        setIsCalculatingRoute(false);
         return;
     }
     
@@ -706,14 +732,10 @@ export default function StartNavigationPage() {
     const startPos = userLocation || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
-    // Point-to-point ONLY if navigating, full sequence if in setup
-    const missionPoints = navigationState === 'navigating' 
-        ? [sortedMissions[0]] 
-        : sortedMissions.slice(0, 24);
-
+    // Strict point-to-point: only to the next nearest stop
     const waypoints = [
         [startPos.longitude, startPos.latitude], 
-        ...missionPoints.map(m => [m.longitude, m.latitude])
+        [sortedMissions[0].longitude, sortedMissions[0].latitude]
     ];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     
@@ -726,22 +748,6 @@ export default function StartNavigationPage() {
             const geometry = data.routes[0].geometry;
             setCurrentRouteGeometry(geometry);
             setDisplayedRouteGeometry(turf.feature(geometry));
-            
-            if (zoomToFit && mapRef.current) {
-                const points = [
-                    [startPos.longitude, startPos.latitude],
-                    ...filteredMeldingen.map(m => [m.longitude, m.latitude])
-                ];
-                const coll = turf.featureCollection(points.map(p => turf.point(p)));
-                const bbox = turf.bbox(coll);
-                if (bbox[0] !== Infinity) {
-                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                        padding: 100, 
-                        duration: 2000,
-                        maxZoom: 16 
-                    });
-                }
-            }
         }
     } catch (e) { 
         console.error("Route error:", e); 
@@ -750,12 +756,12 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, userLocation, navigationState, filteredMeldingen]);
 
-  // Initial Overzicht Fit All (Setup mode)
+  // Initial Fit All (Setup mode)
   React.useEffect(() => {
     if (navigationState === 'setup' && filteredMeldingen.length > 0 && mapRef.current && !isLocating) {
         fetchRoute(true);
     }
-  }, [filteredMeldingen.length, navigationState, isLocating, fetchRoute]);
+  }, [filteredMeldingen.length, navigationState, isLocating]);
 
   // WATCH FOR MISSION COMPLETION
   const lastMissionIdRef = React.useRef<string | null>(null);
@@ -820,7 +826,6 @@ export default function StartNavigationPage() {
                     const currPt = turf.point([rawLoc.longitude, rawLoc.latitude]);
                     const snapped = turf.nearestPointOnLine(line, currPt);
                     
-                    // Stay strictly on the line if we're reasonably close
                     activeLoc.longitude = snapped.geometry.coordinates[0];
                     activeLoc.latitude = snapped.geometry.coordinates[1];
 
