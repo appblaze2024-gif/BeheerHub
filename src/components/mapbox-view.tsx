@@ -158,7 +158,6 @@ export function MapboxView({
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         
-        // Use the new sharp 3D printer icon for all waste containers
         const isWasteOrRecycling = typeStr.includes('prullenbak') || 
                                   typeStr.includes('brengpark') || 
                                   typeStr.includes('container') || 
