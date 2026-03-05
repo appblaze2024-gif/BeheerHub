@@ -695,7 +695,7 @@ export default function StartNavigationPage() {
 
   // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
-    // If in setup mode, we don't show lines anymore
+    // NEW: If in setup mode, we NEVER want to show lines
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
@@ -1333,6 +1333,7 @@ export default function StartNavigationPage() {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
                         setCurrentRouteGeometry(null); 
+                        setDisplayedRouteGeometry(null);
                         setTimeout(() => fetchRoute(), 100);
                     }} 
                 />
