@@ -671,26 +671,31 @@ export default function StartNavigationPage() {
         });
   }, [filteredMeldingen, userLocation]);
 
+  const goToOverview = React.useCallback(() => {
+    if (!mapRef.current || filteredMeldingen.length === 0) return;
+    const startPos = userLocation || SIMULATION_START_LOCATION;
+    const points = [
+        [startPos.longitude, startPos.latitude],
+        ...filteredMeldingen.map(m => [m.longitude, m.latitude])
+    ];
+    const coll = turf.featureCollection(points.map(p => turf.point(p)));
+    const bbox = turf.bbox(coll);
+    if (bbox[0] !== Infinity) {
+        mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
+            padding: 300, 
+            duration: 0, 
+            maxZoom: 11
+        });
+    }
+  }, [filteredMeldingen, userLocation]);
+
   // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (zoomToFit = false, force = false) => {
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
-        if (zoomToFit && mapRef.current) {
-            const startPos = userLocation || SIMULATION_START_LOCATION;
-            const points = [
-                [startPos.longitude, startPos.latitude],
-                ...filteredMeldingen.map(m => [m.longitude, m.latitude])
-            ];
-            const coll = turf.featureCollection(points.map(p => turf.point(p)));
-            const bbox = turf.bbox(coll);
-            if (bbox[0] !== Infinity) {
-                mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                    padding: 300, 
-                    duration: 0, 
-                    maxZoom: 11
-                });
-            }
+        if (zoomToFit) {
+            goToOverview();
         }
         return;
     }
@@ -730,14 +735,14 @@ export default function StartNavigationPage() {
     } finally {
         setIsCalculatingRoute(false);
     }
-  }, [sortedMissions, userLocation, navigationState, filteredMeldingen]);
+  }, [sortedMissions, userLocation, navigationState, filteredMeldingen, goToOverview]);
 
   // Initial Fit All
   React.useEffect(() => {
     if (navigationState === 'setup' && filteredMeldingen.length > 0 && mapRef.current && !isLocating) {
-        fetchRoute(true);
+        goToOverview();
     }
-  }, [filteredMeldingen.length, navigationState, isLocating, fetchRoute]);
+  }, [filteredMeldingen.length, navigationState, isLocating, goToOverview]);
 
   // WATCH FOR NAVIGATION STATE OR MISSION CHANGES
   React.useEffect(() => {
@@ -1075,7 +1080,7 @@ export default function StartNavigationPage() {
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 0 });
                         setCurrentRouteGeometry(null);
                         setDisplayedRouteGeometry(null);
-                        setTimeout(() => fetchRoute(true), 0); 
+                        setTimeout(() => goToOverview(), 0); 
                     }}>
                       <span className="hidden md:inline">STOP RIT</span>
                       <span className="md:hidden">STOP</span>
