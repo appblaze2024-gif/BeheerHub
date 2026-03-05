@@ -1028,33 +1028,33 @@ export default function StartNavigationPage() {
             <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 pointer-events-auto" onClick={() => router.push('/')}>
                 <ArrowLeft className="h-6 w-6 text-slate-600" />
             </Button>
-            <div className="flex items-center gap-3 pointer-events-auto">
+            <div className="flex items-center gap-2 pointer-events-auto">
                 {navigationState === 'setup' ? (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pointer-events-auto">
                         {isPrivileged && (
                           <Button 
                             variant="outline" 
-                            className="h-10 md:h-12 px-3 md:px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-100 text-[10px] md:text-sm" 
+                            className="h-12 md:h-14 px-4 md:px-8 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-slate-100 transition-all active:scale-95" 
                             onClick={() => handleStartRit(true)}
+                            title="Simulator"
                           >
-                            <Gauge className="md:mr-2 h-4 w-4 md:h-5 md:w-5" /> 
-                            <span className="hidden md:inline">SIMULATOR</span>
-                            <span className="md:hidden">SIM</span>
+                            <Gauge className="h-6 w-6 md:mr-3" /> 
+                            <span className="hidden md:inline text-sm">SIMULATOR</span>
                           </Button>
                         )}
                         <Button 
-                          className="h-10 md:h-12 px-4 md:px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl text-[10px] md:text-sm" 
+                          className="h-12 md:h-14 px-5 md:px-10 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl transition-all active:scale-95" 
                           onClick={() => handleStartRit(false)}
+                          title="Start Rit"
                         >
-                            {isLocating ? <Loader2 className="md:mr-2 h-4 w-4 md:h-5 md:w-5 animate-spin" /> : <Play className="md:mr-2 h-4 w-4 md:h-5 md:w-5 fill-current" />} 
-                            <span className="hidden md:inline">START RIT</span>
-                            <span className="md:hidden">START</span>
+                            {isLocating ? <Loader2 className="h-6 w-6 md:mr-3 animate-spin" /> : <Play className="h-6 w-6 md:mr-3 fill-current" />} 
+                            <span className="hidden md:inline text-sm">START RIT</span>
                         </Button>
                     </div>
                 ) : (
                     <Button 
                       variant="destructive" 
-                      className="h-10 md:h-12 px-4 md:px-8 font-black uppercase rounded-2xl shadow-2xl text-[10px] md:text-sm" 
+                      className="h-12 md:h-14 px-5 md:px-10 font-black uppercase rounded-2xl shadow-2xl transition-all active:scale-95" 
                       onClick={() => { 
                         setNavigationState('setup'); 
                         setIsListExpanded(true); 
