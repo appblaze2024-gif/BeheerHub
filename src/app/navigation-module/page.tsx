@@ -284,7 +284,7 @@ function IntegratedWerkbonOverlay({
         <div className="flex flex-col h-full bg-slate-50">
             <header className="h-14 lg:h-16 bg-white border-b flex items-center justify-between px-4 lg:px-6 shrink-0 shadow-sm z-10 sticky top-0">
                 <div className="flex items-center gap-3 lg:gap-4">
-                    <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors">
+                    <Button variant="ghost" size="icon" onClose={onClose} className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors" onClick={onClose}>
                         <ArrowLeft className="h-6 w-6 text-slate-600" />
                     </Button>
                     <div>
@@ -1081,6 +1081,30 @@ export default function StartNavigationPage() {
                 <ArrowLeft className="h-6 w-6 text-slate-600" />
             </Button>
             <div className="flex items-center gap-2 pointer-events-auto">
+                {navigationState === 'navigating' && (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95">
+                                <Settings className="h-6 w-6 text-slate-600" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div>
+                                        <Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
+                                        <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
+                                    </div>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                )}
                 {navigationState === 'setup' ? (
                     <div className="flex gap-2 pointer-events-auto">
                         {isPrivileged && (
@@ -1114,38 +1138,6 @@ export default function StartNavigationPage() {
                 )}
             </div>
         </div>
-
-        {navigationState === 'navigating' && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 pointer-events-auto">
-                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => updateNavZoom(Math.min(navZoom + 0.5, 22))}>
-                    <Plus className="h-6 w-6 text-slate-600" />
-                </Button>
-                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => updateNavZoom(Math.max(navZoom - 0.5, 10))}>
-                    <Minus className="h-6 w-6 text-slate-600" />
-                </Button>
-                
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 mt-2"><Settings className="h-6 w-6 text-slate-600" /></Button>
-                    </PopoverTrigger>
-                    <PopoverContent side="left" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div>
-                                    <Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
-                                    <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
-                                </div>
-                            </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            </div>
-        )}
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
