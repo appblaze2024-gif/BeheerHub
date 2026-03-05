@@ -129,18 +129,6 @@ const translationLanguages = [
   { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
 ];
 
-const getMeldingAgeColor = (datum?: string) => {
-    if (!datum) return 'bg-slate-400';
-    try {
-        const d = new Date(datum);
-        const diffDays = Math.abs(differenceInCalendarDays(new Date(), d));
-        if (diffDays <= 1) return 'bg-slate-400'; 
-        if (diffDays === 2) return 'bg-yellow-400'; 
-        if (diffDays === 3) return 'bg-orange-500'; 
-        return 'bg-red-600'; 
-    } catch (e) { return 'bg-slate-400'; }
-};
-
 function IntegratedWerkbonOverlay({ 
     meldingId, 
     onClose, 
@@ -348,11 +336,11 @@ function IntegratedWerkbonOverlay({
                         <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                                 <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col overflow-hidden">
-                                    <CardHeader className="bg-slate-50 text-white p-4 lg:p-5 shrink-0">
+                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-5 shrink-0">
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-0.5 lg:space-y-1">
-                                                <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-blue-200">Intakenummer</p>
-                                                <CardTitle className="text-lg lg:text-xl font-black uppercase tracking-tight">{melding.intakenummer}</CardTitle>
+                                                <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-slate-400">Intakenummer</p>
+                                                <CardTitle className="text-lg lg:text-xl font-black uppercase tracking-tight text-slate-900">{melding.intakenummer}</CardTitle>
                                             </div>
                                             <Badge className="bg-blue-500 text-white border-none font-black text-[8px] lg:text-[9px] h-4 lg:h-5 px-2 lg:px-2.5">{melding.status}</Badge>
                                         </div>
@@ -682,7 +670,7 @@ export default function StartNavigationPage() {
         });
   }, [filteredMeldingen, userLocation]);
 
-  // ROUTE FETCHING - High speed, no delay
+  // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (zoomToFit = false, force = false) => {
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
@@ -713,7 +701,6 @@ export default function StartNavigationPage() {
     }
     
     const now = Date.now();
-    // Reduce debounce for faster response
     if (!force && now - lastFetchTimeRef.current < 2000) return;
     
     setIsCalculatingRoute(true);
@@ -749,7 +736,7 @@ export default function StartNavigationPage() {
     if (navigationState === 'setup' && filteredMeldingen.length > 0 && mapRef.current && !isLocating) {
         fetchRoute(true);
     }
-  }, [filteredMeldingen.length, navigationState, isLocating]);
+  }, [filteredMeldingen.length, navigationState, isLocating, fetchRoute]);
 
   // WATCH FOR NAVIGATION STATE OR MISSION CHANGES
   React.useEffect(() => {
@@ -759,7 +746,7 @@ export default function StartNavigationPage() {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
     }
-  }, [navigationState, sortedMissions[0]?.id]);
+  }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
   // AUTO-RECENTER LOGIC
   React.useEffect(() => {
@@ -1254,3 +1241,15 @@ export default function StartNavigationPage() {
     </div>
   );
 }
+
+const getMeldingAgeColor = (datum?: string) => {
+    if (!datum) return 'bg-slate-400';
+    try {
+        const d = new Date(datum);
+        const diffDays = Math.abs(differenceInCalendarDays(new Date(), d));
+        if (diffDays <= 1) return 'bg-slate-400'; 
+        if (diffDays === 2) return 'bg-yellow-400'; 
+        if (diffDays === 3) return 'bg-orange-500'; 
+        return 'bg-red-600'; 
+    } catch (e) { return 'bg-slate-400'; }
+};
