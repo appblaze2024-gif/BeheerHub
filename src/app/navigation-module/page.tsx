@@ -4,7 +4,7 @@
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc } from '@/firebase';
-import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -706,7 +706,7 @@ export default function StartNavigationPage() {
     const startPos = userLocation || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
-    // Point-to-point if navigating, full sequence if in setup
+    // Point-to-point ONLY if navigating, full sequence if in setup
     const missionPoints = navigationState === 'navigating' 
         ? [sortedMissions[0]] 
         : sortedMissions.slice(0, 24);
@@ -750,12 +750,12 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, userLocation, navigationState, filteredMeldingen]);
 
-  // Initial Fit All
+  // Initial Overzicht Fit All (Setup mode)
   React.useEffect(() => {
     if (navigationState === 'setup' && filteredMeldingen.length > 0 && mapRef.current && !isLocating) {
         fetchRoute(true);
     }
-  }, [filteredMeldingen.length, navigationState, isLocating]);
+  }, [filteredMeldingen.length, navigationState, isLocating, fetchRoute]);
 
   // WATCH FOR MISSION COMPLETION
   const lastMissionIdRef = React.useRef<string | null>(null);
@@ -840,7 +840,6 @@ export default function StartNavigationPage() {
             if (!smoothLocation) {
                 setSmoothLocation(activeLoc);
             } else {
-                // Animate smooth transition to new snapped position
                 if (smoothAnimationRef.current) cancelAnimationFrame(smoothAnimationRef.current);
                 
                 const startPos = { ...smoothLocation };
@@ -883,7 +882,7 @@ export default function StartNavigationPage() {
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, isCalculatingRoute]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, isCalculatingRoute, fetchRoute, smoothLocation]);
 
   // INTERFACE HANDLERS
   const handleResize = (clientY: number) => {
@@ -1155,10 +1154,10 @@ export default function StartNavigationPage() {
                             if (mapRef.current && smoothLocation) {
                                 const map = mapRef.current.getMap();
                                 map.easeTo({
-                                    center: [currentPos.longitude, currentPos.latitude],
+                                    center: [smoothLocation.longitude, smoothLocation.latitude],
                                     zoom: navZoom,
                                     pitch: navPitch,
-                                    bearing: currentPos.heading || 0,
+                                    bearing: smoothLocation.heading || 0,
                                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
                                     duration: 800
                                 });
