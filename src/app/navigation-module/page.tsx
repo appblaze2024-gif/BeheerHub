@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -80,6 +81,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
 import { MapboxView } from '@/components/mapbox-view';
+import { Separator } from '@/components/ui/separator';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -164,6 +166,7 @@ function IntegratedWerkbonOverlay({
     const [targetLang, setTargetLang] = React.useState(translationLanguages[0]);
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
+    const [newQuickKey, setNewQuickKey] = React.useState('');
     
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
@@ -274,6 +277,23 @@ function IntegratedWerkbonOverlay({
             const result = await translateText(afhandelingBijzonderheden, targetLang.name);
             setAfhandelingBijzonderheden(result.translatedText);
         } catch (err) { toast({ variant: 'destructive', title: 'Vertaalfout' }); } finally { setIsTranslating(false); }
+    };
+
+    const handleAddQuickKey = () => {
+        if (!newQuickKey.trim() || !user || !firestore) return;
+        const currentKeys = profile?.quickKeys || [];
+        const updatedKeys = [...new Set([...currentKeys, newQuickKey.trim()])];
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys });
+        setNewQuickKey('');
+        toast({ title: 'Sneltoets toegevoegd' });
+    };
+
+    const handleRemoveQuickKey = (key: string) => {
+        if (!user || !firestore) return;
+        const currentKeys = profile?.quickKeys || [];
+        const updatedKeys = currentKeys.filter(k => k !== key);
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys });
+        toast({ title: 'Sneltoets verwijderd' });
     };
 
     if (isLoading || !melding) return <div className="p-12 flex justify-center h-full items-center"><Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" /></div>;
@@ -428,10 +448,63 @@ function IntegratedWerkbonOverlay({
                                         </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="p-4 lg:p-6 space-y-4">
+                                <CardContent className="p-4 lg:p-6 space-y-6">
+                                    {/* Sneltoetsen Sectie */}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Persoonlijke Sneltoetsen</Label>
+                                            <div className="flex gap-2">
+                                                <Input 
+                                                    placeholder="Nieuwe tekst..." 
+                                                    className="h-8 text-[10px] w-32 font-bold rounded-lg" 
+                                                    value={newQuickKey}
+                                                    onChange={e => setNewQuickKey(e.target.value)}
+                                                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddQuickKey())}
+                                                />
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 rounded-lg" 
+                                                    onClick={handleAddQuickKey}
+                                                    disabled={!newQuickKey.trim()}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(profile?.quickKeys || []).map((k, i) => (
+                                                <div key={i} className="group relative">
+                                                    <Button 
+                                                        variant="secondary" 
+                                                        size="sm" 
+                                                        className="h-8 px-3 text-[10px] font-black uppercase tracking-tight rounded-xl border-2 border-slate-100 bg-white hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm"
+                                                        onClick={() => setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + k)}
+                                                    >
+                                                        {k}
+                                                    </Button>
+                                                    <button 
+                                                        className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRemoveQuickKey(k);
+                                                        }}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {(profile?.quickKeys || []).length === 0 && (
+                                                <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest italic py-2">Geen sneltoetsen ingesteld.</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <Separator className="bg-slate-100" />
+
                                     <Textarea 
                                         placeholder="Voer hier je bevindingen in..." 
-                                        className="resize-none text-[11px] lg:text-sm font-medium leading-relaxed rounded-xl border-slate-100 bg-slate-50 focus:ring-primary/20 min-h-[120px]"
+                                        className="resize-none text-[11px] lg:text-sm font-medium leading-relaxed rounded-xl border-slate-100 bg-slate-50 focus:ring-primary/20 min-h-[200px]"
                                         value={afhandelingBijzonderheden}
                                         onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
                                     />
@@ -1023,7 +1096,7 @@ export default function StartNavigationPage() {
                     <div className="flex gap-2">
                         {isPrivileged && <Button variant="outline" className="h-12 px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-100" onClick={() => handleStartRit(true)}><Gauge className="mr-2 h-5 w-5" /> SIMULATOR</Button>}
                         <Button className="h-12 px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRit(false)}>
-                            {isLocating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-5 w-5 fill-current" />} START RIT
+                            {isLocating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Play className="mr-2 h-4 w-4 fill-current" />} START RIT
                         </Button>
                     </div>
                 ) : (
@@ -1132,7 +1205,7 @@ export default function StartNavigationPage() {
             style={navigationState !== 'navigating' && isListExpanded ? { height: `${listHeight}px` } : {}}
         >
             {navigationState !== 'navigating' && isListExpanded && (
-                <div onMouseDown={onMouseDown} onTouchStart={onTouchStart} className="absolute top-0 left-0 right-0 h-4 px-2 cursor-ns-resize z-50 flex items-center justify-center -translate-y-1/2 group/handle">
+                <div onMouseDown={onMouseDown} onTouchStart={onTouchStart} className="absolute top-0 left-0 right-0 h-4 px-2 Hub-handle z-50 flex items-center justify-center -translate-y-1/2 group/handle">
                     <div className="bg-slate-900 rounded-full h-7 w-7 flex flex-col items-center justify-center shadow-2xl border-2 border-white group-hover/handle:scale-110 transition-transform">
                         <ChevronUp className="h-2.5 w-2.5 text-white -mb-0.5" />
                         <ChevronDown className="h-2.5 w-2.5 text-white -mt-0.5" />
