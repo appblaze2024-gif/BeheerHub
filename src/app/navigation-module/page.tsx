@@ -333,19 +333,19 @@ function IntegratedWerkbonOverlay({
                 <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar">
                         <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                                <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col overflow-hidden">
-                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-5 shrink-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 h-full">
+                                <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col h-full overflow-hidden">
+                                    <CardHeader className="bg-slate-500 text-white p-4 lg:p-5 shrink-0">
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-0.5 lg:space-y-1">
-                                                <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-slate-400">Intakenummer</p>
+                                                <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-blue-200">Intakenummer</p>
                                                 <CardTitle className="text-lg lg:text-xl font-black uppercase tracking-tight text-slate-900">{melding.intakenummer}</CardTitle>
                                             </div>
                                             <Badge className="bg-blue-500 text-white border-none font-black text-[8px] lg:text-[9px] h-4 lg:h-5 px-2 lg:px-2.5">{melding.status}</Badge>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-4 lg:p-6 space-y-4 lg:space-y-6">
-                                        <div className="grid grid-cols-2 gap-x-4 lg:gap-x-6 gap-y-3 lg:gap-y-4">
+                                    <CardContent className="p-4 lg:p-6 space-y-4 lg:space-y-6 flex-1 flex flex-col min-h-0">
+                                        <div className="grid grid-cols-2 gap-x-4 lg:gap-x-6 gap-y-3 lg:gap-y-4 shrink-0">
                                             <div className="space-y-0.5">
                                                 <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Datum & Tijd</p>
                                                 <p className="text-[10px] lg:text-xs font-bold text-slate-900">{melding.datum} • {melding.tijdstip || '--:--'}</p>
@@ -367,9 +367,13 @@ function IntegratedWerkbonOverlay({
                                                 <p className="text-[10px] lg:text-xs font-bold text-slate-900 truncate">{melding.werkgebied || melding.wijk || '-'}</p>
                                             </div>
                                         </div>
-                                        <div className="space-y-1.5 lg:space-y-2 border-t pt-4">
-                                            <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Oorspronkelijke melding</p>
-                                            <p className="text-[10px] lg:text-xs italic text-slate-600 font-medium leading-relaxed">"{melding.extra_informatie || 'Geen omschrijving.'}"</p>
+                                        <div className="flex-1 min-h-0 flex flex-col space-y-1.5 lg:space-y-2 border-t pt-4">
+                                            <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest shrink-0">Omschrijving melding</p>
+                                            <ScrollArea className="flex-1 bg-slate-50 rounded-lg lg:rounded-xl border border-slate-100 p-3 lg:p-4">
+                                                <p className="text-[10px] lg:text-xs italic text-slate-600 font-medium leading-relaxed">
+                                                    "{melding.extra_informatie || 'Geen omschrijving opgegeven.'}"
+                                                </p>
+                                            </ScrollArea>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -487,7 +491,7 @@ function IntegratedWerkbonOverlay({
                                     </CardContent>
                                 </Card>
                                 <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
-                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-6 flex flex-row items-center justify-between">
+                                    <CardHeader className="bg-slate-50 border-b p-4 lg:p-5 flex flex-row items-center justify-between">
                                         <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle>
                                         <Badge variant="secondary" className="bg-green-100 text-green-700 border-none font-bold text-[9px] uppercase px-2 h-5">{afhandelingFotos.length} Foto's</Badge>
                                     </CardHeader>
@@ -1166,7 +1170,7 @@ export default function StartNavigationPage() {
                 navigationState === 'navigating' ? "h-0 translate-y-full opacity-0" : (isListExpanded ? "h-[244px]" : "h-14 translate-y-[calc(100%-3.5rem)]")
             )}
         >
-            <div className="h-12 flex items-center justify-between px-4 sm:px-6 cursor-pointer shrink-0 border-b bg-slate-50" onClick={() => setIsListExpanded(!isListExpanded)}>
+            <div className="h-12 flex items-center justify-between px-4 sm:px-6 cursor-default shrink-0 border-b bg-slate-50">
                 <div className="flex items-center gap-4 flex-1 pointer-events-auto overflow-x-auto no-scrollbar" onClick={e => e.stopPropagation()}>
                     <div className="relative w-40 sm:w-64 shrink-0">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
@@ -1200,11 +1204,6 @@ export default function StartNavigationPage() {
                             </PopoverContent>
                         </Popover>
                     </div>
-                </div>
-                
-                <div className="flex items-center gap-3 ml-2 shrink-0">
-                    <div className="h-8 w-px bg-slate-200 mx-1" />
-                    {isListExpanded ? <ChevronDown className="h-5 w-5 text-slate-300" /> : <ChevronUp className="h-5 w-5 text-slate-300" />}
                 </div>
             </div>
             
