@@ -48,7 +48,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -684,8 +684,8 @@ export default function StartNavigationPage() {
   }, [filteredMeldingen, userLocation]);
 
   // ROUTE FETCHING
-  const fetchRoute = React.useCallback(async (zoomToFit = false) => {
-    // Prio 1: No lines in setup
+  const fetchRoute = React.useCallback(async (zoomToFit = false, force = false) => {
+    // Prio 1: No lines in setup or if just stopped
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
@@ -715,9 +715,9 @@ export default function StartNavigationPage() {
         return;
     }
     
-    // Prevent flickering by ensuring we don't fetch too frequently
+    // Prevent flickering by ensuring we don't fetch too frequently, unless forced
     const now = Date.now();
-    if (now - lastFetchTimeRef.current < 5000) return;
+    if (!force && now - lastFetchTimeRef.current < 5000) return;
     
     setIsCalculatingRoute(true);
     lastFetchTimeRef.current = now;
@@ -758,12 +758,13 @@ export default function StartNavigationPage() {
   // WATCH FOR NAVIGATION STATE OR MISSION CHANGES
   React.useEffect(() => {
     if (navigationState === 'navigating' && sortedMissions.length > 0) {
-        fetchRoute();
+        // Force calculation on initial navigation start
+        fetchRoute(false, true);
     } else if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
     }
-  }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
+  }, [navigationState, sortedMissions[0]?.id]); // Mission ID dependency ensures point-to-point update
 
   // AUTO-RECENTER LOGIC (10s)
   React.useEffect(() => {
@@ -802,7 +803,7 @@ export default function StartNavigationPage() {
                 const rawPt = turf.point([loc.longitude, loc.latitude]);
                 const distanceOffRoute = turf.pointToLineDistance(rawPt, line, { units: 'meters' });
                 if (distanceOffRoute > 50) {
-                    fetchRoute();
+                    fetchRoute(false, true);
                 }
             }
 
@@ -884,6 +885,7 @@ export default function StartNavigationPage() {
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
     
+    // Explicitly reset geometries
     setCurrentRouteGeometry(null);
     setDisplayedRouteGeometry(null);
 
@@ -1255,9 +1257,10 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
+                        // Force route refresh after completion
                         setCurrentRouteGeometry(null); 
                         setDisplayedRouteGeometry(null);
-                        setTimeout(() => fetchRoute(), 100);
+                        setTimeout(() => fetchRoute(false, true), 100);
                     }} 
                 />
             </div>
