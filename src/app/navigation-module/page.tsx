@@ -43,8 +43,6 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
-  Maximize,
-  Minimize
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -483,7 +481,7 @@ function IntegratedWerkbonOverlay({
                                             {melding.fotos?.map((p, i) => (
                                                 <div key={i} className="relative aspect-square rounded-xl lg:rounded-2xl overflow-hidden border-2 border-slate-50 shadow-sm"><Image src={p.url} alt="melding" fill className="object-cover" /></div>
                                             ))}
-                                            {(!melding.fotos || melding.fotos.length === 0) && (<div className="col-span-3 py-12 text-center opacity-20"><Camera className="h-10 w-10 mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">Geen bronfoto's</p></div>)}
+                                            {(!melding.fotos || melding.fotos.length === 0) && (<div className="col-span-3 py-12 text-center opacity-20"><Camera className="h-10 w-10 lg:h-12 lg:w-12 mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">Geen bronfoto's</p></div>)}
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -686,7 +684,7 @@ export default function StartNavigationPage() {
             if (bbox[0] !== Infinity) {
                 mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
                     padding: 300, 
-                    duration: 1500,
+                    duration: 0, // Instant zoom out as requested
                     maxZoom: 11
                 });
             }
@@ -980,7 +978,7 @@ export default function StartNavigationPage() {
                 touchPitch={true}
                 doubleClickZoom={true}
                 onInteractionStateChange={(state) => {
-                    if (navigationState === 'navigating' && (state.isDragging || state.isZooming || state.isRotating)) {
+                    if (state.isDragging || state.isZooming || state.isRotating) {
                         setIsManualMode(true);
                     }
                 }}
@@ -1044,28 +1042,20 @@ export default function StartNavigationPage() {
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
                         setCurrentRouteGeometry(null);
                         setDisplayedRouteGeometry(null);
+                        // Trigger immediate wide zoom out without animation delay
                         setTimeout(() => fetchRoute(true), 100); 
                     }}>STOP RIT</Button>
                 )}
             </div>
         </div>
 
-        {navigationState === 'navigating' && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 pointer-events-auto">
-                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => updateNavZoom(Math.min(navZoom + 0.5, 22))}>
-                    <Plus className="h-6 w-6 text-slate-600" />
-                </Button>
-                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => updateNavZoom(Math.max(navZoom - 0.5, 10))}>
-                    <Minus className="h-6 w-6 text-slate-600" />
-                </Button>
-                
-                {isManualMode && (
-                    <Button 
-                        variant="default" 
-                        size="icon" 
-                        className="h-14 w-14 rounded-full shadow-2xl bg-primary text-white mt-2 border-4 border-white flex items-center justify-center pointer-events-auto animate-in fade-in" 
-                        onClick={() => {
-                            setIsManualMode(false);
+        {isManualMode && (
+            <div className="absolute left-1/2 -translate-x-1/2 top-20 z-30 pointer-events-auto">
+                <Button 
+                    className="bg-primary text-white font-black uppercase tracking-widest h-12 px-8 rounded-2xl shadow-2xl border-2 border-white animate-in slide-in-from-top-4" 
+                    onClick={() => {
+                        setIsManualMode(false);
+                        if (navigationState === 'navigating') {
                             if (mapRef.current && smoothLocation) {
                                 const map = mapRef.current.getMap();
                                 map.easeTo({
@@ -1077,13 +1067,26 @@ export default function StartNavigationPage() {
                                     duration: 800
                                 });
                             }
-                        }}
-                        title="Hervat navigatie"
-                    >
-                        <Navigation className="h-7 w-7 fill-current" />
-                    </Button>
-                )}
+                        } else {
+                            fetchRoute(true);
+                        }
+                    }}
+                >
+                    <Navigation className="h-5 w-5 mr-2 fill-current" />
+                    HERVAT
+                </Button>
+            </div>
+        )}
 
+        {navigationState === 'navigating' && (
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 pointer-events-auto">
+                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => updateNavZoom(Math.min(navZoom + 0.5, 22))}>
+                    <Plus className="h-6 w-6 text-slate-600" />
+                </Button>
+                <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100" onClick={() => updateNavZoom(Math.max(navZoom - 0.5, 10))}>
+                    <Minus className="h-6 w-6 text-slate-600" />
+                </Button>
+                
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 mt-2"><Settings className="h-6 w-6 text-slate-600" /></Button>
