@@ -597,9 +597,6 @@ export default function StartNavigationPage() {
   const [isManualMode, setIsManualMode] = React.useState(false);
   const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
 
-  const [listHeight, setListHeight] = React.useState(400);
-  const [isResizing, setIsResizing] = React.useState(false);
-
   const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
   const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(ROUTE_COLUMNS_CONFIG);
@@ -631,7 +628,6 @@ export default function StartNavigationPage() {
         if (profile.navZoom !== undefined) setNavZoomState(Number(profile.navZoom));
         if (profile.navPitch !== undefined) setNavPitchState(Number(profile.navPitch));
         if (profile.navOffset !== undefined) setNavOffsetState(Number(profile.navOffset));
-        if (profile.navListHeight !== undefined) setListHeight(Number(profile.navListHeight));
         if (profile.navColumns) setVisibleColumns(profile.navColumns);
     }
   }, [profile]);
@@ -856,39 +852,6 @@ export default function StartNavigationPage() {
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
 
   // INTERFACE HANDLERS
-  const handleResize = (clientY: number) => {
-    const newHeight = window.innerHeight - clientY;
-    const clampedHeight = Math.max(56, Math.min(newHeight, window.innerHeight * 0.85));
-    setListHeight(clampedHeight);
-  };
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    const onMouseMove = (moveEvent: MouseEvent) => { handleResize(moveEvent.clientY); };
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      setIsResizing(false);
-      if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight }, { merge: true });
-    };
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  };
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setIsResizing(true);
-    const onTouchMove = (moveEvent: TouchEvent) => { handleResize(moveEvent.touches[0].clientY); };
-    const onTouchEnd = () => {
-      document.removeEventListener('touchmove', onTouchMove);
-      document.removeEventListener('touchend', onTouchEnd);
-      setIsResizing(false);
-      if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight }, { merge: true });
-    };
-    document.addEventListener('touchmove', onTouchMove);
-    document.addEventListener('touchend', onTouchEnd);
-  };
-
   const updateNavZoom = (newZoom: number) => {
     const val = Number(newZoom);
     setNavZoomState(val);
@@ -1196,20 +1159,10 @@ export default function StartNavigationPage() {
         <div 
             className={cn(
                 "absolute bottom-0 left-0 right-0 z-40 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl",
-                !isResizing && "transition-all duration-500",
-                navigationState === 'navigating' ? "h-0 translate-y-full opacity-0" : (isListExpanded ? "" : "h-14 translate-y-[calc(100%-3.5rem)]")
+                "transition-all duration-500",
+                navigationState === 'navigating' ? "h-0 translate-y-full opacity-0" : (isListExpanded ? "h-[244px]" : "h-14 translate-y-[calc(100%-3.5rem)]")
             )}
-            style={navigationState !== 'navigating' && isListExpanded ? { height: `${listHeight}px` } : {}}
         >
-            {navigationState !== 'navigating' && isListExpanded && (
-                <div onMouseDown={onMouseDown} onTouchStart={onTouchStart} className="absolute top-0 left-0 right-0 h-4 px-2 cursor-ns-resize z-50 flex items-center justify-center -translate-y-1/2 group/handle">
-                    <div className="bg-slate-900 rounded-full h-7 w-7 flex flex-col items-center justify-center shadow-2xl border-2 border-white group-hover/handle:scale-110 transition-transform">
-                        <ChevronUp className="h-2.5 w-2.5 text-white -mb-0.5" />
-                        <ChevronDown className="h-2.5 w-2.5 text-white -mt-0.5" />
-                    </div>
-                </div>
-            )}
-
             <div className="h-12 flex items-center justify-between px-6 cursor-pointer shrink-0 border-b bg-slate-50" onClick={() => setIsListExpanded(!isListExpanded)}>
                 <div className="flex items-center gap-4 flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
                     <div className="relative w-64">
