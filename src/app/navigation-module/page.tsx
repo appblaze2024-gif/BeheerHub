@@ -702,9 +702,9 @@ export default function StartNavigationPage() {
             const bbox = turf.bbox(coll);
             if (bbox[0] !== Infinity) {
                 mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                    padding: 150, // Increased padding to zoom out more in setup/stop
+                    padding: 300, // Significantly increased padding for wide regional overview
                     duration: 2000,
-                    maxZoom: 15 // Slightly lower max zoom for overview
+                    maxZoom: 11 // Lower maxZoom to ensure regional wide view like the photo
                 });
             }
         }
@@ -1023,7 +1023,7 @@ export default function StartNavigationPage() {
                 initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 13 }} 
                 style={{ width: '100%', height: '100%' }} 
                 mapStyle={mapStyle} 
-                mapboxAccessToken={MAPBOX_TOKEN}
+                mapboxAccessToken={MAPBOX_TOKEN} 
                 dragPan={true}
                 dragRotate={true}
                 scrollZoom={true}
