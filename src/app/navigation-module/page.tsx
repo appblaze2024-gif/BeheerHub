@@ -117,15 +117,6 @@ const routeLayerCasing: Layer = {
   paint: { 'line-color': '#1e40af', 'line-width': 12, 'line-opacity': 0.2 },
 };
 
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
-
 function IntegratedWerkbonOverlay({ 
     meldingId, 
     onClose, 
@@ -1024,7 +1015,7 @@ export default function StartNavigationPage() {
         </div>
 
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
-            <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 pointer-events-auto" onClick={() => router.push('/')}>
+            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-md border-2 border-slate-100 pointer-events-auto transition-all active:scale-95" onClick={() => router.push('/')}>
                 <ArrowLeft className="h-6 w-6 text-slate-600" />
             </Button>
             <div className="flex items-center gap-2 pointer-events-auto">
@@ -1171,7 +1162,7 @@ export default function StartNavigationPage() {
                         <Input placeholder="Zoeken..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
                     
-                    <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
                         <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowTodayCompleted(!showTodayCompleted)}>
                             <CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span>
                         </Button>
