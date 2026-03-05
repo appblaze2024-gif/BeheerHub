@@ -41,8 +41,6 @@ import {
   Layout,
   ImageIcon,
   ChevronRight,
-  ChevronUp,
-  ChevronDown,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -584,7 +582,6 @@ export default function StartNavigationPage() {
   const [isLocating, setIsLocating] = React.useState(false);
   const [activeWerkbonId, setActiveWerkbonId] = React.useState<string | null>(null);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
-  const [isListExpanded, setIsListExpanded] = React.useState(true);
   const [isManualMode, setIsManualMode] = React.useState(false);
   const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
 
@@ -877,7 +874,6 @@ export default function StartNavigationPage() {
             setSmoothLocation({ ...loc, heading });
             setIsSimulationMode(false);
             setNavigationState('navigating');
-            setIsListExpanded(false);
             setIsLocating(false);
             setIsManualMode(false);
             
@@ -908,7 +904,6 @@ export default function StartNavigationPage() {
         setIsStartingSimulation(true);
         setIsSimulationMode(true);
         setNavigationState('navigating');
-        setIsListExpanded(false);
         setIsManualMode(false);
         
         setTimeout(() => {
@@ -1061,7 +1056,6 @@ export default function StartNavigationPage() {
                       className="h-12 md:h-14 px-5 md:px-10 font-black uppercase rounded-2xl shadow-2xl transition-all active:scale-95" 
                       onClick={() => { 
                         setNavigationState('setup'); 
-                        setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
                         setCurrentRouteGeometry(null);
@@ -1165,19 +1159,19 @@ export default function StartNavigationPage() {
 
         <div 
             className={cn(
-                "absolute bottom-0 left-0 right-0 z-40 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl",
+                "absolute bottom-0 left-0 right-0 z-40 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl h-[244px]",
                 "transition-all duration-500",
-                navigationState === 'navigating' ? "h-0 translate-y-full opacity-0" : (isListExpanded ? "h-[244px]" : "h-14 translate-y-[calc(100%-3.5rem)]")
+                navigationState === 'navigating' ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"
             )}
         >
             <div className="h-12 flex items-center justify-between px-4 sm:px-6 cursor-default shrink-0 border-b bg-slate-50">
-                <div className="flex items-center gap-4 flex-1 pointer-events-auto overflow-x-auto no-scrollbar" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
                     <div className="relative w-40 sm:w-64 shrink-0">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                         <Input placeholder="Zoeken..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
                     
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar">
                         <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowTodayCompleted(!showTodayCompleted)}>
                             <CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span>
                         </Button>
