@@ -157,8 +157,13 @@ export function MapboxView({
         const isHighlighted = highlightedObject?.id === obj.id;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-        const useRecyclingBin = typeStr.includes('prullenbakken (data meerlanden)');
-        const useWasteBin = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark') || typeStr.includes('container') || typeStr.includes('ondergrond');
+        
+        // Use the new sharp 3D printer icon for all waste containers
+        const isWasteOrRecycling = typeStr.includes('prullenbak') || 
+                                  typeStr.includes('brengpark') || 
+                                  typeStr.includes('container') || 
+                                  typeStr.includes('ondergrond');
+        
         const Icon = Trash2;
 
         return (
@@ -174,10 +179,13 @@ export function MapboxView({
             >
               <div className="relative flex items-center justify-center w-8 h-8">
                 {isHighlighted && <div className="absolute w-6 h-6 rounded-full bg-black/70 animate-pulse" />}
-                {useRecyclingBin ? (
-                  <img src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" alt="recycling bin" className={cn("relative h-7 w-7 transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
-                ) : useWasteBin ? (
-                  <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className={cn("relative h-7 w-7 transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
+                {isWasteOrRecycling ? (
+                  <img 
+                    src="https://i.ibb.co/0jg4jm6v/3d-printer-icon-sharp.png" 
+                    alt="object" 
+                    className={cn("relative h-7 w-7 transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} 
+                    style={{ filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} 
+                  />
                 ) : (
                   <Icon className={cn("relative h-5 w-5 stroke-white stroke-[1.5] transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ fill: isSelected ? 'hsl(48, 96%, 56%)' : color, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
                 )}

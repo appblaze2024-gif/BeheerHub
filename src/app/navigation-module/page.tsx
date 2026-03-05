@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -999,7 +998,7 @@ export default function StartNavigationPage() {
                                     <Check className="h-5 w-5 text-white" />
                                 ) : (
                                     <img 
-                                        src="https://i.ibb.co/9fXVS9F/3d-printer-icon-transparent.png" 
+                                        src="https://i.ibb.co/0jg4jm6v/3d-printer-icon-sharp.png" 
                                         alt="task" 
                                         className="h-7 w-7 object-contain drop-shadow-md" 
                                     />
