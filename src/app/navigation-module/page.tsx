@@ -1151,12 +1151,9 @@ export default function StartNavigationPage() {
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
                     <CardContent className="p-4 sm:p-6 flex items-center justify-between gap-4 sm:gap-8">
-                        <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-4 sm:pr-8">
+                        <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-6 sm:pr-12 min-w-[100px] sm:min-w-[140px]">
                             <p className="text-3xl sm:text-4xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
                             <p className="text-[8px] sm:text-[10px] font-black text-primary uppercase tracking-widest mt-1">minuten</p>
-                            <div className="mt-2 px-2 sm:px-3 py-0.5 bg-primary/10 rounded-full">
-                                <p className="text-[8px] sm:text-[10px] font-black text-primary">{distToNextKm.toFixed(1)} km</p>
-                            </div>
                         </div>
                         <div className="flex-1 flex flex-col gap-2 sm:gap-3 min-w-0">
                             <div className="space-y-0.5">
