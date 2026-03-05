@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -6,7 +7,7 @@ import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNo
 import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -448,10 +449,9 @@ function IntegratedWerkbonOverlay({
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-4 lg:p-6 space-y-6">
-                                    {/* Personal Quick Keys Section */}
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Persoonlijke Sneltoetsen</Label>
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sneltoetsen</Label>
                                             <div className="flex gap-2">
                                                 <Input 
                                                     placeholder="Nieuwe tekst..." 
@@ -460,13 +460,7 @@ function IntegratedWerkbonOverlay({
                                                     onChange={e => setNewQuickKey(e.target.value)}
                                                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddQuickKey())}
                                                 />
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="icon" 
-                                                    className="h-8 w-8 rounded-lg" 
-                                                    onClick={handleAddQuickKey}
-                                                    disabled={!newQuickKey.trim()}
-                                                >
+                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={handleAddQuickKey} disabled={!newQuickKey.trim()}>
                                                     <Plus className="h-4 w-4" />
                                                 </Button>
                                             </div>
@@ -474,33 +468,17 @@ function IntegratedWerkbonOverlay({
                                         <div className="flex flex-wrap gap-2">
                                             {(profile?.quickKeys || []).map((k, i) => (
                                                 <div key={i} className="group relative">
-                                                    <Button 
-                                                        variant="secondary" 
-                                                        size="sm" 
-                                                        className="h-8 px-3 text-[10px] font-black uppercase tracking-tight rounded-xl border-2 border-slate-100 bg-white hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm"
-                                                        onClick={() => setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + k)}
-                                                    >
+                                                    <Button variant="secondary" size="sm" className="h-8 px-3 text-[10px] font-black uppercase tracking-tight rounded-xl border-2 border-slate-100 bg-white hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm" onClick={() => setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + k)}>
                                                         {k}
                                                     </Button>
-                                                    <button 
-                                                        className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleRemoveQuickKey(k);
-                                                        }}
-                                                    >
+                                                    <button className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" onClick={(e) => { e.stopPropagation(); handleRemoveQuickKey(k); }}>
                                                         <X className="h-3 w-3" />
                                                     </button>
                                                 </div>
                                             ))}
-                                            {(profile?.quickKeys || []).length === 0 && (
-                                                <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest italic py-2">Geen sneltoetsen ingesteld.</p>
-                                            )}
                                         </div>
                                     </div>
-
                                     <Separator className="bg-slate-100" />
-
                                     <Textarea 
                                         placeholder="Voer hier je bevindingen in..." 
                                         className="resize-none text-[11px] lg:text-sm font-medium leading-relaxed rounded-xl border-slate-100 bg-slate-50 focus:ring-primary/20 min-h-[200px]"
