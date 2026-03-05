@@ -449,7 +449,7 @@ function IntegratedWerkbonOverlay({
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-4 lg:p-6 space-y-6">
-                                    {/* Sneltoetsen Sectie */}
+                                    {/* Personal Quick Keys Section */}
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between">
                                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Persoonlijke Sneltoetsen</Label>
@@ -1205,7 +1205,7 @@ export default function StartNavigationPage() {
             style={navigationState !== 'navigating' && isListExpanded ? { height: `${listHeight}px` } : {}}
         >
             {navigationState !== 'navigating' && isListExpanded && (
-                <div onMouseDown={onMouseDown} onTouchStart={onTouchStart} className="absolute top-0 left-0 right-0 h-4 px-2 Hub-handle z-50 flex items-center justify-center -translate-y-1/2 group/handle">
+                <div onMouseDown={onMouseDown} onTouchStart={onTouchStart} className="absolute top-0 left-0 right-0 h-4 px-2 cursor-ns-resize z-50 flex items-center justify-center -translate-y-1/2 group/handle">
                     <div className="bg-slate-900 rounded-full h-7 w-7 flex flex-col items-center justify-center shadow-2xl border-2 border-white group-hover/handle:scale-110 transition-transform">
                         <ChevronUp className="h-2.5 w-2.5 text-white -mb-0.5" />
                         <ChevronDown className="h-2.5 w-2.5 text-white -mt-0.5" />
@@ -1312,3 +1312,4 @@ export default function StartNavigationPage() {
     </div>
   );
 }
+
