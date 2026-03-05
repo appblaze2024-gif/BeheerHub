@@ -333,10 +333,10 @@ function IntegratedWerkbonOverlay({
                         <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 h-full">
                                 <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col h-full overflow-hidden">
-                                    <CardHeader className="bg-slate-500 text-white p-4 lg:p-5 shrink-0">
+                                    <CardHeader className="bg-slate-100 border-b p-4 lg:p-5 shrink-0">
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-0.5 lg:space-y-1">
-                                                <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-blue-200">Intakenummer</p>
+                                                <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-slate-400">Intakenummer</p>
                                                 <CardTitle className="text-lg lg:text-xl font-black uppercase tracking-tight text-slate-900">{melding.intakenummer}</CardTitle>
                                             </div>
                                             <Badge className="bg-blue-500 text-white border-none font-black text-[8px] lg:text-[9px] h-4 lg:h-5 px-2 lg:px-2.5">{melding.status}</Badge>
@@ -958,7 +958,7 @@ export default function StartNavigationPage() {
     if (mapRef.current) {
         mapRef.current.getMap().flyTo({
             center: [m.longitude, m.latitude],
-            zoom: 18,
+            zoom: 16,
             pitch: 45,
             duration: 1000
         });
@@ -1081,35 +1081,6 @@ export default function StartNavigationPage() {
                 )}
             </div>
         </div>
-
-        {isManualMode && (
-            <div className="absolute left-1/2 -translate-x-1/2 top-20 z-30 pointer-events-auto">
-                <Button 
-                    className="bg-primary text-white font-black uppercase tracking-widest h-12 px-8 rounded-2xl shadow-2xl border-2 border-white animate-in slide-in-from-top-4" 
-                    onClick={() => {
-                        setIsManualMode(false);
-                        if (navigationState === 'navigating') {
-                            if (mapRef.current && smoothLocation) {
-                                const map = mapRef.current.getMap();
-                                map.easeTo({
-                                    center: [smoothLocation.longitude, smoothLocation.latitude],
-                                    zoom: Math.max(15, Math.min(19, 19 - (speedKmh / 20))),
-                                    pitch: navPitch,
-                                    bearing: smoothLocation.heading || 0,
-                                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                                    duration: 800
-                                });
-                            }
-                        } else {
-                            fetchRoute(true);
-                        }
-                    }}
-                >
-                    <Navigation className="h-5 w-5 mr-2 fill-current" />
-                    HERVAT
-                </Button>
-            </div>
-        )}
 
         {navigationState === 'navigating' && (
             <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 pointer-events-auto">
