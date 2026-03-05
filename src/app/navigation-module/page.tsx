@@ -1134,6 +1134,7 @@ export default function StartNavigationPage() {
                         if(smoothAnimationRef.current) cancelAnimationFrame(smoothAnimationRef.current);
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
                         setCurrentRouteGeometry(null);
+                        setDisplayedRouteGeometry(null);
                         fetchRoute(true); 
                     }}>STOP RIT</Button>
                 )}
