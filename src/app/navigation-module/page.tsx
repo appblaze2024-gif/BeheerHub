@@ -952,6 +952,19 @@ export default function StartNavigationPage() {
     simAnimationRef.current = requestAnimationFrame(animate);
   };
 
+  const handleMeldingClick = (m: Melding) => {
+    setActiveWerkbonId(m.id);
+    setIsManualMode(true);
+    if (mapRef.current) {
+        mapRef.current.getMap().flyTo({
+            center: [m.longitude, m.latitude],
+            zoom: 18,
+            pitch: 45,
+            duration: 1000
+        });
+    }
+  };
+
   const nextMission = sortedMissions[0];
   const distToNextKm = nextMission && smoothLocation ? turf.distance(
       turf.point([smoothLocation.longitude, smoothLocation.latitude]),
@@ -993,7 +1006,7 @@ export default function StartNavigationPage() {
                     </Marker>
                 )}
                 {filteredMeldingen.map((m) => (
-                    <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => setActiveWerkbonId(m.id)}>
+                    <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => handleMeldingClick(m)}>
                         <div className="relative flex items-center justify-center w-14 h-14">
                             {nextMission?.id === m.id && navigationState === 'navigating' && (
                                 <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
@@ -1213,7 +1226,7 @@ export default function StartNavigationPage() {
                                         "p-3 rounded-xl border-2 transition-all flex flex-col gap-1",
                                         isCompleted ? "bg-green-50/50 border-green-100 opacity-60" : "bg-white border-slate-100 active:scale-[0.98]"
                                     )}
-                                    onClick={() => setActiveWerkbonId(m.id)}
+                                    onClick={() => handleMeldingClick(m)}
                                 >
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-1.5 min-w-0">
@@ -1250,7 +1263,7 @@ export default function StartNavigationPage() {
                                 const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
-                                    <TableRow key={m.id} className={cn("h-8 transition-colors cursor-pointer border-b border-slate-100", isCompleted ? "bg-green-50/50 opacity-60" : "hover:bg-blue-50")} onClick={() => setActiveWerkbonId(m.id)}>
+                                    <TableRow key={m.id} className={cn("h-8 transition-colors cursor-pointer border-b border-slate-100", isCompleted ? "bg-green-50/50 opacity-60" : "hover:bg-blue-50")} onClick={() => handleMeldingClick(m)}>
                                         {visibleColumns.intakenummer && (
                                             <TableCell className="font-black text-[10px] border-r border-slate-100 px-2 py-1">
                                                 <div className="flex items-center gap-2">
