@@ -690,9 +690,9 @@ export default function StartNavigationPage() {
         const coll = turf.featureCollection(points.map(p => turf.point(p)));
         const bbox = turf.bbox(coll);
         map.fitBounds(bbox as [number, number, number, number], { 
-            padding: 300, 
+            padding: { top: 80, bottom: 350, left: 80, right: 80 }, 
             duration: 0, 
-            maxZoom: 11,
+            maxZoom: 14,
             linear: true
         });
     } else {
@@ -705,9 +705,13 @@ export default function StartNavigationPage() {
     if (navigationState === 'setup' && !isLoadingMeldingen && filteredMeldingen.length > 0 && mapRef.current) {
         const map = mapRef.current.getMap();
         if (map.isStyleLoaded()) {
+            map.resize();
             goToOverview();
         } else {
-            map.once('style.load', () => goToOverview());
+            map.once('style.load', () => {
+                map.resize();
+                goToOverview();
+            });
         }
     }
   }, [navigationState, isLoadingMeldingen, filteredMeldingen.length, goToOverview]);
@@ -1146,24 +1150,24 @@ export default function StartNavigationPage() {
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
-                    <CardContent className="p-6 flex items-center justify-between gap-8">
-                        <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-8">
-                            <p className="text-4xl font-black text-slate-900">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
-                            <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">minuten</p>
-                            <div className="mt-2 px-3 py-0.5 bg-primary/10 rounded-full">
-                                <p className="text-[10px] font-black text-primary">{distToNextKm.toFixed(1)} km</p>
+                    <CardContent className="p-4 sm:p-6 flex items-center justify-between gap-4 sm:gap-8">
+                        <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-4 sm:pr-8">
+                            <p className="text-3xl sm:text-4xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
+                            <p className="text-[8px] sm:text-[10px] font-black text-primary uppercase tracking-widest mt-1">minuten</p>
+                            <div className="mt-2 px-2 sm:px-3 py-0.5 bg-primary/10 rounded-full">
+                                <p className="text-[8px] sm:text-[10px] font-black text-primary">{distToNextKm.toFixed(1)} km</p>
                             </div>
                         </div>
-                        <div className="flex-1 flex flex-col gap-3 min-w-0">
+                        <div className="flex-1 flex flex-col gap-2 sm:gap-3 min-w-0">
                             <div className="space-y-0.5">
-                                <p className="text-[9px] font-black uppercase text-slate-500">Volgende Bestemming</p>
-                                <p className="text-lg font-black text-slate-900 uppercase truncate">{nextMission?.intakenummer || 'Geen doel'}</p>
+                                <p className="text-[8px] sm:text-[9px] font-black uppercase text-slate-500">Volgende Bestemming</p>
+                                <p className="text-xl sm:text-2xl font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
                             </div>
-                            <Progress value={100} className="h-2 bg-slate-100" />
+                            <Progress value={100} className="h-1.5 sm:h-2 bg-slate-100" />
                         </div>
-                        <div className="h-20 w-20 rounded-full border-[6px] border-primary flex flex-col items-center justify-center bg-slate-50 shrink-0">
-                            <span className="text-3xl font-black text-slate-900">{speedKmh}</span>
-                            <span className="text-[8px] font-black uppercase text-primary">km/h</span>
+                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-slate-50 shrink-0 shadow-inner">
+                            <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
+                            <span className="text-[7px] sm:text-[8px] font-black uppercase text-primary">km/h</span>
                         </div>
                     </CardContent>
                 </Card>
