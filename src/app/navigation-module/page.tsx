@@ -1031,13 +1031,31 @@ export default function StartNavigationPage() {
             <div className="flex items-center gap-3 pointer-events-auto">
                 {navigationState === 'setup' ? (
                     <div className="flex gap-2">
-                        {isPrivileged && <Button variant="outline" className="h-12 px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-100" onClick={() => handleStartRit(true)}><Gauge className="mr-2 h-5 w-5" /> SIMULATOR</Button>}
-                        <Button className="h-12 px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl" onClick={() => handleStartRit(false)}>
-                            {isLocating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4 fill-current" />} START RIT
+                        {isPrivileged && (
+                          <Button 
+                            variant="outline" 
+                            className="h-10 md:h-12 px-3 md:px-6 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-100 text-[10px] md:text-sm" 
+                            onClick={() => handleStartRit(true)}
+                          >
+                            <Gauge className="md:mr-2 h-4 w-4 md:h-5 md:w-5" /> 
+                            <span className="hidden md:inline">SIMULATOR</span>
+                            <span className="md:hidden">SIM</span>
+                          </Button>
+                        )}
+                        <Button 
+                          className="h-10 md:h-12 px-4 md:px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl text-[10px] md:text-sm" 
+                          onClick={() => handleStartRit(false)}
+                        >
+                            {isLocating ? <Loader2 className="md:mr-2 h-4 w-4 md:h-5 md:w-5 animate-spin" /> : <Play className="md:mr-2 h-4 w-4 md:h-5 md:w-5 fill-current" />} 
+                            <span className="hidden md:inline">START RIT</span>
+                            <span className="md:hidden">START</span>
                         </Button>
                     </div>
                 ) : (
-                    <Button variant="destructive" className="h-12 px-8 font-black uppercase rounded-2xl shadow-2xl" onClick={() => { 
+                    <Button 
+                      variant="destructive" 
+                      className="h-10 md:h-12 px-4 md:px-8 font-black uppercase rounded-2xl shadow-2xl text-[10px] md:text-sm" 
+                      onClick={() => { 
                         setNavigationState('setup'); 
                         setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
@@ -1045,7 +1063,10 @@ export default function StartNavigationPage() {
                         setCurrentRouteGeometry(null);
                         setDisplayedRouteGeometry(null);
                         setTimeout(() => fetchRoute(true), 0); 
-                    }}>STOP RIT</Button>
+                    }}>
+                      <span className="hidden md:inline">STOP RIT</span>
+                      <span className="md:hidden">STOP</span>
+                    </Button>
                 )}
             </div>
         </div>
