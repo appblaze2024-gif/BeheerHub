@@ -775,7 +775,7 @@ export default function StartNavigationPage() {
             const map = mapRef.current.getMap();
             map.easeTo({
                 center: [smoothLocation.longitude, smoothLocation.latitude],
-                zoom: navZoom,
+                zoom: Math.max(15, Math.min(19, 19 - (speedKmh / 20))),
                 pitch: navPitch,
                 bearing: smoothLocation.heading || 0,
                 padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
@@ -785,7 +785,7 @@ export default function StartNavigationPage() {
     }, 10000);
 
     return () => clearTimeout(timer);
-  }, [isManualMode, navigationState, smoothLocation, navZoom, navPitch, navOffset]);
+  }, [isManualMode, navigationState, smoothLocation, navPitch, navOffset, speedKmh]);
 
   // STABLE GPS ENGINE
   React.useEffect(() => {
@@ -796,12 +796,12 @@ export default function StartNavigationPage() {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
             
-            // Rerouting check with debounce
+            // Rerouting check with 50m threshold
             if (navigationState === 'navigating' && currentRouteGeometry && !isCalculatingRoute) {
                 const line = turf.lineString(currentRouteGeometry.coordinates);
                 const rawPt = turf.point([loc.longitude, loc.latitude]);
                 const distanceOffRoute = turf.pointToLineDistance(rawPt, line, { units: 'meters' });
-                if (distanceOffRoute > 40) {
+                if (distanceOffRoute > 50) {
                     fetchRoute();
                 }
             }
@@ -830,14 +830,16 @@ export default function StartNavigationPage() {
             }
 
             setSmoothLocation(activeLoc);
-            if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
+            const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
+            setSpeedKmh(currentSpeed);
 
             if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
                 const map = mapRef.current.getMap();
+                const dynamicZoom = Math.max(15, Math.min(19, 19 - (currentSpeed / 20)));
                 map.easeTo({
                     center: [activeLoc.longitude, activeLoc.latitude],
                     bearing: activeLoc.heading,
-                    zoom: navZoom,
+                    zoom: dynamicZoom,
                     pitch: navPitch,
                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
                     duration: 500, 
@@ -849,7 +851,7 @@ export default function StartNavigationPage() {
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
 
   // INTERFACE HANDLERS
   const updateNavZoom = (newZoom: number) => {
@@ -898,7 +900,7 @@ export default function StartNavigationPage() {
             if (mapRef.current) {
                 mapRef.current.getMap().jumpTo({ 
                     center: [loc.longitude, loc.latitude], 
-                    zoom: navZoom, 
+                    zoom: 18, 
                     pitch: navPitch, 
                     bearing: heading, 
                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
@@ -959,7 +961,7 @@ export default function StartNavigationPage() {
                 center: [lng, lat], 
                 bearing: head,
                 pitch: navPitch,
-                zoom: navZoom,
+                zoom: Math.max(15, Math.min(19, 19 - (Math.round(speedMs * 3.6) / 20))),
                 padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
             });
         }
@@ -1092,7 +1094,7 @@ export default function StartNavigationPage() {
                                 const map = mapRef.current.getMap();
                                 map.easeTo({
                                     center: [smoothLocation.longitude, smoothLocation.latitude],
-                                    zoom: navZoom,
+                                    zoom: Math.max(15, Math.min(19, 19 - (speedKmh / 20))),
                                     pitch: navPitch,
                                     bearing: smoothLocation.heading || 0,
                                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
