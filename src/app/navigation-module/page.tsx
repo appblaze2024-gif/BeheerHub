@@ -1050,20 +1050,19 @@ export default function StartNavigationPage() {
                             {nextMission?.id === m.id && navigationState === 'navigating' && (
                                 <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
                             )}
-                            <div className={cn(
-                                "w-10 h-10 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer z-10", 
-                                m.status === 'Afgerond' ? 'bg-green-500' : getMeldingAgeColor(m.datum)
-                            )}>
-                                {m.status === 'Afgerond' ? (
+                            {m.status === 'Afgerond' ? (
+                                <div className="w-10 h-10 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer z-10 bg-green-500">
                                     <Check className="h-5 w-5 text-white" />
-                                ) : (
+                                </div>
+                            ) : (
+                                <div className="transition-transform hover:scale-125 cursor-pointer z-10">
                                     <img 
                                         src="https://i.ibb.co/0jg4jm6v/3d-printer-icon-sharp.png" 
                                         alt="task" 
-                                        className="h-7 w-7 object-contain drop-shadow-md" 
+                                        className="h-10 w-10 object-contain drop-shadow-2xl" 
                                     />
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     </Marker>
                 ))}
