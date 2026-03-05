@@ -578,7 +578,6 @@ export default function StartNavigationPage() {
   const { profile } = useProfile();
   const { toast } = useToast();
   const { setIsHeaderVisible } = useNavigationUI();
-  const searchParams = useSearchParams();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
@@ -616,7 +615,6 @@ export default function StartNavigationPage() {
 
   const mapRef = React.useRef<MapRef>(null);
   const simAnimationRef = React.useRef<number | null>(null);
-  const smoothAnimationRef = React.useRef<number | null>(null);
   const simStateRef = React.useRef({ distanceTravelled: 0, currentSpeedMs: 0 });
   const lastRouteCalculationLocationRef = React.useRef<{latitude: number, longitude: number} | null>(null);
 
@@ -634,25 +632,6 @@ export default function StartNavigationPage() {
         if (profile.navColumns) setVisibleColumns(profile.navColumns);
     }
   }, [profile]);
-
-  // Handle Resume Logic
-  React.useEffect(() => {
-    const resume = searchParams.get('resume');
-    const exclude = searchParams.get('exclude');
-    const lastLat = searchParams.get('lastLat');
-    const lastLng = searchParams.get('lastLng');
-
-    if (resume === 'true') {
-        if (exclude) setCompletedObjects(prev => [...new Set([...prev, exclude])]);
-        if (lastLat && lastLng) {
-            const loc = { latitude: parseFloat(lastLat), longitude: parseFloat(lastLng) };
-            setUserLocation(loc);
-            setSmoothLocation(loc);
-        }
-        setNavigationState('navigating');
-        setIsListExpanded(false);
-    }
-  }, [searchParams]);
 
   // DATA QUERIES
   const meldingenQuery = useMemoFirebase(() => {
@@ -707,12 +686,12 @@ export default function StartNavigationPage() {
 
   // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
-    // If in setup mode, we NEVER want to show lines
+    // Explicitly hide lines if NOT navigating
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
         
-        // Still fit to bounds if requested
+        // Still fit to bounds if requested, even without lines
         if (zoomToFit && mapRef.current) {
             const startPos = userLocation || SIMULATION_START_LOCATION;
             const points = [
@@ -1118,7 +1097,6 @@ export default function StartNavigationPage() {
                         setNavigationState('setup'); 
                         setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
-                        if(smoothAnimationRef.current) cancelAnimationFrame(smoothAnimationRef.current);
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
                         setCurrentRouteGeometry(null);
                         setDisplayedRouteGeometry(null);
