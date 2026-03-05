@@ -619,6 +619,7 @@ export default function StartNavigationPage() {
   const simAnimationRef = React.useRef<number | null>(null);
   const simStateRef = React.useRef({ distanceTravelled: 0, currentSpeedMs: 0 });
   const lastRouteCalculationLocationRef = React.useRef<{latitude: number, longitude: number} | null>(null);
+  const lastFetchTimeRef = React.useRef<number>(0);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -703,9 +704,9 @@ export default function StartNavigationPage() {
             const bbox = turf.bbox(coll);
             if (bbox[0] !== Infinity) {
                 mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-                    padding: 300, // Significantly increased padding for wide regional overview
+                    padding: 300, 
                     duration: 2000,
-                    maxZoom: 11 // Lower maxZoom to ensure regional wide view like the photo
+                    maxZoom: 11
                 });
             }
         }
@@ -718,7 +719,12 @@ export default function StartNavigationPage() {
         return;
     }
     
+    // Prevent flickering by ensuring we don't fetch too frequently
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < 5000) return;
+    
     setIsCalculatingRoute(true);
+    lastFetchTimeRef.current = now;
     const startPos = userLocation || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
@@ -794,12 +800,14 @@ export default function StartNavigationPage() {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
             
-            // Rerouting check
+            // Rerouting check with debounce
             if (navigationState === 'navigating' && currentRouteGeometry && !isCalculatingRoute) {
                 const line = turf.lineString(currentRouteGeometry.coordinates);
                 const rawPt = turf.point([loc.longitude, loc.latitude]);
                 const distanceOffRoute = turf.pointToLineDistance(rawPt, line, { units: 'meters' });
-                if (distanceOffRoute > 30) fetchRoute();
+                if (distanceOffRoute > 40) {
+                    fetchRoute();
+                }
             }
 
             let activeLoc = { ...loc, heading: lastHeadingRef.current };
@@ -911,7 +919,6 @@ export default function StartNavigationPage() {
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
     
-    // Prio 1: Explicitly clear geometries before starting to force a fresh re-draw
     setCurrentRouteGeometry(null);
     setDisplayedRouteGeometry(null);
 
@@ -1007,7 +1014,7 @@ export default function StartNavigationPage() {
   const etaSeconds = (distToNextKm * 1000) / (speedKmh > 5 ? (speedKmh / 3.6) : 13.8);
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
         {isStartingSimulation && <LoadingScreen message="Simulator voorbereiden..." className="fixed inset-0 z-[1000]" />}
         
@@ -1094,7 +1101,6 @@ export default function StartNavigationPage() {
                         setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
-                        // Prio 1: Explicitly clear geometries when stopping
                         setCurrentRouteGeometry(null);
                         setDisplayedRouteGeometry(null);
                         setTimeout(() => fetchRoute(true), 100); 
@@ -1141,7 +1147,7 @@ export default function StartNavigationPage() {
                     <PopoverTrigger asChild>
                         <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 mt-2"><Settings className="h-6 w-6 text-slate-600" /></Button>
                     </PopoverTrigger>
-                    <PopoverContent side="left" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md">
+                    <PopoverContent side="left" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
                         <div className="space-y-6">
                             <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
                             <div className="space-y-4">
@@ -1294,7 +1300,6 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
-                        // Prio 1: Re-draw the single segment correctly from new position
                         setCurrentRouteGeometry(null); 
                         setDisplayedRouteGeometry(null);
                         setTimeout(() => fetchRoute(), 100);
