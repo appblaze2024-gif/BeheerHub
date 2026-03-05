@@ -101,6 +101,15 @@ const ROUTE_COLUMN_LABELS_CONFIG: Record<string, string> = {
     afstand: 'Afstand'
 };
 
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
+
 const routeLayer: Layer = {
   id: 'route',
   type: 'line',
@@ -1048,7 +1057,7 @@ export default function StartNavigationPage() {
                       onClick={() => { 
                         setNavigationState('setup'); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
-                        mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
+                        mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 0 });
                         setCurrentRouteGeometry(null);
                         setDisplayedRouteGeometry(null);
                         setTimeout(() => fetchRoute(true), 0); 
@@ -1194,32 +1203,29 @@ export default function StartNavigationPage() {
             
             <ScrollArea className="flex-1 bg-white">
                 {isMobile ? (
-                    <div className="p-3 space-y-3">
+                    <div className="p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {filteredMeldingen.map(m => {
                             const isCompleted = m.status === 'Afgerond';
                             return (
                                 <div 
                                     key={m.id} 
                                     className={cn(
-                                        "p-4 rounded-2xl border-2 transition-all flex flex-col gap-2",
+                                        "p-3 rounded-xl border-2 transition-all flex flex-col gap-1",
                                         isCompleted ? "bg-green-50/50 border-green-100 opacity-60" : "bg-white border-slate-100 active:scale-[0.98]"
                                     )}
                                     onClick={() => setActiveWerkbonId(m.id)}
                                 >
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-2">
-                                            <div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
-                                            <span className="font-black text-xs uppercase text-slate-900">{m.intakenummer}</span>
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
+                                            <span className="font-black text-[10px] uppercase text-slate-900 truncate">{m.intakenummer}</span>
                                         </div>
-                                        {m.status && <Badge variant="secondary" className="text-[8px] font-black uppercase px-2 h-4">{m.status}</Badge>}
+                                        <span className="text-[8px] font-bold text-slate-400 truncate ml-2">{m.werkgebied || '-'}</span>
                                     </div>
-                                    <div className="space-y-0.5">
-                                        <p className="font-bold text-xs text-slate-900">{m.straatnaam} {m.huisnummer}</p>
-                                        <p className="text-[10px] font-medium text-slate-500 truncate italic">"{m.extra_informatie || '-'}"</p>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-1">
-                                        <span className="text-[9px] font-black uppercase text-primary bg-primary/5 px-2 py-0.5 rounded-full">{m.subcategorie}</span>
-                                        <span className="text-[9px] font-bold text-slate-400">{m.werkgebied || '-'}</span>
+                                    <p className="font-bold text-[11px] text-slate-900 truncate">{m.straatnaam} {m.huisnummer}</p>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[9px] font-black uppercase text-primary truncate max-w-[70%]">{m.subcategorie}</span>
+                                        {isCompleted && <Check className="h-3 w-3 text-green-600" />}
                                     </div>
                                 </div>
                             );
