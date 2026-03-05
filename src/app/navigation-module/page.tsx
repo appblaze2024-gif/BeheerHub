@@ -629,7 +629,7 @@ export default function StartNavigationPage() {
     );
   }, [firestore]);
 
-  const { data: rawMeldingen } = useCollection<Melding>(meldingenQuery);
+  const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
 
   const completedTodayQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -672,31 +672,50 @@ export default function StartNavigationPage() {
   }, [filteredMeldingen, userLocation]);
 
   const goToOverview = React.useCallback(() => {
-    if (!mapRef.current || filteredMeldingen.length === 0) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
     const startPos = userLocation || SIMULATION_START_LOCATION;
-    const points = [
-        [startPos.longitude, startPos.latitude],
-        ...filteredMeldingen.map(m => [m.longitude, m.latitude])
-    ];
-    const coll = turf.featureCollection(points.map(p => turf.point(p)));
-    const bbox = turf.bbox(coll);
-    if (bbox[0] !== Infinity) {
-        mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
-            padding: 300, 
+    const points: [number, number][] = [[startPos.longitude, startPos.latitude]];
+    
+    // Add all markers to the point list for bounding box calculation
+    filteredMeldingen.forEach(m => {
+        if (m.longitude && m.latitude) {
+            points.push([m.longitude, m.latitude]);
+        }
+    });
+
+    if (points.length > 1) {
+        const coll = turf.featureCollection(points.map(p => turf.point(p)));
+        const bbox = turf.bbox(coll);
+        map.fitBounds(bbox as [number, number, number, number], { 
+            padding: 150, 
             duration: 0, 
-            maxZoom: 11
+            maxZoom: 11,
+            linear: true
         });
+    } else {
+        map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 0 });
     }
   }, [filteredMeldingen, userLocation]);
 
+  // Initial Fit All - Triggered when data arrives or page opens
+  React.useEffect(() => {
+    if (navigationState === 'setup' && !isLoadingMeldingen && filteredMeldingen.length > 0 && mapRef.current) {
+        const map = mapRef.current.getMap();
+        if (map.isStyleLoaded()) {
+            goToOverview();
+        } else {
+            map.once('style.load', () => goToOverview());
+        }
+    }
+  }, [navigationState, isLoadingMeldingen, filteredMeldingen.length, goToOverview]);
+
   // ROUTE FETCHING
-  const fetchRoute = React.useCallback(async (zoomToFit = false, force = false) => {
+  const fetchRoute = React.useCallback(async (force = false) => {
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
-        if (zoomToFit) {
-            goToOverview();
-        }
         return;
     }
 
@@ -735,19 +754,12 @@ export default function StartNavigationPage() {
     } finally {
         setIsCalculatingRoute(false);
     }
-  }, [sortedMissions, userLocation, navigationState, filteredMeldingen, goToOverview]);
-
-  // Initial Fit All
-  React.useEffect(() => {
-    if (navigationState === 'setup' && filteredMeldingen.length > 0 && mapRef.current && !isLocating) {
-        goToOverview();
-    }
-  }, [filteredMeldingen.length, navigationState, isLocating, goToOverview]);
+  }, [sortedMissions, userLocation, navigationState]);
 
   // WATCH FOR NAVIGATION STATE OR MISSION CHANGES
   React.useEffect(() => {
     if (navigationState === 'navigating' && sortedMissions.length > 0) {
-        fetchRoute(false, true);
+        fetchRoute(true);
     } else if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
@@ -789,7 +801,7 @@ export default function StartNavigationPage() {
                 const rawPt = turf.point([loc.longitude, loc.latitude]);
                 const distanceOffRoute = turf.pointToLineDistance(rawPt, line, { units: 'meters' });
                 if (distanceOffRoute > 50) {
-                    fetchRoute(false, true);
+                    fetchRoute(true);
                 }
             }
 
@@ -957,10 +969,7 @@ export default function StartNavigationPage() {
     simAnimationRef.current = requestAnimationFrame(animate);
   };
 
-  const handleMeldingClick = (m: Melding, openWerkbon = false) => {
-    if (openWerkbon) {
-        setActiveWerkbonId(m.id);
-    }
+  const handleMeldingClick = (m: Melding) => {
     setIsManualMode(true);
     if (mapRef.current) {
         mapRef.current.getMap().flyTo({
@@ -969,6 +978,20 @@ export default function StartNavigationPage() {
             pitch: 45,
             duration: 1000
         });
+    }
+  };
+
+  const handleStopRit = () => {
+    setNavigationState('setup'); 
+    if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
+    setCurrentRouteGeometry(null);
+    setDisplayedRouteGeometry(null);
+    setIsManualMode(false);
+    
+    const map = mapRef.current?.getMap();
+    if (map) {
+        map.jumpTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 0 });
+        setTimeout(() => goToOverview(), 50);
     }
   };
 
@@ -1013,7 +1036,7 @@ export default function StartNavigationPage() {
                     </Marker>
                 )}
                 {filteredMeldingen.map((m) => (
-                    <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => handleMeldingClick(m, true)}>
+                    <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setActiveWerkbonId(m.id); }}>
                         <div className="relative flex items-center justify-center w-14 h-14">
                             {nextMission?.id === m.id && navigationState === 'navigating' && (
                                 <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
@@ -1074,14 +1097,7 @@ export default function StartNavigationPage() {
                     <Button 
                       variant="destructive" 
                       className="h-12 md:h-14 px-5 md:px-10 font-black uppercase rounded-2xl shadow-2xl transition-all active:scale-95" 
-                      onClick={() => { 
-                        setNavigationState('setup'); 
-                        if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
-                        mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 0 });
-                        setCurrentRouteGeometry(null);
-                        setDisplayedRouteGeometry(null);
-                        setTimeout(() => goToOverview(), 0); 
-                    }}>
+                      onClick={handleStopRit}>
                       <span className="hidden md:inline">STOP RIT</span>
                       <span className="md:hidden">STOP</span>
                     </Button>
@@ -1204,7 +1220,7 @@ export default function StartNavigationPage() {
                                         "p-3 rounded-xl border-2 transition-all flex flex-col gap-1",
                                         isCompleted ? "bg-green-50/50 border-green-100 opacity-60" : "bg-white border-slate-100 active:scale-[0.98]"
                                     )}
-                                    onClick={() => handleMeldingClick(m, false)}
+                                    onClick={() => handleMeldingClick(m)}
                                 >
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-1.5 min-w-0">
@@ -1241,7 +1257,7 @@ export default function StartNavigationPage() {
                                 const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
-                                    <TableRow key={m.id} className={cn("h-8 transition-colors cursor-pointer border-b border-slate-100", isCompleted ? "bg-green-50/50 opacity-60" : "hover:bg-blue-50")} onClick={() => handleMeldingClick(m, false)}>
+                                    <TableRow key={m.id} className={cn("h-8 transition-colors cursor-pointer border-b border-slate-100", isCompleted ? "bg-green-50/50 opacity-60" : "hover:bg-blue-50")} onClick={() => handleMeldingClick(m)}>
                                         {visibleColumns.intakenummer && (
                                             <TableCell className="font-black text-[10px] border-r border-slate-100 px-2 py-1">
                                                 <div className="flex items-center gap-2">
@@ -1275,7 +1291,7 @@ export default function StartNavigationPage() {
                         setActiveWerkbonId(null);
                         setCurrentRouteGeometry(null); 
                         setDisplayedRouteGeometry(null);
-                        setTimeout(() => fetchRoute(false, true), 100);
+                        setTimeout(() => fetchRoute(true), 100);
                     }} 
                 />
             </div>
