@@ -4,7 +4,7 @@
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc } from '@/firebase';
-import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch, addDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -643,12 +643,17 @@ export default function StartNavigationPage() {
 
   const mapRef = React.useRef<MapRef>(null);
   const simAnimationRef = React.useRef<number | null>(null);
+  const smoothAnimationRef = React.useRef<number | null>(null);
   const simStateRef = React.useRef({ distanceTravelled: 0, currentSpeedMs: 0 });
   const lastRouteCalculationLocationRef = React.useRef<{latitude: number, longitude: number} | null>(null);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
-    return () => setIsHeaderVisible(true);
+    return () => {
+        setIsHeaderVisible(true);
+        if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current);
+        if (smoothAnimationRef.current) cancelAnimationFrame(smoothAnimationRef.current);
+    };
   }, [setIsHeaderVisible]);
 
   React.useEffect(() => {
@@ -808,23 +813,37 @@ export default function StartNavigationPage() {
     return () => clearTimeout(timer);
   }, [isManualMode, navigationState, smoothLocation, navZoom, navPitch, navOffset]);
 
-  // STABLE GPS ENGINE
+  // STABLE GPS ENGINE WITH ROAD SNAPPING AND REROUTING
   React.useEffect(() => {
     if (!navigator.geolocation || isSimulationMode) return;
     
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
-            const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-            setUserLocation(loc);
+            const rawLoc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            setUserLocation(rawLoc);
             
-            let activeLoc = { ...loc, heading: lastHeadingRef.current };
+            // 1. Instant Rerouting Check
+            if (navigationState === 'navigating' && currentRouteGeometry && !isCalculatingRoute) {
+                const line = turf.lineString(currentRouteGeometry.coordinates);
+                const rawPt = turf.point([rawLoc.longitude, rawLoc.latitude]);
+                const distanceOffRoute = turf.pointToLineDistance(rawPt, line, { units: 'meters' });
+                
+                // If more than 30 meters off route, recalculate immediately
+                if (distanceOffRoute > 30) {
+                    fetchRoute();
+                }
+            }
+
+            // 2. Road Snapping & Heading
+            let activeLoc = { ...rawLoc, heading: lastHeadingRef.current };
 
             if (currentRouteGeometry) {
                 try {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
-                    const currPt = turf.point([loc.longitude, loc.latitude]);
+                    const currPt = turf.point([rawLoc.longitude, rawLoc.latitude]);
                     const snapped = turf.nearestPointOnLine(line, currPt);
                     
+                    // Stay strictly on the line if we're reasonably close
                     activeLoc.longitude = snapped.geometry.coordinates[0];
                     activeLoc.latitude = snapped.geometry.coordinates[1];
 
@@ -840,27 +859,54 @@ export default function StartNavigationPage() {
                 } catch (e) {}
             }
 
-            setSmoothLocation(activeLoc);
-            if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
+            // 3. Smooth Gliding Animation
+            if (!smoothLocation) {
+                setSmoothLocation(activeLoc);
+            } else {
+                // Animate smooth transition to new snapped position
+                if (smoothAnimationRef.current) cancelAnimationFrame(smoothAnimationRef.current);
+                
+                const startPos = { ...smoothLocation };
+                const endPos = { ...activeLoc };
+                let startTime: number | null = null;
+                const duration = 500; // Match GPS update frequency
 
-            if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
-                const map = mapRef.current.getMap();
-                map.easeTo({
-                    center: [activeLoc.longitude, activeLoc.latitude],
-                    bearing: activeLoc.heading,
-                    zoom: navZoom,
-                    pitch: navPitch,
-                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                    duration: 500, 
-                    easing: (t) => t 
-                });
+                const animateSmooth = (time: number) => {
+                    if (!startTime) startTime = time;
+                    const elapsed = time - startTime;
+                    const t = Math.min(elapsed / duration, 1);
+                    
+                    const currentPos = {
+                        latitude: startPos.latitude + (endPos.latitude - startPos.latitude) * t,
+                        longitude: startPos.longitude + (endPos.longitude - startPos.longitude) * t,
+                        heading: startPos.heading + (endPos.heading - startPos.heading) * t
+                    };
+                    
+                    setSmoothLocation(currentPos);
+
+                    if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
+                        const map = mapRef.current.getMap();
+                        map.jumpTo({
+                            center: [currentPos.longitude, currentPos.latitude],
+                            bearing: currentPos.heading,
+                            zoom: navZoom,
+                            pitch: navPitch,
+                            padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
+                        });
+                    }
+
+                    if (t < 1) smoothAnimationRef.current = requestAnimationFrame(animateSmooth);
+                };
+                smoothAnimationRef.current = requestAnimationFrame(animateSmooth);
             }
+
+            if (pos.coords.speed !== null) setSpeedKmh(Math.round(pos.coords.speed * 3.6));
         },
         (err) => console.error("GPS Error:", err),
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navZoom, navPitch, navOffset, isCalculatingRoute]);
 
   // INTERFACE HANDLERS
   const handleResize = (clientY: number) => {
@@ -1104,6 +1150,7 @@ export default function StartNavigationPage() {
                         setNavigationState('setup'); 
                         setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
+                        if(smoothAnimationRef.current) cancelAnimationFrame(smoothAnimationRef.current);
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
                         setCurrentRouteGeometry(null);
                         fetchRoute(true); 
@@ -1312,4 +1359,3 @@ export default function StartNavigationPage() {
     </div>
   );
 }
-
