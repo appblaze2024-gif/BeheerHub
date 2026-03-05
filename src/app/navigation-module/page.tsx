@@ -541,7 +541,7 @@ function IntegratedWerkbonOverlay({
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 bg-slate-50 p-4 lg:p-6 rounded-2xl lg:rounded-3xl border-2 border-slate-100">
                                         <div className="space-y-1">
-                                            <Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Materiaal</Label>
+                                            <Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Material</Label>
                                             <Input placeholder="Bv. Zand..." className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:text-sm" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} />
                                         </div>
                                         <div className="space-y-1">
@@ -578,7 +578,6 @@ export default function StartNavigationPage() {
   const { user } = useUser();
   const router = useRouter();
   const { profile } = useProfile();
-  const { toast } = useToast();
   const { setIsHeaderVisible } = useNavigationUI();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
@@ -683,13 +682,11 @@ export default function StartNavigationPage() {
         });
   }, [filteredMeldingen, userLocation]);
 
-  // ROUTE FETCHING
+  // ROUTE FETCHING - High speed, no delay
   const fetchRoute = React.useCallback(async (zoomToFit = false, force = false) => {
-    // Prio 1: No lines in setup or if just stopped
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
-        
         if (zoomToFit && mapRef.current) {
             const startPos = userLocation || SIMULATION_START_LOCATION;
             const points = [
@@ -701,7 +698,7 @@ export default function StartNavigationPage() {
             if (bbox[0] !== Infinity) {
                 mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
                     padding: 300, 
-                    duration: 2000,
+                    duration: 1500,
                     maxZoom: 11
                 });
             }
@@ -715,16 +712,15 @@ export default function StartNavigationPage() {
         return;
     }
     
-    // Prevent flickering by ensuring we don't fetch too frequently, unless forced
     const now = Date.now();
-    if (!force && now - lastFetchTimeRef.current < 5000) return;
+    // Reduce debounce for faster response
+    if (!force && now - lastFetchTimeRef.current < 2000) return;
     
     setIsCalculatingRoute(true);
     lastFetchTimeRef.current = now;
     const startPos = userLocation || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
-    // Point-to-point only when navigating
     const waypoints = [
         [startPos.longitude, startPos.latitude], 
         [sortedMissions[0].longitude, sortedMissions[0].latitude]
@@ -758,18 +754,16 @@ export default function StartNavigationPage() {
   // WATCH FOR NAVIGATION STATE OR MISSION CHANGES
   React.useEffect(() => {
     if (navigationState === 'navigating' && sortedMissions.length > 0) {
-        // Force calculation on initial navigation start
         fetchRoute(false, true);
     } else if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
     }
-  }, [navigationState, sortedMissions[0]?.id]); // Mission ID dependency ensures point-to-point update
+  }, [navigationState, sortedMissions[0]?.id]);
 
-  // AUTO-RECENTER LOGIC (10s)
+  // AUTO-RECENTER LOGIC
   React.useEffect(() => {
     if (!isManualMode || navigationState !== 'navigating') return;
-
     const timer = setTimeout(() => {
         setIsManualMode(false);
         if (mapRef.current && smoothLocation) {
@@ -784,7 +778,6 @@ export default function StartNavigationPage() {
             });
         }
     }, 10000);
-
     return () => clearTimeout(timer);
   }, [isManualMode, navigationState, smoothLocation, navPitch, navOffset, speedKmh]);
 
@@ -797,7 +790,7 @@ export default function StartNavigationPage() {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
             
-            // Rerouting check with 50m threshold
+            // Reroute check with 50m threshold
             if (navigationState === 'navigating' && currentRouteGeometry && !isCalculatingRoute) {
                 const line = turf.lineString(currentRouteGeometry.coordinates);
                 const rawPt = turf.point([loc.longitude, loc.latitude]);
@@ -884,8 +877,6 @@ export default function StartNavigationPage() {
 
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
-    
-    // Explicitly reset geometries
     setCurrentRouteGeometry(null);
     setDisplayedRouteGeometry(null);
 
@@ -943,7 +934,10 @@ export default function StartNavigationPage() {
     simStateRef.current = { distanceTravelled: 0, currentSpeedMs: 0 };
     
     const animate = () => {
-        if (isPaused || activeWerkbonId) { simAnimationRef.current = requestAnimationFrame(animate); return; }
+        if (isPaused || activeWerkbonId || navigationState === 'setup') { 
+            if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current);
+            return; 
+        }
         const speedMs = 13.8;
         simStateRef.current.distanceTravelled += speedMs * 0.016;
         if (simStateRef.current.distanceTravelled >= totalDist) { setSpeedKmh(0); return; }
@@ -985,13 +979,6 @@ export default function StartNavigationPage() {
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
         {isStartingSimulation && <LoadingScreen message="Simulator voorbereiden..." className="fixed inset-0 z-[1000]" />}
         
-        {isCalculatingRoute && (
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-6 py-2 rounded-full shadow-2xl flex items-center gap-3 border-2 border-primary animate-in fade-in duration-300">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Route herberekenen...</span>
-            </div>
-        )}
-
         <div className="absolute inset-0 z-0" style={{ touchAction: 'none' }}>
             <MapGL 
                 ref={mapRef} 
@@ -1257,7 +1244,6 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
-                        // Force route refresh after completion
                         setCurrentRouteGeometry(null); 
                         setDisplayedRouteGeometry(null);
                         setTimeout(() => fetchRoute(false, true), 100);
