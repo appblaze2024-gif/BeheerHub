@@ -686,12 +686,11 @@ export default function StartNavigationPage() {
 
   // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (zoomToFit = false) => {
-    // Explicitly hide lines if NOT navigating
+    // Prio 1: No lines in setup
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
         
-        // Still fit to bounds if requested, even without lines
         if (zoomToFit && mapRef.current) {
             const startPos = userLocation || SIMULATION_START_LOCATION;
             const points = [
@@ -708,14 +707,12 @@ export default function StartNavigationPage() {
                 });
             }
         }
-        setIsCalculatingRoute(false);
         return;
     }
 
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
-        setIsCalculatingRoute(false);
         return;
     }
     
@@ -723,7 +720,7 @@ export default function StartNavigationPage() {
     const startPos = userLocation || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
-    // Strict point-to-point: only to the next nearest stop
+    // Point-to-point only when navigating
     const waypoints = [
         [startPos.longitude, startPos.latitude], 
         [sortedMissions[0].longitude, sortedMissions[0].latitude]
@@ -754,16 +751,15 @@ export default function StartNavigationPage() {
     }
   }, [filteredMeldingen.length, navigationState, isLocating]);
 
-  // WATCH FOR MISSION COMPLETION
-  const lastMissionIdRef = React.useRef<string | null>(null);
+  // WATCH FOR NAVIGATION STATE OR MISSION CHANGES
   React.useEffect(() => {
-    const currentFirstId = sortedMissions[0]?.id || null;
-    if (navigationState === 'navigating' && currentFirstId !== lastMissionIdRef.current) {
-        setCurrentRouteGeometry(null); 
+    if (navigationState === 'navigating' && sortedMissions.length > 0) {
         fetchRoute();
-        lastMissionIdRef.current = currentFirstId;
+    } else if (navigationState === 'setup') {
+        setCurrentRouteGeometry(null);
+        setDisplayedRouteGeometry(null);
     }
-  }, [sortedMissions, navigationState, fetchRoute]);
+  }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
   // AUTO-RECENTER LOGIC (10s)
   React.useEffect(() => {
@@ -932,7 +928,6 @@ export default function StartNavigationPage() {
                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
                 });
             }
-            fetchRoute();
         };
 
         if (userLocation) beginNavigation(userLocation, lastHeadingRef.current || 0);
@@ -1005,12 +1000,6 @@ export default function StartNavigationPage() {
   ) : 0;
   const etaSeconds = (distToNextKm * 1000) / (speedKmh > 5 ? (speedKmh / 3.6) : 13.8);
 
-  // CRITICAL: Compute route data to ensure cleanup works instantly
-  const activeRouteData = React.useMemo(() => {
-    if (navigationState !== 'navigating') return { type: 'FeatureCollection', features: [] };
-    return displayedRouteGeometry || { type: 'FeatureCollection', features: [] };
-  }, [navigationState, displayedRouteGeometry]);
-
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
@@ -1073,7 +1062,7 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 ))}
-                <Source id="route-line" type="geojson" data={activeRouteData}>
+                <Source id="route-line" type="geojson" data={displayedRouteGeometry || { type: 'FeatureCollection', features: [] }}>
                     <Layer {...routeLayerCasing} />
                     <Layer {...routeLayer} />
                 </Source>
