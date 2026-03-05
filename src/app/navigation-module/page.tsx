@@ -531,11 +531,11 @@ function IntegratedWerkbonOverlay({
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 bg-slate-50 p-4 lg:p-6 rounded-2xl lg:rounded-3xl border-2 border-slate-100">
                                         <div className="space-y-1">
                                             <Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Material</Label>
-                                            <Input placeholder="Bv. Zand..." className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:text-sm" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} />
+                                            <Input placeholder="Bv. Zand..." className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:sm" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} />
                                         </div>
                                         <div className="space-y-1">
                                             <Label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Aantal</Label>
-                                            <Input placeholder="0" type="number" className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:text-sm" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} />
+                                            <Input placeholder="0" type="number" className="h-9 lg:h-11 font-bold rounded-lg lg:rounded-xl text-xs lg:sm" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} />
                                         </div>
                                         <div className="flex items-end">
                                             <Button 
@@ -1158,7 +1158,7 @@ export default function StartNavigationPage() {
                         <div className="flex-1 flex flex-col gap-2 sm:gap-3 min-w-0">
                             <div className="space-y-0.5">
                                 <p className="text-[8px] sm:text-[9px] font-black uppercase text-slate-500">Volgende Bestemming</p>
-                                <p className="text-xl sm:text-2xl font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
+                                <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
                             </div>
                             <Progress value={100} className="h-1.5 sm:h-2 bg-slate-100" />
                         </div>
