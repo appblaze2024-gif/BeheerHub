@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -87,10 +88,8 @@ export function MapboxView({
     
     const getPriority = (obj: MapObject) => {
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-        const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
-        const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
-        if (isPrullenbakMeerlanden) return 3;
-        if (isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond')) return 2;
+        const isWaste = typeStr.includes('prullenbak') || typeStr.includes('bak') || typeStr.includes('container');
+        if (isWaste) return 3;
         return 1;
     };
 
@@ -155,15 +154,14 @@ export function MapboxView({
       markerElements.push(...uniqueObjects.map(obj => {
         const isSelected = selectedObjects.some(so => so.id === obj.id);
         const isHighlighted = highlightedObject?.id === obj.id;
-        const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         
         const isWasteOrRecycling = typeStr.includes('prullenbak') || 
-                                  typeStr.includes('brengpark') || 
+                                  typeStr.includes('bak') ||
                                   typeStr.includes('container') || 
                                   typeStr.includes('ondergrond');
         
-        const Icon = Trash2;
+        const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
 
         return (
             <Marker key={`obj-${obj.id}`} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={e => {
@@ -181,12 +179,12 @@ export function MapboxView({
                 {isWasteOrRecycling ? (
                   <img 
                     src="https://i.ibb.co/0jg4jm6v/3d-printer-icon-sharp.png" 
-                    alt="object" 
+                    alt="unit" 
                     className={cn("relative h-7 w-7 transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} 
                     style={{ filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} 
                   />
                 ) : (
-                  <Icon className={cn("relative h-5 w-5 stroke-white stroke-[1.5] transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ fill: isSelected ? 'hsl(48, 96%, 56%)' : color, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
+                  <Trash2 className={cn("relative h-5 w-5 stroke-white stroke-[1.5] transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ fill: isSelected ? 'hsl(48, 96%, 56%)' : color, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
                 )}
               </div>
             </Marker>

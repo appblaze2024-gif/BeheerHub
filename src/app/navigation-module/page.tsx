@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
-import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +42,9 @@ import {
   ImageIcon,
   ChevronRight,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -278,7 +280,7 @@ function IntegratedWerkbonOverlay({
         if (!newQuickKey.trim() || !user || !firestore) return;
         const currentKeys = profile?.quickKeys || [];
         const updatedKeys = [...new Set([...currentKeys, newQuickKey.trim()])];
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys });
+        setDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys }, { merge: true });
         setNewQuickKey('');
         toast({ title: 'Sneltoets toegevoegd' });
     };
@@ -287,7 +289,7 @@ function IntegratedWerkbonOverlay({
         if (!user || !firestore) return;
         const currentKeys = profile?.quickKeys || [];
         const updatedKeys = currentKeys.filter(k => k !== key);
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys });
+        setDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys }, { merge: true });
         toast({ title: 'Sneltoets verwijderd' });
     };
 
@@ -499,7 +501,7 @@ function IntegratedWerkbonOverlay({
                                 </Card>
                                 <Card className="rounded-xl lg:rounded-3xl shadow-xl border-none bg-white overflow-hidden">
                                     <CardHeader className="bg-slate-50 border-b p-4 lg:p-6 flex flex-row items-center justify-between">
-                                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle>
+                                        <CardTitle className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering (Foto's)</CardTitle>
                                         <Badge variant="secondary" className="bg-green-100 text-green-700 border-none font-bold text-[9px] uppercase px-2 h-5">{afhandelingFotos.length} Foto's</Badge>
                                     </CardHeader>
                                     <CardContent className="p-4 lg:p-8 space-y-6">
@@ -860,7 +862,7 @@ export default function StartNavigationPage() {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       setIsResizing(false);
-      if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
+      if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight }, { merge: true });
     };
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
@@ -873,7 +875,7 @@ export default function StartNavigationPage() {
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
       setIsResizing(false);
-      if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight });
+      if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navListHeight: listHeight }, { merge: true });
     };
     document.addEventListener('touchmove', onTouchMove);
     document.addEventListener('touchend', onTouchEnd);
@@ -882,32 +884,37 @@ export default function StartNavigationPage() {
   const updateNavZoom = (newZoom: number) => {
     const val = Number(newZoom);
     setNavZoomState(val);
-    if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val });
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val }, { merge: true });
     mapRef.current?.getMap().jumpTo({ zoom: val });
   };
 
   const updateNavPitch = (newPitch: number) => {
     const val = Number(newPitch);
     setNavPitchState(val);
-    if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val });
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val }, { merge: true });
     mapRef.current?.getMap().jumpTo({ pitch: val });
   };
 
   const updateNavOffset = (newOffset: number) => {
     const val = Number(newOffset);
     setNavOffsetState(val);
-    if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val });
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val }, { merge: true });
     mapRef.current?.getMap().jumpTo({ padding: { top: 0, bottom: Math.max(0, val), left: 0, right: 0 } });
   };
 
   const toggleColumnVisibility = (colId: string) => {
     const next = { ...visibleColumns, [colId]: !visibleColumns[colId] };
     setVisibleColumns(next);
-    if (user && firestore) updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next });
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next }, { merge: true });
   };
 
   const handleStartRit = (simulate = false) => {
     if (sortedMissions.length === 0) return;
+    
+    // Prio 1: Explicitly clear geometries before starting to force a fresh re-draw
+    setCurrentRouteGeometry(null);
+    setDisplayedRouteGeometry(null);
+
     if (!simulate) {
         setIsLocating(true);
         const beginNavigation = (loc: { latitude: number, longitude: number }, heading: number) => {
@@ -917,7 +924,6 @@ export default function StartNavigationPage() {
             setIsListExpanded(false);
             setIsLocating(false);
             setIsManualMode(false);
-            setCurrentRouteGeometry(null);
             
             if (mapRef.current) {
                 mapRef.current.getMap().jumpTo({ 
@@ -948,7 +954,7 @@ export default function StartNavigationPage() {
         setNavigationState('navigating');
         setIsListExpanded(false);
         setIsManualMode(false);
-        setCurrentRouteGeometry(null); 
+        
         setTimeout(() => {
             setIsStartingSimulation(false);
             startSimulation();
@@ -1062,10 +1068,12 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 ))}
-                <Source id="route-line" type="geojson" data={displayedRouteGeometry || { type: 'FeatureCollection', features: [] }}>
-                    <Layer {...routeLayerCasing} />
-                    <Layer {...routeLayer} />
-                </Source>
+                {navigationState === 'navigating' && displayedRouteGeometry && (
+                    <Source id="route-line" type="geojson" data={displayedRouteGeometry}>
+                        <Layer {...routeLayerCasing} />
+                        <Layer {...routeLayer} />
+                    </Source>
+                )}
             </MapGL>
         </div>
 
@@ -1087,9 +1095,10 @@ export default function StartNavigationPage() {
                         setIsListExpanded(true); 
                         if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
                         mapRef.current?.getMap().jumpTo({ pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
+                        // Prio 1: Explicitly clear geometries when stopping
                         setCurrentRouteGeometry(null);
                         setDisplayedRouteGeometry(null);
-                        fetchRoute(true); 
+                        setTimeout(() => fetchRoute(true), 100); 
                     }}>STOP RIT</Button>
                 )}
             </div>
@@ -1286,6 +1295,7 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
+                        // Prio 1: Re-draw the single segment correctly from new position
                         setCurrentRouteGeometry(null); 
                         setDisplayedRouteGeometry(null);
                         setTimeout(() => fetchRoute(), 100);
