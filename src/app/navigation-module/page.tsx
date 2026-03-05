@@ -597,6 +597,7 @@ export default function StartNavigationPage() {
   const lastHeadingRef = React.useRef(0);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
+  const [routeInfo, setRouteInfo] = React.useState<{ duration: number; distance: number } | null>(null);
   const [speedKmh, setSpeedKmh] = React.useState(0);
   const [isPaused, setIsPaused] = React.useState(false);
 
@@ -689,7 +690,7 @@ export default function StartNavigationPage() {
         const coll = turf.featureCollection(points.map(p => turf.point(p)));
         const bbox = turf.bbox(coll);
         map.fitBounds(bbox as [number, number, number, number], { 
-            padding: 150, 
+            padding: 300, 
             duration: 0, 
             maxZoom: 11,
             linear: true
@@ -716,12 +717,14 @@ export default function StartNavigationPage() {
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
+        setRouteInfo(null);
         return;
     }
 
     if (sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
+        setRouteInfo(null);
         return;
     }
     
@@ -745,9 +748,10 @@ export default function StartNavigationPage() {
         const res = await fetch(url);
         const data = await res.json();
         if (data.routes?.[0]) {
-            const geometry = data.routes[0].geometry;
-            setCurrentRouteGeometry(geometry);
-            setDisplayedRouteGeometry(turf.feature(geometry));
+            const route = data.routes[0];
+            setCurrentRouteGeometry(route.geometry);
+            setDisplayedRouteGeometry(turf.feature(route.geometry));
+            setRouteInfo({ duration: route.duration, distance: route.distance });
         }
     } catch (e) { 
         console.error("Route error:", e); 
@@ -763,6 +767,7 @@ export default function StartNavigationPage() {
     } else if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
         setDisplayedRouteGeometry(null);
+        setRouteInfo(null);
     }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
@@ -884,6 +889,7 @@ export default function StartNavigationPage() {
     if (sortedMissions.length === 0) return;
     setCurrentRouteGeometry(null);
     setDisplayedRouteGeometry(null);
+    setRouteInfo(null);
 
     if (!simulate) {
         setIsLocating(true);
@@ -986,6 +992,7 @@ export default function StartNavigationPage() {
     if(simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); 
     setCurrentRouteGeometry(null);
     setDisplayedRouteGeometry(null);
+    setRouteInfo(null);
     setIsManualMode(false);
     
     const map = mapRef.current?.getMap();
@@ -1001,7 +1008,6 @@ export default function StartNavigationPage() {
       turf.point([nextMission.longitude, nextMission.latitude]),
       { units: 'kilometers' }
   ) : 0;
-  const etaSeconds = (distToNextKm * 1000) / (speedKmh > 5 ? (speedKmh / 3.6) : 13.8);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
@@ -1142,8 +1148,8 @@ export default function StartNavigationPage() {
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
                     <CardContent className="p-6 flex items-center justify-between gap-8">
                         <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-8">
-                            <p className="text-4xl font-black text-slate-900">{formatDate(addSeconds(new Date(), etaSeconds), 'HH:mm')}</p>
-                            <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">aankomst</p>
+                            <p className="text-4xl font-black text-slate-900">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">minuten</p>
                             <div className="mt-2 px-3 py-0.5 bg-primary/10 rounded-full">
                                 <p className="text-[10px] font-black text-primary">{distToNextKm.toFixed(1)} km</p>
                             </div>
@@ -1291,6 +1297,7 @@ export default function StartNavigationPage() {
                         setActiveWerkbonId(null);
                         setCurrentRouteGeometry(null); 
                         setDisplayedRouteGeometry(null);
+                        setRouteInfo(null);
                         setTimeout(() => fetchRoute(true), 100);
                     }} 
                 />
