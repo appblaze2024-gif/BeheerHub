@@ -166,7 +166,6 @@ function IntegratedWerkbonOverlay({
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     
-    // Fixed: Added missing state for materials
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     
@@ -675,15 +674,18 @@ export default function StartNavigationPage() {
             setDisplayedRouteGeometry(turf.feature(geometry));
             
             if (zoomToFit && mapRef.current) {
-                // Fixed: Fit bounds to include user location + all visible mission points
                 const points = [
                     [startPos.longitude, startPos.latitude],
                     ...filteredMeldingen.map(m => [m.longitude, m.latitude])
                 ];
-                const collection = turf.featureCollection(points.map(p => turf.point(p)));
-                const bbox = turf.bbox(collection);
+                const coll = turf.featureCollection(points.map(p => turf.point(p)));
+                const bbox = turf.bbox(coll);
                 if (bbox[0] !== Infinity) {
-                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 80, duration: 1000 });
+                    mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { 
+                        padding: 100, 
+                        duration: 2000,
+                        maxZoom: 16 
+                    });
                 }
             }
         }
@@ -693,6 +695,13 @@ export default function StartNavigationPage() {
         setIsCalculatingRoute(false);
     }
   }, [sortedMissions, userLocation, navigationState, filteredMeldingen]);
+
+  // Initial Fit All
+  React.useEffect(() => {
+    if (navigationState === 'setup' && filteredMeldingen.length > 0 && mapRef.current && !isLocating) {
+        fetchRoute(true);
+    }
+  }, [filteredMeldingen.length, navigationState, isLocating]);
 
   // WATCH FOR MISSION COMPLETION
   const lastMissionIdRef = React.useRef<string | null>(null);
@@ -704,23 +713,6 @@ export default function StartNavigationPage() {
         lastMissionIdRef.current = currentFirstId;
     }
   }, [sortedMissions, navigationState, fetchRoute]);
-
-  // Check if off-route (> 50m)
-  React.useEffect(() => {
-    if (navigationState !== 'navigating' || !userLocation || !currentRouteGeometry) return;
-
-    const pt = turf.point([userLocation.longitude, userLocation.latitude]);
-    const line = turf.lineString(currentRouteGeometry.coordinates);
-    const distanceToRoute = turf.pointToLineDistance(pt, line, { units: 'meters' });
-
-    if (distanceToRoute > 50) {
-        fetchRoute(false);
-    }
-  }, [userLocation, currentRouteGeometry, navigationState, fetchRoute]);
-
-  React.useEffect(() => {
-    if (sortedMissions.length > 0 && !currentRouteGeometry) fetchRoute(navigationState === 'setup');
-  }, [sortedMissions, navigationState, fetchRoute, currentRouteGeometry]);
 
   // AUTO-RECENTER LOGIC (10s)
   React.useEffect(() => {
@@ -744,7 +736,7 @@ export default function StartNavigationPage() {
     return () => clearTimeout(timer);
   }, [isManualMode, navigationState, smoothLocation, navZoom, navPitch, navOffset]);
 
-  // STABLE GPS ENGINE (Eliminate Flickering)
+  // STABLE GPS ENGINE
   React.useEffect(() => {
     if (!navigator.geolocation || isSimulationMode) return;
     
@@ -753,7 +745,6 @@ export default function StartNavigationPage() {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
             
-            // Calculate snapping and heading only if we have a route
             let activeLoc = { ...loc, heading: lastHeadingRef.current };
 
             if (currentRouteGeometry) {
@@ -871,7 +862,6 @@ export default function StartNavigationPage() {
             setIsListExpanded(false);
             setIsLocating(false);
             setIsManualMode(false);
-            
             setCurrentRouteGeometry(null);
             
             if (mapRef.current) {
@@ -982,7 +972,6 @@ export default function StartNavigationPage() {
                 touchPitch={true}
                 doubleClickZoom={true}
                 onInteractionStateChange={(state) => {
-                    // Detect manual interaction to show the "Resume" button
                     if (navigationState === 'navigating' && (state.isDragging || state.isZooming || state.isRotating)) {
                         setIsManualMode(true);
                     }
@@ -1003,10 +992,18 @@ export default function StartNavigationPage() {
                                 <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
                             )}
                             <div className={cn(
-                                "w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer z-10", 
+                                "w-10 h-10 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer z-10", 
                                 m.status === 'Afgerond' ? 'bg-green-500' : getMeldingAgeColor(m.datum)
                             )}>
-                                {m.status === 'Afgerond' ? <Check className="h-4 w-4 text-white" /> : <Bell className="h-4 w-4 text-white" />}
+                                {m.status === 'Afgerond' ? (
+                                    <Check className="h-5 w-5 text-white" />
+                                ) : (
+                                    <img 
+                                        src="https://i.ibb.co/9fXVS9F/3d-printer-icon-transparent.png" 
+                                        alt="task" 
+                                        className="h-7 w-7 object-contain drop-shadow-md" 
+                                    />
+                                )}
                             </div>
                         </div>
                     </Marker>
@@ -1052,7 +1049,7 @@ export default function StartNavigationPage() {
                     <Minus className="h-6 w-6 text-slate-600" />
                 </Button>
                 
-                {(isManualMode || navZoom < 17) && (
+                {isManualMode && (
                     <Button 
                         variant="default" 
                         size="icon" 
