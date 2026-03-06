@@ -56,6 +56,7 @@ import {
   ClipboardCheck,
   Pencil,
   ChevronLeft,
+  UploadCloud,
   Map as MapIcon
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
