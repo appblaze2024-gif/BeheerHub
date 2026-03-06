@@ -33,7 +33,6 @@ import {
   User,
   Package,
   Plus,
-  Minus,
   Settings,
   Sliders,
   AlertCircle,
@@ -44,13 +43,12 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowRight,
-  AlertTriangle,
   Wrench,
   RotateCcw,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -288,7 +286,7 @@ function IntegratedWerkbonOverlay({
     if (isLoading || !melding) return <div className="p-12 flex justify-center h-full items-center"><Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" /></div>;
 
     return (
-        <div className="flex flex-col h-full bg-slate-50">
+        <div className="flex flex-col h-full bg-slate-50 relative">
             <header className="h-14 lg:h-16 bg-white border-b flex items-center justify-between px-4 lg:px-6 shrink-0 shadow-sm z-10 sticky top-0">
                 <div className="flex items-center gap-3 lg:gap-4">
                     <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 hover:bg-slate-200 transition-colors shrink-0" onClick={onClose}>
@@ -299,38 +297,29 @@ function IntegratedWerkbonOverlay({
                         <p className="text-[8px] lg:text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{melding.subcategorie}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 lg:gap-3 shrink-0">
-                    {melding.workStartedAt ? (
-                        <Button className="bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-tight h-9 lg:h-11 px-4 lg:px-8 rounded-lg lg:rounded-xl shadow-lg shadow-orange-600/20 text-[10px] lg:text-sm" onClick={handleAfronden} disabled={isSubmitting}>
-                            {isSubmitting ? <Loader2 className="mr-2 h-3 w-3 lg:h-4 lg:w-4 animate-spin" /> : <Check className="mr-2 h-3 w-3 lg:h-4 lg:w-4" />}
-                            AFHANDELEN
-                        </Button>
-                    ) : (
-                        <Button className="bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-tight h-9 lg:h-11 px-4 lg:px-8 rounded-lg lg:rounded-xl shadow-lg shadow-green-600/20 text-[10px] lg:text-sm" onClick={handleStartWork}>
-                            AFHANDELEN
-                        </Button>
-                    )}
+                <div className="flex items-center gap-2 shrink-0">
+                    <Badge className="bg-blue-500 text-white border-none font-black text-[8px] lg:text-[9px] h-5 lg:h-6 px-2 lg:px-3 uppercase">{melding.status}</Badge>
                 </div>
             </header>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 pb-20">
                 <div className="px-4 lg:px-6 pt-2 lg:pt-4 overflow-x-auto no-scrollbar bg-white shrink-0 border-b">
-                    <TabsList className="w-max inline-flex h-9 lg:h-12 border-none gap-4 lg:gap-8">
+                    <TabsList className="w-max inline-flex h-10 lg:h-12 border-none gap-4 lg:gap-10">
                         <TabsTrigger value="Werkzaamheden" className="gap-1.5 lg:gap-2 shrink-0 px-1 lg:px-4">
-                            <FileText className="h-3 w-3 lg:h-4 lg:w-4" />
-                            <span className="text-[9px] lg:text-[11px]">Werkzaamheden</span>
+                            <FileText className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                            <span className="text-[10px] lg:text-[11px]">Werk</span>
                         </TabsTrigger>
                         <TabsTrigger value="Opmerkingen" className="gap-1.5 lg:gap-2 shrink-0 px-1 lg:px-4">
-                            <MessageSquare className="h-3 w-3 lg:h-4 lg:w-4" />
-                            <span className="text-[9px] lg:text-[11px]">Opmerkingen</span>
+                            <MessageSquare className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                            <span className="text-[10px] lg:text-[11px]">Nota</span>
                         </TabsTrigger>
                         <TabsTrigger value="Fotos" className="gap-1.5 lg:gap-2 shrink-0 px-1 lg:px-4">
-                            <Camera className="h-3 w-3 lg:h-4 lg:w-4" />
-                            <span className="text-[9px] lg:text-[11px]">Foto's</span>
+                            <Camera className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                            <span className="text-[10px] lg:text-[11px]">Media</span>
                         </TabsTrigger>
                         <TabsTrigger value="Hoeveelheid" className="gap-1.5 lg:gap-2 shrink-0 px-1 lg:px-4">
-                            <Package className="h-3 w-3 lg:h-4 lg:w-4" />
-                            <span className="text-[9px] lg:text-[11px]">Hoeveelheid</span>
+                            <Package className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                            <span className="text-[10px] lg:text-[11px]">Voorraad</span>
                         </TabsTrigger>
                     </TabsList>
                 </div>
@@ -339,66 +328,57 @@ function IntegratedWerkbonOverlay({
                     <div className="flex-1 p-3 md:p-4 lg:p-6 overflow-y-auto custom-scrollbar">
                         <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300 space-y-4 lg:space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                                <Card className="rounded-xl lg:rounded-2xl bg-white shadow-xl border-none flex flex-col h-fit overflow-hidden">
-                                    <CardHeader className="bg-slate-100 border-b p-3 lg:p-5 shrink-0">
-                                        <div className="flex justify-between items-start">
-                                            <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[9px] font-black uppercase tracking-widest text-slate-400">Intakenummer</p>
-                                                <CardTitle className="text-sm lg:text-xl font-black uppercase tracking-tight text-slate-900">{melding.intakenummer}</CardTitle>
+                                <div className="space-y-4">
+                                    <div className="bg-white p-5 rounded-3xl shadow-xl space-y-6 border border-slate-100">
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Datum & Tijd</p>
+                                                <p className="text-xs font-black text-slate-900">{melding.datum} • {melding.tijdstip || '--:--'}</p>
                                             </div>
-                                            <Badge className="bg-blue-500 text-white border-none font-black text-[7px] lg:text-[9px] h-4 lg:h-5 px-1.5 lg:px-2.5">{melding.status}</Badge>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="p-3 lg:p-6 space-y-3 lg:space-y-6">
-                                        <div className="grid grid-cols-2 gap-x-3 lg:gap-x-6 gap-y-2 lg:gap-y-4 shrink-0">
-                                            <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Datum & Tijd</p>
-                                                <p className="text-[9px] lg:text-xs font-bold text-slate-900">{melding.datum} • {melding.tijdstip || '--:--'}</p>
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><Package className="h-3 w-3" /> Container</p>
+                                                <p className="text-xs font-black text-slate-900">{melding.containernummer || '-'}</p>
                                             </div>
-                                            <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Containernummer</p>
-                                                <p className="text-[9px] lg:text-xs font-bold text-slate-900">{melding.containernummer || '-'}</p>
+                                            <div className="col-span-2 space-y-1">
+                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><MapPin className="h-3 w-3" /> Adres</p>
+                                                <p className="text-xs font-black text-slate-900 leading-tight">{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</p>
                                             </div>
-                                            <div className="col-span-2 space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
-                                                <p className="text-[9px] lg:text-xs font-bold text-slate-900">{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</p>
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><LayoutGrid className="h-3 w-3" /> Categorie</p>
+                                                <p className="text-xs font-black text-slate-900 truncate">{melding.hoofdcategorie}</p>
                                             </div>
-                                            <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Categorie</p>
-                                                <p className="text-[9px] lg:text-xs font-bold text-slate-900 truncate">{melding.hoofdcategorie}</p>
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Wijk</p>
-                                                <p className="text-[9px] lg:text-xs font-bold text-slate-900 truncate">{melding.werkgebied || melding.wijk || '-'}</p>
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><User className="h-3 w-3" /> Melder</p>
+                                                <p className="text-xs font-black text-slate-900 truncate">{melding.melder || 'Anoniem'}</p>
                                             </div>
                                         </div>
-                                        <div className="space-y-1.5 border-t pt-3 lg:pt-4">
-                                            <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Omschrijving melding</p>
-                                            <div className="bg-slate-50 rounded-lg lg:rounded-xl border border-slate-100 p-2 lg:p-4">
-                                                <p className="text-[9px] lg:text-xs italic text-slate-600 font-medium leading-relaxed">
-                                                    "{melding.extra_informatie || 'Geen omschrijving opgegeven.'}"
-                                                </p>
+                                        <Separator className="bg-slate-100" />
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Melding Omschrijving</p>
+                                            <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 italic font-medium text-slate-600 text-xs leading-relaxed">
+                                                "{melding.extra_informatie || 'Geen omschrijving opgegeven.'}"
                                             </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
-                                <div className="rounded-xl lg:rounded-2xl overflow-hidden border-2 border-white shadow-2xl h-fit min-h-[200px] aspect-[4/3] md:aspect-auto md:h-full">
+                                    </div>
+                                </div>
+                                <div className="rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl h-fit min-h-[250px] aspect-[4/3] md:aspect-auto md:h-full relative group">
                                     <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={true} objects={nearbyObjects} />
+                                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-xl border border-slate-100 flex items-center gap-2">
+                                        <Navigation className="h-3.5 w-3.5 text-primary" /> Interactieve Kaart
+                                    </div>
                                 </div>
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="Opmerkingen" className="mt-0 h-full space-y-4 lg:space-y-6">
-                            <Card className="rounded-xl lg:rounded-2xl border-none shadow-xl bg-white overflow-hidden h-full flex flex-col min-h-[400px]">
-                                <CardHeader className="bg-slate-50 border-b p-3 lg:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                                    <CardTitle className="text-[9px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle>
-                                    <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl lg:rounded-2xl border border-slate-200 w-full sm:w-auto">
-                                        <div className="flex items-center gap-1 pr-1.5 border-r border-slate-200">
+                        <TabsContent value="Opmerkingen" className="mt-0 h-full space-y-4">
+                            <div className="bg-white p-5 rounded-[2rem] shadow-xl border border-slate-100 h-full flex flex-col min-h-[450px]">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Uitvoeringsnotities</h4>
+                                    <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-full sm:w-auto">
+                                        <div className="flex items-center gap-1.5 pr-2 border-r border-slate-300">
                                             <Select value={sourceLang.code} onValueChange={(val) => setSourceLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
-                                                <SelectTrigger className="h-7 w-12 p-0 border-none bg-transparent shadow-none focus:ring-0">
-                                                    <div className="flex items-center justify-center w-full">
-                                                        <img src={`https://flagcdn.com/w40/${sourceLang.flag}.png`} alt={sourceLang.label} className="h-3 w-5 rounded-sm object-cover border border-slate-200" />
-                                                    </div>
+                                                <SelectTrigger className="h-8 w-14 p-0 border-none bg-transparent shadow-none focus:ring-0">
+                                                    <img src={`https://flagcdn.com/w40/${sourceLang.flag}.png`} alt={sourceLang.label} className="h-4 w-6 rounded shadow-sm object-cover border border-slate-200 mx-auto" />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {translationLanguages.map(l => (
@@ -411,132 +391,142 @@ function IntegratedWerkbonOverlay({
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-                                            <Button variant={isListening ? "destructive" : "ghost"} size="icon" className="rounded-full h-7 w-7 shadow-sm shrink-0" onClick={toggleListening}>
-                                                {isListening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mic className="h-3.5 w-3.5 text-primary" />}
+                                            <Button variant={isListening ? "destructive" : "ghost"} size="icon" className="rounded-full h-9 w-9 shadow-lg bg-white shrink-0" onClick={toggleListening}>
+                                                {isListening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4 text-primary" />}
                                             </Button>
                                         </div>
-                                        <div className="flex items-center gap-1 pl-1">
-                                            <Select value={targetLang.code} onValueChange={(val) => setTargetLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
-                                                <SelectTrigger className="h-7 w-12 p-0 border-none bg-transparent shadow-none focus:ring-0">
-                                                    <div className="flex items-center justify-center w-full">
-                                                        <img src={`https://flagcdn.com/w40/${targetLang.flag}.png`} alt={targetLang.label} className="h-3 w-5 rounded-sm object-cover border border-slate-200" />
-                                                    </div>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {translationLanguages.map(l => (
-                                                        <SelectItem key={l.code} value={l.code}>
-                                                            <div className="flex items-center gap-2">
-                                                                <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
-                                                                <span className="text-xs font-bold">{l.label}</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <Button variant="ghost" size="sm" className="h-7 px-2 font-black uppercase text-[8px] lg:text-[9px] gap-1.5 text-primary hover:bg-primary/5 rounded-lg" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden}>
+                                        <div className="flex items-center gap-2 pl-1.5">
+                                            <Button variant="ghost" size="sm" className="h-8 px-3 font-black uppercase text-[9px] gap-2 text-primary hover:bg-primary/5 rounded-xl border border-primary/10" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden}>
                                                 {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                                                 Vertaal
                                             </Button>
                                         </div>
                                     </div>
-                                </CardHeader>
-                                <CardContent className="p-3 lg:p-6 space-y-4 flex-1 flex flex-col">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-[8px] lg:text-[10px] font-black uppercase tracking-widest text-slate-400">Sneltoetsen</Label>
-                                            <div className="flex gap-1">
-                                                <Input placeholder="Nieuw..." className="h-7 text-[9px] w-20 font-bold rounded-lg" value={newQuickKey} onChange={e => setNewQuickKey(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddQuickKey())} />
-                                                <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg" onClick={handleAddQuickKey} disabled={!newQuickKey.trim()}><Plus className="h-3.5 w-3.5" /></Button>
+                                </div>
+                                
+                                <div className="space-y-3 mb-6">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Sneltoetsen</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(profile?.quickKeys || []).map((k, i) => (
+                                            <div key={i} className="group relative">
+                                                <Button variant="secondary" size="sm" className="h-9 px-4 text-[10px] font-black uppercase tracking-tight rounded-2xl border-2 border-slate-100 bg-white hover:bg-primary hover:text-white transition-all shadow-sm" onClick={() => setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + k)}>
+                                                    {k}
+                                                </Button>
+                                                <button className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" onClick={(e) => { e.stopPropagation(); handleRemoveQuickKey(k); }}>
+                                                    <X className="h-3 w-3" />
+                                                </button>
                                             </div>
-                                        </div>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {(profile?.quickKeys || []).map((k, i) => (
-                                                <div key={i} className="group relative">
-                                                    <Button variant="secondary" size="sm" className="h-7 px-2 text-[9px] font-black uppercase tracking-tight rounded-lg border-2 border-slate-100 bg-white hover:bg-primary hover:text-white transition-all shadow-sm" onClick={() => setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + k)}>
-                                                        {k}
-                                                    </Button>
-                                                    <button className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" onClick={(e) => { e.stopPropagation(); handleRemoveQuickKey(k); }}>
-                                                        <X className="h-2.5 w-2.5" />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                        ))}
+                                        <div className="flex gap-1">
+                                            <Input placeholder="Nieuw..." className="h-9 text-[10px] w-24 font-bold rounded-2xl border-2 border-dashed" value={newQuickKey} onChange={e => setNewQuickKey(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddQuickKey())} />
+                                            <Button variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-2" onClick={handleAddQuickKey} disabled={!newQuickKey.trim()}><Plus className="h-4 w-4" /></Button>
                                         </div>
                                     </div>
-                                    <Separator className="bg-slate-100" />
-                                    <Textarea 
-                                        placeholder="Voer hier je bevindingen in..." 
-                                        className="resize-none text-[11px] lg:text-sm font-medium leading-relaxed rounded-xl border-slate-100 bg-slate-50 focus:ring-primary/20 flex-1 min-h-[150px]"
-                                        value={afhandelingBijzonderheden}
-                                        onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
-                                    />
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
+                                </div>
 
-                        <TabsContent value="Fotos" className="mt-0 space-y-4 lg:space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8 h-fit">
-                                <Card className="rounded-xl lg:rounded-2xl shadow-xl border-none bg-white overflow-hidden">
-                                    <CardHeader className="bg-slate-50 border-b p-3 lg:p-6"><CardTitle className="text-[9px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Bronfoto's</CardTitle></CardHeader>
-                                    <CardContent className="p-3 lg:p-8">
-                                        <div className="grid grid-cols-3 gap-2 lg:gap-4">
-                                            {melding.fotos?.map((p, i) => (
-                                                <div key={i} className="relative aspect-square rounded-lg lg:rounded-2xl overflow-hidden border-2 border-slate-50 shadow-sm"><Image src={p.url} alt="melding" fill className="object-cover" /></div>
-                                            ))}
-                                            {(!melding.fotos || melding.fotos.length === 0) && (<div className="col-span-3 py-10 text-center opacity-20"><Camera className="h-8 w-8 lg:h-12 lg:w-12 mx-auto mb-2" /><p className="text-[9px] font-black uppercase tracking-widest">Geen bronfoto's</p></div>)}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <Card className="rounded-xl lg:rounded-2xl shadow-xl border-none bg-white overflow-hidden">
-                                    <CardHeader className="bg-slate-50 border-b p-3 lg:p-5 flex flex-row items-center justify-between">
-                                        <CardTitle className="text-[9px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Uitvoering</CardTitle>
-                                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-none font-bold text-[8px] uppercase px-1.5 h-4">{afhandelingFotos.length}</Badge>
-                                    </CardHeader>
-                                    <CardContent className="p-3 lg:p-8 space-y-3 lg:space-y-6">
-                                        <div className="flex gap-2">
-                                            <Button variant="outline" className="flex-1 h-12 lg:h-16 border-dashed border-2 border-slate-200 rounded-xl font-black uppercase text-[8px] lg:text-[10px] tracking-widest gap-2 bg-slate-50/50" onClick={() => document.getElementById('camera-input-integrated')?.click()}><Camera className="h-4 w-4 text-primary" /><span>Foto Maken</span></Button>
-                                            <Button variant="outline" className="flex-1 h-12 lg:h-16 border-dashed border-2 border-slate-200 rounded-xl font-black uppercase text-[8px] lg:text-[10px] tracking-widest gap-2 bg-slate-50/50" onClick={() => document.getElementById('gallery-input-integrated')?.click()}><ImageIcon className="h-4 w-4 text-slate-400" /><span>Album</span></Button>
-                                        </div>
-                                        <input type="file" id="camera-input-integrated" className="hidden" accept="image/*" capture="environment" onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
-                                        <input type="file" id="gallery-input-integrated" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {afhandelingFotos.map((p, i) => (
-                                                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border-2 border-white shadow-md group">
-                                                    <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                                    <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-5 w-5 rounded-full opacity-80 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity shadow-lg" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><X className="h-2.5 w-2.5" /></Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                <Textarea 
+                                    placeholder="Typ hier de details van de werkzaamheden..." 
+                                    className="resize-none text-sm font-medium leading-relaxed rounded-3xl border-2 border-slate-50 bg-slate-50 focus:ring-primary/20 flex-1 p-6"
+                                    value={afhandelingBijzonderheden}
+                                    onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
+                                />
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="Hoeveelheid" className="mt-0 h-fit space-y-4 lg:space-y-6">
-                            <Card className="rounded-xl lg:rounded-2xl shadow-xl border-none bg-white overflow-hidden">
-                                <CardHeader className="bg-slate-50 border-b p-3 lg:p-6"><CardTitle className="text-[9px] lg:text-xs font-black uppercase tracking-widest text-slate-400">Materialen</CardTitle></CardHeader>
-                                <CardContent className="p-3 lg:p-8 space-y-4 lg:space-y-8">
-                                    <div className="grid gap-2">
-                                        {hoeveelheden.map(h => (
-                                            <div key={h.id} className="flex justify-between items-center p-2.5 lg:p-5 bg-slate-50 border-2 border-transparent rounded-xl lg:rounded-3xl">
-                                                <div className="flex flex-col"><span className="text-[10px] lg:text-sm font-black uppercase tracking-tight text-slate-900">{h.type}</span><span className="text-[7px] lg:text-[10px] text-slate-400 font-bold uppercase tracking-widest">{h.eenheid}</span></div>
-                                                <div className="flex items-center gap-3 lg:gap-6">
-                                                    <span className="text-xl lg:text-3xl font-black text-primary leading-none">{h.aantal}</span>
-                                                    <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-full h-7 w-7 lg:h-10 lg:w-10" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-3.5 w-3.5 lg:h-5 lg:w-5" /></Button>
-                                                </div>
+                        <TabsContent value="Fotos" className="mt-0 space-y-6">
+                            <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100 space-y-6">
+                                <div className="flex justify-between items-center border-b pb-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Uitvoering Foto's</h4>
+                                    <Badge className="bg-green-500 font-black h-5">{afhandelingFotos.length}</Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Button variant="outline" className="h-20 border-dashed border-4 border-slate-100 rounded-3xl font-black uppercase text-[10px] tracking-widest gap-3 flex-col bg-slate-50/50 hover:bg-white transition-all" onClick={() => document.getElementById('camera-input-integrated')?.click()}>
+                                        <Camera className="h-6 w-6 text-primary" />
+                                        <span>Camera</span>
+                                    </Button>
+                                    <Button variant="outline" className="h-20 border-dashed border-4 border-slate-100 rounded-3xl font-black uppercase text-[10px] tracking-widest gap-3 flex-col bg-slate-50/50 hover:bg-white transition-all" onClick={() => document.getElementById('gallery-input-integrated')?.click()}>
+                                        <ImageIcon className="h-6 w-6 text-slate-400" />
+                                        <span>Album</span>
+                                    </Button>
+                                </div>
+                                <input type="file" id="camera-input-integrated" className="hidden" accept="image/*" capture="environment" onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
+                                <input type="file" id="gallery-input-integrated" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
+                                
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    {afhandelingFotos.map((p, i) => (
+                                        <div key={i} className="relative aspect-square rounded-3xl overflow-hidden border-4 border-white shadow-lg group animate-in zoom-in-95">
+                                            <Image src={p.url} alt="afhandeling" fill className="object-cover" />
+                                            <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-90 shadow-2xl" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><X className="h-4 w-4" /></Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="Hoeveelheid" className="mt-0 space-y-6">
+                            <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100 space-y-8">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b pb-4">Gebruikte Materialen</h4>
+                                
+                                <div className="space-y-3">
+                                    {hoeveelheden.map(h => (
+                                        <div key={h.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border-2 border-transparent hover:border-primary/10 transition-all">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-black uppercase tracking-tight text-slate-900">{h.type}</span>
+                                                <span className="text-[9px] text-slate-400 font-bold uppercase">{h.eenheid}</span>
                                             </div>
-                                        ))}
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-3xl font-black text-primary tracking-tighter">{h.aantal}</span>
+                                                <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full h-9 w-9" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4" /></Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="p-6 bg-slate-900 text-white rounded-[2rem] shadow-2xl space-y-6">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Nieuw Item Toevoegen</p>
+                                    <div className="grid gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Materiaal Naam</Label>
+                                            <Input placeholder="Bv. Zand, Tegels..." className="h-12 bg-white/10 border-none text-white font-bold text-base focus:ring-primary/30" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Aantal</Label>
+                                            <Input placeholder="0" type="number" className="h-12 bg-white/10 border-none text-white font-bold text-base focus:ring-primary/30" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} />
+                                        </div>
+                                        <Button className="h-14 w-full font-black uppercase tracking-tight rounded-2xl shadow-xl shadow-primary/20 text-base mt-2" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>
+                                            Toevoegen aan Lijst
+                                        </Button>
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 lg:gap-4 bg-slate-50 p-3 lg:p-6 rounded-xl lg:rounded-3xl border-2 border-slate-100">
-                                        <div className="space-y-1"><Label className="text-[7px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Materiaal</Label><Input placeholder="Bv. Zand..." className="h-8 lg:h-11 font-bold rounded-lg text-[10px] lg:text-sm" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} /></div>
-                                        <div className="space-y-1"><Label className="text-[7px] lg:text-[9px] font-black uppercase text-slate-400 ml-1">Aantal</Label><Input placeholder="0" type="number" className="h-8 lg:h-11 font-bold rounded-lg text-[10px] lg:text-sm" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} /></div>
-                                        <div className="flex items-end"><Button className="h-8 lg:h-11 w-full font-black uppercase tracking-tight rounded-lg shadow-lg shadow-primary/20 text-[9px] lg:text-xs" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>Toevoegen</Button></div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </div>
                         </TabsContent>
                     </div>
                 </main>
             </Tabs>
+
+            {/* STICKY MOBILE FOOTER */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t-2 border-slate-100 z-50 animate-in slide-in-from-bottom-full duration-500">
+                <div className="max-w-md mx-auto">
+                    {melding.workStartedAt ? (
+                        <Button 
+                            className="w-full h-14 bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-widest text-base shadow-2xl shadow-orange-600/30 rounded-3xl gap-3 active:scale-95 transition-transform" 
+                            onClick={handleAfronden} 
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : <CheckCircle2 className="h-6 w-6" />}
+                            WERKBON AFRONDEN
+                        </Button>
+                    ) : (
+                        <Button 
+                            className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest text-base shadow-2xl shadow-green-600/30 rounded-3xl gap-3 active:scale-95 transition-transform" 
+                            onClick={handleStartWork}
+                        >
+                            <Play className="h-6 w-6 fill-current" />
+                            WERKZAAMHEDEN STARTEN
+                        </Button>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
@@ -774,7 +764,6 @@ export default function StartNavigationPage() {
     const userPt = turf.point([currentPos.longitude, currentPos.latitude]);
     const distance = turf.distance(userPt, missionPt, { units: 'meters' });
 
-    // Condition: Close (< 50m) and practically stopped (< 2km/h)
     if (distance < 50 && speedKmh < 2) {
         if (!autoOpenTimerRef.current) {
             autoOpenTimerRef.current = setTimeout(() => {
@@ -878,9 +867,9 @@ export default function StartNavigationPage() {
             }
         },
         (err) => {
-            if (err.code === 1) { // PERMISSION_DENIED
+            if (err.code === 1) {
                 console.warn("GPS Permission Denied");
-            } else if (err.code === 3) { // TIMEOUT
+            } else if (err.code === 3) {
                 console.warn("GPS Timeout - searching for signal...");
             } else {
                 console.warn("GPS Position Error:", err.message || "Unknown error");
@@ -1143,7 +1132,7 @@ export default function StartNavigationPage() {
                                         alt="task" 
                                         className="h-10 w-10 object-contain drop-shadow-2xl" 
                                     />
-                                    <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-sm overflow-hidden">
+                                    <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden">
                                         <Wrench className="h-3.5 w-3.5 text-slate-900" strokeWidth={3} />
                                     </div>
                                 </div>
@@ -1161,7 +1150,6 @@ export default function StartNavigationPage() {
         </div>
 
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
-            {/* Top Left Widgets */}
             <div className="flex flex-col gap-3 pointer-events-auto">
                 {navigationState === 'navigating' && routeInfo && (
                     <div className="bg-white/95 backdrop-blur-md px-5 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
@@ -1254,7 +1242,6 @@ export default function StartNavigationPage() {
                         <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
                         <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
                     </div>
-                    {/* Live Speed Limit Sign */}
                     <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full border-[4px] border-red-600 flex items-center justify-center bg-white shadow-2xl shrink-0 animate-in fade-in zoom-in duration-500">
                         <span className="text-lg sm:text-xl font-black text-slate-900">{currentSpeedLimit}</span>
                     </div>
