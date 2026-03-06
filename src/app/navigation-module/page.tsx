@@ -53,7 +53,8 @@ import {
   Briefcase,
   ChevronLeft,
   UploadCloud,
-  Map as MapIcon
+  Map as MapIcon,
+  Hash
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -330,7 +331,7 @@ function IntegratedWerkbonOverlay({
                                 <span>{melding.hoofdcategorie} • {melding.subcategorie}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                                <Package className="h-3.5 w-3.5 text-slate-400" />
+                                <Hash className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.containernummer || 'Geen unit gekoppeld'}</span>
                             </div>
                         </div>
