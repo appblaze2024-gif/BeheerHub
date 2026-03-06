@@ -1127,7 +1127,7 @@ export default function StartNavigationPage() {
             {/* Top Left Widgets */}
             <div className="flex flex-col gap-3 pointer-events-auto">
                 {navigationState === 'navigating' && routeInfo && (
-                    <div className="bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                    <div className="bg-white/95 backdrop-blur-md px-5 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
                         <div className="flex flex-col items-center">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Vertrek</span>
                             <span className="text-lg font-black text-slate-900 leading-none">{formatDate(new Date(), 'HH:mm')}</span>
