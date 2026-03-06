@@ -1076,9 +1076,24 @@ export default function StartNavigationPage() {
         </div>
 
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
-            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-md border-2 border-slate-100 pointer-events-auto transition-all active:scale-95" onClick={() => router.push('/')}>
-                <ArrowLeft className="h-6 w-6 text-slate-600" />
-            </Button>
+            {/* Top Left Widgets */}
+            <div className="flex flex-col gap-3 pointer-events-auto">
+                {navigationState === 'navigating' && (
+                    <>
+                        {/* Speedometer */}
+                        <div className="h-16 w-16 md:h-20 md:w-20 rounded-full border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl border-white/50">
+                            <span className="text-2xl md:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
+                            <span className="text-[8px] md:text-[10px] font-black uppercase text-primary">km/h</span>
+                        </div>
+                        {/* Travel Time */}
+                        <div className="bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-3xl shadow-2xl border-2 border-slate-100 flex flex-col items-center min-w-[90px] animate-in slide-in-from-left-4 duration-500">
+                            <p className="text-xl md:text-2xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
+                            <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-0.5">minuten</p>
+                        </div>
+                    </>
+                )}
+            </div>
+
             <div className="flex items-center gap-2 pointer-events-auto">
                 {navigationState === 'navigating' && (
                     <Popover>
@@ -1140,25 +1155,13 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                {/* Speedometer - Positioned above the time section */}
-                <div className="absolute -top-28 left-6 sm:left-10 pointer-events-auto">
-                    <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full border-[6px] sm:border-[8px] border-primary flex flex-col items-center justify-center bg-white/90 backdrop-blur-md shadow-2xl">
-                        <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
-                        <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
-                    </div>
-                </div>
-
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
-                    <CardContent className="p-4 sm:p-6 flex items-center justify-between gap-4 sm:gap-8">
-                        <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-6 sm:pr-12 min-w-[100px] sm:min-w-[140px]">
-                            <p className="text-3xl sm:text-4xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
-                            <p className="text-[8px] sm:text-[10px] font-black text-primary uppercase tracking-widest mt-1">minuten</p>
-                        </div>
-                        <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                    <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col gap-1.5 min-w-0">
                             <div className="flex justify-between items-center">
                                 <div className="space-y-0.5 min-w-0 flex-1">
                                     <p className="text-[8px] font-black uppercase text-slate-500">Intakenummer</p>
-                                    <p className="text-xs sm:text-sm font-black text-slate-900 uppercase truncate">{nextMission?.intakenummer || 'Geen doel'}</p>
+                                    <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
                                 </div>
                                 {nextMission?.containernummer && (
                                     <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase bg-slate-100 border-none shrink-0">
@@ -1178,7 +1181,7 @@ export default function StartNavigationPage() {
                                     {nextMission?.extra_informatie}
                                 </p>
                             </div>
-                            <Progress value={100} className="h-1 bg-slate-100" />
+                            <Progress value={100} className="h-1 bg-slate-100 mt-2" />
                         </div>
                     </CardContent>
                 </Card>
