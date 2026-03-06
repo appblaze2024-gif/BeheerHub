@@ -412,11 +412,6 @@ function IntegratedWerkbonOverlay({
                     value={elapsedDisplay} 
                     onClick={() => {}} 
                 />
-                <SectionRow 
-                    icon={Car} 
-                    label="Kilometers / parkeerkosten" 
-                    onClick={() => {}} 
-                />
             </div>
 
             <div className="p-6 bg-slate-50">
@@ -589,7 +584,7 @@ function IntegratedWerkbonOverlay({
                         <>
                             {renderSubViewHeader('Taken')}
                             <div className="flex-1 p-6 overflow-y-auto">
-                                <p className="text-center text-slate-400 text-sm italic py-12">Geen specifieke checklists gekoppeld.</p>
+                                <p className="text-center text-slate-400 text-sm italic py-12">Geen specifieiche checklists gekoppeld.</p>
                             </div>
                         </>
                     )}
