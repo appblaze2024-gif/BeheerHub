@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -55,7 +54,9 @@ import {
   Briefcase,
   Car,
   ClipboardCheck,
-  Pencil
+  Pencil,
+  ChevronLeft,
+  Map as MapIcon
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
