@@ -51,7 +51,6 @@ import {
   Phone,
   Paperclip,
   Briefcase,
-  ClipboardCheck,
   ChevronLeft,
   UploadCloud,
   Map as MapIcon
@@ -186,7 +185,7 @@ function IntegratedWerkbonOverlay({
     const { toast } = useToast();
     const router = useRouter();
 
-    const [subView, setSubView] = React.useState<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials' | 'tasks'>('main');
+    const [subView, setSubView] = React.useState<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials'>('main');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = React.useState('');
     const [isListening, setIsListening] = React.useState(false);
@@ -355,12 +354,6 @@ function IntegratedWerkbonOverlay({
                     label="Werkzaamheden" 
                     value={afhandelingBijzonderheden ? 'Ingevuld' : ''} 
                     onClick={() => setSubView('werkzaamheden')} 
-                />
-                <SectionRow 
-                    icon={ClipboardCheck} 
-                    label="Taken / checklists" 
-                    value={melding.tasks?.length ? `${melding.tasks.length} taken` : ''} 
-                    onClick={() => setSubView('tasks')} 
                 />
                 <SectionRow 
                     icon={MapIcon} 
@@ -550,14 +543,6 @@ function IntegratedWerkbonOverlay({
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        </>
-                    )}
-                    {subView === 'tasks' && (
-                        <>
-                            {renderSubViewHeader('Taken')}
-                            <div className="flex-1 p-6 overflow-y-auto">
-                                <p className="text-center text-slate-400 text-sm italic py-12">Geen specifieiche checklists gekoppeld.</p>
                             </div>
                         </>
                     )}
