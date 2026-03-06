@@ -45,6 +45,7 @@ import {
   ArrowRight,
   Wrench,
   RotateCcw,
+  Calendar,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -104,15 +105,6 @@ const ROUTE_COLUMN_LABELS_CONFIG: Record<string, string> = {
     werkgebied: 'Gebied',
     afstand: 'Afstand'
 };
-
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
 
 const routeLayer: Layer = {
   id: 'route',
@@ -327,7 +319,7 @@ function IntegratedWerkbonOverlay({
                 <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="flex-1 p-3 md:p-4 lg:p-6 overflow-y-auto custom-scrollbar">
                         <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-300 space-y-4 lg:space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 h-full">
                                 <div className="space-y-4">
                                     <div className="bg-white p-5 rounded-3xl shadow-xl space-y-6 border border-slate-100">
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-6">
@@ -530,6 +522,15 @@ function IntegratedWerkbonOverlay({
         </div>
     );
 }
+
+const translationLanguages = [
+  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
+  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
+  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
+  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
+  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
+  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
+];
 
 export default function StartNavigationPage() {
   const firestore = useFirestore();
