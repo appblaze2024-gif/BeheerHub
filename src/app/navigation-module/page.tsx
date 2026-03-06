@@ -1140,8 +1140,8 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                {/* Speedometer - Positioned absolutely relative to the cockpit container */}
-                <div className="absolute -top-28 left-4 sm:left-8 pointer-events-auto">
+                {/* Speedometer - Positioned above the time section */}
+                <div className="absolute -top-28 left-6 sm:left-10 pointer-events-auto">
                     <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full border-[6px] sm:border-[8px] border-primary flex flex-col items-center justify-center bg-white/90 backdrop-blur-md shadow-2xl">
                         <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
                         <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
@@ -1154,12 +1154,31 @@ export default function StartNavigationPage() {
                             <p className="text-3xl sm:text-4xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
                             <p className="text-[8px] sm:text-[10px] font-black text-primary uppercase tracking-widest mt-1">minuten</p>
                         </div>
-                        <div className="flex-1 flex flex-col gap-2 sm:gap-3 min-w-0">
-                            <div className="space-y-0.5">
-                                <p className="text-[8px] sm:text-[9px] font-black uppercase text-slate-500">Volgende Bestemming</p>
-                                <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
+                        <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                            <div className="flex justify-between items-center">
+                                <div className="space-y-0.5 min-w-0 flex-1">
+                                    <p className="text-[8px] font-black uppercase text-slate-500">Intakenummer</p>
+                                    <p className="text-xs sm:text-sm font-black text-slate-900 uppercase truncate">{nextMission?.intakenummer || 'Geen doel'}</p>
+                                </div>
+                                {nextMission?.containernummer && (
+                                    <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase bg-slate-100 border-none shrink-0">
+                                        {nextMission.containernummer}
+                                    </Badge>
+                                )}
                             </div>
-                            <Progress value={100} className="h-1.5 sm:h-2 bg-slate-100" />
+                            
+                            <div className="space-y-0.5 min-w-0">
+                                <p className="text-[10px] font-black text-slate-800 truncate">
+                                    {nextMission?.straatnaam} {nextMission?.huisnummer}
+                                </p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">
+                                    {nextMission?.postcode} {nextMission?.plaats}
+                                </p>
+                                <p className="text-[10px] font-medium text-primary line-clamp-1 italic border-t pt-1 border-slate-100 mt-1">
+                                    {nextMission?.extra_informatie}
+                                </p>
+                            </div>
+                            <Progress value={100} className="h-1 bg-slate-100" />
                         </div>
                     </CardContent>
                 </Card>
@@ -1249,7 +1268,7 @@ export default function StartNavigationPage() {
                                 {visibleColumns.memo && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Omschrijving</TableHead>}
                                 {visibleColumns.hoofdcategorie && <TableHead className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 h-8">Hoofdtype</TableHead>}
                                 {visibleColumns.subcategorie && <TableHead className="font-black uppercase text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
-                                {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-200 px-2 h-8">Gebied</TableHead>}
+                                {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-100 px-2 h-8">Gebied</TableHead>}
                                 {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
                             </TableRow>
                         </TableHeader>
