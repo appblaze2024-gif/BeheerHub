@@ -44,6 +44,7 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -1153,12 +1154,16 @@ export default function StartNavigationPage() {
                                     <Check className="h-5 w-5 text-white" />
                                 </div>
                             ) : (
-                                <div className="transition-transform hover:scale-125 cursor-pointer z-10">
+                                <div className="transition-transform hover:scale-125 cursor-pointer z-10 relative">
                                     <img 
                                         src="https://i.ibb.co/0jg4jm6v/3d-printer-icon-sharp.png" 
                                         alt="task" 
                                         className="h-10 w-10 object-contain drop-shadow-2xl" 
                                     />
+                                    {/* Geel waarschuwingsbolletje met driehoek */}
+                                    <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm">
+                                        <AlertTriangle className="h-3.5 w-3.5 text-black fill-current" />
+                                    </div>
                                 </div>
                             )}
                         </div>
