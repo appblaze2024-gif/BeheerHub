@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -48,6 +49,13 @@ import {
   Calendar,
   Layers,
   Zap,
+  Tag,
+  Phone,
+  Paperclip,
+  Briefcase,
+  Car,
+  ClipboardCheck,
+  Pencil
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -124,13 +132,6 @@ const routeLayerCasing: Layer = {
   paint: { 'line-color': '#1e40af', 'line-width': 12, 'line-opacity': 0.2 },
 };
 
-const werkbonNavItems = [
-    { label: 'Werkzaamheden', icon: Wrench },
-    { label: 'Opmerkingen', icon: MessageSquare },
-    { label: 'Fotos', icon: Camera },
-    { label: 'Hoeveelheid', icon: Package },
-];
-
 const translationLanguages = [
   { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
   { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
@@ -139,6 +140,36 @@ const translationLanguages = [
   { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
   { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
 ];
+
+function SectionRow({ 
+    icon: Icon, 
+    label, 
+    value, 
+    onClick 
+}: { 
+    icon: React.ElementType, 
+    label: string, 
+    value?: string | number, 
+    onClick: () => void 
+}) {
+    return (
+        <button 
+            onClick={onClick}
+            className="w-full flex items-center justify-between p-4 bg-white border-b border-slate-100 active:bg-slate-50 transition-colors"
+        >
+            <div className="flex items-center gap-4">
+                <div className="bg-[#FF5722] p-2 rounded-lg">
+                    <Icon className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-slate-700">{label}</span>
+            </div>
+            <div className="flex items-center gap-2">
+                {value !== undefined && <span className="text-xs font-bold text-slate-400">{value}</span>}
+                <ChevronRight className="h-4 w-4 text-slate-300" />
+            </div>
+        </button>
+    );
+}
 
 function IntegratedWerkbonOverlay({ 
     meldingId, 
@@ -154,9 +185,9 @@ function IntegratedWerkbonOverlay({
     const { user } = useUser();
     const { profile } = useProfile();
     const { toast } = useToast();
-    const isMobile = useIsMobile();
+    const router = useRouter();
 
-    const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
+    const [subView, setSubView] = React.useState<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials' | 'tasks'>('main');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = React.useState('');
     const [isListening, setIsListening] = React.useState(false);
@@ -164,7 +195,6 @@ function IntegratedWerkbonOverlay({
     const [targetLang, setTargetLang] = React.useState(translationLanguages[0]);
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
-    const [newQuickKey, setNewQuickKey] = React.useState('');
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
     const [elapsedDisplay, setElapsedDisplay] = React.useState<string>("00:00");
@@ -294,310 +324,275 @@ function IntegratedWerkbonOverlay({
         } catch (err) { toast({ variant: 'destructive', title: 'Vertaalfout' }); } finally { setIsTranslating(false); }
     };
 
-    const handleAddQuickKey = () => {
-        if (!newQuickKey.trim() || !user || !firestore) return;
-        const currentKeys = profile?.quickKeys || [];
-        const updatedKeys = [...new Set([...currentKeys, newQuickKey.trim()])];
-        setDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys }, { merge: true });
-        setNewQuickKey('');
-        toast({ title: 'Sneltoets toegevoegd' });
-    };
+    if (isLoading || !melding) return <LoadingScreen message="Data laden..." />;
 
-    const handleRemoveQuickKey = (key: string) => {
-        if (!user || !firestore) return;
-        const currentKeys = profile?.quickKeys || [];
-        const updatedKeys = currentKeys.filter(k => k !== key);
-        setDocumentNonBlocking(doc(firestore, 'users', user.uid), { quickKeys: updatedKeys }, { merge: true });
-        toast({ title: 'Sneltoets verwijderd' });
-    };
-
-    if (isLoading || !melding) return <div className="p-12 flex justify-center h-full items-center bg-white"><Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" /></div>;
-
-    return (
-        <div className="flex flex-col h-full bg-slate-50 relative animate-in slide-in-from-right duration-300">
-            <header className="h-16 lg:h-20 bg-slate-900 text-white flex items-center justify-between px-6 shrink-0 shadow-xl z-10 sticky top-0">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-white hover:bg-white/10 shrink-0" onClick={onClose}>
-                        <ArrowLeft className="h-6 w-6" />
-                    </Button>
-                    <div className="min-w-0">
-                        <h3 className="text-lg font-black uppercase tracking-tight leading-none truncate">{melding.intakenummer}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                            <div className={cn("h-2 w-2 rounded-full", melding.workStartedAt ? "bg-green-500 animate-pulse" : "bg-orange-500")} />
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                                {melding.workStartedAt ? `Lopend • ${elapsedDisplay}` : "Wachtend op start"}
-                            </p>
+    const renderMainList = () => (
+        <div className="flex flex-col h-full bg-slate-50">
+            <div className="bg-white p-6 space-y-4">
+                <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-bold text-slate-900">{melding.melder || 'Anonieme Melder'}</h2>
+                        <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                                <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                                <span>{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                                <User className="h-3.5 w-3.5 text-slate-400" />
+                                <span>{melding.behandelaar || 'Niet toegewezen'}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                                <Phone className="h-3.5 w-3.5 text-slate-400" />
+                                <span>{melding.telefoon_melder || '-'}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                                <Tag className="h-3.5 w-3.5 text-slate-400" />
+                                <span>{melding.hoofdcategorie} • {melding.subcategorie}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                                <Package className="h-3.5 w-3.5 text-slate-400" />
+                                <span>{melding.containernummer || 'Geen unit gekoppeld'}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="outline" className="hidden sm:inline-flex h-7 border-white/20 text-white font-black text-[9px] uppercase tracking-widest">{melding.status}</Badge>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-white/60 hover:text-white" onClick={onClose}>
-                        <X className="h-6 w-6" />
-                    </Button>
-                </div>
-            </header>
-
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                <div className="px-6 py-4 bg-white shrink-0 border-b overflow-x-auto no-scrollbar shadow-sm">
-                    <TabsList className="w-full inline-flex h-12 bg-slate-100 p-1.5 rounded-full border-none gap-2">
-                        {werkbonNavItems.map(item => (
-                            <TabsTrigger 
-                                key={item.label} 
-                                value={item.label} 
-                                className="flex-1 gap-2 rounded-full data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all text-[10px] font-black uppercase tracking-widest"
-                            >
-                                <item.icon className="h-3.5 w-3.5 shrink-0" />
-                                <span className="hidden md:inline">{item.label}</span>
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </div>
-                
-                <main className="flex-1 overflow-y-auto no-scrollbar pb-32">
-                    <TabsContent value="Werkzaamheden" className="mt-0 p-4 md:p-8 animate-in fade-in duration-500">
-                        <div className="max-w-4xl mx-auto space-y-8">
-                            {/* Speech Bubble for Omschrijving */}
-                            <div className="space-y-3 animate-in slide-in-from-left duration-500">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-6 flex items-center gap-2">
-                                    <MessageSquare className="h-3 w-3" /> Klacht Omschrijving
-                                </Label>
-                                <div className="bg-white p-8 rounded-[3rem] rounded-tl-sm shadow-2xl border-none text-slate-700 italic font-medium leading-relaxed relative text-sm md:text-base ring-1 ring-black/5">
-                                    "{melding.extra_informatie || 'Geen omschrijving opgegeven door de melder.'}"
-                                </div>
-                            </div>
-
-                            {/* Core Info Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 animate-in slide-in-from-bottom-4 duration-700">
-                                <Card className="bg-white border-none shadow-xl rounded-[2.5rem] p-6 hover:scale-[1.02] transition-transform">
-                                    <div className="flex items-center gap-4">
-                                        <div className="bg-blue-100 p-3 rounded-2xl"><MapPin className="h-6 w-6 text-primary" /></div>
-                                        <div className="min-w-0">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Locatie</p>
-                                            <p className="text-sm font-black text-slate-900 leading-tight truncate">{melding.straatnaam} {melding.huisnummer}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase">{melding.plaats}</p>
-                                        </div>
-                                    </div>
-                                </Card>
-
-                                <Card className="bg-white border-none shadow-xl rounded-[2.5rem] p-6 hover:scale-[1.02] transition-transform">
-                                    <div className="flex items-center gap-4">
-                                        <div className="bg-yellow-400 p-3 rounded-2xl shadow-lg shadow-yellow-400/20"><Package className="h-6 w-6 text-slate-900" /></div>
-                                        <div className="min-w-0">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Unit ID</p>
-                                            <p className="text-sm font-black text-slate-900 leading-none">{melding.containernummer || 'N.V.T.'}</p>
-                                            <Badge className="mt-1.5 bg-slate-900 text-white font-black text-[8px] tracking-widest border-none px-2 h-4 uppercase">{melding.hoofdcategorie}</Badge>
-                                        </div>
-                                    </div>
-                                </Card>
-
-                                <Card className="bg-white border-none shadow-xl rounded-[2.5rem] p-6 hover:scale-[1.02] transition-transform">
-                                    <div className="flex items-center gap-4">
-                                        <div className="bg-slate-100 p-3 rounded-2xl"><Calendar className="h-6 w-6 text-slate-600" /></div>
-                                        <div className="min-w-0">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Meld Datum</p>
-                                            <p className="text-sm font-black text-slate-900 leading-none">{formatDate(new Date(melding.datum), 'dd MMM yyyy')}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{melding.tijdstip || '00:00'}</p>
-                                        </div>
-                                    </div>
-                                </Card>
-                            </div>
-
-                            {/* Map Control Card */}
-                            <Card className="bg-white border-none shadow-2xl rounded-[3rem] overflow-hidden p-2">
-                                <div className="p-6 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-primary p-2 rounded-xl"><Navigation className="h-4 w-4 text-white" /></div>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">Locatie Controle</span>
-                                    </div>
-                                    <Badge className="bg-green-500 font-black text-[8px] tracking-tighter shadow-lg shadow-green-500/20">LIVE GPS</Badge>
-                                </div>
-                                <div className="rounded-[2.5rem] overflow-hidden h-64 md:h-80 border-2 border-slate-50 relative">
-                                    <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={true} objects={nearbyObjects} />
-                                </div>
-                            </Card>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="Opmerkingen" className="mt-0 p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-                        <div className="max-w-3xl mx-auto bg-white p-8 rounded-[3.5rem] shadow-2xl space-y-10 border border-slate-100">
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 border-b border-slate-100 pb-6">
-                                <div>
-                                    <h4 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Afhandeling notitie</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Gebruik de dicteerknop voor snelle invoer</p>
-                                </div>
-                                <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-full border-2 border-slate-200">
-                                    <Select value={sourceLang.code} onValueChange={(val) => setSourceLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
-                                        <SelectTrigger className="h-10 w-16 p-0 border-none bg-transparent shadow-none focus:ring-0">
-                                            <img src={`https://flagcdn.com/w40/${sourceLang.flag}.png`} alt={sourceLang.label} className="h-5 w-8 rounded-md shadow-md object-cover border-2 border-white mx-auto" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {translationLanguages.map(l => (
-                                                <SelectItem key={l.code} value={l.code}>
-                                                    <div className="flex items-center gap-3">
-                                                        <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-5 rounded-sm object-cover" />
-                                                        <span className="text-xs font-black uppercase">{l.label}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <Button variant={isListening ? "destructive" : "ghost"} size="icon" className="rounded-full h-11 w-11 shadow-xl bg-white hover:scale-105 transition-all" onClick={toggleListening}>
-                                        {isListening ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mic className="h-5 w-5 text-primary" />}
-                                    </Button>
-                                    <Separator orientation="vertical" className="h-8 bg-slate-300" />
-                                    <Button variant="ghost" size="sm" className="h-10 px-5 font-black uppercase text-[10px] text-primary hover:bg-primary/10 rounded-full transition-colors" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden}>
-                                        {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                                        Vertaal met AI
-                                    </Button>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between px-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sneltoetsen</Label>
-                                    <Badge variant="secondary" className="bg-slate-100 text-slate-400 text-[8px] font-black uppercase">Click om toe te voegen</Badge>
-                                </div>
-                                <div className="flex flex-wrap gap-2.5">
-                                    {(profile?.quickKeys || []).map((k, i) => (
-                                        <div key={i} className="group relative">
-                                            <Button variant="outline" size="sm" className="h-11 px-6 text-[10px] font-black uppercase tracking-tight rounded-2xl border-2 border-slate-100 bg-white hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm active:scale-95" onClick={() => setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + k)}>
-                                                {k}
-                                            </Button>
-                                            <button className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl border-2 border-white" onClick={(e) => { e.stopPropagation(); handleRemoveQuickKey(k); }}>
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    <div className="flex gap-2">
-                                        <Input placeholder="Nieuwe toets..." className="h-11 text-[10px] w-36 font-bold rounded-2xl border-2 border-dashed border-slate-200" value={newQuickKey} onChange={e => setNewQuickKey(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddQuickKey())} />
-                                        <Button variant="ghost" size="icon" className="h-11 w-11 rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-400 hover:text-primary transition-colors" onClick={handleAddQuickKey} disabled={!newQuickKey.trim()}><Plus className="h-5 w-5" /></Button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Textarea 
-                                placeholder="Typ hier de details van de werkzaamheden..." 
-                                className="resize-none text-base font-medium leading-relaxed rounded-[2.5rem] border-none bg-slate-50 focus:ring-primary/20 min-h-[300px] p-8 shadow-inner"
-                                value={afhandelingBijzonderheden}
-                                onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
-                            />
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="Fotos" className="mt-0 p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-                        <div className="max-w-3xl mx-auto bg-white p-10 rounded-[4rem] shadow-2xl space-y-10 border border-slate-100">
-                            <div className="flex justify-between items-end border-b border-slate-100 pb-6">
-                                <div className="space-y-1">
-                                    <h4 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Media</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Foto's van de afgeronde werkzaamheid</p>
-                                </div>
-                                <Badge className="bg-primary text-white font-black h-8 rounded-2xl px-4 shadow-lg shadow-primary/20">{afhandelingFotos.length} FILES</Badge>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-6">
-                                <Button variant="outline" className="h-32 border-dashed border-4 border-slate-100 rounded-[3rem] font-black uppercase text-xs tracking-[0.2em] gap-4 flex-col bg-slate-50/50 hover:bg-white hover:border-primary/30 transition-all hover:scale-[1.02] shadow-sm" onClick={() => document.getElementById('camera-input-integrated')?.click()}>
-                                    <div className="bg-primary/10 p-4 rounded-3xl"><Camera className="h-8 w-8 text-primary" /></div>
-                                    <span>Nieuwe Foto</span>
-                                </Button>
-                                <Button variant="outline" className="h-32 border-dashed border-4 border-slate-100 rounded-[3rem] font-black uppercase text-xs tracking-[0.2em] gap-4 flex-col bg-slate-50/50 hover:bg-white hover:border-primary/30 transition-all hover:scale-[1.02] shadow-sm" onClick={() => document.getElementById('gallery-input-integrated')?.click()}>
-                                    <div className="bg-slate-200 p-4 rounded-3xl"><ImageIcon className="h-8 w-8 text-slate-500" /></div>
-                                    <span>Uit Album</span>
-                                </Button>
-                            </div>
-                            <input type="file" id="camera-input-integrated" className="hidden" accept="image/*" capture="environment" onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
-                            <input type="file" id="gallery-input-integrated" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
-                            
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                                {afhandelingFotos.map((p, i) => (
-                                    <div key={i} className="relative aspect-square rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl group animate-in zoom-in-95 hover:scale-105 transition-transform">
-                                        <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <Button variant="destructive" size="icon" className="h-12 w-12 rounded-full shadow-2xl border-4 border-white active:scale-90 transition-all" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}>
-                                                <Trash2 className="h-6 w-6" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="Hoeveelheid" className="mt-0 p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-                        <div className="max-w-3xl mx-auto bg-white p-10 rounded-[4rem] shadow-2xl space-y-10 border border-slate-100">
-                            <div className="space-y-1 border-b border-slate-100 pb-6">
-                                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Materiaalinzet</h4>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">Registreer verbruikte onderdelen en materialen</p>
-                            </div>
-                            
-                            <div className="space-y-4">
-                                {hoeveelheden.map(h => (
-                                    <div key={h.id} className="flex justify-between items-center p-6 bg-slate-50 rounded-[2.5rem] border-none hover:bg-slate-100 transition-all group animate-in slide-in-from-left-4 shadow-sm">
-                                        <div className="flex flex-col">
-                                            <span className="text-base font-black uppercase tracking-tight text-slate-900">{h.type}</span>
-                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{h.eenheid}</span>
-                                        </div>
-                                        <div className="flex items-center gap-8">
-                                            <span className="text-4xl font-black text-primary tracking-tighter">{h.aantal}</span>
-                                            <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full h-12 w-12 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-6 w-6" /></Button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {hoeveelheden.length === 0 && (
-                                    <div className="py-16 text-center text-slate-300">
-                                        <Package className="h-16 w-16 mx-auto mb-4 opacity-10" />
-                                        <p className="text-[10px] font-black uppercase tracking-[0.3em]">Geen materialen toegevoegd</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            <Card className="bg-slate-900 text-white rounded-[3rem] p-10 space-y-8 shadow-[0_30px_60px_rgba(15,23,42,0.3)] border-none ring-1 ring-white/10">
-                                <div className="text-center space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Toevoegen</p>
-                                    <h5 className="text-lg font-black uppercase tracking-tight">Nieuw Materiaal</h5>
-                                </div>
-                                <div className="grid gap-6">
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-slate-400 ml-4 tracking-widest">Product / Onderdeel</Label>
-                                        <Input placeholder="Bv. Straatstenen, Zand, Klep..." className="h-16 bg-white/10 border-none text-white font-bold text-lg rounded-2xl px-8 focus:ring-primary/30 shadow-inner" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-slate-400 ml-4 tracking-widest">Aantal</Label>
-                                        <Input placeholder="0" type="number" className="h-16 bg-white/10 border-none text-white font-black text-3xl rounded-2xl px-8 focus:ring-primary/30 text-center shadow-inner" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} />
-                                    </div>
-                                    <Button className="h-16 w-full font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl shadow-primary/30 text-base mt-4 transition-all active:scale-95 bg-primary hover:bg-primary/90" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>
-                                        <Plus className="mr-3 h-5 w-5" /> Inboeken
-                                    </Button>
-                                </div>
-                            </Card>
-                        </div>
-                    </TabsContent>
-                </main>
-            </Tabs>
-
-            {/* Floating Action Button Footer */}
-            <div className="absolute bottom-10 left-0 right-0 z-50 pointer-events-none flex justify-center px-6">
-                <div className="max-w-md w-full pointer-events-auto">
-                    {melding.workStartedAt ? (
-                        <Button 
-                            className="w-full h-20 bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-[0.2em] text-xl shadow-[0_25px_60px_rgba(234,88,12,0.5)] rounded-[2.5rem] gap-5 active:scale-95 transition-all animate-in slide-in-from-bottom-10 ring-4 ring-orange-600/20" 
-                            onClick={handleAfronden} 
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? <Loader2 className="h-8 w-8 animate-spin" /> : <CheckCircle2 className="h-8 w-8" />}
-                            GEREED MELDEN
-                        </Button>
-                    ) : (
-                        <Button 
-                            className="w-full h-20 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-[0.2em] text-xl shadow-[0_25px_60px_rgba(22,163,74,0.5)] rounded-[2.5rem] gap-5 active:scale-95 transition-all animate-in slide-in-from-bottom-10 ring-4 ring-green-600/20" 
-                            onClick={handleStartWork}
-                        >
-                            <Play className="h-8 w-8 fill-current" />
-                            START UITVOERING
-                        </Button>
-                    )}
+                    <button 
+                        onClick={handleStartWork}
+                        disabled={!!melding.workStartedAt}
+                        className={cn(
+                            "h-14 w-14 rounded-full flex items-center justify-center border-2 border-slate-100 shadow-sm transition-all active:scale-95",
+                            melding.workStartedAt ? "bg-slate-100" : "bg-white"
+                        )}
+                    >
+                        <Play className={cn("h-6 w-6 ml-1", melding.workStartedAt ? "text-slate-300" : "text-[#FF5722] fill-current")} />
+                    </button>
                 </div>
             </div>
+
+            <div className="mt-4 flex-1">
+                <SectionRow 
+                    icon={Wrench} 
+                    label="Werkzaamheden" 
+                    value={afhandelingBijzonderheden ? 'Ingevuld' : ''} 
+                    onClick={() => setSubView('werkzaamheden')} 
+                />
+                <SectionRow 
+                    icon={ClipboardCheck} 
+                    label="Taken / checklists" 
+                    value={melding.tasks?.length ? `${melding.tasks.length} taken` : ''} 
+                    onClick={() => setSubView('tasks')} 
+                />
+                <SectionRow 
+                    icon={MapIcon} 
+                    label="Locatiegegevens" 
+                    onClick={() => setSubView('map')} 
+                />
+                <SectionRow 
+                    icon={Paperclip} 
+                    label="Documenten" 
+                    value={uploadedFiles.length > 0 ? `${uploadedFiles.length} files` : ''} 
+                    onClick={() => setSubView('docs')} 
+                />
+                <SectionRow 
+                    icon={Camera} 
+                    label="Foto's" 
+                    value={afhandelingFotos.length > 0 ? `${afhandelingFotos.length}` : ''} 
+                    onClick={() => setSubView('photos')} 
+                />
+                <SectionRow 
+                    icon={Briefcase} 
+                    label="Materialen" 
+                    value={hoeveelheden.length > 0 ? `${hoeveelheden.length} types` : ''} 
+                    onClick={() => setSubView('materials')} 
+                />
+                <SectionRow 
+                    icon={Clock} 
+                    label="Uren" 
+                    value={elapsedDisplay} 
+                    onClick={() => {}} 
+                />
+                <SectionRow 
+                    icon={Car} 
+                    label="Kilometers / parkeerkosten" 
+                    onClick={() => {}} 
+                />
+            </div>
+
+            <div className="p-6 bg-slate-50">
+                <Button 
+                    className="w-full h-14 bg-[#FF5722] hover:bg-[#E64A19] text-white font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-orange-600/20"
+                    onClick={handleAfronden}
+                    disabled={isSubmitting || !melding.workStartedAt}
+                >
+                    {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "WERKBON AFRONDEN"}
+                </Button>
+            </div>
+        </div>
+    );
+
+    const renderSubViewHeader = (title: string) => (
+        <header className="h-16 bg-[#2C2E3E] text-white flex items-center justify-between px-4 shrink-0">
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => setSubView('main')}>
+                <ArrowLeft className="h-6 w-6" />
+            </Button>
+            <h3 className="text-sm font-bold uppercase tracking-widest">{title}</h3>
+            <div className="w-10" />
+        </header>
+    );
+
+    return (
+        <div className="flex flex-col h-full bg-white relative animate-in slide-in-from-right duration-300">
+            {subView === 'main' ? (
+                <>
+                    <header className="h-16 bg-[#2C2E3E] text-white flex items-center justify-between px-4 shrink-0">
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={onClose}>
+                            <ChevronLeft className="h-6 w-6" />
+                        </Button>
+                        <h3 className="text-sm font-bold uppercase tracking-widest">Werkbon</h3>
+                        <Button variant="ghost" className="text-white font-medium" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>Wijzig</Button>
+                    </header>
+                    {renderMainList()}
+                </>
+            ) : (
+                <div className="flex flex-col h-full overflow-hidden">
+                    {subView === 'werkzaamheden' && (
+                        <>
+                            {renderSubViewHeader('Werkzaamheden')}
+                            <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-slate-400">Klacht omschrijving</Label>
+                                    <div className="bg-slate-50 p-4 rounded-xl text-sm italic text-slate-600 border border-slate-100">
+                                        "{melding.extra_informatie}"
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-[10px] font-black uppercase text-slate-400">Uitvoeringsnotities</Label>
+                                        <div className="flex gap-2">
+                                            <Button variant="outline" size="sm" className={cn("h-8 rounded-full", isListening && "bg-red-50 text-red-600 border-red-200")} onClick={toggleListening}>
+                                                {isListening ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Mic className="h-3 w-3 mr-2" />}
+                                                Dictaat
+                                            </Button>
+                                            <Button variant="ghost" size="sm" className="h-8 text-primary font-bold text-[10px] uppercase" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden}>
+                                                <Sparkles className="h-3 w-3 mr-2" /> Vertaal
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <Textarea 
+                                        className="min-h-[300px] rounded-2xl border-slate-200 p-4 text-base"
+                                        placeholder="Noteer hier de voortgang of details..."
+                                        value={afhandelingBijzonderheden}
+                                        onChange={e => setAfhandelingBijzonderheden(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
+                    {subView === 'map' && (
+                        <>
+                            {renderSubViewHeader('Locatie')}
+                            <div className="flex-1 relative">
+                                <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={true} objects={nearbyObjects} />
+                            </div>
+                        </>
+                    )}
+                    {subView === 'photos' && (
+                        <>
+                            {renderSubViewHeader("Foto's")}
+                            <div className="flex-1 p-6 space-y-8 overflow-y-auto">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('cam-input')?.click()}>
+                                        <Camera className="h-8 w-8 text-slate-400" />
+                                        <span className="text-xs font-bold uppercase">Nieuwe Foto</span>
+                                    </Button>
+                                    <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('gal-input')?.click()}>
+                                        <ImageIcon className="h-8 w-8 text-slate-400" />
+                                        <span className="text-xs font-bold uppercase">Galerij</span>
+                                    </Button>
+                                </div>
+                                <input type="file" id="cam-input" className="hidden" accept="image/*" capture="environment" onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
+                                <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
+                                
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    {afhandelingFotos.map((p, i) => (
+                                        <div key={i} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
+                                            <Image src={p.url} alt="afhandeling" fill className="object-cover" />
+                                            <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}>
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                    {subView === 'materials' && (
+                        <>
+                            {renderSubViewHeader('Materialen')}
+                            <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                                <div className="bg-slate-50 p-6 rounded-2xl space-y-4">
+                                    <div className="grid gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-black uppercase text-slate-400">Product</Label>
+                                            <Input placeholder="Bv. Straatsteen..." value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} className="h-11 font-bold" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-black uppercase text-slate-400">Aantal</Label>
+                                            <Input type="number" placeholder="0" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} className="h-11 font-bold" />
+                                        </div>
+                                        <Button className="w-full h-11 font-black uppercase bg-[#FF5722]" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>
+                                            Toevoegen
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    {hoeveelheden.map(h => (
+                                        <div key={h.id} className="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold">{h.type}</span>
+                                                <span className="text-[10px] text-slate-400 uppercase font-black">{h.eenheid}</span>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-xl font-black text-primary">{h.aantal}</span>
+                                                <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4" /></Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                    {subView === 'docs' && (
+                        <>
+                            {renderSubViewHeader('Documenten')}
+                            <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+                                <Button variant="outline" className="w-full h-16 border-dashed border-2 rounded-xl gap-3" onClick={() => document.getElementById('sub-doc-input')?.click()}>
+                                    <UploadCloud className="h-5 w-5 text-primary" /> Document Uploaden
+                                </Button>
+                                <input type="file" id="sub-doc-input" className="hidden" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'documents')} />
+                                <div className="grid gap-2">
+                                    {uploadedFiles.map(f => (
+                                        <div key={f.storagePath} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                            <div className="flex items-center gap-3 truncate">
+                                                <FileText className="h-5 w-5 text-blue-600" />
+                                                <span className="text-xs font-bold truncate uppercase">{f.name}</span>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                    {subView === 'tasks' && (
+                        <>
+                            {renderSubViewHeader('Taken')}
+                            <div className="flex-1 p-6 overflow-y-auto">
+                                <p className="text-center text-slate-400 text-sm italic py-12">Geen specifieke checklists gekoppeld.</p>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
@@ -650,7 +645,6 @@ export default function StartNavigationPage() {
   const simStateRef = React.useRef({ distanceTravelled: 0, currentSpeedMs: 0 });
   const lastRouteCalculationLocationRef = React.useRef<{latitude: number, longitude: number} | null>(null);
   const lastFetchTimeRef = React.useRef<number>(0);
-  const autoOpenTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -889,13 +883,6 @@ export default function StartNavigationPage() {
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
 
   // INTERFACE HANDLERS
-  const updateNavZoom = (newZoom: number) => {
-    const val = Number(newZoom);
-    setNavZoomState(val);
-    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val }, { merge: true });
-    mapRef.current?.getMap().jumpTo({ zoom: val });
-  };
-
   const updateNavPitch = (newPitch: number) => {
     const val = Number(newPitch);
     setNavPitchState(val);
