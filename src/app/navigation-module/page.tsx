@@ -311,7 +311,7 @@ function IntegratedWerkbonOverlay({
             <div className="bg-white p-6 space-y-4">
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
-                        <h2 className="text-xl font-bold text-slate-900">{melding.melder || 'Anonieme Melder'}</h2>
+                        <h2 className="text-xl font-bold text-slate-900">{melding.intakenummer}</h2>
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                                 <MapPin className="h-3.5 w-3.5 text-slate-400" />
