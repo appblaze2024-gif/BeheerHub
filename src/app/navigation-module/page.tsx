@@ -1150,6 +1150,14 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
+                {/* Speedometer outside the card on the left */}
+                <div className="mb-4 flex justify-start pointer-events-auto">
+                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
+                        <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
+                        <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
+                    </div>
+                </div>
+
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
                     <CardContent className="p-4 sm:p-6">
                         <div className="flex items-center justify-between gap-4 sm:gap-8">
@@ -1178,12 +1186,6 @@ export default function StartNavigationPage() {
                                     </p>
                                 </div>
                                 <Progress value={100} className="h-1 bg-slate-100 mt-2" />
-                            </div>
-
-                            {/* Speedometer back in the original card position */}
-                            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-slate-50 shrink-0 shadow-inner">
-                                <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
-                                <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
                             </div>
                         </div>
                     </CardContent>
