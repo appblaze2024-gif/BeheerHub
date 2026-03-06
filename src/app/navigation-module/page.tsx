@@ -161,7 +161,7 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
-    const recognitionRef = React.useRef<any>(null);
+    recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
@@ -1170,10 +1170,7 @@ export default function StartNavigationPage() {
                                         className="h-10 w-10 object-contain drop-shadow-2xl" 
                                     />
                                     <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-sm overflow-hidden">
-                                        <div className="relative w-full h-full flex items-center justify-center">
-                                            <Wrench className="h-3 w-3 text-slate-900 absolute rotate-[45deg]" strokeWidth={3} />
-                                            <Wrench className="h-3 w-3 text-slate-900 absolute rotate-[-45deg]" strokeWidth={3} />
-                                        </div>
+                                        <Wrench className="h-3.5 w-3.5 text-slate-900" strokeWidth={3} />
                                     </div>
                                 </div>
                             )}
