@@ -408,7 +408,7 @@ function IntegratedWerkbonOverlay({
                             <ChevronLeft className="h-6 w-6" />
                         </Button>
                         <h3 className="text-sm font-bold uppercase tracking-widest">Werkbon</h3>
-                        <Button variant="ghost" className="text-white font-medium" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>Wijzig</Button>
+                        <div className="w-10" />
                     </header>
                     {renderMainList()}
                 </>
@@ -536,7 +536,7 @@ function IntegratedWerkbonOverlay({
                                                 <FileText className="h-5 w-5 text-blue-600" />
                                                 <span className="text-xs font-bold truncate uppercase">{f.name}</span>
                                             </div>
-                                            <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>
                                         </div>
                                     ))}
                                 </div>
