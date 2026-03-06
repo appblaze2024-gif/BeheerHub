@@ -46,6 +46,7 @@ import {
   ArrowRight,
   AlertTriangle,
   Wrench,
+  RotateCcw,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -80,8 +81,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Separator } from '@/components/ui/separator';
-import { MapboxView } from '@/components/mapbox-view';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -1296,7 +1295,7 @@ export default function StartNavigationPage() {
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                     {nextMission?.containernummer && (
-                                        <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase bg-slate-100 border-none">
+                                        <Badge variant="secondary" className="text-[10px] h-6 font-black uppercase bg-yellow-400 text-slate-900 border-2 border-white shadow-sm px-2">
                                             {nextMission.containernummer}
                                         </Badge>
                                     )}
