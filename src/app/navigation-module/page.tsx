@@ -1126,13 +1126,18 @@ export default function StartNavigationPage() {
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
             {/* Top Left Widgets */}
             <div className="flex flex-col gap-3 pointer-events-auto">
-                {navigationState === 'navigating' && (
-                    <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-2 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reistijd</span>
-                        <ArrowRight className="h-3 w-3 text-primary" />
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</span>
-                            <span className="text-[9px] font-black text-primary uppercase tracking-widest">min</span>
+                {navigationState === 'navigating' && routeInfo && (
+                    <div className="bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                        <div className="flex flex-col items-center">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Vertrek</span>
+                            <span className="text-lg font-black text-slate-900 leading-none">{formatDate(new Date(), 'HH:mm')}</span>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-primary shrink-0" />
+                        <div className="flex flex-col items-center">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aankomst</span>
+                            <span className="text-lg font-black text-primary leading-none">
+                                {formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}
+                            </span>
                         </div>
                     </div>
                 )}
