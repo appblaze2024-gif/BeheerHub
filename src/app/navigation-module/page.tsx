@@ -160,7 +160,7 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
-    const recognitionRef = React.useRef<any>(null);
+    recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
@@ -1162,7 +1162,7 @@ export default function StartNavigationPage() {
                                     />
                                     {/* Geel waarschuwingsbolletje met driehoek */}
                                     <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm">
-                                        <AlertTriangle className="h-3.5 w-3.5 text-black fill-current" />
+                                        <AlertTriangle className="h-3.5 w-3.5 text-slate-900" strokeWidth={2.5} />
                                     </div>
                                 </div>
                             )}
