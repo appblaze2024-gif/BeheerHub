@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -44,7 +43,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -284,7 +283,7 @@ function IntegratedWerkbonOverlay({
         <div className="flex flex-col h-full bg-slate-50">
             <header className="h-14 lg:h-16 bg-white border-b flex items-center justify-between px-4 lg:px-6 shrink-0 shadow-sm z-10 sticky top-0">
                 <div className="flex items-center gap-3 lg:gap-4">
-                    <Button variant="ghost" size="icon" onClose={onClose} className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors" onClick={onClose}>
+                    <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 hover:bg-slate-200 transition-colors" onClick={onClose}>
                         <ArrowLeft className="h-6 w-6 text-slate-600" />
                     </Button>
                     <div>
@@ -737,7 +736,7 @@ export default function StartNavigationPage() {
     
     setIsCalculatingRoute(true);
     lastFetchTimeRef.current = now;
-    const startPos = userLocation || SIMULATION_START_LOCATION;
+    const startPos = pos || SIMULATION_START_LOCATION;
     lastRouteCalculationLocationRef.current = startPos;
 
     const waypoints = [
@@ -1140,27 +1139,32 @@ export default function StartNavigationPage() {
         </div>
 
         {navigationState === 'navigating' && !activeWerkbonId && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
-                    <CardContent className="p-4 sm:p-6 flex items-center justify-between gap-4 sm:gap-8">
-                        <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-6 sm:pr-12 min-w-[100px] sm:min-w-[140px]">
-                            <p className="text-3xl sm:text-4xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
-                            <p className="text-[8px] sm:text-[10px] font-black text-primary uppercase tracking-widest mt-1">minuten</p>
-                        </div>
-                        <div className="flex-1 flex flex-col gap-2 sm:gap-3 min-w-0">
-                            <div className="space-y-0.5">
-                                <p className="text-[8px] sm:text-[9px] font-black uppercase text-slate-500">Volgende Bestemming</p>
-                                <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
+            <>
+                <div className="absolute bottom-40 left-8 z-30 pointer-events-none animate-in fade-in duration-700">
+                    <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full border-[6px] sm:border-[8px] border-primary flex flex-col items-center justify-center bg-white/90 backdrop-blur-md shadow-2xl pointer-events-auto">
+                        <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
+                        <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
+                    </div>
+                </div>
+
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
+                    <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
+                        <CardContent className="p-4 sm:p-6 flex items-center justify-between gap-4 sm:gap-8">
+                            <div className="flex flex-col items-center shrink-0 border-r border-slate-100 pr-6 sm:pr-12 min-w-[100px] sm:min-w-[140px]">
+                                <p className="text-3xl sm:text-4xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
+                                <p className="text-[8px] sm:text-[10px] font-black text-primary uppercase tracking-widest mt-1">minuten</p>
                             </div>
-                            <Progress value={100} className="h-1.5 sm:h-2 bg-slate-100" />
-                        </div>
-                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-slate-50 shrink-0 shadow-inner">
-                            <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
-                            <span className="text-[7px] sm:text-[8px] font-black uppercase text-primary">km/h</span>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                            <div className="flex-1 flex flex-col gap-2 sm:gap-3 min-w-0">
+                                <div className="space-y-0.5">
+                                    <p className="text-[8px] sm:text-[9px] font-black uppercase text-slate-500">Volgende Bestemming</p>
+                                    <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
+                                </div>
+                                <Progress value={100} className="h-1.5 sm:h-2 bg-slate-100" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </>
         )}
 
         <div 
