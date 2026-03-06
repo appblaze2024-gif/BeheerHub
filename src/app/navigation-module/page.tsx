@@ -58,7 +58,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -321,10 +321,6 @@ function IntegratedWerkbonOverlay({
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                                 <User className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.behandelaar || 'Niet toegewezen'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                                <Phone className="h-3.5 w-3.5 text-slate-400" />
-                                <span>{melding.telefoon_melder || '-'}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                                 <Tag className="h-3.5 w-3.5 text-slate-400" />
