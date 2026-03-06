@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -69,7 +68,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/popover";
 import Image from 'next/image';
 import { translateText } from '@/ai/flows/translate-text-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -600,6 +599,7 @@ export default function StartNavigationPage() {
   const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
   const [routeInfo, setRouteInfo] = React.useState<{ duration: number; distance: number } | null>(null);
   const [speedKmh, setSpeedKmh] = React.useState(0);
+  const [currentSpeedLimit, setCurrentSpeedLimit] = React.useState<number>(50);
   const [isPaused, setIsPaused] = React.useState(false);
 
   const mapRef = React.useRef<MapRef>(null);
@@ -680,7 +680,6 @@ export default function StartNavigationPage() {
     const startPos = userLocation || SIMULATION_START_LOCATION;
     const points: [number, number][] = [[startPos.longitude, startPos.latitude]];
     
-    // Add all markers to the point list for bounding box calculation
     filteredMeldingen.forEach(m => {
         if (m.longitude && m.latitude) {
             points.push([m.longitude, m.latitude]);
@@ -701,7 +700,6 @@ export default function StartNavigationPage() {
     }
   }, [filteredMeldingen, userLocation]);
 
-  // Initial Fit All - Triggered when data arrives or page opens
   React.useEffect(() => {
     if (navigationState === 'setup' && !isLoadingMeldingen && filteredMeldingen.length > 0 && mapRef.current) {
         const map = mapRef.current.getMap();
@@ -765,7 +763,6 @@ export default function StartNavigationPage() {
     }
   }, [sortedMissions, userLocation, navigationState]);
 
-  // WATCH FOR NAVIGATION STATE OR MISSION CHANGES
   React.useEffect(() => {
     if (navigationState === 'navigating' && sortedMissions.length > 0) {
         fetchRoute(true);
@@ -805,7 +802,6 @@ export default function StartNavigationPage() {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
             
-            // Reroute check with 50m threshold
             if (navigationState === 'navigating' && currentRouteGeometry && !isCalculatingRoute) {
                 const line = turf.lineString(currentRouteGeometry.coordinates);
                 const rawPt = turf.point([loc.longitude, loc.latitude]);
@@ -861,6 +857,46 @@ export default function StartNavigationPage() {
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
+
+  // LIVE SPEED LIMIT DETECTION
+  React.useEffect(() => {
+    if (navigationState !== 'navigating' || !smoothLocation || !mapRef.current) return;
+
+    const map = mapRef.current.getMap();
+    if (!map.isStyleLoaded()) return;
+
+    const updateSpeedLimit = () => {
+        try {
+            const point = map.project([smoothLocation.longitude, smoothLocation.latitude]);
+            // Check for road metadata in Mapbox layers
+            const features = map.queryRenderedFeatures(point, { layers: ['road-label', 'road', 'bridge-road'] });
+            
+            if (features.length > 0) {
+                const roadClass = features[0].properties?.class;
+                let limit = 50;
+
+                switch(roadClass) {
+                    case 'motorway': limit = 100; break;
+                    case 'trunk': limit = 100; break;
+                    case 'primary': limit = 80; break;
+                    case 'secondary': limit = 80; break;
+                    case 'tertiary': limit = 50; break;
+                    case 'street': 
+                    case 'road':
+                    case 'residential':
+                    case 'service': limit = 30; break;
+                    case 'path':
+                    case 'pedestrian': limit = 15; break;
+                    default: limit = 50;
+                }
+                setCurrentSpeedLimit(limit);
+            }
+        } catch (e) {}
+    };
+
+    const timer = setTimeout(updateSpeedLimit, 1000);
+    return () => clearTimeout(timer);
+  }, [smoothLocation, navigationState]);
 
   // INTERFACE HANDLERS
   const updateNavZoom = (newZoom: number) => {
@@ -1008,11 +1044,6 @@ export default function StartNavigationPage() {
   };
 
   const nextMission = sortedMissions[0];
-  const distToNextKm = nextMission && smoothLocation ? turf.distance(
-      turf.point([smoothLocation.longitude, smoothLocation.latitude]),
-      turf.point([nextMission.longitude, nextMission.latitude]),
-      { units: 'kilometers' }
-  ) : 0;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
@@ -1082,7 +1113,6 @@ export default function StartNavigationPage() {
             <div className="flex flex-col gap-3 pointer-events-auto">
                 {navigationState === 'navigating' && (
                     <>
-                        {/* Travel Time Indicator stays at top left - Compacted */}
                         <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-2 min-w-fit animate-in slide-in-from-left-4 duration-500">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reistijd</span>
                             <ArrowRight className="h-3 w-3 text-primary" />
@@ -1156,11 +1186,14 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                {/* Speedometer outside the card on the left */}
-                <div className="mb-4 flex justify-start pointer-events-auto">
+                <div className="mb-4 flex justify-start items-center gap-3 pointer-events-auto">
                     <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
                         <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
                         <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
+                    </div>
+                    {/* Live Speed Limit Sign */}
+                    <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full border-[4px] border-red-600 flex items-center justify-center bg-white shadow-2xl shrink-0 animate-in fade-in zoom-in duration-500">
+                        <span className="text-lg sm:text-xl font-black text-slate-900">{currentSpeedLimit}</span>
                     </div>
                 </div>
 
