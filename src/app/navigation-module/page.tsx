@@ -45,6 +45,7 @@ import {
   ChevronUp,
   ArrowRight,
   AlertTriangle,
+  Wrench,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -160,7 +161,7 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
-    recognitionRef = React.useRef<any>(null);
+    const recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
@@ -902,8 +903,16 @@ export default function StartNavigationPage() {
                 });
             }
         },
-        (err) => console.error("GPS Error:", err),
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+        (err) => {
+            if (err.code === 1) { // PERMISSION_DENIED
+                console.warn("GPS Permission Denied");
+            } else if (err.code === 3) { // TIMEOUT
+                console.warn("GPS Timeout - searching for signal...");
+            } else {
+                console.warn("GPS Position Error:", err.message || "Unknown error");
+            }
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
@@ -1160,9 +1169,11 @@ export default function StartNavigationPage() {
                                         alt="task" 
                                         className="h-10 w-10 object-contain drop-shadow-2xl" 
                                     />
-                                    {/* Geel waarschuwingsbolletje met driehoek */}
-                                    <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm">
-                                        <AlertTriangle className="h-3.5 w-3.5 text-slate-900" strokeWidth={2.5} />
+                                    <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-sm overflow-hidden">
+                                        <div className="relative w-full h-full flex items-center justify-center">
+                                            <Wrench className="h-3 w-3 text-slate-900 absolute rotate-[45deg]" strokeWidth={3} />
+                                            <Wrench className="h-3 w-3 text-slate-900 absolute rotate-[-45deg]" strokeWidth={3} />
+                                        </div>
                                     </div>
                                 </div>
                             )}
