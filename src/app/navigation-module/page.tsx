@@ -46,6 +46,8 @@ import {
   Wrench,
   RotateCcw,
   Calendar,
+  Layers,
+  Zap,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -165,6 +167,7 @@ function IntegratedWerkbonOverlay({
     const [newQuickKey, setNewQuickKey] = React.useState('');
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
+    const [elapsedDisplay, setElapsedDisplay] = React.useState<string>("00:00");
     
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
@@ -195,6 +198,23 @@ function IntegratedWerkbonOverlay({
             setUploadedFiles(melding.files || []);
         }
     }, [melding]);
+
+    React.useEffect(() => {
+        if (!melding?.workStartedAt) {
+            setElapsedDisplay("00:00");
+            return;
+        }
+        const interval = setInterval(() => {
+            const start = new Date(melding.workStartedAt!).getTime();
+            const now = Date.now();
+            const diffSecs = Math.floor((now - start) / 1000);
+            const hours = Math.floor(diffSecs / 3600);
+            const mins = Math.floor((diffSecs % 3600) / 60);
+            const secs = diffSecs % 60;
+            setElapsedDisplay(`${hours > 0 ? hours + ':' : ''}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [melding?.workStartedAt]);
 
     const handleStartWork = async () => {
         if (!firestore || !melding) return;
@@ -291,57 +311,64 @@ function IntegratedWerkbonOverlay({
         toast({ title: 'Sneltoets verwijderd' });
     };
 
-    if (isLoading || !melding) return <div className="p-12 flex justify-center h-full items-center"><Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" /></div>;
+    if (isLoading || !melding) return <div className="p-12 flex justify-center h-full items-center bg-white"><Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" /></div>;
 
     return (
         <div className="flex flex-col h-full bg-slate-50 relative animate-in slide-in-from-right duration-300">
-            <header className="h-16 lg:h-20 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-10 sticky top-0">
+            <header className="h-16 lg:h-20 bg-slate-900 text-white flex items-center justify-between px-6 shrink-0 shadow-xl z-10 sticky top-0">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 hover:bg-slate-100 transition-colors shrink-0" onClick={onClose}>
-                        <ArrowLeft className="h-6 w-6 text-slate-600" />
+                    <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-white hover:bg-white/10 shrink-0" onClick={onClose}>
+                        <ArrowLeft className="h-6 w-6" />
                     </Button>
                     <div className="min-w-0">
-                        <h3 className="text-lg font-black uppercase tracking-tight leading-none text-slate-900 truncate">Werkbon Detail</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate mt-1">BeheerHub Melding Systeem</p>
+                        <h3 className="text-lg font-black uppercase tracking-tight leading-none truncate">{melding.intakenummer}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className={cn("h-2 w-2 rounded-full", melding.workStartedAt ? "bg-green-500 animate-pulse" : "bg-orange-500")} />
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                {melding.workStartedAt ? `Lopend • ${elapsedDisplay}` : "Wachtend op start"}
+                            </p>
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={onClose}>
-                        <X className="h-6 w-6 text-slate-400" />
+                    <Badge variant="outline" className="hidden sm:inline-flex h-7 border-white/20 text-white font-black text-[9px] uppercase tracking-widest">{melding.status}</Badge>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-white/60 hover:text-white" onClick={onClose}>
+                        <X className="h-6 w-6" />
                     </Button>
                 </div>
             </header>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 pb-24">
-                <div className="px-6 py-4 bg-white/80 backdrop-blur-md shrink-0 border-b overflow-x-auto no-scrollbar">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+                <div className="px-6 py-4 bg-white shrink-0 border-b overflow-x-auto no-scrollbar shadow-sm">
                     <TabsList className="w-full inline-flex h-12 bg-slate-100 p-1.5 rounded-full border-none gap-2">
                         {werkbonNavItems.map(item => (
                             <TabsTrigger 
                                 key={item.label} 
                                 value={item.label} 
-                                className="flex-1 gap-2 rounded-full data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all text-[10px] font-black uppercase tracking-widest"
+                                className="flex-1 gap-2 rounded-full data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all text-[10px] font-black uppercase tracking-widest"
                             >
                                 <item.icon className="h-3.5 w-3.5 shrink-0" />
-                                <span className="hidden sm:inline">{item.label}</span>
+                                <span className="hidden md:inline">{item.label}</span>
                             </TabsTrigger>
                         ))}
                     </TabsList>
                 </div>
                 
-                <main className="flex-1 p-4 md:p-6 overflow-y-auto no-scrollbar">
-                    <TabsContent value="Werkzaamheden" className="mt-0 animate-in fade-in duration-500">
-                        <div className="max-w-3xl mx-auto space-y-6">
-                            {/* Message Bubble - Style from screenshot */}
-                            <div className="flex flex-col gap-2 animate-in slide-in-from-left duration-500">
-                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4">Meldingsomschrijving</span>
-                                <div className="bg-white p-6 rounded-[2.5rem] rounded-tl-sm shadow-xl border-none text-slate-700 italic font-medium leading-relaxed relative">
-                                    "{melding.extra_informatie || 'Geen omschrijving opgegeven.'}"
-                                    <div className="absolute top-0 -left-2 w-4 h-4 bg-white transform rotate-45" style={{ display: 'none' }} />
+                <main className="flex-1 overflow-y-auto no-scrollbar pb-32">
+                    <TabsContent value="Werkzaamheden" className="mt-0 p-4 md:p-8 animate-in fade-in duration-500">
+                        <div className="max-w-4xl mx-auto space-y-8">
+                            {/* Speech Bubble for Omschrijving */}
+                            <div className="space-y-3 animate-in slide-in-from-left duration-500">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-6 flex items-center gap-2">
+                                    <MessageSquare className="h-3 w-3" /> Klacht Omschrijving
+                                </Label>
+                                <div className="bg-white p-8 rounded-[3rem] rounded-tl-sm shadow-2xl border-none text-slate-700 italic font-medium leading-relaxed relative text-sm md:text-base ring-1 ring-black/5">
+                                    "{melding.extra_informatie || 'Geen omschrijving opgegeven door de melder.'}"
                                 </div>
                             </div>
 
-                            {/* Detail Cards */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-bottom-4 duration-700">
+                            {/* Core Info Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 animate-in slide-in-from-bottom-4 duration-700">
                                 <Card className="bg-white border-none shadow-xl rounded-[2.5rem] p-6 hover:scale-[1.02] transition-transform">
                                     <div className="flex items-center gap-4">
                                         <div className="bg-blue-100 p-3 rounded-2xl"><MapPin className="h-6 w-6 text-primary" /></div>
@@ -355,159 +382,191 @@ function IntegratedWerkbonOverlay({
 
                                 <Card className="bg-white border-none shadow-xl rounded-[2.5rem] p-6 hover:scale-[1.02] transition-transform">
                                     <div className="flex items-center gap-4">
-                                        <div className="bg-yellow-100 p-3 rounded-2xl"><Package className="h-6 w-6 text-yellow-600" /></div>
+                                        <div className="bg-yellow-400 p-3 rounded-2xl shadow-lg shadow-yellow-400/20"><Package className="h-6 w-6 text-slate-900" /></div>
                                         <div className="min-w-0">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Container ID</p>
-                                            <p className="text-sm font-black text-slate-900 leading-none">{melding.containernummer || '-'}</p>
-                                            <Badge variant="outline" className="mt-1 h-4 text-[8px] font-black border-2 bg-yellow-400 text-black border-black px-1.5">{melding.hoofdcategorie}</Badge>
+                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Unit ID</p>
+                                            <p className="text-sm font-black text-slate-900 leading-none">{melding.containernummer || 'N.V.T.'}</p>
+                                            <Badge className="mt-1.5 bg-slate-900 text-white font-black text-[8px] tracking-widest border-none px-2 h-4 uppercase">{melding.hoofdcategorie}</Badge>
                                         </div>
                                     </div>
                                 </Card>
 
-                                <Card className="bg-white border-none shadow-xl rounded-[2.5rem] p-6 sm:col-span-2">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-slate-100 p-2 rounded-xl"><Navigation className="h-4 w-4 text-slate-600" /></div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Locatie op kaart</span>
+                                <Card className="bg-white border-none shadow-xl rounded-[2.5rem] p-6 hover:scale-[1.02] transition-transform">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-slate-100 p-3 rounded-2xl"><Calendar className="h-6 w-6 text-slate-600" /></div>
+                                        <div className="min-w-0">
+                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Meld Datum</p>
+                                            <p className="text-sm font-black text-slate-900 leading-none">{formatDate(new Date(melding.datum), 'dd MMM yyyy')}</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{melding.tijdstip || '00:00'}</p>
                                         </div>
-                                        <Badge className="bg-green-500 font-black text-[8px] tracking-tighter">LIVE</Badge>
-                                    </div>
-                                    <div className="rounded-3xl overflow-hidden h-48 border-2 border-slate-50 shadow-inner relative">
-                                        <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={true} objects={nearbyObjects} />
                                     </div>
                                 </Card>
                             </div>
+
+                            {/* Map Control Card */}
+                            <Card className="bg-white border-none shadow-2xl rounded-[3rem] overflow-hidden p-2">
+                                <div className="p-6 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-primary p-2 rounded-xl"><Navigation className="h-4 w-4 text-white" /></div>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">Locatie Controle</span>
+                                    </div>
+                                    <Badge className="bg-green-500 font-black text-[8px] tracking-tighter shadow-lg shadow-green-500/20">LIVE GPS</Badge>
+                                </div>
+                                <div className="rounded-[2.5rem] overflow-hidden h-64 md:h-80 border-2 border-slate-50 relative">
+                                    <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={true} objects={nearbyObjects} />
+                                </div>
+                            </Card>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="Opmerkingen" className="mt-0 space-y-6 animate-in fade-in duration-500">
-                        <div className="max-w-2xl mx-auto bg-white p-6 rounded-[3rem] shadow-2xl space-y-6">
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Uitvoeringsnotities</h4>
-                                <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-full border border-slate-200">
+                    <TabsContent value="Opmerkingen" className="mt-0 p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
+                        <div className="max-w-3xl mx-auto bg-white p-8 rounded-[3.5rem] shadow-2xl space-y-10 border border-slate-100">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 border-b border-slate-100 pb-6">
+                                <div>
+                                    <h4 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Afhandeling notitie</h4>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Gebruik de dicteerknop voor snelle invoer</p>
+                                </div>
+                                <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-full border-2 border-slate-200">
                                     <Select value={sourceLang.code} onValueChange={(val) => setSourceLang(translationLanguages.find(l => l.code === val) || translationLanguages[0])}>
-                                        <SelectTrigger className="h-8 w-14 p-0 border-none bg-transparent shadow-none focus:ring-0">
-                                            <img src={`https://flagcdn.com/w40/${sourceLang.flag}.png`} alt={sourceLang.label} className="h-4 w-6 rounded shadow-sm object-cover border border-slate-200 mx-auto" />
+                                        <SelectTrigger className="h-10 w-16 p-0 border-none bg-transparent shadow-none focus:ring-0">
+                                            <img src={`https://flagcdn.com/w40/${sourceLang.flag}.png`} alt={sourceLang.label} className="h-5 w-8 rounded-md shadow-md object-cover border-2 border-white mx-auto" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {translationLanguages.map(l => (
                                                 <SelectItem key={l.code} value={l.code}>
-                                                    <div className="flex items-center gap-2">
-                                                        <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-4 rounded-sm object-cover" />
-                                                        <span className="text-xs font-bold">{l.label}</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={`https://flagcdn.com/w40/${l.flag}.png`} alt={l.label} className="h-3 w-5 rounded-sm object-cover" />
+                                                        <span className="text-xs font-black uppercase">{l.label}</span>
                                                     </div>
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <Button variant={isListening ? "destructive" : "ghost"} size="icon" className="rounded-full h-9 w-9 shadow-lg bg-white" onClick={toggleListening}>
-                                        {isListening ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4 text-primary" />}
+                                    <Button variant={isListening ? "destructive" : "ghost"} size="icon" className="rounded-full h-11 w-11 shadow-xl bg-white hover:scale-105 transition-all" onClick={toggleListening}>
+                                        {isListening ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mic className="h-5 w-5 text-primary" />}
                                     </Button>
-                                    <Separator orientation="vertical" className="h-6" />
-                                    <Button variant="ghost" size="sm" className="h-8 px-3 font-black uppercase text-[9px] text-primary hover:bg-primary/5 rounded-full" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden}>
-                                        {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1.5" />}
-                                        Vertaal
+                                    <Separator orientation="vertical" className="h-8 bg-slate-300" />
+                                    <Button variant="ghost" size="sm" className="h-10 px-5 font-black uppercase text-[10px] text-primary hover:bg-primary/10 rounded-full transition-colors" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden}>
+                                        {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                                        Vertaal met AI
                                     </Button>
                                 </div>
                             </div>
                             
-                            <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Snelle Toevoegingen</Label>
-                                <div className="flex flex-wrap gap-2 px-1">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sneltoetsen</Label>
+                                    <Badge variant="secondary" className="bg-slate-100 text-slate-400 text-[8px] font-black uppercase">Click om toe te voegen</Badge>
+                                </div>
+                                <div className="flex flex-wrap gap-2.5">
                                     {(profile?.quickKeys || []).map((k, i) => (
                                         <div key={i} className="group relative">
-                                            <Button variant="secondary" size="sm" className="h-10 px-5 text-[10px] font-black uppercase tracking-tight rounded-full border-2 border-slate-100 bg-white hover:bg-primary hover:text-white transition-all shadow-sm" onClick={() => setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + k)}>
+                                            <Button variant="outline" size="sm" className="h-11 px-6 text-[10px] font-black uppercase tracking-tight rounded-2xl border-2 border-slate-100 bg-white hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm active:scale-95" onClick={() => setAfhandelingBijzonderheden(prev => prev + (prev ? ' ' : '') + k)}>
                                                 {k}
                                             </Button>
-                                            <button className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" onClick={(e) => { e.stopPropagation(); handleRemoveQuickKey(k); }}>
+                                            <button className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl border-2 border-white" onClick={(e) => { e.stopPropagation(); handleRemoveQuickKey(k); }}>
                                                 <X className="h-3 w-3" />
                                             </button>
                                         </div>
                                     ))}
-                                    <div className="flex gap-1">
-                                        <Input placeholder="Nieuw..." className="h-10 text-[10px] w-28 font-bold rounded-full border-2 border-dashed" value={newQuickKey} onChange={e => setNewQuickKey(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddQuickKey())} />
-                                        <Button variant="outline" size="icon" className="h-10 w-10 rounded-full border-2" onClick={handleAddQuickKey} disabled={!newQuickKey.trim()}><Plus className="h-4 w-4" /></Button>
+                                    <div className="flex gap-2">
+                                        <Input placeholder="Nieuwe toets..." className="h-11 text-[10px] w-36 font-bold rounded-2xl border-2 border-dashed border-slate-200" value={newQuickKey} onChange={e => setNewQuickKey(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddQuickKey())} />
+                                        <Button variant="ghost" size="icon" className="h-11 w-11 rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-400 hover:text-primary transition-colors" onClick={handleAddQuickKey} disabled={!newQuickKey.trim()}><Plus className="h-5 w-5" /></Button>
                                     </div>
                                 </div>
                             </div>
 
                             <Textarea 
-                                placeholder="Waar gaat de afhandeling over?" 
-                                className="resize-none text-sm font-medium leading-relaxed rounded-3xl border-none bg-slate-50 focus:ring-primary/20 min-h-[250px] p-6 shadow-inner"
+                                placeholder="Typ hier de details van de werkzaamheden..." 
+                                className="resize-none text-base font-medium leading-relaxed rounded-[2.5rem] border-none bg-slate-50 focus:ring-primary/20 min-h-[300px] p-8 shadow-inner"
                                 value={afhandelingBijzonderheden}
                                 onChange={(e) => setAfhandelingBijzonderheden(e.target.value)}
                             />
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="Fotos" className="mt-0 animate-in fade-in duration-500">
-                        <div className="max-w-2xl mx-auto bg-white p-8 rounded-[3rem] shadow-2xl space-y-8">
-                            <div className="flex justify-between items-center border-b pb-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Media van de werkplek</h4>
-                                <Badge className="bg-primary font-black h-6 rounded-full px-3">{afhandelingFotos.length}</Badge>
+                    <TabsContent value="Fotos" className="mt-0 p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
+                        <div className="max-w-3xl mx-auto bg-white p-10 rounded-[4rem] shadow-2xl space-y-10 border border-slate-100">
+                            <div className="flex justify-between items-end border-b border-slate-100 pb-6">
+                                <div className="space-y-1">
+                                    <h4 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Media</h4>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Foto's van de afgeronde werkzaamheid</p>
+                                </div>
+                                <Badge className="bg-primary text-white font-black h-8 rounded-2xl px-4 shadow-lg shadow-primary/20">{afhandelingFotos.length} FILES</Badge>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Button variant="outline" className="h-24 border-dashed border-2 border-slate-200 rounded-[2rem] font-black uppercase text-[10px] tracking-widest gap-3 flex-col bg-slate-50 hover:bg-white hover:border-primary/30 transition-all" onClick={() => document.getElementById('camera-input-integrated')?.click()}>
-                                    <Camera className="h-7 w-7 text-primary" />
-                                    <span>Camera</span>
+                            
+                            <div className="grid grid-cols-2 gap-6">
+                                <Button variant="outline" className="h-32 border-dashed border-4 border-slate-100 rounded-[3rem] font-black uppercase text-xs tracking-[0.2em] gap-4 flex-col bg-slate-50/50 hover:bg-white hover:border-primary/30 transition-all hover:scale-[1.02] shadow-sm" onClick={() => document.getElementById('camera-input-integrated')?.click()}>
+                                    <div className="bg-primary/10 p-4 rounded-3xl"><Camera className="h-8 w-8 text-primary" /></div>
+                                    <span>Nieuwe Foto</span>
                                 </Button>
-                                <Button variant="outline" className="h-24 border-dashed border-2 border-slate-200 rounded-[2rem] font-black uppercase text-[10px] tracking-widest gap-3 flex-col bg-slate-50 hover:bg-white hover:border-primary/30 transition-all" onClick={() => document.getElementById('gallery-input-integrated')?.click()}>
-                                    <ImageIcon className="h-7 w-7 text-slate-400" />
-                                    <span>Album</span>
+                                <Button variant="outline" className="h-32 border-dashed border-4 border-slate-100 rounded-[3rem] font-black uppercase text-xs tracking-[0.2em] gap-4 flex-col bg-slate-50/50 hover:bg-white hover:border-primary/30 transition-all hover:scale-[1.02] shadow-sm" onClick={() => document.getElementById('gallery-input-integrated')?.click()}>
+                                    <div className="bg-slate-200 p-4 rounded-3xl"><ImageIcon className="h-8 w-8 text-slate-500" /></div>
+                                    <span>Uit Album</span>
                                 </Button>
                             </div>
                             <input type="file" id="camera-input-integrated" className="hidden" accept="image/*" capture="environment" onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
                             <input type="file" id="gallery-input-integrated" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
                             
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
                                 {afhandelingFotos.map((p, i) => (
-                                    <div key={i} className="relative aspect-square rounded-[2rem] overflow-hidden border-4 border-white shadow-xl group animate-in zoom-in-95">
+                                    <div key={i} className="relative aspect-square rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl group animate-in zoom-in-95 hover:scale-105 transition-transform">
                                         <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                        <Button variant="destructive" size="icon" className="absolute top-3 right-3 h-8 w-8 rounded-full opacity-90 shadow-2xl border-2 border-white" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><X className="h-4 w-4" /></Button>
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Button variant="destructive" size="icon" className="h-12 w-12 rounded-full shadow-2xl border-4 border-white active:scale-90 transition-all" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}>
+                                                <Trash2 className="h-6 w-6" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="Hoeveelheid" className="mt-0 animate-in fade-in duration-500">
-                        <div className="max-w-2xl mx-auto bg-white p-8 rounded-[3rem] shadow-2xl space-y-8">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b pb-4">Gebruikte Middelen</h4>
+                    <TabsContent value="Hoeveelheid" className="mt-0 p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
+                        <div className="max-w-3xl mx-auto bg-white p-10 rounded-[4rem] shadow-2xl space-y-10 border border-slate-100">
+                            <div className="space-y-1 border-b border-slate-100 pb-6">
+                                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Materiaalinzet</h4>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">Registreer verbruikte onderdelen en materialen</p>
+                            </div>
                             
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {hoeveelheden.map(h => (
-                                    <div key={h.id} className="flex justify-between items-center p-5 bg-slate-50 rounded-3xl border-none hover:bg-slate-100 transition-all group">
+                                    <div key={h.id} className="flex justify-between items-center p-6 bg-slate-50 rounded-[2.5rem] border-none hover:bg-slate-100 transition-all group animate-in slide-in-from-left-4 shadow-sm">
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-black uppercase tracking-tight text-slate-900">{h.type}</span>
-                                            <span className="text-[10px] text-slate-400 font-bold uppercase">{h.eenheid}</span>
+                                            <span className="text-base font-black uppercase tracking-tight text-slate-900">{h.type}</span>
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{h.eenheid}</span>
                                         </div>
-                                        <div className="flex items-center gap-6">
-                                            <span className="text-3xl font-black text-primary tracking-tighter">{h.aantal}</span>
-                                            <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-5 w-5" /></Button>
+                                        <div className="flex items-center gap-8">
+                                            <span className="text-4xl font-black text-primary tracking-tighter">{h.aantal}</span>
+                                            <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full h-12 w-12 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-6 w-6" /></Button>
                                         </div>
                                     </div>
                                 ))}
                                 {hoeveelheden.length === 0 && (
-                                    <div className="py-12 text-center text-slate-300">
-                                        <Package className="h-12 w-12 mx-auto mb-3 opacity-10" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest">Geen verbruik geregistreerd</p>
+                                    <div className="py-16 text-center text-slate-300">
+                                        <Package className="h-16 w-16 mx-auto mb-4 opacity-10" />
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em]">Geen materialen toegevoegd</p>
                                     </div>
                                 )}
                             </div>
 
-                            <Card className="bg-slate-900 text-white rounded-[2.5rem] p-8 space-y-6 shadow-2xl border-none">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-primary text-center">Nieuw item toevoegen</p>
-                                <div className="grid gap-5">
+                            <Card className="bg-slate-900 text-white rounded-[3rem] p-10 space-y-8 shadow-[0_30px_60px_rgba(15,23,42,0.3)] border-none ring-1 ring-white/10">
+                                <div className="text-center space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Toevoegen</p>
+                                    <h5 className="text-lg font-black uppercase tracking-tight">Nieuw Materiaal</h5>
+                                </div>
+                                <div className="grid gap-6">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-slate-400 ml-2">Product Naam</Label>
-                                        <Input placeholder="Bv. Zand, Tegels..." className="h-14 bg-white/10 border-none text-white font-bold text-lg rounded-2xl px-6 focus:ring-primary/30" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} />
+                                        <Label className="text-[10px] font-black uppercase text-slate-400 ml-4 tracking-widest">Product / Onderdeel</Label>
+                                        <Input placeholder="Bv. Straatstenen, Zand, Klep..." className="h-16 bg-white/10 border-none text-white font-bold text-lg rounded-2xl px-8 focus:ring-primary/30 shadow-inner" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-slate-400 ml-2">Aantal</Label>
-                                        <Input placeholder="0" type="number" className="h-14 bg-white/10 border-none text-white font-bold text-2xl rounded-2xl px-6 focus:ring-primary/30 text-center" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} />
+                                        <Label className="text-[10px] font-black uppercase text-slate-400 ml-4 tracking-widest">Aantal</Label>
+                                        <Input placeholder="0" type="number" className="h-16 bg-white/10 border-none text-white font-black text-3xl rounded-2xl px-8 focus:ring-primary/30 text-center shadow-inner" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} />
                                     </div>
-                                    <Button className="h-16 w-full font-black uppercase tracking-[0.1em] rounded-2xl shadow-2xl shadow-primary/20 text-base mt-4 transition-all active:scale-95" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>
-                                        Toevoegen
+                                    <Button className="h-16 w-full font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl shadow-primary/30 text-base mt-4 transition-all active:scale-95 bg-primary hover:bg-primary/90" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>
+                                        <Plus className="mr-3 h-5 w-5" /> Inboeken
                                     </Button>
                                 </div>
                             </Card>
@@ -517,24 +576,24 @@ function IntegratedWerkbonOverlay({
             </Tabs>
 
             {/* Floating Action Button Footer */}
-            <div className="absolute bottom-6 left-0 right-0 z-50 pointer-events-none flex justify-center px-6">
+            <div className="absolute bottom-10 left-0 right-0 z-50 pointer-events-none flex justify-center px-6">
                 <div className="max-w-md w-full pointer-events-auto">
                     {melding.workStartedAt ? (
                         <Button 
-                            className="w-full h-16 bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-[0.15em] text-lg shadow-[0_20px_50px_rgba(234,88,12,0.4)] rounded-[2rem] gap-4 active:scale-95 transition-all animate-in slide-in-from-bottom-8" 
+                            className="w-full h-20 bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-[0.2em] text-xl shadow-[0_25px_60px_rgba(234,88,12,0.5)] rounded-[2.5rem] gap-5 active:scale-95 transition-all animate-in slide-in-from-bottom-10 ring-4 ring-orange-600/20" 
                             onClick={handleAfronden} 
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? <Loader2 className="h-7 w-7 animate-spin" /> : <CheckCircle2 className="h-7 w-7" />}
-                            AFHANDELEN
+                            {isSubmitting ? <Loader2 className="h-8 w-8 animate-spin" /> : <CheckCircle2 className="h-8 w-8" />}
+                            GEREED MELDEN
                         </Button>
                     ) : (
                         <Button 
-                            className="w-full h-16 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-[0.15em] text-lg shadow-[0_20px_50px_rgba(22,163,74,0.4)] rounded-[2rem] gap-4 active:scale-95 transition-all animate-in slide-in-from-bottom-8" 
+                            className="w-full h-20 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-[0.2em] text-xl shadow-[0_25px_60px_rgba(22,163,74,0.5)] rounded-[2.5rem] gap-5 active:scale-95 transition-all animate-in slide-in-from-bottom-10 ring-4 ring-green-600/20" 
                             onClick={handleStartWork}
                         >
-                            <Play className="h-7 w-7 fill-current" />
-                            START MELDING
+                            <Play className="h-8 w-8 fill-current" />
+                            START UITVOERING
                         </Button>
                     )}
                 </div>
@@ -761,64 +820,6 @@ export default function StartNavigationPage() {
     }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
-  // AUTO-OPEN LOGIC
-  React.useEffect(() => {
-    if (!autoOpenEnabled || navigationState !== 'navigating' || !nextMission || activeWerkbonId) {
-        if (autoOpenTimerRef.current) {
-            clearTimeout(autoOpenTimerRef.current);
-            autoOpenTimerRef.current = null;
-        }
-        return;
-    }
-
-    const currentPos = userLocation || SIMULATION_START_LOCATION;
-    const missionPt = turf.point([nextMission.longitude, nextMission.latitude]);
-    const userPt = turf.point([currentPos.longitude, currentPos.latitude]);
-    const distance = turf.distance(userPt, missionPt, { units: 'meters' });
-
-    if (distance < 50 && speedKmh < 2) {
-        if (!autoOpenTimerRef.current) {
-            autoOpenTimerRef.current = setTimeout(() => {
-                setActiveWerkbonId(nextMission.id);
-                toast({ title: "Melding automatisch geopend", description: "U bent gearriveerd op de locatie." });
-                autoOpenTimerRef.current = null;
-            }, 10000);
-        }
-    } else {
-        if (autoOpenTimerRef.current) {
-            clearTimeout(autoOpenTimerRef.current);
-            autoOpenTimerRef.current = null;
-        }
-    }
-
-    return () => {
-        if (autoOpenTimerRef.current) {
-            clearTimeout(autoOpenTimerRef.current);
-            autoOpenTimerRef.current = null;
-        }
-    };
-  }, [autoOpenEnabled, navigationState, nextMission, activeWerkbonId, userLocation, speedKmh, toast]);
-
-  // AUTO-RECENTER LOGIC
-  React.useEffect(() => {
-    if (!isManualMode || navigationState !== 'navigating') return;
-    const timer = setTimeout(() => {
-        setIsManualMode(false);
-        if (mapRef.current && smoothLocation) {
-            const map = mapRef.current.getMap();
-            map.easeTo({
-                center: [smoothLocation.longitude, smoothLocation.latitude],
-                zoom: Math.max(15, Math.min(19, 19 - (speedKmh / 20))),
-                pitch: navPitch,
-                bearing: smoothLocation.heading || 0,
-                padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                duration: 1000
-            });
-        }
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, [isManualMode, navigationState, smoothLocation, navPitch, navOffset, speedKmh]);
-
   // STABLE GPS ENGINE
   React.useEffect(() => {
     if (!navigator.geolocation || isSimulationMode) return;
@@ -879,71 +880,13 @@ export default function StartNavigationPage() {
             }
         },
         (err) => {
-            if (err.code === 1) {
-                console.warn("GPS Permission Denied");
-            } else if (err.code === 3) {
-                console.warn("GPS Timeout - searching for signal...");
-            } else {
-                console.warn("GPS Position Error:", err.message || "Unknown error");
-            }
+            if (err.code === 3) console.warn("GPS Signal lost, retrying...");
+            else console.error("GPS Error:", err);
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
-
-  // LIVE SPEED LIMIT DETECTION
-  React.useEffect(() => {
-    if (navigationState !== 'navigating' || !smoothLocation || !mapRef.current) return;
-
-    const map = mapRef.current.getMap();
-    if (!map.isStyleLoaded()) return;
-
-    const updateSpeedLimit = () => {
-        try {
-            const point = map.project([smoothLocation.longitude, smoothLocation.latitude]);
-            const style = map.getStyle();
-            const availableLayers = style?.layers?.map(l => l.id) || [];
-            const queryLayers = ['road-label', 'road', 'bridge-road', 'tunnel-road'].filter(l => availableLayers.includes(l));
-
-            let features;
-            if (queryLayers.length > 0) {
-                features = map.queryRenderedFeatures(point, { layers: queryLayers });
-            } else {
-                features = map.queryRenderedFeatures(point);
-            }
-            
-            if (features && features.length > 0) {
-                const roadFeature = features.find(f => f.properties?.class);
-                if (roadFeature) {
-                    const roadClass = roadFeature.properties.class;
-                    let limit = 50;
-
-                    switch(roadClass) {
-                        case 'motorway': limit = 100; break;
-                        case 'trunk': limit = 100; break;
-                        case 'primary': limit = 80; break;
-                        case 'secondary': limit = 80; break;
-                        case 'tertiary': limit = 50; break;
-                        case 'street': 
-                        case 'road':
-                        case 'residential':
-                        case 'service': limit = 30; break;
-                        case 'path':
-                        case 'pedestrian': limit = 15; break;
-                        default: limit = 50;
-                    }
-                    setCurrentSpeedLimit(limit);
-                }
-            }
-        } catch (e) {
-            console.warn("Speed limit detection skipped or failed", e);
-        }
-    };
-
-    const timer = setTimeout(updateSpeedLimit, 1000);
-    return () => clearTimeout(timer);
-  }, [smoothLocation, navigationState]);
 
   // INTERFACE HANDLERS
   const updateNavZoom = (newZoom: number) => {
@@ -1145,7 +1088,7 @@ export default function StartNavigationPage() {
                                         className="h-10 w-10 object-contain drop-shadow-2xl" 
                                     />
                                     <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden">
-                                        <Wrench className="h-3.5 w-3.5 text-slate-900" strokeWidth={3} />
+                                        <Wrench className="h-3.5 w-3.5 text-slate-900" />
                                     </div>
                                 </div>
                             )}
