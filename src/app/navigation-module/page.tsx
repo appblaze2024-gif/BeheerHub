@@ -591,7 +591,7 @@ export default function StartNavigationPage() {
   const [isCockpitExpanded, setIsCockpitExpanded] = React.useState(true);
 
   const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
-  const [showAssignmentBubbles, React.useState(false)] = React.useState(false);
+  const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
   const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(ROUTE_COLUMNS_CONFIG);
 
   const [navZoom, setNavZoomState] = React.useState(18);
