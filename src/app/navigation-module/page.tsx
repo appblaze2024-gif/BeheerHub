@@ -40,6 +40,8 @@ import {
   Layout,
   ImageIcon,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ArrowRight,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -584,6 +586,7 @@ export default function StartNavigationPage() {
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isManualMode, setIsManualMode] = React.useState(false);
   const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
+  const [isCockpitExpanded, setIsCockpitExpanded] = React.useState(false);
 
   const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
@@ -1215,35 +1218,50 @@ export default function StartNavigationPage() {
                     </div>
                 </div>
 
-                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto">
+                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
                     <CardContent className="p-4 sm:p-6">
-                        <div className="flex items-center justify-between gap-4 sm:gap-8">
-                            <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                                <div className="flex justify-between items-center">
-                                    <div className="space-y-0.5 min-w-0 flex-1">
-                                        <p className="text-[8px] font-black uppercase text-slate-500">Intakenummer</p>
-                                        <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
-                                    </div>
+                        <div className="flex flex-col gap-3 min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="space-y-0.5 min-w-0 flex-1">
+                                    <p className="text-[8px] font-black uppercase text-slate-500">Intakenummer</p>
+                                    <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
                                     {nextMission?.containernummer && (
-                                        <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase bg-slate-100 border-none shrink-0">
+                                        <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase bg-slate-100 border-none">
                                             {nextMission.containernummer}
                                         </Badge>
                                     )}
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8 rounded-full hover:bg-slate-100 transition-colors pointer-events-auto"
+                                        onClick={() => setIsCockpitExpanded(!isCockpitExpanded)}
+                                    >
+                                        {isCockpitExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                    </Button>
                                 </div>
-                                
-                                <div className="space-y-0.5 min-w-0">
-                                    <p className="text-[10px] font-black text-slate-800 truncate">
-                                        {nextMission?.straatnaam} {nextMission?.huisnummer}
-                                    </p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">
-                                        {nextMission?.postcode} {nextMission?.plaats}
-                                    </p>
-                                    <p className="text-[10px] font-medium text-primary line-clamp-1 italic border-t pt-1 border-slate-100 mt-1">
-                                        {nextMission?.extra_informatie}
-                                    </p>
-                                </div>
-                                <Progress value={100} className="h-1 bg-slate-100 mt-2" />
                             </div>
+                            
+                            <div className="space-y-0.5 min-w-0">
+                                <p className="text-[10px] font-black text-slate-800 truncate">
+                                    {nextMission?.straatnaam} {nextMission?.huisnummer}
+                                </p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">
+                                    {nextMission?.postcode} {nextMission?.plaats}
+                                </p>
+                            </div>
+
+                            {isCockpitExpanded && (
+                                <div className="pt-2 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Melding omschrijving</p>
+                                    <p className="text-[11px] font-medium text-slate-600 leading-relaxed italic">
+                                        "{nextMission?.extra_informatie || 'Geen omschrijving beschikbaar.'}"
+                                    </p>
+                                </div>
+                            )}
+                            
+                            <Progress value={100} className="h-1 bg-slate-100 mt-1" />
                         </div>
                     </CardContent>
                 </Card>
