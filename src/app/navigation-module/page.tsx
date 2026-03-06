@@ -868,30 +868,45 @@ export default function StartNavigationPage() {
     const updateSpeedLimit = () => {
         try {
             const point = map.project([smoothLocation.longitude, smoothLocation.latitude]);
-            // Check for road metadata in Mapbox layers
-            const features = map.queryRenderedFeatures(point, { layers: ['road-label', 'road', 'bridge-road'] });
             
-            if (features.length > 0) {
-                const roadClass = features[0].properties?.class;
-                let limit = 50;
+            // Defensively check which layers exist in current style
+            const style = map.getStyle();
+            const availableLayers = style?.layers?.map(l => l.id) || [];
+            const queryLayers = ['road-label', 'road', 'bridge-road', 'tunnel-road'].filter(l => availableLayers.includes(l));
 
-                switch(roadClass) {
-                    case 'motorway': limit = 100; break;
-                    case 'trunk': limit = 100; break;
-                    case 'primary': limit = 80; break;
-                    case 'secondary': limit = 80; break;
-                    case 'tertiary': limit = 50; break;
-                    case 'street': 
-                    case 'road':
-                    case 'residential':
-                    case 'service': limit = 30; break;
-                    case 'path':
-                    case 'pedestrian': limit = 15; break;
-                    default: limit = 50;
-                }
-                setCurrentSpeedLimit(limit);
+            let features;
+            if (queryLayers.length > 0) {
+                features = map.queryRenderedFeatures(point, { layers: queryLayers });
+            } else {
+                features = map.queryRenderedFeatures(point);
             }
-        } catch (e) {}
+            
+            if (features && features.length > 0) {
+                const roadFeature = features.find(f => f.properties?.class);
+                if (roadFeature) {
+                    const roadClass = roadFeature.properties.class;
+                    let limit = 50;
+
+                    switch(roadClass) {
+                        case 'motorway': limit = 100; break;
+                        case 'trunk': limit = 100; break;
+                        case 'primary': limit = 80; break;
+                        case 'secondary': limit = 80; break;
+                        case 'tertiary': limit = 50; break;
+                        case 'street': 
+                        case 'road':
+                        case 'residential':
+                        case 'service': limit = 30; break;
+                        case 'path':
+                        case 'pedestrian': limit = 15; break;
+                        default: limit = 50;
+                    }
+                    setCurrentSpeedLimit(limit);
+                }
+            }
+        } catch (e) {
+            console.warn("Speed limit detection skipped or failed", e);
+        }
     };
 
     const timer = setTimeout(updateSpeedLimit, 1000);
@@ -1112,16 +1127,14 @@ export default function StartNavigationPage() {
             {/* Top Left Widgets */}
             <div className="flex flex-col gap-3 pointer-events-auto">
                 {navigationState === 'navigating' && (
-                    <>
-                        <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-2 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reistijd</span>
-                            <ArrowRight className="h-3 w-3 text-primary" />
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</span>
-                                <span className="text-[9px] font-black text-primary uppercase tracking-widest">min</span>
-                            </div>
+                    <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-2 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reistijd</span>
+                        <ArrowRight className="h-3 w-3 text-primary" />
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</span>
+                            <span className="text-[9px] font-black text-primary uppercase tracking-widest">min</span>
                         </div>
-                    </>
+                    </div>
                 )}
             </div>
 
