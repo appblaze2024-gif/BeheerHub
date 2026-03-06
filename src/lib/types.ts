@@ -34,6 +34,7 @@ export type UserProfile = {
   navOffset?: number;
   navListHeight?: number;
   navColumns?: Record<string, boolean>;
+  autoOpenEnabled?: boolean;
   quickKeys?: string[];
 };
 
@@ -285,7 +286,7 @@ export interface Hoeveelheid {
   eenheid: string;
 }
 
-export type Melding {
+export type Melding = {
   id: string;
   intakenummer: string;
   containernummer?: string;

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { 
   ArrowLeft, 
   Play, 
@@ -570,6 +571,7 @@ export default function StartNavigationPage() {
   const router = useRouter();
   const { profile } = useProfile();
   const { setIsHeaderVisible } = useNavigationUI();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
@@ -595,6 +597,7 @@ export default function StartNavigationPage() {
   const [navZoom, setNavZoomState] = React.useState(18);
   const [navPitch, setNavPitchState] = React.useState(60);
   const [navOffset, setNavOffsetState] = React.useState(450);
+  const [autoOpenEnabled, setAutoOpenEnabledState] = React.useState(false);
 
   const [smoothLocation, setSmoothLocation] = React.useState<any>(null);
   const lastHeadingRef = React.useRef(0);
@@ -610,6 +613,7 @@ export default function StartNavigationPage() {
   const simStateRef = React.useRef({ distanceTravelled: 0, currentSpeedMs: 0 });
   const lastRouteCalculationLocationRef = React.useRef<{latitude: number, longitude: number} | null>(null);
   const lastFetchTimeRef = React.useRef<number>(0);
+  const autoOpenTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -622,6 +626,7 @@ export default function StartNavigationPage() {
         if (profile.navPitch !== undefined) setNavPitchState(Number(profile.navPitch));
         if (profile.navOffset !== undefined) setNavOffsetState(Number(profile.navOffset));
         if (profile.navColumns) setVisibleColumns(profile.navColumns);
+        if (profile.autoOpenEnabled !== undefined) setAutoOpenEnabledState(!!profile.autoOpenEnabled);
     }
   }, [profile]);
 
@@ -675,6 +680,8 @@ export default function StartNavigationPage() {
             return distA - distB;
         });
   }, [filteredMeldingen, userLocation]);
+
+  const nextMission = sortedMissions[0];
 
   const goToOverview = React.useCallback(() => {
     const map = mapRef.current?.getMap();
@@ -776,6 +783,45 @@ export default function StartNavigationPage() {
     }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
+  // AUTO-OPEN LOGIC
+  React.useEffect(() => {
+    if (!autoOpenEnabled || navigationState !== 'navigating' || !nextMission || activeWerkbonId) {
+        if (autoOpenTimerRef.current) {
+            clearTimeout(autoOpenTimerRef.current);
+            autoOpenTimerRef.current = null;
+        }
+        return;
+    }
+
+    const currentPos = userLocation || SIMULATION_START_LOCATION;
+    const missionPt = turf.point([nextMission.longitude, nextMission.latitude]);
+    const userPt = turf.point([currentPos.longitude, currentPos.latitude]);
+    const distance = turf.distance(userPt, missionPt, { units: 'meters' });
+
+    // Condition: Close (< 50m) and practically stopped (< 2km/h)
+    if (distance < 50 && speedKmh < 2) {
+        if (!autoOpenTimerRef.current) {
+            autoOpenTimerRef.current = setTimeout(() => {
+                setActiveWerkbonId(nextMission.id);
+                toast({ title: "Melding automatisch geopend", description: "U bent gearriveerd op de locatie." });
+                autoOpenTimerRef.current = null;
+            }, 10000);
+        }
+    } else {
+        if (autoOpenTimerRef.current) {
+            clearTimeout(autoOpenTimerRef.current);
+            autoOpenTimerRef.current = null;
+        }
+    }
+
+    return () => {
+        if (autoOpenTimerRef.current) {
+            clearTimeout(autoOpenTimerRef.current);
+            autoOpenTimerRef.current = null;
+        }
+    };
+  }, [autoOpenEnabled, navigationState, nextMission, activeWerkbonId, userLocation, speedKmh, toast]);
+
   // AUTO-RECENTER LOGIC
   React.useEffect(() => {
     if (!isManualMode || navigationState !== 'navigating') return;
@@ -871,8 +917,6 @@ export default function StartNavigationPage() {
     const updateSpeedLimit = () => {
         try {
             const point = map.project([smoothLocation.longitude, smoothLocation.latitude]);
-            
-            // Defensively check which layers exist in current style
             const style = map.getStyle();
             const availableLayers = style?.layers?.map(l => l.id) || [];
             const queryLayers = ['road-label', 'road', 'bridge-road', 'tunnel-road'].filter(l => availableLayers.includes(l));
@@ -936,6 +980,11 @@ export default function StartNavigationPage() {
     setNavOffsetState(val);
     if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val }, { merge: true });
     mapRef.current?.getMap().jumpTo({ padding: { top: 0, bottom: Math.max(0, val), left: 0, right: 0 } });
+  };
+
+  const setAutoOpenEnabled = (val: boolean) => {
+    setAutoOpenEnabledState(val);
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { autoOpenEnabled: val }, { merge: true });
   };
 
   const toggleColumnVisibility = (colId: string) => {
@@ -1061,8 +1110,6 @@ export default function StartNavigationPage() {
     }
   };
 
-  const nextMission = sortedMissions[0];
-
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
@@ -1157,7 +1204,7 @@ export default function StartNavigationPage() {
                         <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
                             <div className="space-y-6">
                                 <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
-                                <div className="space-y-4">
+                                <div className="space-y-6">
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div>
                                         <Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} />
@@ -1165,6 +1212,14 @@ export default function StartNavigationPage() {
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
                                         <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
+                                    </div>
+                                    <Separator className="bg-slate-100" />
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Opent werkbon na 10s stilstand</p>
+                                        </div>
+                                        <Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} />
                                     </div>
                                 </div>
                             </div>
