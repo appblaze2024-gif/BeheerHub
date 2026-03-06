@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -40,6 +41,7 @@ import {
   Layout,
   ImageIcon,
   ChevronRight,
+  ArrowRight,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -1080,10 +1082,14 @@ export default function StartNavigationPage() {
             <div className="flex flex-col gap-3 pointer-events-auto">
                 {navigationState === 'navigating' && (
                     <>
-                        {/* Travel Time Indicator stays at top left */}
-                        <div className="bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-3xl shadow-2xl border-2 border-slate-100 flex flex-col items-center min-w-[90px] animate-in slide-in-from-left-4 duration-500">
-                            <p className="text-xl md:text-2xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</p>
-                            <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-0.5">minuten</p>
+                        {/* Travel Time Indicator stays at top left - Compacted */}
+                        <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-2 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reistijd</span>
+                            <ArrowRight className="h-3 w-3 text-primary" />
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-xl font-black text-slate-900 leading-none">{routeInfo ? Math.ceil(routeInfo.duration / 60) : '-'}</span>
+                                <span className="text-[9px] font-black text-primary uppercase tracking-widest">min</span>
+                            </div>
                         </div>
                     </>
                 )}
