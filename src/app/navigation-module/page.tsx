@@ -161,7 +161,7 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
-    recognitionRef = React.useRef<any>(null);
+    const recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
