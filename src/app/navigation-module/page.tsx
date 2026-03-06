@@ -332,16 +332,6 @@ function IntegratedWerkbonOverlay({
                             </div>
                         </div>
                     </div>
-                    <button 
-                        onClick={handleStartWork}
-                        disabled={!!melding.workStartedAt}
-                        className={cn(
-                            "h-14 w-14 rounded-full flex items-center justify-center border-2 border-slate-100 shadow-sm transition-all active:scale-95",
-                            melding.workStartedAt ? "bg-slate-100" : "bg-white"
-                        )}
-                    >
-                        <Play className={cn("h-6 w-6 ml-1", melding.workStartedAt ? "text-slate-300" : "text-[#FF5722] fill-current")} />
-                    </button>
                 </div>
             </div>
 
@@ -379,11 +369,20 @@ function IntegratedWerkbonOverlay({
 
             <div className="p-6 bg-slate-50">
                 <Button 
-                    className="w-full h-14 bg-[#FF5722] hover:bg-[#E64A19] text-white font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-orange-600/20"
-                    onClick={handleAfronden}
-                    disabled={isSubmitting || !melding.workStartedAt}
+                    className={cn(
+                        "w-full h-14 text-white font-bold uppercase tracking-widest rounded-xl shadow-lg transition-all",
+                        melding.workStartedAt 
+                            ? "bg-[#FF5722] hover:bg-[#E64A19] shadow-orange-600/20" 
+                            : "bg-green-600 hover:bg-green-700 shadow-green-600/20"
+                    )}
+                    onClick={melding.workStartedAt ? handleAfronden : handleStartWork}
+                    disabled={isSubmitting}
                 >
-                    {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "WERKBON AFRONDEN"}
+                    {isSubmitting ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                        melding.workStartedAt ? "WERKBON AFRONDEN" : "START UITVOERING"
+                    )}
                 </Button>
             </div>
         </div>
