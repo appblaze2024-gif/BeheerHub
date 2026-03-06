@@ -22,7 +22,6 @@ import {
   Navigation,
   Search,
   Camera,
-  MessageSquare,
   Mic,
   Check,
   LayoutGrid,
@@ -52,16 +51,14 @@ import {
   Phone,
   Paperclip,
   Briefcase,
-  Car,
   ClipboardCheck,
-  Pencil,
   ChevronLeft,
   UploadCloud,
   Map as MapIcon
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -199,7 +196,6 @@ function IntegratedWerkbonOverlay({
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
-    const [elapsedDisplay, setElapsedDisplay] = React.useState<string>("00:00");
     
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
@@ -230,23 +226,6 @@ function IntegratedWerkbonOverlay({
             setUploadedFiles(melding.files || []);
         }
     }, [melding]);
-
-    React.useEffect(() => {
-        if (!melding?.workStartedAt) {
-            setElapsedDisplay("00:00");
-            return;
-        }
-        const interval = setInterval(() => {
-            const start = new Date(melding.workStartedAt!).getTime();
-            const now = Date.now();
-            const diffSecs = Math.floor((now - start) / 1000);
-            const hours = Math.floor(diffSecs / 3600);
-            const mins = Math.floor((diffSecs % 3600) / 60);
-            const secs = diffSecs % 60;
-            setElapsedDisplay(`${hours > 0 ? hours + ':' : ''}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [melding?.workStartedAt]);
 
     const handleStartWork = async () => {
         if (!firestore || !melding) return;
@@ -405,12 +384,6 @@ function IntegratedWerkbonOverlay({
                     label="Materialen" 
                     value={hoeveelheden.length > 0 ? `${hoeveelheden.length} types` : ''} 
                     onClick={() => setSubView('materials')} 
-                />
-                <SectionRow 
-                    icon={Clock} 
-                    label="Uren" 
-                    value={elapsedDisplay} 
-                    onClick={() => {}} 
                 />
             </div>
 
