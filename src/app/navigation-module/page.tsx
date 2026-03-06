@@ -68,7 +68,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/popover";
+} from "@/components/ui/popover";
 import Image from 'next/image';
 import { translateText } from '@/ai/flows/translate-text-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
