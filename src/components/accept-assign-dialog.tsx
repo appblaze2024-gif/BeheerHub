@@ -32,7 +32,7 @@ interface AcceptAssignDialogProps {
 export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: AcceptAssignDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user: currentUser } = useUser();
+  const { user } = useUser();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -48,8 +48,8 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
   React.useEffect(() => {
     if (open && melding) {
       // Try to find the currently assigned user to pre-select them
-      const user = users?.find(u => (u.displayName || u.email) === melding.behandelaar);
-      setSelectedUserId(user?.id || null);
+      const assignedUser = users?.find(u => (u.displayName || u.email) === melding.behandelaar);
+      setSelectedUserId(assignedUser?.id || null);
       setSearchTerm('');
     } else if (!open) {
       setSelectedUserId(null);
