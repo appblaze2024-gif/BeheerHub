@@ -219,11 +219,8 @@ function IntegratedWerkbonOverlay({
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
 
-    // OPTIMIZED: Nearby objects fetch is limited to 50 items and depends on the specific location
     const objectsQuery = useMemoFirebase(() => {
         if (!firestore || !melding) return null;
-        // In a real production app with thousands of objects, we would use a geohash search.
-        // For now, we fetch a limited set of all objects to maintain functionality with fewer reads.
         return query(collection(firestore, 'objects'), limit(200));
     }, [firestore, melding]);
     
@@ -641,12 +638,10 @@ export default function StartNavigationPage() {
     }
   }, [profile]);
 
-  // DATA QUERIES - OPTIMIZED: Using filters at the source
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId), [projects, selectedProjectId]);
 
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // We limit to 100 open meldingen to reduce reads
     return query(
       collection(firestore, 'meldingen'),
       where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']),
@@ -663,13 +658,12 @@ export default function StartNavigationPage() {
       collection(firestore, 'meldingen'),
       where('status', '==', 'Afgerond'),
       where('afhandeling_datum', '==', todayStr),
-      limit(50) // Limit completed items display
+      limit(50) 
     );
   }, [firestore]);
 
   const { data: rawCompletedToday } = useCollection<Melding>(completedTodayQuery);
 
-  // OPTIMIZED: Fetch objects based on project filter only
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProject?.objectFilter) return null;
     return query(
@@ -681,7 +675,6 @@ export default function StartNavigationPage() {
 
   const { data: allMapObjects } = useCollection<MapObject>(objectsQuery);
 
-  // FILTERS
   const filteredMeldingen = React.useMemo(() => {
     if (!rawMeldingen) return [];
     let pool = [...rawMeldingen].filter(m => !completedObjects.includes(m.id));
@@ -753,7 +746,6 @@ export default function StartNavigationPage() {
     }
   }, [navigationState, isLoadingMeldingen, filteredMeldingen.length, goToOverview]);
 
-  // ROUTE FETCHING
   const fetchRoute = React.useCallback(async (force = false) => {
     if (navigationState === 'setup') {
         setCurrentRouteGeometry(null);
@@ -811,7 +803,6 @@ export default function StartNavigationPage() {
     }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
-  // STABLE GPS ENGINE
   React.useEffect(() => {
     if (!navigator.geolocation || isSimulationMode) return;
     
@@ -879,7 +870,6 @@ export default function StartNavigationPage() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
 
-  // INTERFACE HANDLERS
   const updateNavPitch = (newPitch: number) => {
     const val = Number(newPitch);
     setNavPitchState(val);
@@ -1085,7 +1075,6 @@ export default function StartNavigationPage() {
                         <Layer {...routeLayer} />
                     </Source>
                 )}
-                {/* OPTIMIZED: Static equipment markers from allMapObjects (filtered by project) */}
                 {allMapObjects?.map(obj => (
                     <Marker key={`obj-${obj.id}`} longitude={obj.longitude} latitude={obj.latitude} anchor="center">
                         <div className="h-1 w-1 bg-slate-400 rounded-full opacity-40" />
@@ -1204,9 +1193,12 @@ export default function StartNavigationPage() {
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                     {nextMission?.containernummer && (
-                                        <Badge variant="secondary" className="text-[10px] h-6 font-black uppercase bg-yellow-400 text-slate-900 border-2 border-white shadow-sm px-2">
-                                            {nextMission.containernummer}
-                                        </Badge>
+                                        <div className="flex flex-col items-end">
+                                            <p className="text-[7px] font-black uppercase text-slate-400 mb-0.5">Objectnummer</p>
+                                            <Badge variant="secondary" className="text-[10px] h-6 font-black uppercase bg-yellow-400 text-slate-900 border-2 border-white shadow-sm px-2">
+                                                {nextMission.containernummer}
+                                            </Badge>
+                                        </div>
                                     )}
                                     <Button 
                                         variant="ghost" 
@@ -1367,19 +1359,11 @@ export default function StartNavigationPage() {
                     meldingId={activeWerkbonId} 
                     onClose={() => setActiveWerkbonId(null)} 
                     onCompleted={(id) => {
-                        // Immediately clear the current route UI
                         setCurrentRouteGeometry(null); 
                         setDisplayedRouteGeometry(null);
                         setRouteInfo(null);
-                        
-                        // Mark as completed to filter it out
                         setCompletedObjects(prev => [...prev, id]);
-                        
-                        // Close the overlay
                         setActiveWerkbonId(null);
-                        
-                        // Recalculate route to next nearest mission from current location
-                        // Use a short delay to ensure filteredMeldingen has updated
                         setTimeout(() => fetchRoute(true), 150);
                     }} 
                 />
