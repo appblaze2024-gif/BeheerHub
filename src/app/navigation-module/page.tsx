@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -343,6 +344,15 @@ function IntegratedWerkbonOverlay({
                         </div>
                     </div>
                 </div>
+                {/* Meldingsomschrijving toegevoegd voor een snelle referentie */}
+                {melding.extra_informatie && (
+                    <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-start gap-2">
+                        <FileText className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />
+                        <p className="text-xs font-medium text-slate-600 leading-relaxed italic">
+                            "{melding.extra_informatie}"
+                        </p>
+                    </div>
+                )}
             </div>
 
             <div className="mt-4 flex-1">
