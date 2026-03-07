@@ -1454,7 +1454,7 @@ export default function StartNavigationPage() {
                                 {visibleColumns.memo && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Omschrijving</TableHead>}
                                 {visibleColumns.hoofdcategorie && <TableHead className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 h-8">Hoofdtype</TableHead>}
                                 {visibleColumns.subcategorie && <TableHead className="font-black uppercase text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
-                                {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-100 px-2 e-8">{m.werkgebied || m.wijk || '-'}</TableHead>}
+                                {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-100 px-2 h-8">Gebied</TableHead>}
                                 {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
                             </TableRow>
                         </TableHeader>
@@ -1477,7 +1477,7 @@ export default function StartNavigationPage() {
                                         {visibleColumns.memo && <TableCell className="font-medium italic text-slate-500 border-r border-slate-100 px-2 py-1 truncate max-w-[350px]">"{m.extra_informatie || '-'}"</TableCell>}
                                         {visibleColumns.hoofdcategorie && <TableCell className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 py-1">{m.hoofdcategorie}</TableCell>}
                                         {visibleColumns.subcategorie && <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[150px]">{m.subcategorie}</TableCell>}
-                                        {visibleColumns.werkgebied && <TableCell className="font-black uppercase text-primary border-r border-slate-100 px-2 e-8">{m.werkgebied || m.wijk || '-'}</TableCell>}
+                                        {visibleColumns.werkgebied && <TableCell className="font-black text-primary border-r border-slate-100 px-2 py-1">{m.werkgebied || m.wijk || '-'}</TableCell>}
                                         {visibleColumns.afstand && <TableCell className="text-right font-black text-primary px-2 py-1">{dist}</TableCell>}
                                     </TableRow>
                                 );
