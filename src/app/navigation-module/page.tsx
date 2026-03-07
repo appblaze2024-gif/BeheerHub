@@ -1101,21 +1101,19 @@ export default function StartNavigationPage() {
                     </div>
                 )}
 
-                {/* Recenter / Overview Button */}
-                {(navigationState === 'setup' || (navigationState === 'navigating' && isManualMode)) && (
+                {/* Recenter / Overview Button - Only for setup mode now */}
+                {navigationState === 'setup' && isManualMode && (
                     <Button 
                         variant="secondary" 
                         className="h-12 md:h-14 px-5 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 gap-3 w-fit"
                         onClick={() => {
                             setIsManualMode(false);
-                            if (navigationState === 'setup') {
-                                goToOverview();
-                            }
+                            goToOverview();
                         }}
                     >
                         <MapIcon className="h-5 w-5 text-primary" />
                         <span className="text-xs font-black uppercase tracking-widest text-slate-900">
-                            {navigationState === 'navigating' ? 'HERVAT' : 'OVERZICHT'}
+                            OVERZICHT
                         </span>
                     </Button>
                 )}
@@ -1190,7 +1188,7 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <div className="mb-4 flex justify-start items-center pointer-events-auto">
+                <div className="mb-4 flex justify-start items-center gap-3 pointer-events-auto">
                     <div className="relative">
                         <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
                             <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
@@ -1200,6 +1198,18 @@ export default function StartNavigationPage() {
                             <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
+
+                    {/* Recenter Button for Navigation Mode */}
+                    {isManualMode && (
+                        <Button 
+                            variant="secondary" 
+                            size="icon"
+                            className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center animate-in fade-in slide-in-from-left-2 duration-300"
+                            onClick={() => setIsManualMode(false)}
+                        >
+                            <Navigation className="h-6 w-6 text-primary fill-current" />
+                        </Button>
+                    )}
                 </div>
 
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
