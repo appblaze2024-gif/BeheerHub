@@ -599,7 +599,7 @@ export default function StartNavigationPage() {
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isManualMode, setIsManualMode] = React.useState(false);
   const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
-  const [isCockpitExpanded, setIsCockpitExpanded] = React.useState(true);
+  const [isCockpitExpanded, setIsCockpitExpanded] = React.useState(false);
 
   const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
