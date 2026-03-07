@@ -295,6 +295,7 @@ export default function OpenIssuesPage() {
       </div>
 
       <AcceptAssignDialog 
+        key={selectedMeldingForAssign?.id || 'none'}
         open={assignDialogOpen} 
         onOpenChange={setAssignDialogOpen} 
         melding={selectedMeldingForAssign} 

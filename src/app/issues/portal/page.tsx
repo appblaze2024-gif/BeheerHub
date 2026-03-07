@@ -226,7 +226,13 @@ export default function MeldingenportaalPage() {
       </div>
 
       <ForwardExternalDialog open={isForwardDialogOpen} onOpenChange={setIsForwardDialogOpen} melding={selectedMelding} onSuccess={() => {}} />
-      <AcceptAssignDialog open={isAcceptDialogOpen} onOpenChange={setIsAcceptDialogOpen} melding={selectedMelding} onSuccess={() => {}} />
+      <AcceptAssignDialog 
+        key={selectedMelding?.id || 'none'}
+        open={isAcceptDialogOpen} 
+        onOpenChange={setIsAcceptDialogOpen} 
+        melding={selectedMelding} 
+        onSuccess={() => {}} 
+      />
     </div>
   );
 }

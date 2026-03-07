@@ -44,6 +44,19 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 
+  // Reset state when the dialog is opened for a specific melding to prevent "state bleed"
+  React.useEffect(() => {
+    if (open && melding) {
+      // Try to find the currently assigned user to pre-select them
+      const user = users?.find(u => (u.displayName || u.email) === melding.behandelaar);
+      setSelectedUserId(user?.id || null);
+      setSearchTerm('');
+    } else if (!open) {
+      setSelectedUserId(null);
+      setSearchTerm('');
+    }
+  }, [open, melding?.id, users]);
+
   const filteredUsers = React.useMemo(() => {
     if (!users) return [];
     const q = searchTerm.toLowerCase();
@@ -72,7 +85,6 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
         updatedAt: new Date().toISOString()
       };
 
-      // Only force 'In behandeling' if it was a completely new/unassigned issue
       if (melding.status === 'Nieuw') {
         updateData.status = 'In behandeling';
       }
@@ -107,9 +119,11 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
-          <DialogTitle className="text-xl font-black uppercase tracking-tight">Melding Toewijzen</DialogTitle>
+          <DialogTitle className="text-xl font-black uppercase tracking-tight">
+            {melding ? `Toewijzen: ${melding.intakenummer}` : 'Melding Toewijzen'}
+          </DialogTitle>
           <DialogDescription className="text-slate-400 font-bold">
-            Selecteer een collega die deze melding gaat afhandelen.
+            Selecteer een collega die deze specifieke opdracht gaat uitvoeren.
           </DialogDescription>
         </DialogHeader>
 
@@ -146,7 +160,7 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-1 ring-slate-100">
                       <AvatarFallback className="bg-slate-100 text-primary font-black text-xs uppercase">
-                        {getInitials(u.displayName)}
+                        {getInitials(u.displayName || u.email)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
