@@ -94,7 +94,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/Popover";
 import Image from 'next/image';
 import { translateText } from '@/ai/flows/translate-text-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -732,7 +732,7 @@ export default function StartNavigationPage() {
   }, [filteredMeldingen, userLocation]);
 
   React.useEffect(() => {
-    if (navigationState === 'setup' && !isLoadingMeldingen && filteredMeldingen.length > 0 && mapRef.current) {
+    if (navigationState === 'setup' && !isLoadingMeldingen && filteredMeldingen.length > 0 && mapRef.current && !isManualMode) {
         const map = mapRef.current.getMap();
         if (map.isStyleLoaded()) {
             map.resize();
@@ -744,7 +744,7 @@ export default function StartNavigationPage() {
             });
         }
     }
-  }, [navigationState, isLoadingMeldingen, filteredMeldingen.length, goToOverview]);
+  }, [navigationState, isLoadingMeldingen, filteredMeldingen.length, goToOverview, isManualMode]);
 
   const fetchRoute = React.useCallback(async (force = false) => {
     if (navigationState === 'setup') {
@@ -1100,6 +1100,25 @@ export default function StartNavigationPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Recenter / Overview Button */}
+                {(navigationState === 'setup' || (navigationState === 'navigating' && isManualMode)) && (
+                    <Button 
+                        variant="secondary" 
+                        className="h-12 md:h-14 px-5 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 gap-3 w-fit"
+                        onClick={() => {
+                            setIsManualMode(false);
+                            if (navigationState === 'setup') {
+                                goToOverview();
+                            }
+                        }}
+                    >
+                        <MapIcon className="h-5 w-5 text-primary" />
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-900">
+                            {navigationState === 'navigating' ? 'HERVAT' : 'OVERZICHT'}
+                        </span>
+                    </Button>
+                )}
             </div>
 
             <div className="flex items-center gap-2 pointer-events-auto">
@@ -1364,6 +1383,7 @@ export default function StartNavigationPage() {
                         setRouteInfo(null);
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
+                        setIsManualMode(false); // Reset manual mode to follow user to next task
                         setTimeout(() => fetchRoute(true), 150);
                     }} 
                 />
