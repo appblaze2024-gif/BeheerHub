@@ -1030,8 +1030,8 @@ export default function StartNavigationPage() {
                 touchZoomRotate={true}
                 touchPitch={true}
                 doubleClickZoom={true}
-                onInteractionStateChange={(state) => {
-                    if (state.isDragging || state.isZooming || state.isRotating) {
+                onMove={(evt) => {
+                    if (evt.originalEvent) {
                         setIsManualMode(true);
                     }
                 }}
@@ -1099,23 +1099,6 @@ export default function StartNavigationPage() {
                             </span>
                         </div>
                     </div>
-                )}
-
-                {/* Recenter / Overview Button - Only for setup mode now */}
-                {navigationState === 'setup' && isManualMode && (
-                    <Button 
-                        variant="secondary" 
-                        className="h-12 md:h-14 px-5 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 gap-3 w-fit"
-                        onClick={() => {
-                            setIsManualMode(false);
-                            goToOverview();
-                        }}
-                    >
-                        <MapIcon className="h-5 w-5 text-primary" />
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-900">
-                            OVERZICHT
-                        </span>
-                    </Button>
                 )}
             </div>
 
@@ -1186,6 +1169,30 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
+        {/* RECENTRE BUTTONS - MOBILE VISIBLE */}
+        {isManualMode && (
+            <>
+                {/* OVERZICHT Button for Setup Mode - Floating above bottom sheet */}
+                {navigationState === 'setup' && (
+                    <div className="absolute bottom-[260px] left-1/2 -translate-x-1/2 z-50 pointer-events-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <Button 
+                            variant="secondary" 
+                            className="h-12 px-6 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 gap-3"
+                            onClick={() => {
+                                setIsManualMode(false);
+                                goToOverview();
+                            }}
+                        >
+                            <MapIcon className="h-5 w-5 text-primary" />
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-900">
+                                OVERZICHT
+                            </span>
+                        </Button>
+                    </div>
+                )}
+            </>
+        )}
+
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
                 <div className="mb-4 flex justify-start items-center gap-3 pointer-events-auto">
@@ -1199,7 +1206,7 @@ export default function StartNavigationPage() {
                         </div>
                     </div>
 
-                    {/* Recenter Button for Navigation Mode */}
+                    {/* Recenter Button for Navigation Mode - To the right of the speedometer */}
                     {isManualMode && (
                         <Button 
                             variant="secondary" 
