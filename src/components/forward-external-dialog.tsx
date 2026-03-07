@@ -173,7 +173,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[750px] max-h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[750px] max-h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 border-b shrink-0 relative bg-slate-50/80 backdrop-blur-md">
           <div className="flex items-center justify-between">
             <div className="space-y-1">

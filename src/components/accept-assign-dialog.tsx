@@ -61,13 +61,14 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
     if (!users) return [];
     const q = searchTerm.toLowerCase();
     return users
+      .filter(u => u.id !== user?.uid)
       .filter(u => 
         (u.displayName || '').toLowerCase().includes(q) || 
         (u.email || '').toLowerCase().includes(q) ||
         (u.role || '').toLowerCase().includes(q)
       )
       .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
-  }, [users, searchTerm]);
+  }, [users, searchTerm, user?.uid]);
 
   const handleConfirm = async () => {
     if (!firestore || !melding || !selectedUserId) return;
@@ -117,7 +118,7 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
           <DialogTitle className="text-xl font-black uppercase tracking-tight">
             {melding ? `Toewijzen: ${melding.intakenummer}` : 'Melding Toewijzen'}
