@@ -1194,7 +1194,7 @@ export default function StartNavigationPage() {
                                 <div className="flex items-center gap-2 shrink-0">
                                     {nextMission?.containernummer && (
                                         <div className="flex flex-col items-end">
-                                            <p className="text-[7px] font-black uppercase text-slate-400 mb-0.5">Objectnummer</p>
+                                            <p className="text-[8px] font-black uppercase text-slate-400 mb-0.5">Objectnummer</p>
                                             <Badge variant="secondary" className="text-[10px] h-6 font-black uppercase bg-yellow-400 text-slate-900 border-2 border-white shadow-sm px-2">
                                                 {nextMission.containernummer}
                                             </Badge>
