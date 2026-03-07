@@ -328,7 +328,7 @@ function IntegratedWerkbonOverlay({
                     <div className="space-y-1">
                         <h2 className="text-xl font-bold text-slate-900">Intakenummer: {melding.intakenummer}</h2>
                         <div className="space-y-1.5">
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-50">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                                 <MapPin className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
                             </div>
@@ -642,7 +642,8 @@ export default function StartNavigationPage() {
 
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId), [projects, selectedProjectId]);
 
-  const meldingenQuery = useMemoFirebase(() => {
+  // Query 1: Active tasks (necessary for route/map pins)
+  const activeMeldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
       collection(firestore, 'meldingen'),
@@ -651,18 +652,34 @@ export default function StartNavigationPage() {
     );
   }, [firestore]);
 
-  const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+  const { data: rawActiveMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(activeMeldingenQuery);
 
-  const completedMeldingenQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+  // Query 2: Today's completed (only if toggle is on and NOT searching)
+  const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
+  const todayCompletedQuery = useMemoFirebase(() => {
+    if (!firestore || !showTodayCompleted || debouncedSearchQuery) return null;
     return query(
       collection(firestore, 'meldingen'),
       where('status', '==', 'Afgerond'),
-      limit(150) // Fetch a pool for search and "Today Completed" toggle
+      where('afhandeling_datum', '==', todayStr),
+      limit(50)
     );
-  }, [firestore]);
+  }, [firestore, showTodayCompleted, debouncedSearchQuery, todayStr]);
 
-  const { data: rawCompleted } = useCollection<Melding>(completedMeldingenQuery);
+  const { data: rawTodayCompleted } = useCollection<Melding>(todayCompletedQuery);
+
+  // Query 3: Backend search by intakenummer (prefix search)
+  const backendSearchQuery = useMemoFirebase(() => {
+    if (!firestore || !debouncedSearchQuery) return null;
+    return query(
+      collection(firestore, 'meldingen'),
+      where('intakenummer', '>=', debouncedSearchQuery),
+      where('intakenummer', '<=', debouncedSearchQuery + '\uf8ff'),
+      limit(20)
+    );
+  }, [firestore, debouncedSearchQuery]);
+
+  const { data: rawSearchResults } = useCollection<Melding>(backendSearchQuery);
 
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProject?.objectFilter) return null;
@@ -675,44 +692,31 @@ export default function StartNavigationPage() {
 
   const { data: allMapObjects } = useCollection<MapObject>(objectsQuery);
 
+  // Combine results for the UI
   const filteredMeldingen = React.useMemo(() => {
-    if (!rawMeldingen) return [];
+    const poolMap = new Map<string, Melding>();
     
-    // Start with active reports
-    let pool = [...rawMeldingen].filter(m => !completedObjects.includes(m.id));
-    
-    if (rawCompleted) {
-        if (debouncedSearchQuery) {
-            // When searching, include all fetched completed reports in the pool
-            pool = [...pool, ...rawCompleted];
-        } else if (showTodayCompleted) {
-            // Otherwise, only add today's if the toggle is on
-            const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
-            const todayCompleted = rawCompleted.filter(m => m.afhandeling_datum === todayStr);
-            pool = [...pool, ...todayCompleted];
-        }
-    }
+    // Add active ones
+    rawActiveMeldingen?.forEach(m => {
+        if (!completedObjects.includes(m.id)) poolMap.set(m.id, m);
+    });
 
-    // Deduplicate pool
-    const uniquePool = Array.from(new Map(pool.map(m => [m.id, m])).values());
+    // Add today's completed ones
+    rawTodayCompleted?.forEach(m => poolMap.set(m.id, m));
 
-    let result = uniquePool;
+    // Add search results
+    rawSearchResults?.forEach(m => poolMap.set(m.id, m));
+
+    let result = Array.from(poolMap.values());
+
+    // Respect user privileges
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
         result = result.filter(m => m.behandelaar === userName);
     }
 
-    if (debouncedSearchQuery) {
-        const q = debouncedSearchQuery.toLowerCase();
-        result = result.filter(m => 
-            m.intakenummer.toLowerCase().includes(q) || 
-            (m.straatnaam || '').toLowerCase().includes(q) ||
-            (m.plaats || '').toLowerCase().includes(q) ||
-            (m.subcategorie || '').toLowerCase().includes(q)
-        );
-    }
     return result;
-  }, [rawMeldingen, rawCompleted, showTodayCompleted, isPrivileged, profile, debouncedSearchQuery, completedObjects]);
+  }, [rawActiveMeldingen, rawTodayCompleted, rawSearchResults, isPrivileged, profile, completedObjects]);
 
   const sortedMissions = React.useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
@@ -1072,6 +1076,13 @@ export default function StartNavigationPage() {
     }
   };
 
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
@@ -1365,7 +1376,7 @@ export default function StartNavigationPage() {
                     <div className="relative w-40 sm:w-64 shrink-0">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                         <Input 
-                            placeholder="Zoeken..." 
+                            placeholder="Zoek nummer..." 
                             className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" 
                             value={searchQuery} 
                             onChange={e => setSearchQuery(e.target.value)} 
@@ -1443,7 +1454,7 @@ export default function StartNavigationPage() {
                                 {visibleColumns.memo && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Omschrijving</TableHead>}
                                 {visibleColumns.hoofdcategorie && <TableHead className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 h-8">Hoofdtype</TableHead>}
                                 {visibleColumns.subcategorie && <TableHead className="font-black uppercase text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
-                                {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-100 px-2 h-8">Gebied</TableHead>}
+                                {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-100 px-2 e-8">{m.werkgebied || m.wijk || '-'}</TableHead>}
                                 {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
                             </TableRow>
                         </TableHeader>
@@ -1488,7 +1499,7 @@ export default function StartNavigationPage() {
                         setRouteInfo(null);
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
-                        setIsManualMode(false); // Reset manual mode to follow user to next task
+                        setIsManualMode(false); 
                         setTimeout(() => fetchRoute(true), 150);
                     }} 
                 />
