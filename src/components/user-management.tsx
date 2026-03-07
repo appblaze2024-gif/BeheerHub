@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -8,7 +7,7 @@ import { z } from 'zod';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, collection } from 'firebase/firestore';
-import { Loader2, Plus, MoreHorizontal, User as UserIcon, Nfc } from 'lucide-react';
+import { Loader2, Plus, MoreHorizontal, User as UserIcon, Nfc, Mail, MapPin, ShieldCheck, ChevronRight } from 'lucide-react';
 import { firebaseConfig } from '@/firebase/config';
 
 import {
@@ -62,6 +61,8 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Info } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 
 const allPermissions = permissionConfig;
@@ -223,7 +224,7 @@ function UserDialog({
       };
 
       if (user) { // Edit existing user
-        const userRef = doc(firestore, 'users', user.id);
+        const userRef = doc(firestore!, 'users', user.id);
         await updateDocumentNonBlocking(userRef, userData);
         toast({ title: 'Gebruiker bijgewerkt', description: `De gegevens voor ${user.email} zijn bijgewerkt.` });
       } else { // Create new user
@@ -243,7 +244,7 @@ function UserDialog({
                 status: 'Niet uitgenodigd',
             };
 
-            await setDocumentNonBlocking(doc(firestore, 'users', newUser.uid), userProfileData, {});
+            await setDocumentNonBlocking(doc(firestore!, 'users', newUser.uid), userProfileData, {});
 
             toast({ title: 'Gebruiker aangemaakt', description: `Stuur ${data.email} een uitnodiging om het account te activeren.`});
         } finally {
@@ -276,225 +277,236 @@ function UserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{user ? 'Gebruiker bewerken' : 'Nieuwe gebruiker aanmaken'}</DialogTitle>
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-3xl rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
+        <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
+          <DialogTitle className="text-xl font-black uppercase tracking-tight">
+            {user ? 'Gebruiker bewerken' : 'Nieuwe gebruiker'}
+          </DialogTitle>
+          <DialogDescription className="text-slate-400 font-bold">Beheer hier de accountgegevens en module-rechten.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField control={form.control} name="firstName" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Voornaam</FormLabel>
-                  <FormControl><Input placeholder="Jan" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="lastName" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Achternaam</FormLabel>
-                  <FormControl><Input placeholder="Janssen" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField control={form.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>E-mailadres</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="gebruiker@example.com" {...field} disabled={!!user} />
-                    </FormControl>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-[70vh]">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="firstName" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Voornaam*</FormLabel>
+                    <FormControl><Input placeholder="Jan" {...field} className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50" /></FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField control={form.control} name="role" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rol</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                              <SelectTrigger><SelectValue placeholder="Selecteer een rol" /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              <SelectItem value="Super admin">Super admin</SelectItem>
-                              <SelectItem value="toezichthouder">Toezichthouder</SelectItem>
-                              <SelectItem value="ondersteuner">Ondersteuner</SelectItem>
-                              <SelectItem value="medewerkers">Medewerkers</SelectItem>
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
                     </FormItem>
-                  )}
-                />
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="nfcTagId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>NFC Tag ID</FormLabel>
-                  <div className="flex items-center gap-2">
-                    <FormControl>
-                      <Input placeholder="Scan of voer ID in" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <Button type="button" variant="outline" onClick={handleNfcScan} disabled={isNfcScanning}>
-                      {isNfcScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Nfc className="h-4 w-4" />}
-                      <span className="ml-2 hidden sm:inline">Scan</span>
-                    </Button>
-                  </div>
-                  {isNfcScanning && <p className="text-sm text-muted-foreground">Wachten op NFC-tag...</p>}
-                  {nfcScanError && <FormMessage>{nfcScanError}</FormMessage>}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                )} />
+                <FormField control={form.control} name="lastName" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Achternaam*</FormLabel>
+                    <FormControl><Input placeholder="Janssen" {...field} className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50" /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField control={form.control} name="wijk" render={({ field }) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="email" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Wijk</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'geen_wijk'}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Koppel aan wijk" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="geen_wijk">-- Geen wijk --</SelectItem>
-                                {wijken.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="veegroute" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Veegroute</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'geen_veegroute'}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Koppel aan veegroute" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="geen_veegroute">-- Geen veegroute --</SelectItem>
-                                {veegroutes.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="prullenbakkenroute" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Prullenbakkenroute</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'geen_prullenbakkenroute'}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Koppel aan route" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="geen_prullenbakkenroute">-- Geen prullenbakkenroute --</SelectItem>
-                                {prullenbakkenroutes.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-            </div>
-
-            {user && (
-                <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">E-mailadres*</FormLabel>
                         <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Selecteer een status" />
-                            </SelectTrigger>
+                        <Input type="email" placeholder="gebruiker@example.com" {...field} disabled={!!user} className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50" />
                         </FormControl>
-                        <SelectContent>
-                            <SelectItem value="Actief">Actief</SelectItem>
-                            <SelectItem value="Inactief">Inactief</SelectItem>
-                            <SelectItem value="Niet uitgenodigd">Niet uitgenodigd</SelectItem>
-                            <SelectItem value="Uitgenodigd">Uitgenodigd</SelectItem>
-                        </SelectContent>
-                        </Select>
                         <FormMessage />
                     </FormItem>
                     )}
                 />
-                )}
-
-            <div>
-                {role === 'Super admin' && (
-                    <Alert>
-                        <Info className="h-4 w-4" />
-                        <AlertTitle>Let op!</AlertTitle>
-                        <AlertDescription>
-                            Super admins hebben automatisch volledige toegang tot alle modules en rechten. De onderstaande instellingen zijn informatief en niet bewerkbaar.
-                        </AlertDescription>
-                    </Alert>
-                )}
-                <div className="space-y-4 mt-4">
-                  <FormLabel>Rechten</FormLabel>
-                  {allPermissions.map((module) => (
-                    <div key={module.module} className="border p-4 rounded-md">
-                      <h4 className="font-semibold capitalize mb-2">{module.label}</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {module.actions.map((permission) => (
-                          <FormField
-                            key={permission.id}
-                            control={form.control}
-                            name={`permissions.${module.module}.${permission.id}`}
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    disabled={isSubmitting || isSuperAdminEditing}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  {permission.label}
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      {module.tabs && (
-                          <>
-                              <h5 className="font-semibold text-sm mt-4 mb-2">Tab Rechten</h5>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                  {module.tabs.map((tab) => (
-                                      <FormField
-                                          key={tab.id}
-                                          control={form.control}
-                                          name={`permissions.${module.module}.tabs.${tab.id}`}
-                                          render={({ field }) => (
-                                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                                  <FormControl>
-                                                      <Checkbox
-                                                          checked={field.value}
-                                                          onCheckedChange={field.onChange}
-                                                          disabled={isSubmitting || isSuperAdminEditing}
-                                                      />
-                                                  </FormControl>
-                                                  <FormLabel className="font-normal">
-                                                      {tab.label}
-                                                  </FormLabel>
-                                              </FormItem>
-                                          )}
-                                      />
-                                  ))}
-                              </div>
-                          </>
-                      )}
+                <FormField control={form.control} name="role" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rol*</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50"><SelectValue placeholder="Selecteer een rol" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="Super admin">Super admin</SelectItem>
+                                <SelectItem value="toezichthouder">Toezichthouder</SelectItem>
+                                <SelectItem value="ondersteuner">Ondersteuner</SelectItem>
+                                <SelectItem value="medewerkers">Medewerkers</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
+                
+                <FormField
+                control={form.control}
+                name="nfcTagId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">NFC Tag ID (Login Badge)</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormControl>
+                        <Input placeholder="Scan of voer ID in" {...field} value={field.value || ''} className="h-11 font-mono font-bold rounded-xl border-slate-100 bg-slate-50" />
+                        </FormControl>
+                        <Button type="button" variant="outline" onClick={handleNfcScan} disabled={isNfcScanning} className="h-11 rounded-xl px-4 border-slate-200">
+                        {isNfcScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Nfc className="h-4 w-4" />}
+                        <span className="ml-2 hidden sm:inline">Scan</span>
+                        </Button>
                     </div>
-                  ))}
+                    {isNfcScanning && <p className="text-[10px] font-bold text-primary uppercase animate-pulse">Wachten op NFC-tag...</p>}
+                    {nfcScanError && <FormMessage>{nfcScanError}</FormMessage>}
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField control={form.control} name="wijk" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Wijk</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'geen_wijk'}>
+                                <FormControl><SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50"><SelectValue placeholder="Koppel aan wijk" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="geen_wijk">-- Geen wijk --</SelectItem>
+                                    {wijken.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="veegroute" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Veegroute</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'geen_veegroute'}>
+                                <FormControl><SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50"><SelectValue placeholder="Koppel aan veegroute" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="geen_veegroute">-- Geen veegroute --</SelectItem>
+                                    {veegroutes.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="prullenbakkenroute" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Prullenbakkenroute</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'geen_prullenbakkenroute'}>
+                                <FormControl><SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50"><SelectValue placeholder="Koppel aan route" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="geen_prullenbakkenroute">-- Geen prullenbakkenroute --</SelectItem>
+                                    {prullenbakkenroutes.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+
+                {user && (
+                    <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50">
+                                <SelectValue placeholder="Selecteer een status" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="Actief">Actief</SelectItem>
+                                <SelectItem value="Inactief">Inactief</SelectItem>
+                                <SelectItem value="Niet uitgenodigd">Niet uitgenodigd</SelectItem>
+                                <SelectItem value="Uitgenodigd">Uitgenodigd</SelectItem>
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    )}
+
+                <div className="space-y-4">
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Module Rechten</FormLabel>
+                    {role === 'Super admin' && (
+                        <Alert className="bg-primary/5 border-primary/20 rounded-2xl">
+                            <Info className="h-4 w-4 text-primary" />
+                            <AlertTitle className="text-xs font-black uppercase">Volledige toegang</AlertTitle>
+                            <AlertDescription className="text-[10px] font-bold text-slate-500">
+                                Super admins hebben automatisch volledige toegang tot alle modules.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                    <div className="space-y-4">
+                    {allPermissions.map((module) => (
+                        <div key={module.module} className="bg-slate-50/50 p-4 rounded-2xl border-2 border-slate-100 space-y-4">
+                        <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                            <ShieldCheck className="h-4 w-4 text-primary" />
+                            <h4 className="font-black text-[11px] uppercase tracking-tight">{module.label}</h4>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {module.actions.map((permission) => (
+                            <FormField
+                                key={permission.id}
+                                control={form.control}
+                                name={`permissions.${module.module}.${permission.id}`}
+                                render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-1">
+                                    <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        disabled={isSubmitting || isSuperAdminEditing}
+                                        className="rounded-md"
+                                    />
+                                    </FormControl>
+                                    <FormLabel className="text-[11px] font-bold text-slate-600 cursor-pointer">
+                                    {permission.label}
+                                    </FormLabel>
+                                </FormItem>
+                                )}
+                            />
+                            ))}
+                        </div>
+                        {module.tabs && (
+                            <div className="pt-2 border-t border-slate-100">
+                                <h5 className="font-black text-[9px] uppercase tracking-widest text-slate-400 mb-3">Tabs & Secties</h5>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                    {module.tabs.map((tab) => (
+                                        <FormField
+                                            key={tab.id}
+                                            control={form.control}
+                                            name={`permissions.${module.module}.tabs.${tab.id}`}
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-1">
+                                                    <FormControl>
+                                                        <Checkbox
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
+                                                            disabled={isSubmitting || isSuperAdminEditing}
+                                                            className="rounded-md"
+                                                        />
+                                                    </FormControl>
+                                                    <FormLabel className="text-[11px] font-medium text-slate-500 cursor-pointer italic">
+                                                        {tab.label}
+                                                    </FormLabel>
+                                                </FormItem>
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        </div>
+                    ))}
+                    </div>
                 </div>
             </div>
-            <DialogFooter className="sticky bottom-0 bg-background py-4 -mx-4 px-6">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {user ? 'Opslaan' : 'Aanmaken'}
+
+            <DialogFooter className="p-6 bg-slate-50 border-t shrink-0">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting} className="font-bold">Annuleren</Button>
+              <Button type="submit" disabled={isSubmitting} className="font-black uppercase tracking-tight px-8 shadow-xl shadow-primary/20 h-11 rounded-xl">
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {user ? 'Opslaan' : 'Gebruiker aanmaken'}
               </Button>
             </DialogFooter>
           </form>
@@ -513,6 +525,7 @@ export function UserManagement() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const isSuperUser = currentAdminProfile?.role === 'Super admin';
   const canManageUsers = isSuperUser || !!currentAdminProfile?.permissions?.users?.view;
@@ -594,10 +607,10 @@ export function UserManagement() {
             handleCodeInApp: true,
         });
         
-        const userRef = doc(firestore, 'users', user.id);
+        const userRef = doc(firestore!, 'users', user.id);
         await updateDocumentNonBlocking(userRef, { status: 'Uitgenodigd' });
 
-        toast({ title: 'Uitnodiging verstuurd!', description: `Een e-mail is naar ${user.email} gestuurd om een wachtwoord in te stellen. Vraag hen de spamfolder te controleren.` });
+        toast({ title: 'Uitnodiging verstuurd!', description: `Een e-mail is naar ${user.email} gestuurd om een wachtwoord in te stellen.` });
     } catch (error: any) {
         console.error("Error sending invitation:", error);
         toast({ variant: 'destructive', title: 'Versturen mislukt', description: error.message || 'Kon de uitnodiging niet versturen.' });
@@ -615,15 +628,13 @@ export function UserManagement() {
 
   if (isAdminLoading) {
     return (
-       <Card>
-        <CardHeader>
-          <CardTitle>Gebruikersbeheer</CardTitle>
-          <CardDescription>
-            Voeg gebruikers toe en beheer hun rollen en rechten.
-          </CardDescription>
+       <Card className="rounded-[2rem] border-none shadow-xl">
+        <CardHeader className="p-8">
+          <CardTitle className="text-xl font-black uppercase tracking-tight">Gebruikersbeheer</CardTitle>
+          <CardDescription className="font-bold text-slate-400">Gebruikers laden...</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <CardContent className="flex items-center justify-center p-12">
+            <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
         </CardContent>
       </Card>
     )
@@ -631,113 +642,198 @@ export function UserManagement() {
   
   if (!canManageUsers) {
       return (
-           <Card>
-                <CardHeader>
-                    <CardTitle>Geen Toegang</CardTitle>
+           <Card className="rounded-[2rem] border-none shadow-xl bg-red-50">
+                <CardHeader className="p-8">
+                    <CardTitle className="text-xl font-black uppercase tracking-tight text-red-900">Geen Toegang</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <p>U heeft geen rechten om gebruikers te beheren.</p>
+                <CardContent className="p-8 pt-0">
+                    <p className="font-bold text-red-600">U heeft geen rechten om de gebruikers van dit systeem te beheren.</p>
                 </CardContent>
            </Card>
       )
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+    <div className="space-y-6">
+      <Card className="rounded-[2rem] border-none shadow-xl bg-white overflow-hidden">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-8 border-b bg-slate-50/50">
           <div>
-            <CardTitle>Gebruikersbeheer</CardTitle>
-            <CardDescription>
-              Voeg gebruikers toe en beheer hun rollen en rechten.
+            <CardTitle className="text-xl font-black uppercase tracking-tight text-slate-900">Gebruikersbeheer</CardTitle>
+            <CardDescription className="font-bold text-slate-400">
+              Voeg collega's toe en beheer hun toegang tot de BeheerHub modules.
             </CardDescription>
           </div>
           {canCreate && (
-            <Button onClick={handleAddNew}>
+            <Button onClick={handleAddNew} className="w-full sm:w-auto h-11 font-black uppercase tracking-tight px-8 shadow-xl shadow-primary/20 rounded-xl">
               <Plus className="mr-2 h-4 w-4" /> Gebruiker aanmaken
             </Button>
           )}
         </CardHeader>
-        <CardContent>
-            <div className="border rounded-lg">
-                <div className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1fr] px-4 py-2 font-semibold bg-muted text-muted-foreground">
-                    <span>Naam</span>
-                    <span>E-mail</span>
-                    <span>Rol</span>
-                    <span>Wijken / Routes</span>
-                    <span>Status</span>
+        <CardContent className="p-0">
+            {isLoadingUsers ? (
+                <div className="flex flex-col items-center justify-center p-20 gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Synchroniseren...</p>
                 </div>
-                {isLoadingUsers ? (
-                     <div className="flex items-center justify-center p-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                ) : usersError ? (
-                    <div className="p-4 text-destructive-foreground bg-destructive/80 text-center">{usersError.message}</div>
-                ) : users && users.length > 0 ? (
-                    users.map(user => (
-                        <div key={user.id} onClick={() => canEdit && handleEdit(user)} className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1fr] items-center px-4 py-3 border-t hover:bg-muted/50 cursor-pointer">
-                            <div className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarFallback>
-                                        {getInitials(user.firstName, user.lastName)}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <span>{user.displayName || 'N.B.'}</span>
-                            </div>
-                            <span className="truncate">{user.email}</span>
-                            <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="w-fit">{user.role}</Badge>
-                            <div className="truncate text-xs space-y-0.5">
-                                {user.wijk && <div><span className='font-semibold'>W:</span> {user.wijk}</div>}
-                                {user.veegroute && <div><span className='font-semibold'>V:</span> {user.veegroute}</div>}
-                                {user.prullenbakkenroute && <div><span className='font-semibold'>P:</span> {user.prullenbakkenroute}</div>}
-                                {!user.wijk && !user.veegroute && !user.prullenbakkenroute && '-'}
-                            </div>
-                            <div>
-                                {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit ? (
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleSendInvitation(user);
-                                        }}
-                                    >
-                                        {user.status === 'Niet uitgenodigd' ? 'Verstuur uitnodiging' : 'Opnieuw versturen'}
-                                    </Button>
-                                ) : user.role !== 'Super admin' ? (
-                                    <Badge
-                                        variant={
-                                            user.status === 'Actief' ? 'outline'
-                                            : user.status === 'Inactief' ? 'secondary'
-                                            : 'destructive'
-                                        }
-                                        className={
-                                            user.status === 'Actief' ? 'text-green-600 border-green-600 w-fit'
-                                            : user.status === 'Inactief' ? 'w-fit'
-                                            : 'w-fit'
-                                        }
-                                    >
-                                        {user.status || 'N.v.t.'}
-                                    </Badge>
-                                ) : null}
-                            </div>
+            ) : usersError ? (
+                <div className="p-12 text-center">
+                    <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4 opacity-20" />
+                    <p className="font-black text-red-600 uppercase tracking-tight">{usersError.message}</p>
+                </div>
+            ) : users && users.length > 0 ? (
+                <div className="divide-y divide-slate-100">
+                    {/* Desktop Table View */}
+                    <div className="hidden lg:block">
+                        <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1.5fr_1fr] px-8 py-4 font-black uppercase tracking-[0.15em] text-[10px] text-slate-400 bg-white sticky top-0 z-10">
+                            <span>Naam</span>
+                            <span>E-mail</span>
+                            <span>Rol</span>
+                            <span>Toegewezen Gebieden</span>
+                            <span>Status / Actie</span>
                         </div>
-                    ))
-                ) : (
-                    <div className="text-center p-8 text-muted-foreground">Geen gebruikers gevonden.</div>
-                )}
-            </div>
+                        {users.map(user => (
+                            <div 
+                                key={user.id} 
+                                onClick={() => canEdit && handleEdit(user)} 
+                                className="grid grid-cols-[1.5fr_1.5fr_1fr_1.5fr_1fr] items-center px-8 py-5 hover:bg-slate-50 transition-all cursor-pointer group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <Avatar className="h-10 w-10 border-2 border-white shadow-md ring-1 ring-slate-100 transition-transform group-hover:scale-110">
+                                        <AvatarFallback className="bg-slate-100 text-primary font-black text-xs uppercase">
+                                            {getInitials(user.firstName, user.lastName)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-black uppercase tracking-tight text-slate-900 group-hover:text-primary transition-colors">{user.displayName || 'Geen naam'}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                                    <Mail className="h-3.5 w-3.5 opacity-30" />
+                                    <span className="truncate">{user.email}</span>
+                                </div>
+                                <div>
+                                    <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className={cn(
+                                        "h-6 px-3 text-[9px] font-black uppercase tracking-widest",
+                                        user.role === 'Super admin' ? "bg-slate-900" : "bg-slate-100 text-slate-500 border-none"
+                                    )}>
+                                        {user.role}
+                                    </Badge>
+                                </div>
+                                <div className="flex flex-col gap-1 pr-4">
+                                    {user.wijk && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-primary/20 text-primary bg-primary/5">W</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.wijk}</span></div>}
+                                    {user.veegroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-green-200 text-green-600 bg-green-50">V</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.veegroute}</span></div>}
+                                    {user.prullenbakkenroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-blue-200 text-blue-600 bg-blue-50">P</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.prullenbakkenroute}</span></div>}
+                                    {!user.wijk && !user.veegroute && !user.prullenbakkenroute && <span className="text-[10px] font-bold text-slate-300 italic">Geen toewijzingen</span>}
+                                </div>
+                                <div className="flex justify-between items-center pr-4">
+                                    {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit ? (
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            className="h-8 font-black uppercase text-[9px] tracking-widest rounded-lg border-primary/30 text-primary hover:bg-primary/5"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleSendInvitation(user);
+                                            }}
+                                        >
+                                            {user.status === 'Niet uitgenodigd' ? 'Uitnodigen' : 'Nieuwe link'}
+                                        </Button>
+                                    ) : (
+                                        <Badge
+                                            className={cn(
+                                                "h-6 px-3 text-[9px] font-black uppercase tracking-widest border-none",
+                                                user.status === 'Actief' ? 'bg-green-100 text-green-700'
+                                                : user.status === 'Inactief' ? 'bg-slate-100 text-slate-500'
+                                                : 'bg-orange-100 text-orange-700'
+                                            )}
+                                        >
+                                            {user.status || 'N.v.t.'}
+                                        </Badge>
+                                    )}
+                                    <ChevronRight className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="lg:hidden p-4 space-y-4 bg-slate-50/30">
+                        {users.map(user => (
+                            <Card 
+                                key={user.id} 
+                                onClick={() => canEdit && handleEdit(user)} 
+                                className="rounded-[1.5rem] border-none shadow-md bg-white active:scale-[0.98] transition-transform overflow-hidden"
+                            >
+                                <div className="p-5 flex flex-col gap-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-12 w-12 border-2 border-white shadow-lg ring-1 ring-slate-100">
+                                                <AvatarFallback className="bg-slate-100 text-primary font-black text-sm uppercase">
+                                                    {getInitials(user.firstName, user.lastName)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="min-w-0">
+                                                <p className="font-black uppercase tracking-tight text-slate-900 truncate">{user.displayName || 'Geen naam'}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 truncate flex items-center gap-1"><Mail className="h-3 w-3" /> {user.email}</p>
+                                            </div>
+                                        </div>
+                                        <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="text-[8px] font-black uppercase tracking-widest">
+                                            {user.role}
+                                        </Badge>
+                                    </div>
+
+                                    <div className="bg-slate-50/80 p-3 rounded-2xl space-y-2">
+                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1 flex items-center gap-1.5"><MapPin className="h-3 w-3" /> Toewijzingen</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {user.wijk && <Badge variant="outline" className="text-[9px] font-black bg-white border-primary/20 text-primary">W: {user.wijk}</Badge>}
+                                            {user.veegroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-green-200 text-green-600">V: {user.veegroute}</Badge>}
+                                            {user.prullenbakkenroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-blue-200 text-blue-600">P: {user.prullenbakkenroute}</Badge>}
+                                            {!user.wijk && !user.veegroute && !user.prullenbakkenroute && <span className="text-[10px] font-bold text-slate-300 italic">Geen Gebieden</span>}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className={cn("h-2 w-2 rounded-full", user.status === 'Actief' ? "bg-green-500" : "bg-orange-400")} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{user.status || 'Onbekend'}</span>
+                                        </div>
+                                        {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit && (
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                className="h-8 font-black uppercase text-[10px] rounded-xl px-4"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleSendInvitation(user);
+                                                }}
+                                            >
+                                                Stuur Link
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <div className="p-20 text-center text-slate-300">
+                    <UserIcon className="h-16 w-16 mx-auto mb-4 opacity-10" />
+                    <p className="font-black uppercase tracking-widest text-xs">Geen gebruikers gevonden in de database.</p>
+                </div>
+            )}
         </CardContent>
       </Card>
-      <UserDialog 
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        user={selectedUser}
-        onSuccess={() => {}}
-        wijken={allWijken}
-        veegroutes={allVeegroutes}
-        prullenbakkenroutes={allPrullenbakkenroutes}
-      />
-    </>
+      
+      {canManageUsers && (
+        <UserDialog 
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            user={selectedUser}
+            onSuccess={() => {}}
+            wijken={allWijken}
+            veegroutes={allVeegroutes}
+            prullenbakkenroutes={allPrullenbakkenroutes}
+        />
+      )}
+    </div>
   );
 }
