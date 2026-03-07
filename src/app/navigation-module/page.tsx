@@ -319,10 +319,6 @@ function IntegratedWerkbonOverlay({
                                 <span>{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                                <User className="h-3.5 w-3.5 text-slate-400" />
-                                <span>{melding.behandelaar || 'Niet toegewezen'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                                 <Tag className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.hoofdcategorie} • {melding.subcategorie}</span>
                             </div>
@@ -1065,7 +1061,7 @@ export default function StartNavigationPage() {
                 {navigationState === 'navigating' && (
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95">
+                            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95">
                                 <Settings className="h-6 w-6 text-slate-600" />
                             </Button>
                         </PopoverTrigger>
@@ -1099,7 +1095,7 @@ export default function StartNavigationPage() {
                         {isPrivileged && (
                           <Button 
                             variant="outline" 
-                            className="h-12 md:h-14 px-4 md:px-8 font-black uppercase bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-slate-100 transition-all active:scale-95" 
+                            className="h-12 md:h-14 px-4 md:px-8 font-black uppercase bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl border-2 border-slate-100 transition-all active:scale-95" 
                             onClick={() => handleStartRit(true)}
                             title="Simulator"
                           >
