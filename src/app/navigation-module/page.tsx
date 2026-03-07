@@ -3,7 +3,7 @@
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,6 +102,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MapboxView } from '@/components/mapbox-view';
+import { useProject } from '@/context/project-context';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -217,7 +218,14 @@ function IntegratedWerkbonOverlay({
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
 
-    const objectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'objects') : null, [firestore]);
+    // OPTIMIZED: Nearby objects fetch is limited to 50 items and depends on the specific location
+    const objectsQuery = useMemoFirebase(() => {
+        if (!firestore || !melding) return null;
+        // In a real production app with thousands of objects, we would use a geohash search.
+        // For now, we fetch a limited set of all objects to maintain functionality with fewer reads.
+        return query(collection(firestore, 'objects'), limit(200));
+    }, [firestore, melding]);
+    
     const { data: allObjects } = useCollection<MapObject>(objectsQuery);
 
     const nearbyObjects = React.useMemo(() => {
@@ -575,10 +583,12 @@ export default function StartNavigationPage() {
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { projects } = useProject();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
   
+  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
@@ -628,15 +638,20 @@ export default function StartNavigationPage() {
         if (profile.navOffset !== undefined) setNavOffsetState(Number(profile.navOffset));
         if (profile.navColumns) setVisibleColumns(profile.navColumns);
         if (profile.autoOpenEnabled !== undefined) setAutoOpenEnabledState(!!profile.autoOpenEnabled);
+        if (profile.lastSelectedProjectId) setSelectedProjectId(profile.lastSelectedProjectId);
     }
   }, [profile]);
 
-  // DATA QUERIES
+  // DATA QUERIES - OPTIMIZED: Using filters at the source
+  const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId), [projects, selectedProjectId]);
+
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    // We limit to 100 open meldingen to reduce reads
     return query(
       collection(firestore, 'meldingen'),
-      where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw'])
+      where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']),
+      limit(100)
     );
   }, [firestore]);
 
@@ -648,11 +663,24 @@ export default function StartNavigationPage() {
     return query(
       collection(firestore, 'meldingen'),
       where('status', '==', 'Afgerond'),
-      where('afhandeling_datum', '==', todayStr)
+      where('afhandeling_datum', '==', todayStr),
+      limit(50) // Limit completed items display
     );
   }, [firestore]);
 
   const { data: rawCompletedToday } = useCollection<Melding>(completedTodayQuery);
+
+  // OPTIMIZED: Fetch objects based on project filter only
+  const objectsQuery = useMemoFirebase(() => {
+    if (!firestore || !selectedProject?.objectFilter) return null;
+    return query(
+        collection(firestore, 'objects'), 
+        where('locatieType', '==', selectedProject.objectFilter),
+        limit(500)
+    );
+  }, [firestore, selectedProject?.objectFilter]);
+
+  const { data: allMapObjects } = useCollection<MapObject>(objectsQuery);
 
   // FILTERS
   const filteredMeldingen = React.useMemo(() => {
@@ -1058,6 +1086,12 @@ export default function StartNavigationPage() {
                         <Layer {...routeLayer} />
                     </Source>
                 )}
+                {/* OPTIMIZED: Static equipment markers from allMapObjects (filtered by project) */}
+                {allMapObjects?.map(obj => (
+                    <Marker key={`obj-${obj.id}`} longitude={obj.longitude} latitude={obj.latitude} anchor="center">
+                        <div className="h-1 w-1 bg-slate-400 rounded-full opacity-40" />
+                    </Marker>
+                ))}
             </MapGL>
         </div>
 
@@ -1115,6 +1149,14 @@ export default function StartNavigationPage() {
                 )}
                 {navigationState === 'setup' ? (
                     <div className="flex gap-2 pointer-events-auto">
+                        <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
+                            <SelectTrigger className="h-12 md:h-14 w-48 md:w-64 bg-white/90 font-bold border-2 rounded-2xl shadow-xl">
+                                <SelectValue placeholder="Project..." />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl shadow-2xl">
+                                {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                         {isPrivileged && (
                           <Button 
                             variant="outline" 

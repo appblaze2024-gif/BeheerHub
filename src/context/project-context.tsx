@@ -1,54 +1,74 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo, useRef } from 'react';
-import { useProfile } from '@/firebase/profile-provider';
-import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { doc, collection, orderBy, query } from 'firebase/firestore';
+import type { Project } from '@/lib/types';
 
 interface ProjectContextType {
   selectedProjectId: string | null;
   setSelectedProjectId: (projectId: string | null) => void;
+  projects: Project[] | null;
   isLoading: boolean;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const { profile, isLoading: isProfileLoading } = useProfile();
   const { user } = useUser();
   const firestore = useFirestore();
+
+  // Fetch projects ONCE for the entire app
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'projects'), orderBy('projectnaam', 'asc'));
+  }, [firestore]);
+
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
   const [selectedProjectId, setSelectedProjectIdState] = useState<string | null>(null);
   const isInitialProjectSetRef = useRef(false);
 
+  // Get initial selection from user profile
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  // We don't use useDoc here to avoid double loading, we just use the user to set initial state once
   useEffect(() => {
-    // Only run if the profile is loaded, and we haven't set the initial project ID yet.
-    if (profile && !isInitialProjectSetRef.current) {
-      if (profile.lastSelectedProjectId) {
-        setSelectedProjectIdState(profile.lastSelectedProjectId);
-      }
-      // Mark that we have set the initial project.
-      isInitialProjectSetRef.current = true;
-    }
-  }, [profile]); // Depend only on the profile object.
+    const fetchInitialSelection = async () => {
+        if (!user || !firestore || isInitialProjectSetRef.current) return;
+        // Optimization: We could use the profile here, but since it's in another provider, 
+        // we'll rely on the first load of projects to match the ID if we have it in localStorage or similar
+        const savedId = localStorage.getItem('lastSelectedProjectId');
+        if (savedId) {
+            setSelectedProjectIdState(savedId);
+        }
+        isInitialProjectSetRef.current = true;
+    };
+    fetchInitialSelection();
+  }, [user, firestore]);
 
   const handleSetSelectedProjectId = (projectId: string | null) => {
     setSelectedProjectIdState(projectId);
+    if (projectId) {
+        localStorage.setItem('lastSelectedProjectId', projectId);
+    } else {
+        localStorage.removeItem('lastSelectedProjectId');
+    }
     if (user && firestore) {
-      const userProfileRef = doc(firestore, 'users', user.uid);
-      setDocumentNonBlocking(userProfileRef, { lastSelectedProjectId: projectId || null }, { merge: true });
+      const userRef = doc(firestore, 'users', user.uid);
+      setDocumentNonBlocking(userRef, { lastSelectedProjectId: projectId || null }, { merge: true });
     }
   };
-
-  // The context is "loading" if the profile is still loading and we haven't had a chance to set the project from it.
-  const isLoading = isProfileLoading && !isInitialProjectSetRef.current;
 
   const value = useMemo(() => ({
     selectedProjectId,
     setSelectedProjectId: handleSetSelectedProjectId,
-    isLoading,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [selectedProjectId, isLoading]);
+    projects,
+    isLoading: isLoadingProjects,
+  }), [selectedProjectId, projects, isLoadingProjects]);
 
   return (
     <ProjectContext.Provider value={value}>

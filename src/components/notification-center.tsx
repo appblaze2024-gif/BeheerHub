@@ -74,44 +74,37 @@ export function NotificationCenter() {
 
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
 
-  // Messages Query
+  // OPTIMIZED: Added limit to messages query
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(
       collection(firestore, 'users', user.uid, 'messages'),
       orderBy('createdAt', 'desc'),
-      limit(100)
+      limit(20)
     );
   }, [firestore, user?.uid]);
 
   const { data: allMessages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
 
-  // Active Issues Query for the "Meldingen" tab
+  // OPTIMIZED: Added limit to portal alerts
   const meldingenQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'));
-  }, [firestore, user]);
+    if (!firestore || !user || !isPrivileged) return null;
+    return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'), limit(10));
+  }, [firestore, user, isPrivileged]);
 
-  const { data: activeMeldingenFromDb } = useCollection<Melding>(meldingenQuery);
+  const { data: activeMeldingen } = useCollection<Melding>(meldingenQuery);
 
-  const activeMeldingen = React.useMemo(() => {
-    if (!activeMeldingenFromDb) return [];
-    return [...activeMeldingenFromDb]
-      .sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime())
-      .slice(0, 20);
-  }, [activeMeldingenFromDb]);
-
-  // Users Query for starting new chats
+  // OPTIMIZED: Lazy load users ONLY when the 'new' tab is active
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || activeTab !== 'new') return null;
     return collection(firestore, 'users');
-  }, [firestore, user]);
+  }, [firestore, user, activeTab]);
 
-  const { data: users } = useCollection<UserProfile>(usersQuery);
+  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const unreadCount = React.useMemo(() => {
     const unreadMessagesCount = allMessages?.filter((m) => !m.read && m.toUserId === user?.uid).length || 0;
-    const newMeldingenCount = isPrivileged ? activeMeldingen.length : 0;
+    const newMeldingenCount = isPrivileged ? (activeMeldingen?.length || 0) : 0;
     return unreadMessagesCount + newMeldingenCount;
   }, [allMessages, activeMeldingen, user?.uid, isPrivileged]);
 
@@ -435,7 +428,9 @@ export function NotificationCenter() {
               </div>
               <ScrollArea className="h-[350px]">
                 <div className="p-2 space-y-1">
-                  {filteredUsers?.length > 0 ? (
+                  {isLoadingUsers ? (
+                    <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                  ) : filteredUsers?.length > 0 ? (
                     filteredUsers.map(u => (
                       <button
                         key={u.id}

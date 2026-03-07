@@ -4,41 +4,24 @@ import * as React from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Filter,
-  Save,
   Map as MapIcon,
-  Plus,
   Search,
   ChevronDown,
   MapPin,
-  MoreVertical,
   ChevronRight,
-  ImageIcon,
   Upload,
-  List,
-  Palette,
   Download,
+  List,
   ArrowLeft,
-  Cpu,
-  Clock,
-  Activity,
-  History,
   Loader2,
-  Check,
-  PlusCircle,
   Trash2,
-  ShieldCheck,
-  SearchCode,
-  FileCheck,
-  AlertTriangle,
-  AlertCircle,
-  Settings2,
   Tag,
-  MapPinned,
   X,
   Pencil,
-  Calendar,
   LocateFixed,
   RefreshCw,
+  AlertCircle,
+  PlusCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,26 +34,14 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/accordion';
-import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, arrayRemove, writeBatch } from 'firebase/firestore';
-import type { Wijk, Project } from '@/lib/types';
+import { collection, doc, query, where, arrayRemove, writeBatch, limit } from 'firebase/firestore';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -107,6 +78,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Textarea } from '@/components/ui/textarea';
+import { useProject } from '@/context/project-context';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -117,6 +90,7 @@ export default function ObjectsPage() {
   const { toast } = useToast();
   const isTablet = useIsMobile(1024);
   const { profile } = useProfile();
+  const { projects } = useProject();
   
   const isSuperUser = profile?.role === 'Super admin';
   const canImport = isSuperUser || !!profile?.permissions?.objects?.tabs?.import;
@@ -156,10 +130,12 @@ export default function ObjectsPage() {
     }
   }, [searchParams, canImport, canExport, router]);
 
+  // OPTIMIZED: Added limit(500) to object queries to reduce reads
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !typeFilter) return null;
-    if (typeFilter === 'all') return collection(firestore, 'objects');
-    return query(collection(firestore, 'objects'), where('locatieType', '==', typeFilter));
+    const baseCol = collection(firestore, 'objects');
+    if (typeFilter === 'all') return query(baseCol, limit(500));
+    return query(baseCol, where('locatieType', '==', typeFilter), limit(500));
   }, [firestore, typeFilter]);
 
   const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
@@ -167,9 +143,6 @@ export default function ObjectsPage() {
   const customFilters = filtersData?.custom || [];
 
   const { data: objects, isLoading: isLoadingObjects } = useCollection<any>(objectsQuery);
-
-  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
-  const { data: projects } = useCollection<Project>(projectsQuery);
 
   const filteredObjectsList = React.useMemo(() => {
     if (!objects) return [];
@@ -350,6 +323,8 @@ export default function ObjectsPage() {
         const updatedFilters = customFilters.map(f => f === filterToRename ? newFilterName.trim() : f);
         batch.set(filtersRef, { custom: updatedFilters }, { merge: true });
         
+        // Caution: This could be many reads/writes if the filter has many objects
+        // In a strictly optimized read environment, we might avoid bulk renaming objects
         if (objects && objects.length > 0) {
             objects.forEach(obj => {
                 if (obj.locatieType === filterToRename) {
