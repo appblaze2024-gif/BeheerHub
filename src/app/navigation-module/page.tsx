@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1210,7 +1209,19 @@ export default function StartNavigationPage() {
                             variant="secondary" 
                             size="icon"
                             className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center animate-in fade-in slide-in-from-right-2 duration-300"
-                            onClick={() => setIsManualMode(false)}
+                            onClick={() => {
+                                setIsManualMode(false);
+                                if (mapRef.current && smoothLocation) {
+                                    mapRef.current.getMap().flyTo({
+                                        center: [smoothLocation.longitude, smoothLocation.latitude],
+                                        zoom: 18,
+                                        pitch: navPitch,
+                                        bearing: smoothLocation.heading,
+                                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+                                        duration: 1000
+                                    });
+                                }
+                            }}
                         >
                             <Navigation className="h-6 w-6 text-primary fill-current" />
                         </Button>
