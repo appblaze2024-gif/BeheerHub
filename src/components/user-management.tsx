@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, collection } from 'firebase/firestore';
-import { Loader2, Plus, MoreHorizontal, User as UserIcon, Nfc, Mail, MapPin, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Loader2, Plus, MoreHorizontal, User as UserIcon, Nfc, Mail, MapPin, ShieldCheck, ChevronRight, AlertCircle, Info } from 'lucide-react';
 import { firebaseConfig } from '@/firebase/config';
 
 import {
@@ -21,7 +21,7 @@ import {
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
-import type { Project, Wijk } from '@/app/projects/page';
+import type { Project, Wijk } from '@/lib/types';
 import { permissionConfig, getDefaultPermissions } from '@/lib/permissions';
 
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -59,10 +60,9 @@ import { useToast } from '@/components/ui/use-toast';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Checkbox } from './ui/checkbox';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Info } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from './ui/scroll-area';
 
 
 const allPermissions = permissionConfig;
@@ -187,9 +187,9 @@ function UserDialog({
     setIsNfcScanning(true);
     setNfcScanError(null);
     try {
-      const ndef = new NDEFReader();
+      const ndef = new (window as any).NDEFReader();
       await ndef.scan();
-      ndef.onreading = ({ serialNumber }) => {
+      ndef.onreading = ({ serialNumber }: any) => {
         if (serialNumber) {
           form.setValue('nfcTagId', serialNumber, { shouldValidate: true, shouldDirty: true });
         }
