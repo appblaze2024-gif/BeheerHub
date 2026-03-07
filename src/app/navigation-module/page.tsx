@@ -1174,19 +1174,17 @@ export default function StartNavigationPage() {
             <>
                 {/* OVERZICHT Button for Setup Mode - Floating above bottom sheet */}
                 {navigationState === 'setup' && (
-                    <div className="absolute bottom-[260px] left-1/2 -translate-x-1/2 z-50 pointer-events-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="absolute bottom-[260px] right-4 z-50 pointer-events-auto animate-in fade-in slide-in-from-right-2 duration-300">
                         <Button 
                             variant="secondary" 
-                            className="h-12 px-6 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 gap-3"
+                            size="icon"
+                            className="h-12 w-12 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95"
                             onClick={() => {
                                 setIsManualMode(false);
                                 goToOverview();
                             }}
                         >
-                            <MapIcon className="h-5 w-5 text-primary" />
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-900">
-                                OVERZICHT
-                            </span>
+                            <MapIcon className="h-6 w-6 text-primary" />
                         </Button>
                     </div>
                 )}
@@ -1195,7 +1193,7 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <div className="mb-4 flex justify-start items-center gap-3 pointer-events-auto">
+                <div className="mb-4 flex justify-between items-center gap-3 pointer-events-auto">
                     <div className="relative">
                         <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
                             <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
@@ -1206,12 +1204,12 @@ export default function StartNavigationPage() {
                         </div>
                     </div>
 
-                    {/* Recenter Button for Navigation Mode - To the right of the speedometer */}
+                    {/* Recenter Button for Navigation Mode - Moved to the right side of the cockpit bar */}
                     {isManualMode && (
                         <Button 
                             variant="secondary" 
                             size="icon"
-                            className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center animate-in fade-in slide-in-from-left-2 duration-300"
+                            className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center animate-in fade-in slide-in-from-right-2 duration-300"
                             onClick={() => setIsManualMode(false)}
                         >
                             <Navigation className="h-6 w-6 text-primary fill-current" />
@@ -1287,7 +1285,7 @@ export default function StartNavigationPage() {
                     </div>
                     
                     <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
-                        <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowTodayCompleted(!showTodayCompleted)}>
+                        <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}>
                             <CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span>
                         </Button>
                         <Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}>
