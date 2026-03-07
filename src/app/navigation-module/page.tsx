@@ -327,7 +327,7 @@ function IntegratedWerkbonOverlay({
                     <div className="space-y-1">
                         <h2 className="text-xl font-bold text-slate-900">Intakenummer: {melding.intakenummer}</h2>
                         <div className="space-y-1.5">
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-50">
                                 <MapPin className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</span>
                             </div>
@@ -1011,6 +1011,20 @@ export default function StartNavigationPage() {
     }
   };
 
+  const handleHervatNavigatie = () => {
+    setIsManualMode(false);
+    if (mapRef.current && smoothLocation) {
+        mapRef.current.getMap().flyTo({
+            center: [smoothLocation.longitude, smoothLocation.latitude],
+            zoom: 18,
+            pitch: navPitch,
+            bearing: smoothLocation.heading,
+            padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+            duration: 1000
+        });
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
@@ -1170,29 +1184,35 @@ export default function StartNavigationPage() {
 
         {/* RECENTRE BUTTONS - MOBILE VISIBLE */}
         {isManualMode && (
-            <>
-                {/* OVERZICHT Button for Setup Mode - Floating above bottom sheet */}
-                {navigationState === 'setup' && (
-                    <div className="absolute bottom-[260px] right-4 z-50 pointer-events-auto animate-in fade-in slide-in-from-right-2 duration-300">
-                        <Button 
-                            variant="secondary" 
-                            size="icon"
-                            className="h-12 w-12 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95"
-                            onClick={() => {
-                                setIsManualMode(false);
-                                goToOverview();
-                            }}
-                        >
-                            <MapIcon className="h-6 w-6 text-primary" />
-                        </Button>
-                    </div>
+            <div className="absolute bottom-[260px] right-4 z-50 pointer-events-auto animate-in fade-in slide-in-from-right-2 duration-300">
+                {navigationState === 'setup' ? (
+                    <Button 
+                        variant="secondary" 
+                        size="icon"
+                        className="h-12 w-12 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95"
+                        onClick={() => {
+                            setIsManualMode(false);
+                            goToOverview();
+                        }}
+                    >
+                        <MapIcon className="h-6 w-6 text-primary" />
+                    </Button>
+                ) : !activeWerkbonId && (
+                    <Button 
+                        variant="secondary" 
+                        size="icon"
+                        className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                        onClick={handleHervatNavigatie}
+                    >
+                        <Navigation className="h-6 w-6 text-primary fill-current" />
+                    </Button>
                 )}
-            </>
+            </div>
         )}
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <div className="mb-4 flex justify-between items-center gap-3 pointer-events-auto">
+                <div className="mb-4 flex justify-start items-center gap-3 pointer-events-auto">
                     <div className="relative">
                         <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
                             <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
@@ -1202,30 +1222,6 @@ export default function StartNavigationPage() {
                             <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
-
-                    {/* Recenter Button for Navigation Mode - Moved to the right side of the cockpit bar */}
-                    {isManualMode && (
-                        <Button 
-                            variant="secondary" 
-                            size="icon"
-                            className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center animate-in fade-in slide-in-from-right-2 duration-300"
-                            onClick={() => {
-                                setIsManualMode(false);
-                                if (mapRef.current && smoothLocation) {
-                                    mapRef.current.getMap().flyTo({
-                                        center: [smoothLocation.longitude, smoothLocation.latitude],
-                                        zoom: 18,
-                                        pitch: navPitch,
-                                        bearing: smoothLocation.heading,
-                                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                                        duration: 1000
-                                    });
-                                }
-                            }}
-                        >
-                            <Navigation className="h-6 w-6 text-primary fill-current" />
-                        </Button>
-                    )}
                 </div>
 
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
@@ -1346,7 +1342,7 @@ export default function StartNavigationPage() {
                                         </div>
                                         <span className="text-[8px] font-bold text-slate-400 truncate ml-2">{m.werkgebied || '-'}</span>
                                     </div>
-                                    <p className="font-bold text-[11px] text-slate-900 truncate">{m.straatnaam} {m.huisnummer}</p>
+                                    <p className="font-bold text-[11px] text-slate-900 truncate">{m.straatnaam} {m.huisnummer}, {m.postcode} {m.plaats}</p>
                                     <div className="flex items-center justify-between">
                                         <span className="text-[9px] font-black uppercase text-primary truncate max-w-[70%]">{m.subcategorie}</span>
                                         {isCompleted && <Check className="h-3 w-3 text-green-600" />}
