@@ -1181,13 +1181,15 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <div className="mb-4 flex justify-start items-center gap-3 pointer-events-auto">
-                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
-                        <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
-                        <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
-                    </div>
-                    <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full border-[4px] border-red-600 flex items-center justify-center bg-white shadow-2xl shrink-0 animate-in fade-in zoom-in duration-500">
-                        <span className="text-lg sm:text-xl font-black text-slate-900">{currentSpeedLimit}</span>
+                <div className="mb-4 flex justify-start items-center pointer-events-auto">
+                    <div className="relative">
+                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
+                            <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
+                            <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
+                        </div>
+                        <div className="absolute -top-1.5 -right-1.5 h-10 w-10 sm:h-12 sm:w-12 rounded-full border-[4px] border-red-600 flex items-center justify-center bg-white shadow-xl shrink-0 animate-in fade-in zoom-in duration-500 z-10">
+                            <span className="text-sm sm:text-base font-black text-slate-900">{currentSpeedLimit}</span>
+                        </div>
                     </div>
                 </div>
 
