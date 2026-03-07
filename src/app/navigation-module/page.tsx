@@ -54,7 +54,8 @@ import {
   ChevronLeft,
   UploadCloud,
   Map as MapIcon,
-  Hash
+  Hash,
+  Minus
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -329,7 +330,7 @@ function IntegratedWerkbonOverlay({
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-50">
                                 <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                                <span>{melding.straatnaam} {melding.huisnummer}, {melding.plaats}</span>
+                                <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                                 <Tag className="h-3.5 w-3.5 text-slate-400" />
@@ -606,6 +607,7 @@ export default function StartNavigationPage() {
   const [navPitch, setNavPitchState] = React.useState(60);
   const [navOffset, setNavOffsetState] = React.useState(450);
   const [autoOpenEnabled, setAutoOpenEnabledState] = React.useState(false);
+  const [dynamicZoomEnabled, setDynamicZoomEnabledState] = React.useState(true);
 
   const [smoothLocation, setSmoothLocation] = React.useState<any>(null);
   const lastHeadingRef = React.useRef(0);
@@ -634,6 +636,7 @@ export default function StartNavigationPage() {
         if (profile.navOffset !== undefined) setNavOffsetState(Number(profile.navOffset));
         if (profile.navColumns) setVisibleColumns(profile.navColumns);
         if (profile.autoOpenEnabled !== undefined) setAutoOpenEnabledState(!!profile.autoOpenEnabled);
+        if (profile.dynamicZoomEnabled !== undefined) setDynamicZoomEnabledState(!!profile.dynamicZoomEnabled);
     }
   }, [profile]);
 
@@ -848,11 +851,14 @@ export default function StartNavigationPage() {
 
             if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
                 const map = mapRef.current.getMap();
-                const dynamicZoom = Math.max(15, Math.min(19, 19 - (currentSpeed / 20)));
+                const targetZoom = dynamicZoomEnabled 
+                    ? Math.max(15, Math.min(19, 19 - (currentSpeed / 20)))
+                    : navZoom;
+
                 map.easeTo({
                     center: [activeLoc.longitude, activeLoc.latitude],
                     bearing: activeLoc.heading,
-                    zoom: dynamicZoom,
+                    zoom: targetZoom,
                     pitch: navPitch,
                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
                     duration: 500, 
@@ -867,7 +873,7 @@ export default function StartNavigationPage() {
         { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute, dynamicZoomEnabled, navZoom]);
 
   const updateNavPitch = (newPitch: number) => {
     const val = Number(newPitch);
@@ -883,9 +889,23 @@ export default function StartNavigationPage() {
     mapRef.current?.getMap().jumpTo({ padding: { top: 0, bottom: Math.max(0, val), left: 0, right: 0 } });
   };
 
+  const updateNavZoom = (newZoom: number) => {
+    const val = Number(Math.max(10, Math.min(22, newZoom)));
+    setNavZoomState(val);
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val }, { merge: true });
+    if (!dynamicZoomEnabled) {
+        mapRef.current?.getMap().jumpTo({ zoom: val });
+    }
+  };
+
   const setAutoOpenEnabled = (val: boolean) => {
     setAutoOpenEnabledState(val);
     if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { autoOpenEnabled: val }, { merge: true });
+  };
+
+  const setDynamicZoomEnabled = (val: boolean) => {
+    setDynamicZoomEnabledState(val);
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { dynamicZoomEnabled: val }, { merge: true });
   };
 
   const toggleColumnVisibility = (colId: string) => {
@@ -912,7 +932,7 @@ export default function StartNavigationPage() {
             if (mapRef.current) {
                 mapRef.current.getMap().jumpTo({ 
                     center: [loc.longitude, loc.latitude], 
-                    zoom: 18, 
+                    zoom: dynamicZoomEnabled ? 18 : navZoom, 
                     pitch: navPitch, 
                     bearing: heading, 
                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
@@ -971,11 +991,16 @@ export default function StartNavigationPage() {
         setSmoothLocation(base);
         setSpeedKmh(Math.round(speedMs * 3.6));
         if (mapRef.current && !isManualMode) {
-            mapRef.current.getMap().jumpTo({ 
+            const map = mapRef.current.getMap();
+            const targetZoom = dynamicZoomEnabled
+                ? Math.max(15, Math.min(19, 19 - (Math.round(speedMs * 3.6) / 20)))
+                : navZoom;
+
+            map.jumpTo({ 
                 center: [lng, lat], 
                 bearing: head,
                 pitch: navPitch,
-                zoom: Math.max(15, Math.min(19, 19 - (Math.round(speedMs * 3.6) / 20))),
+                zoom: targetZoom,
                 padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
             });
         }
@@ -1016,7 +1041,7 @@ export default function StartNavigationPage() {
     if (mapRef.current && smoothLocation) {
         mapRef.current.getMap().flyTo({
             center: [smoothLocation.longitude, smoothLocation.latitude],
-            zoom: 18,
+            zoom: dynamicZoomEnabled ? 18 : navZoom,
             pitch: navPitch,
             bearing: smoothLocation.heading,
             padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
@@ -1135,7 +1160,36 @@ export default function StartNavigationPage() {
                                         <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
                                         <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
                                     </div>
+                                    
                                     <Separator className="bg-slate-100" />
+                                    
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label className="text-[10px] font-black uppercase text-slate-900">Dynamisch zoomen</Label>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Past zoom aan op snelheid</p>
+                                        </div>
+                                        <Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} />
+                                    </div>
+
+                                    {!dynamicZoomEnabled && (
+                                        <div className="space-y-2 animate-in slide-in-from-top-2">
+                                            <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}>
+                                                    <Minus className="h-4 w-4" />
+                                                </Button>
+                                                <div className="flex-1">
+                                                    <Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} />
+                                                </div>
+                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom + 0.5)}>
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <Separator className="bg-slate-100" />
+                                    
                                     <div className="flex items-center justify-between">
                                         <div className="space-y-0.5">
                                             <Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label>
@@ -1254,10 +1308,7 @@ export default function StartNavigationPage() {
                             
                             <div className="space-y-0.5 min-w-0">
                                 <p className="text-[10px] font-black text-slate-800 truncate">
-                                    {nextMission?.straatnaam} {nextMission?.huisnummer}
-                                </p>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">
-                                    {nextMission?.postcode} {nextMission?.plaats}
+                                    {nextMission?.straatnaam} {nextMission?.huisnummer} {nextMission?.postcode} {nextMission?.plaats}
                                 </p>
                             </div>
 
@@ -1342,7 +1393,7 @@ export default function StartNavigationPage() {
                                         </div>
                                         <span className="text-[8px] font-bold text-slate-400 truncate ml-2">{m.werkgebied || '-'}</span>
                                     </div>
-                                    <p className="font-bold text-[11px] text-slate-900 truncate">{m.straatnaam} {m.huisnummer}, {m.postcode} {m.plaats}</p>
+                                    <p className="font-bold text-[11px] text-slate-900 truncate">{m.straatnaam} {m.huisnummer} {m.postcode} {m.plaats}</p>
                                     <div className="flex items-center justify-between">
                                         <span className="text-[9px] font-black uppercase text-primary truncate max-w-[70%]">{m.subcategorie}</span>
                                         {isCompleted && <Check className="h-3 w-3 text-green-600" />}
@@ -1379,7 +1430,7 @@ export default function StartNavigationPage() {
                                                 </div>
                                             </TableCell>
                                         )}
-                                        {visibleColumns.locatie && <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[200px]">{m.straatnaam} {m.huisnummer}</TableCell>}
+                                        {visibleColumns.locatie && <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[200px]">{m.straatnaam} {m.huisnummer} {m.postcode} {m.plaats}</TableCell>}
                                         {visibleColumns.memo && <TableCell className="font-medium italic text-slate-500 border-r border-slate-100 px-2 py-1 truncate max-w-[350px]">"{m.extra_informatie || '-'}"</TableCell>}
                                         {visibleColumns.hoofdcategorie && <TableCell className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 py-1">{m.hoofdcategorie}</TableCell>}
                                         {visibleColumns.subcategorie && <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[150px]">{m.subcategorie}</TableCell>}

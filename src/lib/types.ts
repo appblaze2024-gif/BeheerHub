@@ -35,6 +35,7 @@ export type UserProfile = {
   navListHeight?: number;
   navColumns?: Record<string, boolean>;
   autoOpenEnabled?: boolean;
+  dynamicZoomEnabled?: boolean;
   quickKeys?: string[];
 };
 
