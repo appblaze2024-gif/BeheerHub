@@ -583,12 +583,11 @@ export default function StartNavigationPage() {
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { projects } = useProject();
+  const { selectedProjectId, projects } = useProject();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
   
-  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
@@ -638,7 +637,6 @@ export default function StartNavigationPage() {
         if (profile.navOffset !== undefined) setNavOffsetState(Number(profile.navOffset));
         if (profile.navColumns) setVisibleColumns(profile.navColumns);
         if (profile.autoOpenEnabled !== undefined) setAutoOpenEnabledState(!!profile.autoOpenEnabled);
-        if (profile.lastSelectedProjectId) setSelectedProjectId(profile.lastSelectedProjectId);
     }
   }, [profile]);
 
@@ -1149,14 +1147,6 @@ export default function StartNavigationPage() {
                 )}
                 {navigationState === 'setup' ? (
                     <div className="flex gap-2 pointer-events-auto">
-                        <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
-                            <SelectTrigger className="h-12 md:h-14 w-48 md:w-64 bg-white/90 font-bold border-2 rounded-2xl shadow-xl">
-                                <SelectValue placeholder="Project..." />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-2xl shadow-2xl">
-                                {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
                         {isPrivileged && (
                           <Button 
                             variant="outline" 
