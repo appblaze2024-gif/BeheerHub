@@ -130,7 +130,6 @@ export default function ObjectsPage() {
     }
   }, [searchParams, canImport, canExport, router]);
 
-  // OPTIMIZED: Added limit(500) to object queries to reduce reads
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !typeFilter) return null;
     const baseCol = collection(firestore, 'objects');
@@ -254,10 +253,8 @@ export default function ObjectsPage() {
     const objectRef = doc(firestore, 'objects', selectedObject.id);
     const updates: any = { [field]: value };
 
-    // Update state immediately for the coords
     setSelectedObject((prev: any) => ({ ...prev, [field]: value }));
 
-    // Auto-enrich address from coordinates if they are changed
     if (newCoords.latitude && newCoords.longitude && !isGeocoding) {
         setIsGeocoding(true);
         try {
@@ -274,11 +271,9 @@ export default function ObjectsPage() {
                 const postcode = context.find((c: any) => c.id.startsWith('postcode'))?.text || '';
                 const place = context.find((c: any) => c.id.startsWith('place'))?.text || '';
 
-                // Force update postcode and city from new coordinates
                 if (postcode) updates.postcode = postcode;
                 if (place) updates.plaats = place;
                 
-                // If street/number are missing, fill those too
                 if (!selectedObject.straatnaam) updates.straatnaam = street;
                 if (!selectedObject.huisnummer) updates.huisnummer = houseNumber;
 
@@ -323,8 +318,6 @@ export default function ObjectsPage() {
         const updatedFilters = customFilters.map(f => f === filterToRename ? newFilterName.trim() : f);
         batch.set(filtersRef, { custom: updatedFilters }, { merge: true });
         
-        // Caution: This could be many reads/writes if the filter has many objects
-        // In a strictly optimized read environment, we might avoid bulk renaming objects
         if (objects && objects.length > 0) {
             objects.forEach(obj => {
                 if (obj.locatieType === filterToRename) {
@@ -366,11 +359,11 @@ export default function ObjectsPage() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
-      <header className="h-16 border-b bg-white flex items-center justify-between px-6 shrink-0 shadow-sm">
-        <div className="flex items-center gap-2">
+      <header className="min-h-16 border-b bg-white flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 sm:py-0 gap-4 shrink-0 shadow-sm">
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 font-bold gap-2 rounded-lg border-slate-200">
+              <Button variant="outline" size="sm" className="h-9 font-bold gap-2 rounded-lg border-slate-200 shrink-0">
                 <Filter className="h-4 w-4 text-slate-400" /> 
                 {typeFilter ? (typeFilter === 'all' ? 'Alle Objecten' : typeFilter) : 'Kies Categorie'}
                 <ChevronDown className="h-3 w-3 opacity-50" />
@@ -413,34 +406,42 @@ export default function ObjectsPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-9 font-bold rounded-lg" onClick={() => setViewMode('list')} disabled={!typeFilter}>
-            <List className="h-4 w-4 mr-2" /> Lijst
-          </Button>
-          <Button variant={viewMode === 'map' ? 'secondary' : 'ghost'} size="sm" className="h-9 font-bold rounded-lg" onClick={() => setViewMode('map')} disabled={!typeFilter}>
-            <MapIcon className="h-4 w-4 mr-2" /> Kaart
-          </Button>
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
+            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-lg", viewMode === 'list' && "bg-white shadow-sm")} onClick={() => setViewMode('list')} disabled={!typeFilter}>
+              <List className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Lijst</span>
+            </Button>
+            <Button variant={viewMode === 'map' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-lg", viewMode === 'map' && "bg-white shadow-sm")} onClick={() => setViewMode('map')} disabled={!typeFilter}>
+              <MapIcon className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Kaart</span>
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative w-64 hidden sm:block">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="relative flex-1 sm:w-64 hidden sm:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input placeholder="Snelzoeken..." className="pl-9 h-9 text-xs font-medium rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!typeFilter} />
           </div>
           
-          {canImport && (
-            <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
-              <Button variant="default" size="sm" className="h-9 font-black uppercase tracking-tight bg-primary text-white shadow-lg shadow-primary/20 px-4 rounded-xl">
-                <Upload className="h-4 w-4 mr-2" /> 
-                IMPORT
-              </Button>
-            </ObjectImportDialog>
-          )}
-          
-          {canExport && (
-            <ObjectExportDialog objects={objects} projects={projects}>
-              <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
-            </ObjectExportDialog>
-          )}
+          <div className="flex items-center gap-2 ml-auto">
+            {canImport && (
+              <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
+                <Button variant="default" size="sm" className="h-9 font-black uppercase tracking-tight bg-primary text-white shadow-lg shadow-primary/20 px-3 sm:px-4 rounded-xl">
+                  <Upload className="h-4 w-4 sm:mr-2" /> 
+                  <span className="hidden sm:inline">IMPORT</span>
+                  <span className="sm:hidden text-[10px]">IMP</span>
+                </Button>
+              </ObjectImportDialog>
+            )}
+            
+            {canExport && (
+              <ObjectExportDialog objects={objects} projects={projects}>
+                <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200" disabled={!typeFilter}>
+                  <Download className="h-4 w-4 sm:mr-2" /> 
+                  <span className="hidden sm:inline">Export</span>
+                </Button>
+              </ObjectExportDialog>
+            )}
+          </div>
         </div>
       </header>
 
