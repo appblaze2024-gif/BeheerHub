@@ -1128,6 +1128,12 @@ export default function StartNavigationPage() {
                 {filteredMeldingen.map((m) => (
                     <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setActiveWerkbonId(m.id); }}>
                         <div className="relative flex items-center justify-center w-14 h-14">
+                            {showAssignmentBubbles && m.behandelaar && (
+                                <div className="absolute bottom-full mb-2 bg-white/95 backdrop-blur-md border-2 border-slate-900 px-2 py-0.5 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap">
+                                    <span className="text-[8px] font-black uppercase text-slate-900 leading-none">{m.behandelaar}</span>
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-900" />
+                                </div>
+                            )}
                             {nextMission?.id === m.id && navigationState === 'navigating' && (
                                 <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
                             )}
