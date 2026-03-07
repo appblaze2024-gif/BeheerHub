@@ -932,7 +932,7 @@ export default function StartNavigationPage() {
             if (mapRef.current) {
                 mapRef.current.getMap().jumpTo({ 
                     center: [loc.longitude, loc.latitude], 
-                    zoom: dynamicZoomEnabled ? 18 : navZoom, 
+                    zoom: 18, 
                     pitch: navPitch, 
                     bearing: heading, 
                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
@@ -1041,7 +1041,7 @@ export default function StartNavigationPage() {
     if (mapRef.current && smoothLocation) {
         mapRef.current.getMap().flyTo({
             center: [smoothLocation.longitude, smoothLocation.latitude],
-            zoom: dynamicZoomEnabled ? 18 : navZoom,
+            zoom: 18,
             pitch: navPitch,
             bearing: smoothLocation.heading,
             padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
@@ -1088,22 +1088,22 @@ export default function StartNavigationPage() {
                             {nextMission?.id === m.id && navigationState === 'navigating' && (
                                 <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
                             )}
-                            {m.status === 'Afgerond' ? (
-                                <div className="w-10 h-10 rounded-full border-2 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer z-10 bg-green-500">
-                                    <Check className="h-5 w-5 text-white" />
-                                </div>
-                            ) : (
-                                <div className="transition-transform hover:scale-125 cursor-pointer z-10 relative">
-                                    <img 
-                                        src="https://i.ibb.co/0jg4jm6v/3d-printer-icon-sharp.png" 
-                                        alt="task" 
-                                        className="h-10 w-10 object-contain drop-shadow-2xl" 
-                                    />
+                            <div className="transition-transform hover:scale-125 cursor-pointer z-10 relative">
+                                <img 
+                                    src="https://i.ibb.co/0jg4jm6v/3d-printer-icon-sharp.png" 
+                                    alt="task" 
+                                    className={cn("h-10 w-10 object-contain drop-shadow-2xl", m.status === 'Afgerond' && "opacity-60 grayscale-[0.3]")} 
+                                />
+                                {m.status === 'Afgerond' ? (
+                                    <div className="absolute -top-1.5 -right-1.5 bg-green-500 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden animate-in zoom-in duration-300">
+                                        <Check className="h-3.5 w-3.5 text-white" />
+                                    </div>
+                                ) : (
                                     <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden">
                                         <Wrench className="h-3.5 w-3.5 text-slate-900" />
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </Marker>
                 ))}
@@ -1393,7 +1393,7 @@ export default function StartNavigationPage() {
                                         </div>
                                         <span className="text-[8px] font-bold text-slate-400 truncate ml-2">{m.werkgebied || '-'}</span>
                                     </div>
-                                    <p className="font-bold text-[11px] text-slate-900 truncate">{m.straatnaam} {m.huisnummer} {m.postcode} {m.plaats}</p>
+                                    <p className="font-bold text-[11px] text-slate-900 truncate">{[m.straatnaam, m.huisnummer, m.postcode, m.plaats].filter(Boolean).join(' ')}</p>
                                     <div className="flex items-center justify-between">
                                         <span className="text-[9px] font-black uppercase text-primary truncate max-w-[70%]">{m.subcategorie}</span>
                                         {isCompleted && <Check className="h-3 w-3 text-green-600" />}
@@ -1434,7 +1434,7 @@ export default function StartNavigationPage() {
                                         {visibleColumns.memo && <TableCell className="font-medium italic text-slate-500 border-r border-slate-100 px-2 py-1 truncate max-w-[350px]">"{m.extra_informatie || '-'}"</TableCell>}
                                         {visibleColumns.hoofdcategorie && <TableCell className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 py-1">{m.hoofdcategorie}</TableCell>}
                                         {visibleColumns.subcategorie && <TableCell className="font-bold border-r border-slate-100 px-2 py-1 truncate max-w-[150px]">{m.subcategorie}</TableCell>}
-                                        {visibleColumns.werkgebied && <TableCell className="font-black uppercase text-primary border-r border-slate-100 px-2 py-1">{m.werkgebied || m.wijk || '-'}</TableCell>}
+                                        {visibleColumns.werkgebied && <TableCell className="font-black uppercase text-primary border-r border-slate-100 px-2 e-8">{m.werkgebied || m.wijk || '-'}</TableCell>}
                                         {visibleColumns.afstand && <TableCell className="text-right font-black text-primary px-2 py-1">{dist}</TableCell>}
                                     </TableRow>
                                 );
