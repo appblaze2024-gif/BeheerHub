@@ -653,18 +653,16 @@ export default function StartNavigationPage() {
 
   const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
 
-  const completedTodayQuery = useMemoFirebase(() => {
+  const completedMeldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
     return query(
       collection(firestore, 'meldingen'),
       where('status', '==', 'Afgerond'),
-      where('afhandeling_datum', '==', todayStr),
-      limit(50) 
+      limit(150) // Fetch a pool for search and "Today Completed" toggle
     );
   }, [firestore]);
 
-  const { data: rawCompletedToday } = useCollection<Melding>(completedTodayQuery);
+  const { data: rawCompleted } = useCollection<Melding>(completedMeldingenQuery);
 
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProject?.objectFilter) return null;
@@ -679,18 +677,42 @@ export default function StartNavigationPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!rawMeldingen) return [];
+    
+    // Start with active reports
     let pool = [...rawMeldingen].filter(m => !completedObjects.includes(m.id));
-    if (showTodayCompleted && rawCompletedToday) pool = [...pool, ...rawCompletedToday];
+    
+    if (rawCompleted) {
+        if (debouncedSearchQuery) {
+            // When searching, include all fetched completed reports in the pool
+            pool = [...pool, ...rawCompleted];
+        } else if (showTodayCompleted) {
+            // Otherwise, only add today's if the toggle is on
+            const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
+            const todayCompleted = rawCompleted.filter(m => m.afhandeling_datum === todayStr);
+            pool = [...pool, ...todayCompleted];
+        }
+    }
+
+    // Deduplicate pool
+    const uniquePool = Array.from(new Map(pool.map(m => [m.id, m])).values());
+
+    let result = uniquePool;
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
-        pool = pool.filter(m => m.behandelaar === userName);
+        result = result.filter(m => m.behandelaar === userName);
     }
+
     if (debouncedSearchQuery) {
         const q = debouncedSearchQuery.toLowerCase();
-        pool = pool.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
+        result = result.filter(m => 
+            m.intakenummer.toLowerCase().includes(q) || 
+            (m.straatnaam || '').toLowerCase().includes(q) ||
+            (m.plaats || '').toLowerCase().includes(q) ||
+            (m.subcategorie || '').toLowerCase().includes(q)
+        );
     }
-    return pool;
-  }, [rawMeldingen, rawCompletedToday, showTodayCompleted, isPrivileged, profile, debouncedSearchQuery, completedObjects]);
+    return result;
+  }, [rawMeldingen, rawCompleted, showTodayCompleted, isPrivileged, profile, debouncedSearchQuery, completedObjects]);
 
   const sortedMissions = React.useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
@@ -724,12 +746,12 @@ export default function StartNavigationPage() {
         const bbox = turf.bbox(coll);
         map.fitBounds(bbox as [number, number, number, number], { 
             padding: { top: 80, bottom: 350, left: 80, right: 80 }, 
-            duration: 0, 
+            duration: 800, 
             maxZoom: 14,
-            linear: true
+            linear: false
         });
     } else {
-        map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 0 });
+        map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 800 });
     }
   }, [filteredMeldingen, userLocation]);
 
@@ -1236,9 +1258,12 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {/* RECENTRE BUTTONS - MOBILE VISIBLE */}
+        {/* RECENTRE BUTTONS */}
         {isManualMode && (
-            <div className="absolute bottom-[260px] right-4 z-50 pointer-events-auto animate-in fade-in slide-in-from-right-2 duration-300">
+            <div className={cn(
+                "absolute z-50 pointer-events-auto animate-in fade-in slide-in-from-right-2 duration-300",
+                navigationState === 'setup' ? "bottom-[260px] right-4" : "bottom-[180px] right-6"
+            )}>
                 {navigationState === 'setup' ? (
                     <Button 
                         variant="secondary" 
@@ -1255,10 +1280,10 @@ export default function StartNavigationPage() {
                     <Button 
                         variant="secondary" 
                         size="icon"
-                        className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                        className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center"
                         onClick={handleHervatNavigatie}
                     >
-                        <Navigation className="h-6 w-6 text-primary fill-current" />
+                        <Navigation className="h-7 w-7 text-primary fill-current" />
                     </Button>
                 )}
             </div>
@@ -1339,7 +1364,12 @@ export default function StartNavigationPage() {
                 <div className="flex items-center justify-between flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
                     <div className="relative w-40 sm:w-64 shrink-0">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                        <Input placeholder="Zoeken..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                        <Input 
+                            placeholder="Zoeken..." 
+                            className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" 
+                            value={searchQuery} 
+                            onChange={e => setSearchQuery(e.target.value)} 
+                        />
                     </div>
                     
                     <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
@@ -1393,7 +1423,9 @@ export default function StartNavigationPage() {
                                         </div>
                                         <span className="text-[8px] font-bold text-slate-400 truncate ml-2">{m.werkgebied || '-'}</span>
                                     </div>
-                                    <p className="font-bold text-[11px] text-slate-900 truncate">{[m.straatnaam, m.huisnummer, m.postcode, m.plaats].filter(Boolean).join(' ')}</p>
+                                    <p className="font-bold text-[11px] text-slate-900 truncate">
+                                        {[m.straatnaam, m.huisnummer, m.postcode, m.plaats].filter(Boolean).join(' ')}
+                                    </p>
                                     <div className="flex items-center justify-between">
                                         <span className="text-[9px] font-black uppercase text-primary truncate max-w-[70%]">{m.subcategorie}</span>
                                         {isCompleted && <Check className="h-3 w-3 text-green-600" />}
