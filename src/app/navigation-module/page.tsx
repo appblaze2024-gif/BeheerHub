@@ -74,6 +74,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -200,6 +211,7 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+    const [isConfirmDialogOpen, setIsConfirmDialogOpen] = React.useState(false);
     const recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
@@ -227,11 +239,6 @@ function IntegratedWerkbonOverlay({
         }
     }, [melding]);
 
-    const handleStartWork = async () => {
-        if (!firestore || !melding) return;
-        updateDocumentNonBlocking(doc(firestore, 'meldingen', melding.id), { workStartedAt: new Date().toISOString() });
-    };
-
     const handleAfronden = async () => {
         if (!firestore || !melding || !user) return;
         setIsSubmitting(true);
@@ -257,6 +264,7 @@ function IntegratedWerkbonOverlay({
             toast({ variant: "destructive", title: 'Fout bij afronden' }); 
         } finally { 
             setIsSubmitting(false); 
+            setIsConfirmDialogOpen(false);
         }
     };
 
@@ -364,22 +372,37 @@ function IntegratedWerkbonOverlay({
             </div>
 
             <div className="p-6 bg-slate-50">
-                <Button 
-                    className={cn(
-                        "w-full h-14 text-white font-bold uppercase tracking-widest rounded-xl shadow-lg transition-all",
-                        melding.workStartedAt 
-                            ? "bg-[#FF5722] hover:bg-[#E64A19] shadow-orange-600/20" 
-                            : "bg-green-600 hover:bg-green-700 shadow-green-600/20"
-                    )}
-                    onClick={melding.workStartedAt ? handleAfronden : handleStartWork}
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                        melding.workStartedAt ? "WERKBON AFRONDEN" : "START UITVOERING"
-                    )}
-                </Button>
+                <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+                    <AlertDialogTrigger asChild>
+                        <Button 
+                            className="w-full h-14 text-white font-bold uppercase tracking-widest rounded-xl shadow-lg transition-all bg-[#FF5722] hover:bg-[#E64A19] shadow-orange-600/20"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                                "MELDING AFMELDEN"
+                            )}
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-3xl border-none">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="font-black uppercase tracking-tight">Melding afmelden?</AlertDialogTitle>
+                            <AlertDialogDescription className="font-medium text-slate-500">
+                                Weet u zeker dat u deze melding wilt afmelden en de werkbon wilt voltooien?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel className="rounded-xl font-bold">Annuleren</AlertDialogCancel>
+                            <AlertDialogAction 
+                                onClick={handleAfronden} 
+                                className="bg-[#FF5722] hover:bg-[#E64A19] rounded-xl font-black uppercase tracking-tight"
+                            >
+                                Afmelden
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     );
