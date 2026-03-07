@@ -63,6 +63,7 @@ import { Checkbox } from './ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const allPermissions = permissionConfig;
