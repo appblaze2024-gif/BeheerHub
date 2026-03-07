@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -1187,8 +1188,8 @@ export default function StartNavigationPage() {
                             <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
                             <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
                         </div>
-                        <div className="absolute -top-1.5 -right-1.5 h-10 w-10 sm:h-12 sm:w-12 rounded-full border-[4px] border-red-600 flex items-center justify-center bg-white shadow-xl shrink-0 animate-in fade-in zoom-in duration-500 z-10">
-                            <span className="text-sm sm:text-base font-black text-slate-900">{currentSpeedLimit}</span>
+                        <div className="absolute -top-1 -right-1 h-7 w-7 sm:h-9 sm:w-9 rounded-full border-[3px] sm:border-[4px] border-red-600 flex items-center justify-center bg-white shadow-xl shrink-0 animate-in fade-in zoom-in duration-500 z-10">
+                            <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
                 </div>
