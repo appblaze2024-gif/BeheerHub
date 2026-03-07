@@ -1332,12 +1332,20 @@ export default function StartNavigationPage() {
                     meldingId={activeWerkbonId} 
                     onClose={() => setActiveWerkbonId(null)} 
                     onCompleted={(id) => {
-                        setCompletedObjects(prev => [...prev, id]);
-                        setActiveWerkbonId(null);
+                        // Immediately clear the current route UI
                         setCurrentRouteGeometry(null); 
                         setDisplayedRouteGeometry(null);
                         setRouteInfo(null);
-                        setTimeout(() => fetchRoute(true), 100);
+                        
+                        // Mark as completed to filter it out
+                        setCompletedObjects(prev => [...prev, id]);
+                        
+                        // Close the overlay
+                        setActiveWerkbonId(null);
+                        
+                        // Recalculate route to next nearest mission from current location
+                        // Use a short delay to ensure filteredMeldingen has updated
+                        setTimeout(() => fetchRoute(true), 150);
                     }} 
                 />
             </div>
