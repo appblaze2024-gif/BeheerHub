@@ -24,9 +24,17 @@ export default function DashboardPage() {
   const { profile } = useProfile();
   const isMobile = useIsMobile();
   const [activeModule, setActiveModule] = React.useState<MenuItem | null>(null);
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
   const bannerRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'dashboard_banner') : null, [firestore]);
   const { data: banner } = useDoc<any>(bannerRef);
+
+  // Reset scroll position when switching between main menu and submenus
+  React.useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = 0;
+    }
+  }, [activeModule]);
 
   // Fetch new reports for the notification badge
   const portalQuery = useMemoFirebase(() => {
@@ -142,7 +150,10 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar relative z-10">
+      <div 
+        ref={scrollAreaRef}
+        className="flex-1 overflow-y-auto no-scrollbar relative z-10"
+      >
         {!activeModule ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10">
             {mainNavItems.map((item) => {
