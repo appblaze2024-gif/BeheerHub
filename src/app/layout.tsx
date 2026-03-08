@@ -17,15 +17,11 @@ import { GlobalLoadingProvider, useGlobalLoading } from '@/context/global-loadin
 import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { 
-  Menu, 
   LogOut as LogOutIcon,
   Info,
-  Home,
-  User,
-  Settings,
+  Bell,
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -51,110 +47,51 @@ function Header() {
   const auth = useAuth();
   const { profile } = useProfile();
   const router = useRouter();
-  const pathname = usePathname();
-
-  const menuItems = [
-    { label: 'Hoofdmenu', icon: Home, href: '/' },
-    { label: 'Mijn Profiel', icon: User, href: '/profile' },
-    { label: 'Instellingen', icon: Settings, href: '/settings' },
-  ];
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 lg:px-8 bg-[#3498db] text-white shadow-md sticky top-0 left-0 right-0 z-50">
-      <div className="flex items-center gap-4">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-white hover:bg-white/10 rounded-none h-10 w-10"
-            >
-              <Menu className="h-6 w-6" />
+    <header className="h-20 flex items-center justify-end px-4 lg:px-8 bg-transparent shrink-0 sticky top-0 left-0 right-0 z-50 pointer-events-none">
+      <div className="flex items-center gap-2 bg-white px-4 py-1.5 rounded-full shadow-lg border border-slate-100 pointer-events-auto">
+        <div className="flex items-center gap-1">
+          <NotificationCenter />
+          <AppInfoDialog>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-blue-400 hover:bg-blue-50">
+              <Info className="h-4 w-4" />
             </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0 border-none rounded-none bg-white flex flex-col shadow-2xl">
-            <SheetHeader className="p-6 bg-[#3498db] text-white shrink-0 space-y-4 rounded-none">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12 border-2 border-white shadow-md rounded-none shrink-0">
-                  <AvatarFallback className="bg-white/20 text-white font-black text-sm rounded-none uppercase">
-                    {profile?.firstName?.[0]}{profile?.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <SheetTitle className="text-white text-lg font-black uppercase tracking-tight truncate leading-none mb-1">
-                    {profile?.firstName} {profile?.lastName}
-                  </SheetTitle>
-                  <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest truncate">
-                    {profile?.role || 'Beheerder'}
-                  </p>
-                </div>
-              </div>
-            </SheetHeader>
-
-            <div className="flex-1 py-4">
-              <nav className="flex flex-col">
-                {menuItems.map((item) => (
-                  <SheetClose key={item.href} asChild>
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "justify-start h-14 rounded-none px-6 gap-4 font-black uppercase text-xs tracking-widest text-slate-600 hover:bg-slate-50 hover:text-[#3498db]",
-                        pathname === item.href && "bg-slate-50 text-[#3498db] border-r-4 border-[#3498db]"
-                      )}
-                      onClick={() => router.push(item.href)}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {item.label}
-                    </Button>
-                  </SheetClose>
-                ))}
-              </nav>
-            </div>
-
-            <div className="p-4 border-t bg-slate-50 shrink-0">
-              <Button 
-                variant="destructive" 
-                className="w-full h-12 rounded-none font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-red-600/20"
-                onClick={() => signOut(auth)}
-              >
-                <LogOutIcon className="h-4 w-4" />
-                Uitloggen
-              </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
-        
-        <h1 
-          className="text-lg font-black uppercase tracking-tighter cursor-pointer select-none"
-          onClick={() => router.push('/')}
-        >
-          BEHEERHUB
-        </h1>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <NotificationCenter />
-        <AppInfoDialog>
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-white hover:bg-white/10">
-            <Info className="h-4 w-4" />
+          </AppInfoDialog>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9 rounded-full text-blue-400 hover:bg-blue-50"
+            onClick={() => signOut(auth)}
+          >
+            <LogOutIcon className="h-4 w-4" />
           </Button>
-        </AppInfoDialog>
-        <div className="h-8 w-px bg-white/20 mx-2 hidden sm:block" />
-        <div className="items-center gap-3 hidden sm:flex">
-          <div className="text-right">
-            <p className="text-[10px] font-bold text-white/70 leading-none mb-0.5 uppercase tracking-tight">
-              {profile?.schouwenGemeente || 'Bodegraven-Reeuwijk'}
-            </p>
-            <p className="text-xs font-black leading-none">
-              {profile?.firstName}
-            </p>
-          </div>
-          <Avatar className="h-9 w-9 border-2 border-white/50 shadow-md rounded-none">
-            <AvatarFallback className="text-xs bg-white/20 text-white font-black uppercase rounded-none">
-              {profile?.firstName?.[0]}
-            </AvatarFallback>
-          </Avatar>
         </div>
+        
+        <div className="h-8 w-px bg-slate-100 mx-2" />
+        
+        <div className="flex flex-col items-end mr-2 min-w-0">
+          <p className="text-[8px] font-bold text-slate-400 leading-none mb-0.5 uppercase tracking-widest truncate max-w-[120px]">
+            {profile?.schouwenGemeente || 'BODEGRAVEN-REEUWIJK'}
+          </p>
+          <p className="text-[11px] font-black text-slate-900 leading-none truncate max-w-[150px]">
+            {profile?.firstName} {profile?.lastName}
+          </p>
+          {profile?.role && (
+            <Badge className={cn(
+              "mt-1 h-3.5 px-1.5 text-[7px] font-black uppercase border-none rounded-sm",
+              profile.role === 'Super admin' ? "bg-red-600 text-white" : "bg-blue-500 text-white"
+            )}>
+              {profile.role}
+            </Badge>
+          )}
+        </div>
+        
+        <Avatar className="h-9 w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0">
+          <AvatarFallback className="text-[10px] bg-blue-100 text-blue-600 font-black uppercase">
+            {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+          </AvatarFallback>
+        </Avatar>
       </div>
     </header>
   );
