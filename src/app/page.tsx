@@ -133,11 +133,11 @@ export default function DashboardPage() {
                 <Card 
                   key={item.label}
                   onClick={() => handleCardClick(item)}
-                  className="group relative overflow-hidden rounded-[2rem] border-none shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer bg-white h-36"
+                  className="group relative overflow-hidden rounded-[2rem] border-none shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer bg-white h-32"
                 >
                   <CardContent className="p-5 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start">
-                      <div className="bg-slate-50 p-2.5 rounded-2xl group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner">
+                      <div className="bg-slate-50 p-2 rounded-2xl group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="h-7 w-7 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:translate-x-0 translate-x-4">
@@ -146,7 +146,7 @@ export default function DashboardPage() {
                     </div>
                     
                     <div>
-                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-1.5 group-hover:text-primary transition-colors">
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-1 group-hover:text-primary transition-colors">
                         {item.label}
                       </h3>
                       <div className="flex items-center gap-2">
@@ -188,11 +188,11 @@ export default function DashboardPage() {
                 <Card 
                   key={sub.id}
                   onClick={() => handleSubItemClick(sub)}
-                  className="group relative overflow-hidden rounded-[2rem] border-none shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer bg-white h-36"
+                  className="group relative overflow-hidden rounded-[2rem] border-none shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer bg-white h-32"
                 >
                   <CardContent className="p-5 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start">
-                      <div className="bg-slate-50 p-2.5 rounded-2xl group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner">
+                      <div className="bg-slate-50 p-2 rounded-2xl group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="h-7 w-7 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:translate-x-0 translate-x-4">
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                     </div>
                     
                     <div>
-                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-1.5 group-hover:text-primary transition-colors">
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-1 group-hover:text-primary transition-colors">
                         {sub.label}
                       </h3>
                       <div className="flex items-center gap-2">
