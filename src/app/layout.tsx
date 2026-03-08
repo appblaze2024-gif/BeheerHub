@@ -30,9 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
 import { LoadingScreen } from '@/components/loading-screen';
 import { NotificationCenter } from '@/components/notification-center';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { AppInfoDialog } from '@/components/app-info-dialog';
-import { AppSidebar } from '@/components/app-sidebar';
 
 function ProcessingOverlay() {
   const { isProcessing } = useGlobalLoading();
@@ -54,7 +52,6 @@ function Header() {
   const { profile } = useProfile();
   const router = useRouter();
   const pathname = usePathname();
-  const isMobile = useIsMobile();
 
   const menuItems = [
     { label: 'Hoofdmenu', icon: Home, href: '/' },
@@ -65,69 +62,67 @@ function Header() {
   return (
     <header className="h-16 flex items-center justify-between px-4 lg:px-8 bg-[#3498db] text-white shadow-md sticky top-0 left-0 right-0 z-50">
       <div className="flex items-center gap-4">
-        {isMobile && (
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-white hover:bg-white/10 rounded-none h-10 w-10"
-              >
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0 border-none rounded-none bg-white flex flex-col">
-              <SheetHeader className="p-6 bg-[#3498db] text-white shrink-0 space-y-4 rounded-none">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12 border-2 border-white shadow-md rounded-none shrink-0">
-                    <AvatarFallback className="bg-white/20 text-white font-black text-sm rounded-none uppercase">
-                      {profile?.firstName?.[0]}{profile?.lastName?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <SheetTitle className="text-white text-lg font-black uppercase tracking-tight truncate leading-none mb-1">
-                      {profile?.firstName} {profile?.lastName}
-                    </SheetTitle>
-                    <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest truncate">
-                      {profile?.role || 'Beheerder'}
-                    </p>
-                  </div>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-white hover:bg-white/10 rounded-none h-10 w-10"
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-72 p-0 border-none rounded-none bg-white flex flex-col shadow-2xl">
+            <SheetHeader className="p-6 bg-[#3498db] text-white shrink-0 space-y-4 rounded-none">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-12 w-12 border-2 border-white shadow-md rounded-none shrink-0">
+                  <AvatarFallback className="bg-white/20 text-white font-black text-sm rounded-none uppercase">
+                    {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <SheetTitle className="text-white text-lg font-black uppercase tracking-tight truncate leading-none mb-1">
+                    {profile?.firstName} {profile?.lastName}
+                  </SheetTitle>
+                  <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest truncate">
+                    {profile?.role || 'Beheerder'}
+                  </p>
                 </div>
-              </SheetHeader>
-
-              <div className="flex-1 py-4">
-                <nav className="flex flex-col">
-                  {menuItems.map((item) => (
-                    <SheetClose key={item.href} asChild>
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          "justify-start h-14 rounded-none px-6 gap-4 font-black uppercase text-xs tracking-widest text-slate-600 hover:bg-slate-50 hover:text-[#3498db]",
-                          pathname === item.href && "bg-slate-50 text-[#3498db] border-r-4 border-[#3498db]"
-                        )}
-                        onClick={() => router.push(item.href)}
-                      >
-                        <item.icon className="h-5 w-5" />
-                        {item.label}
-                      </Button>
-                    </SheetClose>
-                  ))}
-                </nav>
               </div>
+            </SheetHeader>
 
-              <div className="p-4 border-t bg-slate-50 shrink-0">
-                <Button 
-                  variant="destructive" 
-                  className="w-full h-12 rounded-none font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-red-600/20"
-                  onClick={() => signOut(auth)}
-                >
-                  <LogOutIcon className="h-4 w-4" />
-                  Uitloggen
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        )}
+            <div className="flex-1 py-4">
+              <nav className="flex flex-col">
+                {menuItems.map((item) => (
+                  <SheetClose key={item.href} asChild>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "justify-start h-14 rounded-none px-6 gap-4 font-black uppercase text-xs tracking-widest text-slate-600 hover:bg-slate-50 hover:text-[#3498db]",
+                        pathname === item.href && "bg-slate-50 text-[#3498db] border-r-4 border-[#3498db]"
+                      )}
+                      onClick={() => router.push(item.href)}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      {item.label}
+                    </Button>
+                  </SheetClose>
+                ))}
+              </nav>
+            </div>
+
+            <div className="p-4 border-t bg-slate-50 shrink-0">
+              <Button 
+                variant="destructive" 
+                className="w-full h-12 rounded-none font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-red-600/20"
+                onClick={() => signOut(auth)}
+              >
+                <LogOutIcon className="h-4 w-4" />
+                Uitloggen
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
         
         <h1 
           className="text-lg font-black uppercase tracking-tighter cursor-pointer select-none"
@@ -169,7 +164,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const { isHeaderVisible } = useNavigationUI();
   const { isUserLoading } = useUser();
   const { isLoading: isProfileLoading } = useProfile();
-  const isMobile = useIsMobile();
 
   if (isUserLoading || isProfileLoading) {
     return <LoadingScreen className="h-screen" />;
@@ -177,11 +171,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
-      {!isMobile && isHeaderVisible && (
-        <aside className="w-16 shrink-0 z-50">
-          <AppSidebar />
-        </aside>
-      )}
       <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
         {isHeaderVisible && <Header />}
         <main className="flex-1 overflow-auto custom-scrollbar relative">
