@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Wrench,
   Truck,
+  Filter,
 } from 'lucide-react';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -41,7 +42,6 @@ import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
 import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
 import { AddDamageDialog } from '@/components/add-damage-dialog';
 import { AddVehicleDialog } from '@/components/add-vehicle-dialog';
-import { VehicleImageUploader } from '@/components/vehicle-image-uploader';
 import { AddDocumentDialog } from '@/components/add-document-dialog';
 import { ApkOverviewDialog } from '@/components/apk-overview-dialog';
 import { MaintenanceOverviewDialog } from '@/components/maintenance-overview-dialog';
@@ -69,6 +69,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { LoadingScreen } from '@/components/loading-screen';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 
 type MaterieelType = 'voertuigen' | 'machines';
 
@@ -134,11 +142,11 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
     }
   }, [filteredMaterieel, selectedItem, isTablet]);
   
-  const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
-  const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
-  const [editingDocument, setEditingDocument] = React.useState<any | null>(null);
-  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = React.useState(false);
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = React.useState(false);
+  const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = React.useState(false);
+  const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
+  const [editingDocument, setEditingDocument] = React.useState<any | null>(null);
 
   const handleEditDamage = (damage: any) => {
     setEditingDamage(damage);
@@ -217,19 +225,19 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                     >
                       <div className="flex-1 min-w-0">
                         <div className={cn(
-                            "inline-flex items-center rounded-sm border-2 overflow-hidden font-mono font-bold text-xs",
-                            selectedItem?.id === item.id && !isTablet ? "bg-yellow-400 border-black text-black" : "bg-yellow-400 border-black text-black"
+                            "inline-flex items-center rounded-sm border-2 overflow-hidden font-mono font-bold text-[10px]",
+                            "bg-yellow-400 border-black text-black"
                         )}>
                           <div className="bg-blue-600 px-1 py-0.5 text-white">
-                            <span className='font-sans text-[9px]'>NL</span>
+                            <span className='font-sans text-[8px]'>NL</span>
                           </div>
-                          <span className="px-2 py-0.5 tracking-wider">{item.id}</span>
+                          <span className="px-1.5 py-0.5 tracking-wider">{item.id}</span>
                         </div>
                         <p className={cn("text-xs font-black mt-1.5 truncate uppercase tracking-tight", selectedItem?.id === item.id && !isTablet ? "text-white" : "text-slate-900")}>
                           {item.merk} {item.model}
                         </p>
                         {(item.type || item.bouwjaar) && (
-                          <p className={cn("text-[10px] font-bold uppercase tracking-tighter mt-0.5", selectedItem?.id === item.id && !isTablet ? "text-white/70" : "text-slate-400")}>
+                          <p className={cn("text-[9px] font-bold uppercase tracking-tighter mt-0.5", selectedItem?.id === item.id && !isTablet ? "text-white/70" : "text-slate-400")}>
                             {item.type} {item.bouwjaar && `(${item.bouwjaar})`}
                           </p>
                         )}
@@ -298,17 +306,19 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                             <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">
                               Specificaties
                             </h3>
-                            {canEdit && <AddVehicleDialog
-                              vehicle={selectedItem}
-                              open={isVehicleDialogOpen}
-                              onOpenChange={setIsVehicleDialogOpen}
-                              materieelType={materieelType}
-                            >
-                              <Button variant="outline" size="sm" className="h-8 font-bold" onClick={handleEditVehicle}>
-                                <Pencil className="mr-2 h-3.5 w-3.5" />
-                                Bewerken
-                              </Button>
-                            </AddVehicleDialog>}
+                            {canEdit && (
+                              <AddVehicleDialog
+                                vehicle={selectedItem}
+                                open={isVehicleDialogOpen}
+                                onOpenChange={setIsVehicleDialogOpen}
+                                materieelType={materieelType}
+                              >
+                                <Button variant="outline" size="sm" className="h-8 font-bold" onClick={handleEditVehicle}>
+                                  <Pencil className="mr-2 h-3.5 w-3.5" />
+                                  Bewerken
+                                </Button>
+                              </AddVehicleDialog>
+                            )}
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4">
                             <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
@@ -408,7 +418,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                   </Card>
 
                   <Tabs key={selectedItem.id} defaultValue="maintenance" className="flex-1 flex flex-col min-h-[400px]">
-                    <div className="overflow-x-auto no-scrollbar pb-1 shrink-0">
+                    <div className="overflow-x-auto no-scrollbar pb-1 shrink-0 px-1">
                         <TabsList className="w-max inline-flex">
                             {canViewTab('maintenance') && <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>}
                             {canViewTab('damages') && <TabsTrigger value="damages">Schade</TabsTrigger>}
@@ -642,12 +652,12 @@ export default function MaterieelBeheerPage() {
   const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<MaterieelType>('voertuigen');
   const { profile } = useProfile();
+  const isMobile = useIsMobile();
 
   const isSuperUser = profile?.role === 'Super admin';
   const canCreate = isSuperUser || !!profile?.permissions?.vehicles?.create;
   const canEdit = isSuperUser || !!profile?.permissions?.vehicles?.edit;
   const canDelete = isSuperUser || !!profile?.permissions?.vehicles?.delete;
-
 
   const handleImportSuccess = () => {
     setIsImporting(false);
@@ -657,45 +667,66 @@ export default function MaterieelBeheerPage() {
     <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0 h-full overflow-hidden bg-white">
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MaterieelType)} className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
         <header className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 md:p-6 border-b bg-slate-50/30 shrink-0">
-            <TabsList className="w-full sm:w-auto">
-                <TabsTrigger value="voertuigen" className="flex-1 sm:flex-none">Voertuigen</TabsTrigger>
-                <TabsTrigger value="machines" className="flex-1 sm:flex-none">Machines</TabsTrigger>
+            <TabsList className="w-full md:w-auto">
+                <TabsTrigger value="voertuigen" className="flex-1 md:flex-none">Voertuigen</TabsTrigger>
+                <TabsTrigger value="machines" className="flex-1 md:flex-none">Machines</TabsTrigger>
             </TabsList>
-            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1">
-            <Button variant="outline" size="sm" onClick={() => setIsApkDialogOpen(true)} className="shrink-0 font-bold h-9">
-                <CalendarCheck className="mr-2 h-4 w-4 text-primary" /> APK
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setIsMaintenanceDialogOpen(true)} className="shrink-0 font-bold h-9">
-                <Wrench className="mr-2 h-4 w-4 text-primary" /> Onderhoud
-            </Button>
-            {canCreate && <AddVehicleDialog materieelType={activeTab}>
-                <Button size="sm" className="shrink-0 font-black h-9 uppercase tracking-tight">
-                <Plus className="mr-2 h-4 w-4" /> Nieuw
+            <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsApkDialogOpen(true)} className="shrink-0 font-bold h-9">
+                    <CalendarCheck className="md:mr-2 h-4 w-4 text-primary" />
+                    <span className="hidden md:inline">APK</span>
                 </Button>
-            </AddVehicleDialog>}
-            <VehicleImportDialog
-                open={isImporting}
-                onOpenChange={setIsImporting}
-                onSuccess={handleImportSuccess}
-            >
-                <Button variant="outline" size="sm" disabled={activeTab === 'machines'} className="shrink-0 font-bold h-9">
-                <Upload className="mr-2 h-4 w-4" />
-                Import
+                <Button variant="outline" size="sm" onClick={() => setIsMaintenanceDialogOpen(true)} className="shrink-0 font-bold h-9">
+                    <Wrench className="md:mr-2 h-4 w-4 text-primary" />
+                    <span className="hidden md:inline">Onderhoud</span>
                 </Button>
-            </VehicleImportDialog>
-            <Button variant="outline" size="sm" className="shrink-0 font-bold h-9">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-            </Button>
+              </div>
+              
+              <div className="flex items-center gap-2 ml-auto md:ml-0">
+                {canCreate && (
+                  <AddVehicleDialog materieelType={activeTab}>
+                    <Button size="sm" className="shrink-0 font-black h-9 uppercase tracking-tight">
+                      <Plus className="md:mr-2 h-4 w-4" />
+                      <span className="hidden md:inline">Nieuw</span>
+                    </Button>
+                  </AddVehicleDialog>
+                )}
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 w-9 md:w-auto md:px-3 font-bold">
+                      <MoreHorizontal className="h-4 w-4 md:mr-2" />
+                      <span className="hidden md:inline">Acties</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Materieel Beheer</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled={activeTab === 'machines'} onSelect={() => setIsImporting(true)}>
+                      <Upload className="mr-2 h-4 w-4" /> Importeer (CSV)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Download className="mr-2 h-4 w-4" /> Exporteer (Excel)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
         </header>
-        <TabsContent value="voertuigen" className="p-4 md:p-6 flex-1 min-h-0 h-full overflow-hidden">
+        <TabsContent value="voertuigen" className="p-0 md:p-6 flex-1 min-h-0 h-full overflow-hidden m-0">
           <MaterielView materieelType="voertuigen" canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
-        <TabsContent value="machines" className="p-4 md:p-6 flex-1 min-h-0 h-full overflow-hidden">
+        <TabsContent value="machines" className="p-0 md:p-6 flex-1 min-h-0 h-full overflow-hidden m-0">
           <MaterielView materieelType="machines" canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
       </Tabs>
+      
+      <VehicleImportDialog
+          open={isImporting}
+          onOpenChange={setIsImporting}
+          onSuccess={handleImportSuccess}
+      />
       <ApkOverviewDialog open={isApkDialogOpen} onOpenChange={setIsApkDialogOpen} />
       <MaintenanceOverviewDialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen} />
     </div>
