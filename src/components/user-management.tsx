@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, collection } from 'firebase/firestore';
-import { Loader2, Plus, MoreHorizontal, User as UserIcon, Nfc, Mail, MapPin, ShieldCheck, ChevronRight, AlertCircle, Info } from 'lucide-react';
+import { Loader2, Plus, MoreHorizontal, User as UserIcon, Nfc, Mail, MapPin, ShieldCheck, ChevronRight, AlertCircle, Info, Search } from 'lucide-react';
 import { firebaseConfig } from '@/firebase/config';
 
 import {
@@ -761,46 +761,46 @@ export function UserManagement() {
                             <Card 
                                 key={user.id} 
                                 onClick={() => canEdit && handleEdit(user)} 
-                                className="rounded-[1.5rem] border-none shadow-md bg-white active:scale-[0.98] transition-transform overflow-hidden"
+                                className="rounded-[2rem] border-none shadow-lg bg-white active:scale-[0.98] transition-transform overflow-hidden"
                             >
-                                <div className="p-5 flex flex-col gap-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-12 w-12 border-2 border-white shadow-lg ring-1 ring-slate-100">
-                                                <AvatarFallback className="bg-slate-100 text-primary font-black text-sm uppercase">
+                                <div className="p-6 flex flex-col gap-5">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-14 w-14 border-4 border-white shadow-xl ring-1 ring-slate-100 shrink-0">
+                                                <AvatarFallback className="bg-slate-100 text-primary font-black text-base uppercase">
                                                     {getInitials(user.firstName, user.lastName)}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="min-w-0">
-                                                <p className="font-black uppercase tracking-tight text-slate-900 truncate">{user.displayName || 'Geen naam'}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 truncate flex items-center gap-1"><Mail className="h-3 w-3" /> {user.email}</p>
+                                                <p className="font-black uppercase tracking-tight text-slate-900 text-base truncate leading-tight mb-1">{user.displayName || 'Geen naam'}</p>
+                                                <p className="text-xs font-bold text-slate-400 truncate flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 opacity-50" /> {user.email}</p>
                                             </div>
                                         </div>
-                                        <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="text-[8px] font-black uppercase tracking-widest">
+                                        <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase tracking-widest px-3 h-6">
                                             {user.role}
                                         </Badge>
                                     </div>
 
-                                    <div className="bg-slate-50/80 p-3 rounded-2xl space-y-2">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1 flex items-center gap-1.5"><MapPin className="h-3 w-3" /> Toewijzingen</p>
+                                    <div className="bg-slate-50/80 p-4 rounded-[1.5rem] space-y-3 border border-slate-100">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1 flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> Toewijzingen</p>
                                         <div className="flex flex-wrap gap-2">
-                                            {user.wijk && <Badge variant="outline" className="text-[9px] font-black bg-white border-primary/20 text-primary">W: {user.wijk}</Badge>}
-                                            {user.veegroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-green-200 text-green-600">V: {user.veegroute}</Badge>}
-                                            {user.prullenbakkenroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-blue-200 text-blue-600">P: {user.prullenbakkenroute}</Badge>}
-                                            {!user.wijk && !user.veegroute && !user.prullenbakkenroute && <span className="text-[10px] font-bold text-slate-300 italic">Geen Gebieden</span>}
+                                            {user.wijk && <Badge variant="outline" className="text-[11px] font-black bg-white border-primary/20 text-primary px-3 py-1">W: {user.wijk}</Badge>}
+                                            {user.veegroute && <Badge variant="outline" className="text-[11px] font-black bg-white border-green-200 text-green-600 px-3 py-1">V: {user.veegroute}</Badge>}
+                                            {user.prullenbakkenroute && <Badge variant="outline" className="text-[11px] font-black bg-white border-blue-200 text-blue-600 px-3 py-1">P: {user.prullenbakkenroute}</Badge>}
+                                            {!user.wijk && !user.veegroute && !user.prullenbakkenroute && <span className="text-xs font-bold text-slate-300 italic py-1">Geen actieve gebieden</span>}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className={cn("h-2 w-2 rounded-full", user.status === 'Actief' ? "bg-green-500" : "bg-orange-400")} />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{user.status || 'Onbekend'}</span>
+                                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className={cn("h-3 w-3 rounded-full shadow-sm", user.status === 'Actief' ? "bg-green-500" : "bg-orange-400")} />
+                                            <span className="text-xs font-black uppercase tracking-widest text-slate-500">{user.status || 'Onbekend'}</span>
                                         </div>
                                         {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit && (
                                             <Button 
                                                 variant="outline" 
                                                 size="sm"
-                                                className="h-8 font-black uppercase text-[10px] rounded-xl px-4"
+                                                className="h-10 font-black uppercase text-xs rounded-xl px-6 border-primary/30 text-primary bg-primary/5 shadow-sm"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleSendInvitation(user);
