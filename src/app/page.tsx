@@ -97,7 +97,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-6 md:p-12 space-y-10 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
+    <div className="p-4 md:p-8 pt-4 md:pt-6 space-y-6 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
       <header className="space-y-1 relative z-10">
         <div className="flex items-center gap-4">
           {activeModule && (
@@ -111,7 +111,7 @@ export default function DashboardPage() {
             </Button>
           )}
           <div>
-            <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-primary">
+            <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-primary leading-tight">
               {activeModule ? activeModule.label : 'SYSTEEM MENU'}
             </h1>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
