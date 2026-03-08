@@ -15,14 +15,16 @@ import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-c
 import { ProjectProvider } from '@/context/project-context';
 import { GlobalLoadingProvider, useGlobalLoading } from '@/context/global-loading-context';
 import { Toaster } from '@/components/ui/toaster';
-import { AppSidebar } from '@/components/app-sidebar';
 import { Button } from '@/components/ui/button';
 import { 
   Menu, 
   LogOut as LogOutIcon,
   Info,
+  Home,
+  User,
+  Settings,
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
@@ -38,8 +40,8 @@ function ProcessingOverlay() {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-white shadow-2xl border border-slate-100 scale-110">
-        <div className="h-10 w-10 animate-spin border-4 border-primary border-t-transparent rounded-full" />
+      <div className="flex flex-col items-center gap-4 p-8 rounded-none bg-white shadow-2xl border border-slate-100 scale-110">
+        <div className="h-10 w-10 animate-spin border-4 border-primary border-t-transparent rounded-none" />
         <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Verwerken...</p>
       </div>
     </div>
@@ -49,72 +51,111 @@ function ProcessingOverlay() {
 function Header() {
   const auth = useAuth();
   const { profile } = useProfile();
-  const isMobile = useIsMobile();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const menuItems = [
+    { label: 'Hoofdmenu', icon: Home, href: '/' },
+    { label: 'Mijn Profiel', icon: User, href: '/profile' },
+    { label: 'Instellingen', icon: Settings, href: '/settings' },
+  ];
 
   return (
-    <header className="h-16 lg:h-20 flex items-center justify-between px-4 lg:px-10 bg-transparent absolute top-0 left-0 right-0 z-50">
-      <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="lg:hidden text-slate-600 hover:bg-slate-100 bg-white/90 backdrop-blur-sm rounded-full shadow-sm h-10 w-10"
+    <header className="h-16 flex items-center justify-between px-4 lg:px-8 bg-[#ff8000] text-white shadow-lg sticky top-0 left-0 right-0 z-50">
+      <div className="flex items-center gap-4">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-white hover:bg-white/10 rounded-none h-10 w-10"
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-72 p-0 border-none rounded-none bg-white flex flex-col">
+            <SheetHeader className="p-6 bg-[#ff8000] text-white shrink-0 space-y-4 rounded-none">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-12 w-12 border-2 border-white shadow-md rounded-none shrink-0">
+                  <AvatarFallback className="bg-white/20 text-white font-black text-sm rounded-none uppercase">
+                    {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <SheetTitle className="text-white text-lg font-black uppercase tracking-tight truncate leading-none mb-1">
+                    {profile?.firstName} {profile?.lastName}
+                  </SheetTitle>
+                  <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest truncate">
+                    {profile?.role || 'Beheerder'}
+                  </p>
+                </div>
+              </div>
+            </SheetHeader>
+
+            <div className="flex-1 py-4">
+              <nav className="flex flex-col">
+                {menuItems.map((item) => (
+                  <SheetClose key={item.href} asChild>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "justify-start h-14 rounded-none px-6 gap-4 font-black uppercase text-xs tracking-widest text-slate-600 hover:bg-slate-50 hover:text-[#ff8000]",
+                        pathname === item.href && "bg-slate-50 text-[#ff8000] border-r-4 border-[#ff8000]"
+                      )}
+                      onClick={() => router.push(item.href)}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      {item.label}
+                    </Button>
+                  </SheetClose>
+                ))}
+              </nav>
+            </div>
+
+            <div className="p-4 border-t bg-slate-50 shrink-0">
+              <Button 
+                variant="destructive" 
+                className="w-full h-12 rounded-none font-black uppercase tracking-widest text-xs gap-3 shadow-lg shadow-red-600/20"
+                onClick={() => signOut(auth)}
+              >
+                <LogOutIcon className="h-4 w-4" />
+                Uitloggen
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+        
+        <h1 
+          className="text-lg font-black uppercase tracking-tighter cursor-pointer select-none"
           onClick={() => router.push('/')}
         >
-          <Menu className="h-5 w-5" />
-        </Button>
-        
-        {isMobile && (
-          <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-slate-100 flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-tighter text-slate-900 truncate max-w-[100px]">
-              {profile?.firstName}
-            </span>
-          </div>
-        )}
+          BEHEERHUB
+        </h1>
       </div>
 
-      <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm p-1 rounded-full shadow-sm border border-slate-100">
-        <div className="flex items-center gap-0.5 md:gap-1 md:pr-4 md:border-r border-slate-100">
-          <div className="relative">
-            <NotificationCenter />
-          </div>
-          {!isMobile && (
-            <AppInfoDialog>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50">
-                <Info className="h-4 w-4" />
-              </Button>
-            </AppInfoDialog>
-          )}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-9 w-9 rounded-full text-[#3498db] hover:bg-red-50 hover:text-red-600"
-            onClick={() => signOut(auth)}
-          >
-            <LogOutIcon className="h-4 w-4" />
+      <div className="flex items-center gap-2">
+        <NotificationCenter />
+        <AppInfoDialog>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-white hover:bg-white/10">
+            <Info className="h-4 w-4" />
           </Button>
-        </div>
-
-        {!isMobile && (
-          <div className="flex items-center gap-3 pl-2">
-            <div className="text-right hidden md:block">
-              <p className="text-[10px] font-bold text-slate-400 leading-none mb-1 uppercase tracking-tight">
-                {profile?.schouwenGemeente || 'Bodegraven-Reeuwijk'}
-              </p>
-              <p className="text-xs font-black text-slate-900 leading-none">
-                {profile?.firstName} {profile?.lastName}
-              </p>
-              <Badge className="mt-1 h-4 text-[7px] font-black uppercase bg-red-500 text-white border-none py-0 heart-pulse px-2 rounded-sm">
-                {profile?.role || 'Beheerder'}
-              </Badge>
-            </div>
-            <Avatar className="h-10 w-10 border-2 border-white shadow-md ring-1 ring-slate-100">
-              <AvatarFallback className="text-xs bg-slate-100 text-[#3498db] font-black uppercase">
-                {profile?.firstName?.[0]}{profile?.lastName?.[0]}
-              </AvatarFallback>
-            </Avatar>
+        </AppInfoDialog>
+        <div className="h-8 w-px bg-white/20 mx-2 hidden sm:block" />
+        <div className="items-center gap-3 hidden sm:flex">
+          <div className="text-right">
+            <p className="text-[10px] font-bold text-white/70 leading-none mb-0.5 uppercase tracking-tight">
+              {profile?.schouwenGemeente || 'Bodegraven-Reeuwijk'}
+            </p>
+            <p className="text-xs font-black leading-none">
+              {profile?.firstName}
+            </p>
           </div>
-        )}
+          <Avatar className="h-9 w-9 border-2 border-white/50 shadow-md rounded-none">
+            <AvatarFallback className="text-xs bg-white/20 text-white font-black uppercase rounded-none">
+              {profile?.firstName?.[0]}
+            </AvatarFallback>
+          </Avatar>
+        </div>
       </div>
     </header>
   );
@@ -130,13 +171,10 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
-      <aside className="hidden lg:block w-16 shrink-0 h-full sidebar-blue relative z-20">
-        <AppSidebar />
-      </aside>
-      <div className="flex-1 flex flex-col min-w-0 relative">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#f8fafc]">
+      <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
         {isHeaderVisible && <Header />}
-        <main className="flex-1 overflow-auto custom-scrollbar relative pt-20 lg:pt-20">
+        <main className="flex-1 overflow-auto custom-scrollbar relative">
           <ProcessingOverlay />
           {children}
         </main>
@@ -176,7 +214,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <title>BeheerHub | Beheer & Onderhoud</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
-      <body className="h-full">
+      <body className="h-full font-sans antialiased">
         <FirebaseClientProvider>
           <GlobalLoadingProvider>
             <ProfileProvider>
