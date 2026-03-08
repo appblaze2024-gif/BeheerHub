@@ -83,7 +83,7 @@ export function VehicleImageUploader({
   return (
     <div
       className={cn(
-        'group relative w-full max-w-md aspect-video rounded-md overflow-hidden border cursor-pointer',
+        'group relative w-full max-w-md aspect-video rounded-none overflow-hidden border cursor-pointer',
         className
       )}
       onClick={handleImageClick}
@@ -121,7 +121,7 @@ export function VehicleImageUploader({
       {isUploadingState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 p-4">
           <Loader2 className="h-8 w-8 animate-spin text-white" />
-          <Progress value={uploadProgress} className="w-full mt-4 h-2" />
+          <Progress value={uploadProgress} className="w-full mt-4 h-2 rounded-none" />
           <p className="text-white text-sm font-medium mt-2">
             {Math.round(uploadProgress)}%
           </p>
@@ -130,4 +130,3 @@ export function VehicleImageUploader({
     </div>
   );
 }
-    
