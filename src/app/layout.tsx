@@ -49,25 +49,20 @@ function ProcessingOverlay() {
 function Header() {
   const auth = useAuth();
   const { profile } = useProfile();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
+  const router = useRouter();
 
   return (
     <header className="h-16 lg:h-20 flex items-center justify-between px-4 lg:px-10 bg-transparent absolute top-0 left-0 right-0 z-50">
       <div className="flex items-center gap-2">
-        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden text-slate-600 hover:bg-slate-100 bg-white/90 backdrop-blur-sm rounded-full shadow-sm h-10 w-10">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-20 sidebar-blue text-white">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Navigatie</SheetTitle>
-            </SheetHeader>
-            <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
-          </SheetContent>
-        </Sheet>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="lg:hidden text-slate-600 hover:bg-slate-100 bg-white/90 backdrop-blur-sm rounded-full shadow-sm h-10 w-10"
+          onClick={() => router.push('/')}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
         
         {isMobile && (
           <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-slate-100 flex items-center gap-2">
