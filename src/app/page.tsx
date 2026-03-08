@@ -117,8 +117,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 pt-1 md:pt-2 space-y-3 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
-      <header className="space-y-1 relative z-10">
+    <div className="p-4 md:p-8 pt-0 md:pt-0 space-y-2 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
+      <header className="space-y-0.5 relative z-10">
         <div className="flex items-center gap-4">
           {activeModule && (
             <Button 
@@ -134,7 +134,7 @@ export default function DashboardPage() {
             <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-primary leading-tight">
               {activeModule ? activeModule.label : 'SYSTEEM MENU'}
             </h1>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
               {activeModule ? `SUBMENU VOOR ${activeModule.label}` : 'SELECTEER EEN MODULE OM TE STARTEN'}
             </p>
           </div>
@@ -143,7 +143,7 @@ export default function DashboardPage() {
 
       <div 
         ref={scrollAreaRef}
-        className="flex-1 overflow-y-auto no-scrollbar relative z-10"
+        className="flex-1 overflow-y-auto no-scrollbar relative z-10 pt-2"
       >
         {!activeModule ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
@@ -192,7 +192,7 @@ export default function DashboardPage() {
                   
                   {/* Large faint background icon */}
                   <div className="absolute right-4 bottom-4 opacity-[0.03] group-hover:opacity-10 group-hover:text-primary transition-all duration-700 pointer-events-none transform translate-x-4 translate-y-4 group-hover:translate-x-0 group-hover:translate-y-0">
-                    <Icon className="h-24 w-24" />
+                    <Icon className="h-20 w-20" />
                   </div>
                 </Card>
               );
@@ -247,7 +247,7 @@ export default function DashboardPage() {
                   
                   {/* Large faint background icon */}
                   <div className="absolute right-4 bottom-4 opacity-[0.03] group-hover:opacity-10 group-hover:text-primary transition-all duration-700 pointer-events-none transform translate-x-4 translate-y-4 group-hover:translate-x-0 group-hover:translate-y-0">
-                    <Icon className="h-24 w-24" />
+                    <Icon className="h-20 w-20" />
                   </div>
                 </Card>
               );
