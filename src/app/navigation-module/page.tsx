@@ -1261,17 +1261,6 @@ export default function StartNavigationPage() {
                 )}
                 {navigationState === 'setup' ? (
                     <div className="flex gap-2 pointer-events-auto">
-                        {isPrivileged && (
-                          <Button 
-                            variant="outline" 
-                            className="h-12 md:h-14 px-4 md:px-8 font-black uppercase bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl border-2 border-slate-100 transition-all active:scale-95" 
-                            onClick={() => handleStartRit(true)}
-                            title="Simulator"
-                          >
-                            <Gauge className="h-6 w-6 md:mr-3" /> 
-                            <span className="hidden md:inline text-sm">SIMULATOR</span>
-                          </Button>
-                        )}
                         <Button 
                           className="h-12 md:h-14 px-5 md:px-10 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl transition-all active:scale-95" 
                           onClick={() => handleStartRit(false)}
