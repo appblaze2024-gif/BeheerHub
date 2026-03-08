@@ -1172,6 +1172,15 @@ export default function StartNavigationPage() {
 
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
             <div className="flex flex-col gap-3 pointer-events-auto">
+                <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                    onClick={() => router.push('/')}
+                >
+                    <ArrowLeft className="h-6 w-6 text-slate-600" />
+                </Button>
+                
                 {navigationState === 'navigating' && routeInfo && (
                     <div className="bg-white/95 backdrop-blur-md px-5 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
                         <div className="flex flex-col items-center">
@@ -1221,7 +1230,7 @@ export default function StartNavigationPage() {
                                     </div>
 
                                     {!dynamicZoomEnabled && (
-                                        <div className="space-y-2 animate-in slide-in-from-top-2">
+                                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
                                             <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
                                             <div className="flex items-center gap-2">
                                                 <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}>
