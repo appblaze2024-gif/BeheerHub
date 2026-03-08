@@ -656,17 +656,17 @@ export function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[2rem] border-none shadow-xl bg-white overflow-hidden">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-8 border-b bg-slate-50/50">
-          <div>
-            <CardTitle className="text-xl font-black uppercase tracking-tight text-slate-900">Gebruikersbeheer</CardTitle>
-            <CardDescription className="font-bold text-slate-400">
+      <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden">
+        <CardHeader className="flex flex-col items-center justify-center gap-4 p-8 sm:p-10 border-b bg-slate-50/50 text-center">
+          <div className="space-y-2">
+            <CardTitle className="text-2xl font-black uppercase tracking-tight text-slate-900">Gebruikersbeheer</CardTitle>
+            <CardDescription className="font-bold text-slate-400 text-sm max-w-sm mx-auto leading-relaxed">
               Voeg collega's toe en beheer hun toegang tot de BeheerHub modules.
             </CardDescription>
           </div>
           {canCreate && (
-            <Button onClick={handleAddNew} className="w-full sm:w-auto h-11 font-black uppercase tracking-tight px-8 shadow-xl shadow-primary/20 rounded-xl">
-              <Plus className="mr-2 h-4 w-4" /> Gebruiker aanmaken
+            <Button onClick={handleAddNew} className="w-full sm:w-auto h-12 font-black uppercase tracking-tight px-10 shadow-xl shadow-primary/20 rounded-2xl text-sm">
+              <Plus className="mr-2 h-5 w-5" /> Gebruiker aanmaken
             </Button>
           )}
         </CardHeader>
@@ -755,58 +755,71 @@ export function UserManagement() {
                         ))}
                     </div>
 
-                    {/* Mobile Card View */}
-                    <div className="lg:hidden p-4 space-y-4 bg-slate-50/30">
+                    {/* Mobile Card View - Optimized per Screenshot */}
+                    <div className="lg:hidden p-4 space-y-6 bg-slate-50/30">
                         {users.map(user => (
                             <Card 
                                 key={user.id} 
                                 onClick={() => canEdit && handleEdit(user)} 
-                                className="rounded-[2rem] border-none shadow-lg bg-white active:scale-[0.98] transition-transform overflow-hidden"
+                                className="rounded-[2.5rem] border-none shadow-xl bg-white active:scale-[0.98] transition-all duration-300 overflow-hidden relative"
                             >
-                                <div className="p-6 flex flex-col gap-5">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <Avatar className="h-14 w-14 border-4 border-white shadow-xl ring-1 ring-slate-100 shrink-0">
-                                                <AvatarFallback className="bg-slate-100 text-primary font-black text-base uppercase">
-                                                    {getInitials(user.firstName, user.lastName)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="min-w-0">
-                                                <p className="font-black uppercase tracking-tight text-slate-900 text-base truncate leading-tight mb-1">{user.displayName || 'Geen naam'}</p>
-                                                <p className="text-xs font-bold text-slate-400 truncate flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 opacity-50" /> {user.email}</p>
+                                <div className="p-8 flex flex-col gap-6">
+                                    <div className="flex items-center gap-5">
+                                        <Avatar className="h-16 w-16 border-4 border-white shadow-2xl ring-1 ring-slate-100 shrink-0">
+                                            <AvatarFallback className="bg-slate-100 text-primary font-black text-lg uppercase">
+                                                {getInitials(user.firstName, user.lastName)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center justify-between mb-1 gap-2">
+                                                <p className="font-black uppercase tracking-tight text-slate-900 text-lg truncate leading-none">
+                                                    {user.displayName || 'Geen naam'}
+                                                </p>
+                                                <Badge className="bg-primary text-white text-[8px] font-black uppercase px-2 h-5 rounded-lg border-none shrink-0 shadow-lg shadow-primary/20">
+                                                    {user.role}
+                                                </Badge>
                                             </div>
-                                        </div>
-                                        <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase tracking-widest px-3 h-6">
-                                            {user.role}
-                                        </Badge>
-                                    </div>
-
-                                    <div className="bg-slate-50/80 p-4 rounded-[1.5rem] space-y-3 border border-slate-100">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1 flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> Toewijzingen</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {user.wijk && <Badge variant="outline" className="text-[11px] font-black bg-white border-primary/20 text-primary px-3 py-1">W: {user.wijk}</Badge>}
-                                            {user.veegroute && <Badge variant="outline" className="text-[11px] font-black bg-white border-green-200 text-green-600 px-3 py-1">V: {user.veegroute}</Badge>}
-                                            {user.prullenbakkenroute && <Badge variant="outline" className="text-[11px] font-black bg-white border-blue-200 text-blue-600 px-3 py-1">P: {user.prullenbakkenroute}</Badge>}
-                                            {!user.wijk && !user.veegroute && !user.prullenbakkenroute && <span className="text-xs font-bold text-slate-300 italic py-1">Geen actieve gebieden</span>}
+                                            <p className="text-[11px] font-bold text-slate-400 truncate flex items-center gap-1.5 uppercase tracking-tighter">
+                                                <Mail className="h-3.5 w-3.5 opacity-40 shrink-0" /> {user.email}
+                                            </p>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className={cn("h-3 w-3 rounded-full shadow-sm", user.status === 'Actief' ? "bg-green-500" : "bg-orange-400")} />
-                                            <span className="text-xs font-black uppercase tracking-widest text-slate-500">{user.status || 'Onbekend'}</span>
+                                    <div className="bg-slate-50 p-6 rounded-[2rem] space-y-4 border-2 border-slate-100 shadow-inner">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <MapPin className="h-4 w-4 text-slate-400" />
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none">Toewijzingen</p>
                                         </div>
+                                        <div className="flex flex-wrap gap-2 min-h-[20px]">
+                                            {user.wijk && <Badge variant="outline" className="text-[10px] font-black bg-white border-primary/20 text-primary px-3 py-1.5 rounded-xl uppercase tracking-tighter shadow-sm">W: {user.wijk}</Badge>}
+                                            {user.veegroute && <Badge variant="outline" className="text-[10px] font-black bg-white border-green-200 text-green-600 px-3 py-1.5 rounded-xl uppercase tracking-tighter shadow-sm">V: {user.veegroute}</Badge>}
+                                            {user.prullenbakkenroute && <Badge variant="outline" className="text-[10px] font-black bg-white border-blue-200 text-blue-600 px-3 py-1.5 rounded-xl uppercase tracking-tighter shadow-sm">P: {user.prullenbakkenroute}</Badge>}
+                                            {!user.wijk && !user.veegroute && !user.prullenbakkenroute && (
+                                                <span className="text-[11px] font-bold text-slate-300 italic uppercase tracking-widest pl-1">Geen actieve gebieden</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn(
+                                                "h-3 w-3 rounded-full border-2 border-white shadow-md",
+                                                user.status === 'Actief' ? "bg-green-500 shadow-green-500/20" : "bg-orange-400 shadow-orange-400/20"
+                                            )} />
+                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">{user.status || 'Onbekend'}</span>
+                                        </div>
+                                        
                                         {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit && (
                                             <Button 
                                                 variant="outline" 
                                                 size="sm"
-                                                className="h-10 font-black uppercase text-xs rounded-xl px-6 border-primary/30 text-primary bg-primary/5 shadow-sm"
+                                                className="h-10 font-black uppercase text-[10px] rounded-2xl px-6 border-primary/30 text-primary bg-primary/5 shadow-xl shadow-primary/5 active:scale-95 transition-all"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleSendInvitation(user);
                                                 }}
                                             >
-                                                Stuur Link
+                                                Verstuur Link
                                             </Button>
                                         )}
                                     </div>
