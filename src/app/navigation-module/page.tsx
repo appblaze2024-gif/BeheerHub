@@ -399,7 +399,7 @@ function IntegratedWerkbonOverlay({
                             )}
                         </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-3xl border-none">
+                    <AlertDialogContent className="w-[calc(100%-2rem)] sm:max-w-lg rounded-3xl border-none">
                         <AlertDialogHeader>
                             <AlertDialogTitle className="font-black uppercase tracking-tight">Melding afmelden?</AlertDialogTitle>
                             <AlertDialogDescription className="font-medium text-slate-500">
