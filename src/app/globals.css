@@ -56,11 +56,13 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    overscroll-behavior-y: none;
   }
 }
 
 html, body, #__next__ {
   height: 100%;
+  overscroll-behavior-y: none;
 }
 
 /* Fix for Radix UI Dialogs/Dropdowns leaving body in pointer-events: none state */
