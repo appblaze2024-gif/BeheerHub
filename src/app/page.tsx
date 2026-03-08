@@ -97,7 +97,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 pt-4 md:pt-6 space-y-6 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
+    <div className="p-4 md:p-8 pt-1 md:pt-2 space-y-3 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
       <header className="space-y-1 relative z-10">
         <div className="flex items-center gap-4">
           {activeModule && (
