@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -99,10 +100,10 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = React.useState('');
   const isTablet = useIsMobile(1024);
-  const isMobile = useIsMobile(640);
   const { profile } = useProfile();
 
   const collectionName = materieelType;
+  const isMachine = materieelType === 'machines';
 
   const materieelCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -552,7 +553,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                                         <TableCell className="text-center px-6">
                                         {item.files?.length > 0 ? (
                                             <div className="flex items-center justify-center gap-2">
-                                                <div className="bg-blue-50 p-1.5 rounded-lg"><FileIcon className="h-3 w-3 text-blue-400" /></div>
+                                                <div className="bg-slate-100 p-1.5 rounded-lg"><FileIcon className="h-3 w-3 text-blue-400" /></div>
                                                 <span className="text-[10px] font-black text-slate-900">{item.files.length}</span>
                                             </div>
                                         ) : '-'}
@@ -563,10 +564,12 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                                     </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={4} className="text-center py-20 text-muted-foreground">
+                                    <TableRow>
+                                      <TableCell colSpan={4} className="text-center py-20 text-muted-foreground">
                                         <FileText className="h-12 w-12 mx-auto mb-4 opacity-10" />
                                         <p className="text-[10px] font-black uppercase tracking-[0.2em]">Geen documenten</p>
-                                    </TableRow></TableCell>
+                                      </TableCell>
+                                    </TableRow>
                                 )}
                                 </TableBody>
                             </Table>
@@ -616,7 +619,6 @@ export default function MaterieelBeheerPage() {
   const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<MaterieelType>('voertuigen');
   const { profile } = useProfile();
-  const isMobile = useIsMobile();
 
   const isSuperUser = profile?.role === 'Super admin';
   const canCreate = isSuperUser || !!profile?.permissions?.vehicles?.create;
