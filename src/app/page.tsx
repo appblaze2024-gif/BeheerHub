@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -109,7 +108,7 @@ export default function DashboardPage() {
           isMobile ? "h-32" : "h-40"
         )}>
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent flex flex-col justify-center p-6 md:p-8 text-white">
-            <Badge className="w-fit mb-2 bg-primary text-white border-none px-3 py-0.5 font-black uppercase tracking-[0.2em] text-[9px]">
+            <Badge className="w-fit mb-2 bg-[#3498db] text-white border-none px-3 py-0.5 font-black uppercase tracking-[0.2em] text-[9px]">
               {banner.badgeText || "Operationeel: OK"}
             </Badge>
             <h2 className={cn(
