@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1176,7 +1175,7 @@ export default function StartNavigationPage() {
                     variant="secondary" 
                     size="icon" 
                     className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center"
-                    onClick={() => router.push('/')}
+                    onClick={() => router.push('/?module=issues')}
                 >
                     <ArrowLeft className="h-6 w-6 text-slate-600" />
                 </Button>

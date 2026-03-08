@@ -6,7 +6,7 @@ import {
   ChevronRight,
   ArrowLeft,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -19,11 +19,58 @@ import type { Melding } from '@/lib/types';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const firestore = useFirestore();
   const { profile } = useProfile();
   const isMobile = useIsMobile();
   const [activeModule, setActiveModule] = React.useState<MenuItem | null>(null);
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+
+  // Permissie helpers
+  const canViewModule = React.useCallback((moduleName?: string) => {
+    if (profile?.role === 'Super admin') return true;
+    if (!moduleName) return true;
+    const modulePerms = profile?.permissions?.[moduleName];
+    return !!modulePerms?.view || !!modulePerms?.use;
+  }, [profile]);
+
+  const canViewSubItem = React.useCallback((parentModule: string | undefined, sub: SubMenuItem) => {
+    if (profile?.role === 'Super admin') return true;
+    
+    // Als het sub-item naar een eigen module verwijst
+    if (sub.module) {
+      return !!profile?.permissions?.[sub.module]?.view;
+    }
+
+    // Als het een tab is in de module van de ouder
+    if (parentModule) {
+      const modulePerms = profile?.permissions?.[parentModule];
+      if (modulePerms?.tabs) {
+        return !!modulePerms.tabs[sub.id];
+      }
+    }
+
+    return true;
+  }, [profile]);
+
+  // Handle deep linking to sub-modules via URL param ?module=...
+  React.useEffect(() => {
+    if (!profile) return;
+    
+    const moduleParam = searchParams.get('module');
+    if (moduleParam) {
+      const item = allMenuItems.find(i => i.module === moduleParam);
+      if (item && canViewModule(item.module)) {
+        const visibleSubItems = item.subItems?.filter(sub => canViewSubItem(item.module, sub));
+        if (visibleSubItems && visibleSubItems.length > 0) {
+          setActiveModule({
+            ...item,
+            subItems: visibleSubItems
+          });
+        }
+      }
+    }
+  }, [searchParams, profile, canViewModule, canViewSubItem]);
 
   // Reset scroll position when switching between main menu and submenus
   React.useEffect(() => {
@@ -44,39 +91,12 @@ export default function DashboardPage() {
   const { data: newMeldingen } = useCollection<Melding>(portalQuery);
   const newCount = newMeldingen?.length || 0;
 
-  // Permissie helpers
-  const canViewModule = (moduleName?: string) => {
-    if (profile?.role === 'Super admin') return true;
-    if (!moduleName) return true;
-    const modulePerms = profile?.permissions?.[moduleName];
-    return !!modulePerms?.view || !!modulePerms?.use;
-  };
-
-  const canViewSubItem = (parentModule: string | undefined, sub: SubMenuItem) => {
-    if (profile?.role === 'Super admin') return true;
-    
-    // Als het sub-item naar een eigen module verwijst
-    if (sub.module) {
-      return !!profile?.permissions?.[sub.module]?.view;
-    }
-
-    // Als het een tab is in de module van de ouder
-    if (parentModule) {
-      const modulePerms = profile?.permissions?.[parentModule];
-      if (modulePerms?.tabs) {
-        return !!modulePerms.tabs[sub.id];
-      }
-    }
-
-    return true;
-  };
-
   // Filter modules voor de grid
   const mainNavItems = React.useMemo(() => {
     return allMenuItems
       .filter(item => item.href !== '/') // Dashboard zelf niet tonen
       .filter(item => canViewModule(item.module));
-  }, [profile]);
+  }, [profile, canViewModule]);
 
   const handleCardClick = (item: MenuItem) => {
     // Filter subItems op permissies
