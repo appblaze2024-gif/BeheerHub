@@ -64,6 +64,7 @@ import {
   FormControl, 
   FormField, 
   FormItem, 
+  FormLabel, 
   FormMessage 
 } from '@/components/ui/form';
 import { 
@@ -576,7 +577,7 @@ export default function NewIssuePage() {
 
   const formContent = (
     <Form {...form}>
-      <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit, onSaveError)} className="space-y-4">
+      <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {isMobile ? (
           <div className="space-y-4">
             <Accordion type="multiple" defaultValue={[]} className="w-full">
@@ -584,7 +585,7 @@ export default function NewIssuePage() {
                 <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
                   <span className="text-xs font-black uppercase tracking-widest text-slate-900">Basisgegevens</span>
                 </AccordionTrigger>
-                <AccordionContent className="p-4 pt-0 space-y-2">
+                <AccordionContent className="p-4 pt-0 space-y-2 relative overflow-visible">
                   <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                     <FormField control={form.control} name="intakenummer" render={({ field, fieldState }) => (
                       <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
@@ -608,6 +609,11 @@ export default function NewIssuePage() {
                     )} />
                   </FormRow>
                   <div className="grid grid-cols-2 gap-3">
+                    <FormRow label="Extern Nr.">
+                      <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
+                        <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>
+                      )} />
+                    </FormRow>
                     <FormRow label="Status">
                       <FormField control={form.control} name="status" render={({ field }) => (
                         <FormItem>
@@ -615,6 +621,27 @@ export default function NewIssuePage() {
                             <FormControl><SelectTrigger className="h-11 font-bold"><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                           </Select>
+                        </FormItem>
+                      )} />
+                    </FormRow>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormRow label="Containernr.">
+                      <FormField control={form.control} name="containernummer" render={({ field }) => (
+                        <FormItem className="relative">
+                          <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" autoComplete="off" /></FormControl>
+                          {containerSuggestions.length > 0 && (
+                            <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                              <ScrollArea className="max-h-60">
+                                {containerSuggestions.map(obj => (
+                                  <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleContainerSelect(obj)}>
+                                    <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer} • {obj.plaats}</p>
+                                  </button>
+                                ))}
+                              </ScrollArea>
+                            </div>
+                          )}
                         </FormItem>
                       )} />
                     </FormRow>
@@ -733,7 +760,7 @@ export default function NewIssuePage() {
                         <FormItem className="relative">
                           <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" autoComplete="off" /></FormControl>
                           {containerSuggestions.length > 0 && (
-                            <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-200">
+                            <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                               <ScrollArea className="max-h-60">
                                 {containerSuggestions.map(obj => (
                                   <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleContainerSelect(obj)}>
@@ -791,7 +818,7 @@ export default function NewIssuePage() {
                 <CardContent className="p-4 pt-2">
                   <div className="grid grid-cols-2 gap-3">
                     <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
-                    <FormRow label={<>Subtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
+                    <FormRow label={<>Subtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
                   </div>
                   <FormRow label="Memo">
                     <FormField control={form.control} name="extra_informatie" render={({ field }) => (
