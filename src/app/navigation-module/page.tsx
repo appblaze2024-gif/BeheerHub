@@ -94,8 +94,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import { LoadingScreen } from '@/components/loading-screen';
 import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MapboxView } from '@/components/mapbox-view';
-import { useProject } from '@/context/project-context';
+import { Textarea } from '@/components/ui/textarea';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -683,8 +682,6 @@ export default function StartNavigationPage() {
     }
   }, [profile]);
 
-  const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId), [projects, selectedProjectId]);
-
   const activeMeldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -801,11 +798,6 @@ export default function StartNavigationPage() {
             setCurrentRouteGeometry(route.geometry);
             setDisplayedRouteGeometry(turf.feature(route.geometry));
             setRouteInfo({ duration: route.duration, distance: route.distance });
-            const avgSpeed = (route.distance / route.duration) * 3.6;
-            if (avgSpeed > 70) setCurrentSpeedLimit(100);
-            else if (avgSpeed > 45) setCurrentSpeedLimit(80);
-            else if (avgSpeed > 25) setCurrentSpeedLimit(50);
-            else setCurrentSpeedLimit(30);
         }
     } catch (e) { 
         console.error("Route error:", e); 
@@ -822,6 +814,34 @@ export default function StartNavigationPage() {
         setRouteInfo(null);
     }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
+
+  // Realtime Speed Limit fetching logic
+  React.useEffect(() => {
+    const fetchSpeedLimit = async () => {
+      if (!userLocation || isSimulationMode) return;
+      
+      try {
+        const { longitude, latitude } = userLocation;
+        // Mapbox TileQuery API to get the current road's metadata including speed limit
+        const url = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${longitude},${latitude}.json?layers=road&radius=25&limit=1&access_token=${MAPBOX_TOKEN}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data.features && data.features.length > 0) {
+          const limitValue = data.features[0].properties.speed_limit;
+          if (limitValue && typeof limitValue === 'number') {
+            setCurrentSpeedLimit(limitValue);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch speed limit", e);
+      }
+    };
+
+    // Throttle checks to every 5 seconds to stay within API limits and avoid spamming
+    const timer = setTimeout(fetchSpeedLimit, 5000);
+    return () => clearTimeout(timer);
+  }, [userLocation, isSimulationMode]);
 
   React.useEffect(() => {
     let animId: number;
@@ -1051,46 +1071,58 @@ export default function StartNavigationPage() {
 
             <div className="flex items-center gap-2 pointer-events-auto">
                 {navigationState === 'navigating' && (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-6 w-6 text-slate-600" /></Button>
-                        </PopoverTrigger>
-                        <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
+                    <div className="flex items-center gap-2">
+                        {isManualMode && (
+                            <Button 
+                                variant="default" 
+                                size="icon" 
+                                className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-primary text-white border-2 border-white transition-all active:scale-95 flex items-center justify-center animate-in zoom-in duration-300"
+                                onClick={handleHervatNavigatie}
+                            >
+                                <Navigation className="h-6 w-6 fill-current" />
+                            </Button>
+                        )}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-6 w-6 text-slate-600" /></Button>
+                            </PopoverTrigger>
+                            <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
                                 <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div>
-                                        <Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
-                                        <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
-                                    </div>
-                                    <Separator className="bg-slate-100" />
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Dynamisch zoomen</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Past zoom aan op snelheid</p></div>
-                                        <Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} />
-                                    </div>
-                                    {!dynamicZoomEnabled && (
-                                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                            <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
-                                            <div className="flex items-center gap-2">
-                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button>
-                                                <div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div>
-                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button>
-                                            </div>
+                                    <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
+                                    <div className="space-y-6">
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div>
+                                            <Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} />
                                         </div>
-                                    )}
-                                    <Separator className="bg-slate-100" />
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Opent werkbon na 10s stilstand</p></div>
-                                        <Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} />
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
+                                            <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
+                                        </div>
+                                        <Separator className="bg-slate-100" />
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Dynamisch zoomen</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Past zoom aan op snelheid</p></div>
+                                            <Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} />
+                                        </div>
+                                        {!dynamicZoomEnabled && (
+                                            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                                <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
+                                                <div className="flex items-center gap-2">
+                                                    <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button>
+                                                    <div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div>
+                                                    <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <Separator className="bg-slate-100" />
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Opent werkbon na 10s stilstand</p></div>
+                                            <Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                 )}
                 {navigationState === 'setup' ? (
                     <Button className="h-12 md:h-14 px-5 md:px-10 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl transition-all active:scale-95 pointer-events-auto" onClick={handleStartRit}>
@@ -1118,17 +1150,6 @@ export default function StartNavigationPage() {
                             <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
-
-                    {isManualMode && (
-                        <Button 
-                            variant="default" 
-                            size="icon" 
-                            className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-primary text-white border-2 border-white transition-all active:scale-95 flex items-center justify-center pointer-events-auto animate-in fade-in zoom-in duration-300"
-                            onClick={handleHervatNavigatie}
-                        >
-                            <Navigation className="h-7 w-7 fill-current" />
-                        </Button>
-                    )}
                 </div>
 
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
