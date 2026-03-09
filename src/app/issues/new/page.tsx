@@ -341,35 +341,35 @@ export default function NewIssuePage() {
 
   // Effect to automatically determine Werkgebied (Wijk) based on location
   React.useEffect(() => {
-    if (!location || !projects || isReadOnly) return;
+    if (location && projects && !isReadOnly) {
+      const point = turf.point([location.longitude, location.latitude]);
+      let foundWijk = '';
 
-    const point = turf.point([location.longitude, location.latitude]);
-    let foundWijk = '';
-
-    for (const project of projects) {
-      if (project.wijken) {
-        for (const wijk of project.wijken) {
-          try {
-            const features = JSON.parse(wijk.subGebieden);
-            if (Array.isArray(features)) {
-              for (const feature of features) {
-                if (turf.booleanPointInPolygon(point, feature)) {
-                  foundWijk = wijk.naam;
-                  break;
+      for (const project of projects) {
+        if (project.wijken) {
+          for (const wijk of project.wijken) {
+            try {
+              const features = JSON.parse(wijk.subGebieden);
+              if (Array.isArray(features)) {
+                for (const feature of features) {
+                  if (turf.booleanPointInPolygon(point, feature)) {
+                    foundWijk = wijk.naam;
+                    break;
+                  }
                 }
               }
+            } catch (e) {
+              // ignore invalid geojson
             }
-          } catch (e) {
-            // ignore invalid geojson
+            if (foundWijk) break;
           }
-          if (foundWijk) break;
         }
+        if (foundWijk) break;
       }
-      if (foundWijk) break;
-    }
 
-    if (foundWijk) {
-      form.setValue('werkgebied', foundWijk);
+      if (foundWijk) {
+        form.setValue('werkgebied', foundWijk);
+      }
     }
   }, [location, projects, form, isReadOnly]);
 
@@ -500,7 +500,7 @@ export default function NewIssuePage() {
     <Form {...form}>
       <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit, onSaveError)} className="space-y-4">
         {isMobile ? (
-          <Accordion type="multiple" defaultValue={["section-1"]} className="w-full">
+          <Accordion type="multiple" defaultValue={[]} className="w-full">
             <AccordionItem value="section-1" className="border-none">
               <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-900">Basisgegevens</span>
@@ -773,62 +773,8 @@ export default function NewIssuePage() {
             </div>
         </header>
 
-        <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
-            <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar">
-                {formContent}
-            </div>
-            
-            <div className="w-full lg:w-[350px] bg-slate-50 lg:border-l shrink-0 flex flex-col min-h-0 overflow-hidden">
-                <div className={cn("relative overflow-hidden bg-slate-100 shrink-0", isMobile ? "h-64 mt-4 rounded-3xl mx-4" : "h-[40%] shadow-inner")}>
-                    <MapboxView 
-                      latitude={location?.latitude} 
-                      longitude={location?.longitude} 
-                      mainLocationLabel={form.watch('containernummer')}
-                      objects={nearbyObjects}
-                      onObjectSelect={handleContainerSelect}
-                    />
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1 shadow-sm">
-                        <MapPin className="h-3 w-3 text-primary" /> GIS Locatie
-                    </div>
-                </div>
-
-                <div className={cn("flex-1 flex flex-col min-h-0 bg-white p-5 border-t shrink-0", isMobile ? "mt-4 rounded-t-[2.5rem] shadow-2xl border-none" : "h-[40%]")}>
-                    <div className="flex items-center justify-between border-b pb-3 mb-4">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">BIJLAGEN ({uploadedFiles.length + uploadedPhotos.length})</h3>
-                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold h-5 px-2">Ready</Badge>
-                    </div>
-                    <ScrollArea className="flex-1 pr-3">
-                        <div className="space-y-3">
-                            {uploadedFiles.map(f => (
-                                <div key={f.storagePath} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-lg">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="bg-blue-100 p-2 rounded-xl"><Paperclip className="h-4 w-4 text-blue-600" /></div>
-                                        <div className="min-w-0"><p className="text-[11px] font-black truncate text-slate-900 uppercase tracking-tighter">{f.name}</p></div>
-                                    </div>
-                                    {!isReadOnly && <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>}
-                                </div>
-                            ))}
-                            {uploadedPhotos.map(p => (
-                                <div key={p.storagePath} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-lg">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="bg-green-100 p-2 rounded-xl"><Camera className="h-4 w-4 text-green-600" /></div>
-                                        <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-slate-200 border-2 border-white shadow-sm shrink-0"><Image src={p.url} alt={p.name} fill className="object-cover" /></div>
-                                        <div className="min-w-0"><p className="text-[11px] font-black truncate text-slate-900 uppercase tracking-tighter">{p.name}</p></div>
-                                    </div>
-                                    {!isReadOnly && <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-4 w-4" /></Button>}
-                                </div>
-                            ))}
-                            {!uploadedFiles.length && !uploadedPhotos.length && (
-                                <div className="py-8 flex flex-col items-center justify-center text-slate-300">
-                                    <Paperclip className="h-10 w-10 text-slate-200 opacity-50 mb-2" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Geen bijlagen actief</p>
-                                    <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">Upload bestanden via de header</p>
-                                </div>
-                            )}
-                        </div>
-                    </ScrollArea>
-                </div>
-            </div>
+        <main className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar">
+            {formContent}
         </main>
     </div>
   );
