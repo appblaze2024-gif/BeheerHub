@@ -880,7 +880,7 @@ export default function StartNavigationPage() {
         { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute, dynamicZoomEnabled, navZoom]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute, dynamicZoomEnabled, navZoom, speedKmh]);
 
   const updateNavPitch = (newPitch: number) => { setNavPitchState(Number(newPitch)); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: Number(newPitch) }, { merge: true }); mapRef.current?.getMap().jumpTo({ pitch: Number(newPitch) }); };
   const updateNavOffset = (newOffset: number) => { setNavOffsetState(Number(newOffset)); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: Number(newOffset) }, { merge: true }); mapRef.current?.getMap().jumpTo({ padding: { top: 0, bottom: Math.max(0, Number(newOffset)), left: 0, right: 0 } }); };
@@ -910,7 +910,18 @@ export default function StartNavigationPage() {
 
   const handleHervatNavigatie = () => {
     setIsManualMode(false);
-    if (mapRef.current && smoothLocation) mapRef.current.getMap().flyTo({ center: [smoothLocation.longitude, smoothLocation.latitude], zoom: 18, pitch: navPitch, bearing: lastHeadingRef.current, padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }, duration: 1000 });
+    if (mapRef.current && smoothLocation) {
+        const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (speedKmh / 25))) : navZoom;
+        mapRef.current.getMap().flyTo({ 
+            center: [smoothLocation.longitude, smoothLocation.latitude], 
+            zoom: targetZoom, 
+            pitch: navPitch, 
+            bearing: lastHeadingRef.current || 0, 
+            padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }, 
+            duration: 800,
+            essential: true
+        });
+    }
   };
 
   const clickedMelding = React.useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
@@ -1094,14 +1105,15 @@ export default function StartNavigationPage() {
                 "absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6",
                 navigationState === 'navigating' ? "bottom-8" : "bottom-[260px]"
             )}>
-                {navigationState === 'navigating' && (
-                    <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={handleHervatNavigatie}>
-                        <Navigation className="h-7 w-7 text-primary fill-current" />
+                {navigationState === 'navigating' ? (
+                    <Button variant="default" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-primary text-white border-2 border-white transition-all active:scale-95 flex items-center justify-center" onClick={handleHervatNavigatie}>
+                        <Navigation className="h-7 w-7 fill-current" />
+                    </Button>
+                ) : (
+                    <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}>
+                        <MapIcon className="h-7 w-7 text-slate-600" />
                     </Button>
                 )}
-                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}>
-                    <MapIcon className="h-7 w-7 text-slate-600" />
-                </Button>
             </div>
         )}
 
