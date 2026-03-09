@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -10,15 +9,18 @@ import {
   DialogDescription,
   DialogFooter,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { Separator } from '@/components/ui/separator';
+import { useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase, useFirebaseApp, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useProfile } from '@/firebase/profile-provider';
-import { Info, Loader2, Save, Sparkles, History } from 'lucide-react';
+import { Info, Loader2, Save, Sparkles, History, Pencil } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -27,18 +29,23 @@ interface AppInfo {
   version: string;
   lastUpdate: string;
   description: string;
+  appIconUrl?: string;
 }
 
 export function AppInfoDialog({ children }: { children: React.ReactNode }) {
   const firestore = useFirestore();
+  const app = useFirebaseApp();
+  const { user } = useUser();
   const { profile } = useProfile();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const infoRef = useMemoFirebase(() => 
-    firestore ? doc(firestore, 'settings', 'app_info') : null, 
-    [firestore]
+    (firestore && user) ? doc(firestore, 'settings', 'app_info') : null, 
+    [firestore, user]
   );
   
   const { data: appInfo, isLoading } = useDoc<AppInfo>(infoRef);
@@ -46,7 +53,8 @@ export function AppInfoDialog({ children }: { children: React.ReactNode }) {
   const [formData, setFormData] = React.useState<AppInfo>({
     version: '1.0.0',
     lastUpdate: new Date().toISOString().split('T')[0],
-    description: 'Welkom bij BeheerHub.'
+    description: 'Welkom bij BeheerHub.',
+    appIconUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png'
   });
 
   React.useEffect(() => {
@@ -54,10 +62,35 @@ export function AppInfoDialog({ children }: { children: React.ReactNode }) {
       setFormData({
         version: appInfo.version || '1.0.0',
         lastUpdate: appInfo.lastUpdate || '',
-        description: appInfo.description || ''
+        description: appInfo.description || '',
+        appIconUrl: appInfo.appIconUrl || 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png'
       });
     }
   }, [appInfo]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !app || !firestore) return;
+
+    setIsUploading(true);
+    try {
+      const storage = getStorage(app);
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+      const storagePath = `settings/app_icons/${Date.now()}_${cleanFileName}`;
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      await uploadTask;
+      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+      setFormData(prev => ({ ...prev, appIconUrl: downloadURL }));
+      toast({ title: 'Icoon geüpload', description: 'Vergeet niet de instellingen op te slaan.' });
+    } catch (error) {
+      console.error('Upload failed:', error);
+      toast({ variant: 'destructive', title: 'Upload mislukt' });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!infoRef) return;
@@ -76,14 +109,14 @@ export function AppInfoDialog({ children }: { children: React.ReactNode }) {
   const isSuperAdmin = profile?.role === 'Super admin';
 
   return (
-    <Dialog onOpenChange={(open) => !open && setIsEditing(false)}>
+    <Dialog onOpenChange={(open) => { if(!open) setIsEditing(false); }}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
         <DialogHeader className="p-8 bg-slate-900 text-white shrink-0">
           <div className="flex items-center gap-4">
-            <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20">
+            <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20 mx-12">
               <Info className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -100,6 +133,23 @@ export function AppInfoDialog({ children }: { children: React.ReactNode }) {
             </div>
           ) : isEditing && isSuperAdmin ? (
             <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex flex-col items-center gap-4 mb-4">
+                <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                  <div className="h-20 w-20 rounded-2xl border-2 border-slate-100 overflow-hidden bg-slate-50 flex items-center justify-center">
+                    {isUploading ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    ) : (
+                      <img src={formData.appIconUrl} alt="App Icon" className="h-full w-full object-contain p-2" />
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Pencil className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">App Icoon Wijzigen</Label>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Versie</Label>
@@ -131,6 +181,12 @@ export function AppInfoDialog({ children }: { children: React.ReactNode }) {
             </div>
           ) : (
             <div className="space-y-8 animate-in fade-in duration-300">
+              <div className="flex flex-col items-center gap-4">
+                <div className="h-24 w-24 rounded-[2rem] border-4 border-slate-50 overflow-hidden bg-white shadow-2xl flex items-center justify-center">
+                  <img src={formData.appIconUrl} alt="App Icon" className="h-full w-full object-contain p-3" />
+                </div>
+              </div>
+
               <div className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem] border-2 border-slate-100 shadow-inner">
                 <div className="space-y-1">
                   <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">Huidige Versie</p>
@@ -165,7 +221,7 @@ export function AppInfoDialog({ children }: { children: React.ReactNode }) {
             <div className="flex gap-2 ml-auto">
               {isSuperAdmin && !isEditing && (
                 <Button variant="outline" onClick={() => setIsEditing(true)} className="font-bold rounded-xl border-slate-200">
-                  <Save className="h-4 w-4 mr-2" /> Informatie bewerken
+                  <Pencil className="h-4 w-4 mr-2" /> Informatie bewerken
                 </Button>
               )}
               {isEditing ? (
@@ -174,7 +230,9 @@ export function AppInfoDialog({ children }: { children: React.ReactNode }) {
                   Opslaan
                 </Button>
               ) : (
-                <Button variant="ghost" className="font-bold" onClick={() => (document.querySelector('[data-state="open"]') as any)?.click()}>Sluiten</Button>
+                <DialogClose asChild>
+                  <Button variant="ghost" className="font-bold">Sluiten</Button>
+                </DialogClose>
               )}
             </div>
           </div>

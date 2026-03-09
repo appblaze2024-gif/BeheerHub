@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { 
   ArrowLeft, 
   Play, 
@@ -88,9 +89,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Popover,
   PopoverContent,
@@ -581,6 +579,18 @@ function IntegratedWerkbonOverlay({
         </div>
     );
 }
+
+const getMeldingAgeColor = (datum?: string) => {
+    if (!datum) return 'bg-slate-400';
+    try {
+        const d = new Date(datum);
+        const diffDays = Math.abs(differenceInCalendarDays(new Date(), d));
+        if (diffDays <= 1) return 'bg-slate-400'; 
+        if (diffDays === 2) return 'bg-yellow-400'; 
+        if (diffDays === 3) return 'bg-orange-500'; 
+        return 'bg-red-600'; 
+    } catch (e) { return 'bg-slate-400'; }
+};
 
 export default function StartNavigationPage() {
   const firestore = useFirestore();
@@ -1153,17 +1163,18 @@ export default function StartNavigationPage() {
                                 )}
                                 <div className={cn(
                                     "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-xl transition-all z-10",
-                                    isCompleted ? "bg-green-500" : "bg-white/20 backdrop-blur-[2px]",
-                                    (isNext || isClicked) && "ring-4 ring-black/20 scale-125"
+                                    isCompleted ? "bg-green-500" : "bg-white/20 backdrop-blur-md",
+                                    (isNext || isClicked) && "ring-4 ring-black/20 scale-125",
+                                    "cursor-pointer hover:scale-110"
                                 )}>
                                     {renderMarkerIcon(m.hoofdcategorie)}
                                     {isCompleted ? (
-                                        <div className="absolute -top-1.5 -right-1.5 bg-green-500 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden animate-in zoom-in duration-300">
-                                            <Check className="h-3.5 w-3.5 text-white" />
+                                        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full w-4 h-4 flex items-center justify-center border border-white shadow-lg overflow-hidden animate-in zoom-in duration-300">
+                                            <Check className="h-2.5 w-2.5 text-white" />
                                         </div>
                                     ) : (
-                                        <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden">
-                                            <Wrench className="h-3.5 w-3.5 text-slate-900" />
+                                        <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-white shadow-lg overflow-hidden">
+                                            <Wrench className="h-2.5 w-2.5 text-slate-900" />
                                         </div>
                                     )}
                                 </div>
@@ -1351,7 +1362,7 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {(isManualMode || priorityMissionId) && (
+        {isManualMode && (
             <div className={cn(
                 "absolute z-50 pointer-events-auto animate-in fade-in slide-in-from-right-2 duration-300",
                 navigationState === 'setup' ? "bottom-[260px] right-4" : "bottom-[180px] right-6"
@@ -1542,7 +1553,7 @@ export default function StartNavigationPage() {
                                 {visibleColumns.memo && <TableHead className="font-black uppercase text-[9px] text-slate-500 border-r border-slate-200 px-2 h-8">Omschrijving</TableHead>}
                                 {visibleColumns.hoofdcategorie && <TableHead className="font-black uppercase text-slate-400 border-r border-slate-100 px-2 h-8">Hoofdtype</TableHead>}
                                 {visibleColumns.subcategorie && <TableHead className="font-black uppercase text-slate-500 border-r border-slate-200 px-2 h-8">Subtype</TableHead>}
-                                {visibleColumns.werkgebied && <TableHead className="font-black uppercase text-primary border-r border-slate-100 px-2 h-8">Gebied</TableHead>}
+                                {visibleColumns.werkgebied && <TableHead className="font-black text-primary border-r border-slate-100 px-2 h-8">Gebied</TableHead>}
                                 {visibleColumns.afstand && <TableHead className="text-right font-black uppercase text-[9px] text-slate-500 px-2 h-8">Dist (km)</TableHead>}
                             </TableRow>
                         </TableHeader>
@@ -1597,15 +1608,3 @@ export default function StartNavigationPage() {
     </div>
   );
 }
-
-const getMeldingAgeColor = (datum?: string) => {
-    if (!datum) return 'bg-slate-400';
-    try {
-        const d = new Date(datum);
-        const diffDays = Math.abs(differenceInCalendarDays(new Date(), d));
-        if (diffDays <= 1) return 'bg-slate-400'; 
-        if (diffDays === 2) return 'bg-yellow-400'; 
-        if (diffDays === 3) return 'bg-orange-500'; 
-        return 'bg-red-600'; 
-    } catch (e) { return 'bg-slate-400'; }
-};
