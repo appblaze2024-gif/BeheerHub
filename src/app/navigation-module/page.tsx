@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -603,6 +604,8 @@ export default function StartNavigationPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
   const [isLocating, setIsLocating] = React.useState(false);
   const [activeWerkbonId, setActiveWerkbonId] = React.useState<string | null>(null);
+  const [clickedMarkerId, setClickedMarkerId] = React.useState<string | null>(null);
+  const [priorityMissionId, setPriorityMissionId] = React.useState<string | null>(null);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [isManualMode, setIsManualMode] = React.useState(false);
   const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
@@ -769,14 +772,25 @@ export default function StartNavigationPage() {
   const sortedMissions = React.useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
     const base = userLocation || SIMULATION_START_LOCATION;
-    return [...filteredMeldingen]
+    
+    const sorted = [...filteredMeldingen]
         .filter(m => m.status !== 'Afgerond')
         .sort((a, b) => {
             const distA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]));
             const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
             return distA - distB;
         });
-  }, [filteredMeldingen, userLocation]);
+
+    if (priorityMissionId) {
+        const priorityIndex = sorted.findIndex(m => m.id === priorityMissionId);
+        if (priorityIndex !== -1) {
+            const [priority] = sorted.splice(priorityIndex, 1);
+            sorted.unshift(priority);
+        }
+    }
+
+    return sorted;
+  }, [filteredMeldingen, userLocation, priorityMissionId]);
 
   const nextMission = sortedMissions[0];
 
@@ -840,7 +854,6 @@ export default function StartNavigationPage() {
             setDisplayedRouteGeometry(turf.feature(route.geometry));
             setRouteInfo({ duration: route.duration, distance: route.distance });
             
-            // Guess speed limit based on duration/distance if not explicitly provided
             const avgSpeed = (route.distance / route.duration) * 3.6;
             if (avgSpeed > 70) setCurrentSpeedLimit(100);
             else if (avgSpeed > 45) setCurrentSpeedLimit(80);
@@ -864,7 +877,6 @@ export default function StartNavigationPage() {
     }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
-  // VLOEIENDE INTERPOLATIE LOOP
   React.useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
@@ -1056,6 +1068,7 @@ export default function StartNavigationPage() {
     setIsManualMode(false);
     visualPosRef.current = null;
     lastSnappedPosRef.current = null;
+    setPriorityMissionId(null);
     
     const map = mapRef.current?.getMap();
     if (map) {
@@ -1077,6 +1090,11 @@ export default function StartNavigationPage() {
         });
     }
   };
+
+  const clickedMelding = React.useMemo(() => 
+    filteredMeldingen.find(m => m.id === clickedMarkerId), 
+    [filteredMeldingen, clickedMarkerId]
+  );
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
@@ -1113,9 +1131,13 @@ export default function StartNavigationPage() {
                 {filteredMeldingen.map((m) => {
                     const isCompleted = m.status === 'Afgerond';
                     const isNext = nextMission?.id === m.id && navigationState === 'navigating';
+                    const isClicked = clickedMarkerId === m.id;
 
                     return (
-                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setActiveWerkbonId(m.id); }}>
+                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { 
+                            e.originalEvent.stopPropagation(); 
+                            setClickedMarkerId(m.id);
+                        }}>
                             <div className="relative flex items-center justify-center w-14 h-14">
                                 {showAssignmentBubbles && m.behandelaar && (
                                     <div className="absolute bottom-full mb-2 bg-white/95 backdrop-blur-md border-2 border-slate-900 px-2 py-0.5 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap">
@@ -1123,13 +1145,17 @@ export default function StartNavigationPage() {
                                         <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-900" />
                                     </div>
                                 )}
-                                {isNext && (
-                                    <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
+                                {(isNext || isClicked) && (
+                                    <div className={cn(
+                                        "absolute inset-0 rounded-full border-[4px] border-slate-900 opacity-80",
+                                        isNext && "animate-pulse",
+                                        isClicked && "border-primary"
+                                    )} />
                                 )}
                                 <div className={cn(
                                     "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-xl transition-all z-10",
                                     isCompleted ? "bg-green-500" : "bg-white/20 backdrop-blur-[2px]",
-                                    isNext && "ring-4 ring-black/20 scale-125"
+                                    (isNext || isClicked) && "ring-4 ring-black/20 scale-125"
                                 )}>
                                     {renderMarkerIcon(m.hoofdcategorie)}
                                     {isCompleted ? (
@@ -1160,6 +1186,49 @@ export default function StartNavigationPage() {
             </MapGL>
         </div>
 
+        {/* Choice Overlay when a marker is clicked */}
+        {clickedMarkerId && clickedMelding && (
+            <div className="absolute inset-0 z-[80] bg-black/20 backdrop-blur-[2px] flex items-center justify-center p-6 animate-in fade-in duration-300">
+                <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border-4 border-white">
+                    <div className="p-6 bg-slate-900 text-white flex justify-between items-start">
+                        <div className="space-y-1">
+                            <Badge className="bg-primary border-none text-[8px] font-black uppercase tracking-widest px-2 h-5">Melding Geselecteerd</Badge>
+                            <h3 className="text-xl font-black uppercase tracking-tight">{clickedMelding.intakenummer}</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[200px]">
+                                {clickedMelding.straatnaam} {clickedMelding.huisnummer}
+                            </p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-white hover:bg-white/10" onClick={() => setClickedMarkerId(null)}>
+                            <X className="h-6 w-6" />
+                        </Button>
+                    </div>
+                    <div className="p-6 grid grid-cols-1 gap-3">
+                        <Button 
+                            className="h-16 rounded-2xl font-black uppercase tracking-widest shadow-lg bg-slate-100 text-slate-900 hover:bg-slate-200 border-none gap-3"
+                            onClick={() => {
+                                setActiveWerkbonId(clickedMarkerId);
+                                setClickedMarkerId(null);
+                            }}
+                        >
+                            <FileText className="h-6 w-6 text-primary" />
+                            Open Werkbon
+                        </Button>
+                        <Button 
+                            className="h-16 rounded-2xl font-black uppercase tracking-widest shadow-xl bg-primary text-white hover:bg-primary/90 border-none gap-3"
+                            onClick={() => {
+                                setPriorityMissionId(clickedMarkerId);
+                                handleStartRit(false);
+                                setClickedMarkerId(null);
+                            }}
+                        >
+                            <Navigation className="h-6 w-6 text-white fill-current" />
+                            Navigeer Hierheen
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        )}
+
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
             <div className="flex flex-col gap-3 pointer-events-auto">
                 {navigationState === 'setup' && (
@@ -1175,16 +1244,24 @@ export default function StartNavigationPage() {
                 
                 {navigationState === 'navigating' && routeInfo && (
                     <div className="bg-white/95 backdrop-blur-md px-5 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                        <div className="flex flex-col items-center">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Vertrek</span>
-                            <span className="text-lg font-black text-slate-900 leading-none">{formatDate(new Date(), 'HH:mm')}</span>
+                        <div className="flex items-center gap-3">
+                            <Clock className="h-5 w-5 text-primary" />
+                            <div className="flex flex-col">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aankomst</span>
+                                <span className="text-lg font-black text-slate-900 leading-none">
+                                    {formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}
+                                </span>
+                            </div>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-primary shrink-0" />
-                        <div className="flex flex-col items-center">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aankomst</span>
-                            <span className="text-lg font-black text-primary leading-none">
-                                {formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}
-                            </span>
+                        <Separator orientation="vertical" className="h-8" />
+                        <div className="flex items-center gap-3">
+                            <Navigation className="h-5 w-5 text-primary" />
+                            <div className="flex flex-col">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Afstand</span>
+                                <span className="text-lg font-black text-slate-900 leading-none">
+                                    {(routeInfo.distance / 1000).toFixed(1)} km
+                                </span>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1275,7 +1352,7 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {isManualMode && (
+        {(isManualMode || priorityMissionId) && (
             <div className={cn(
                 "absolute z-50 pointer-events-auto animate-in fade-in slide-in-from-right-2 duration-300",
                 navigationState === 'setup' ? "bottom-[260px] right-4" : "bottom-[180px] right-6"
@@ -1293,14 +1370,19 @@ export default function StartNavigationPage() {
                         <MapIcon className="h-6 w-6 text-primary" />
                     </Button>
                 ) : !activeWerkbonId && (
-                    <Button 
-                        variant="secondary" 
-                        size="icon"
-                        className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center"
-                        onClick={handleHervatNavigatie}
-                    >
-                        <Navigation className="h-7 w-7 text-primary fill-current" />
-                    </Button>
+                    <div className="flex flex-col gap-2 items-end">
+                        {priorityMissionId && (
+                            <Badge className="bg-primary text-white border-none font-black uppercase text-[8px] tracking-widest shadow-xl animate-bounce">Focus Actief</Badge>
+                        )}
+                        <Button 
+                            variant="secondary" 
+                            size="icon"
+                            className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                            onClick={handleHervatNavigatie}
+                        >
+                            <Navigation className="h-7 w-7 text-primary fill-current" />
+                        </Button>
+                    </div>
                 )}
             </div>
         )}
@@ -1324,7 +1406,12 @@ export default function StartNavigationPage() {
                         <div className="flex flex-col gap-3 min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="space-y-0.5 min-w-0 flex-1">
-                                    <p className="text-[8px] font-black uppercase text-slate-500">Intakenummer</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-[8px] font-black uppercase text-slate-500">Intakenummer</p>
+                                        {priorityMissionId === nextMission?.id && (
+                                            <Badge className="bg-primary/10 text-primary border-none h-4 text-[7px] font-black uppercase px-1">Geprioriteerd</Badge>
+                                        )}
+                                    </div>
                                     <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
@@ -1430,7 +1517,7 @@ export default function StartNavigationPage() {
                                         "p-3 rounded-xl border-2 transition-all flex flex-col gap-1",
                                         isCompleted ? "bg-green-50/50 border-green-100 opacity-60" : "bg-white border-slate-100 active:scale-[0.98]"
                                     )}
-                                    onClick={() => handleMeldingClick(m)}
+                                    onClick={() => setClickedMarkerId(m.id)}
                                 >
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-1.5 min-w-0">
@@ -1469,7 +1556,7 @@ export default function StartNavigationPage() {
                                 const dist = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1);
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
-                                    <TableRow key={m.id} className={cn("h-8 transition-colors cursor-pointer border-b border-slate-100", isCompleted ? "bg-green-50/50 opacity-60" : "hover:bg-blue-50")} onClick={() => handleMeldingClick(m)}>
+                                    <TableRow key={m.id} className={cn("h-8 transition-colors cursor-pointer border-b border-slate-100", isCompleted ? "bg-green-50/50 opacity-60" : "hover:bg-blue-50")} onClick={() => setClickedMarkerId(m.id)}>
                                         {visibleColumns.intakenummer && (
                                             <TableCell className="font-black text-[10px] border-r border-slate-100 px-2 py-1">
                                                 <div className="flex items-center gap-2">
@@ -1505,6 +1592,7 @@ export default function StartNavigationPage() {
                         setCompletedObjects(prev => [...prev, id]);
                         setActiveWerkbonId(null);
                         setIsManualMode(false); 
+                        setPriorityMissionId(null);
                         setTimeout(() => fetchRoute(true), 150);
                     }} 
                 />
