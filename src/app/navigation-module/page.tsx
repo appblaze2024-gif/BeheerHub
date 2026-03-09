@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -627,10 +628,12 @@ export default function StartNavigationPage() {
   const [isPaused, setIsPaused] = React.useState(false);
 
   const mapRef = React.useRef<MapRef>(null);
-  const simAnimationRef = React.useRef<number | null>(null);
-  const simStateRef = React.useRef({ distanceTravelled: 0, currentSpeedMs: 0 });
   const lastRouteCalculationLocationRef = React.useRef<{latitude: number, longitude: number} | null>(null);
   const lastFetchTimeRef = React.useRef<number>(0);
+
+  // SMOOTHING AND LOCKING REFS
+  const visualPosRef = React.useRef<{lng: number, lat: number} | null>(null);
+  const lastSnappedPosRef = React.useRef<{lng: number, lat: number} | null>(null);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -650,7 +653,6 @@ export default function StartNavigationPage() {
 
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId), [projects, selectedProjectId]);
 
-  // Query 1: Active tasks
   const activeMeldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -662,7 +664,6 @@ export default function StartNavigationPage() {
 
   const { data: rawActiveMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(activeMeldingenQuery);
 
-  // Query 2: Today's completed
   const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
   const todayCompletedQuery = useMemoFirebase(() => {
     if (!firestore || !showTodayCompleted || debouncedSearchQuery) return null;
@@ -676,7 +677,6 @@ export default function StartNavigationPage() {
 
   const { data: rawTodayCompleted } = useCollection<Melding>(todayCompletedQuery);
 
-  // Query 3: Backend search
   const backendSearchQuery = useMemoFirebase(() => {
     if (!firestore || !debouncedSearchQuery) return null;
     return query(
@@ -700,7 +700,6 @@ export default function StartNavigationPage() {
 
   const { data: allMapObjects } = useCollection<MapObject>(objectsQuery);
 
-  // Combine results
   const filteredMeldingen = React.useMemo(() => {
     const poolMap = new Map<string, Melding>();
     
@@ -762,21 +761,6 @@ export default function StartNavigationPage() {
     }
   }, [filteredMeldingen, userLocation]);
 
-  React.useEffect(() => {
-    if (navigationState === 'setup' && !isLoadingMeldingen && filteredMeldingen.length > 0 && mapRef.current && !isManualMode) {
-        const map = mapRef.current.getMap();
-        if (map.isStyleLoaded()) {
-            map.resize();
-            goToOverview();
-        } else {
-            map.once('style.load', () => {
-                map.resize();
-                goToOverview();
-            });
-        }
-    }
-  }, [navigationState, isLoadingMeldingen, filteredMeldingen.length, goToOverview, isManualMode]);
-
   const fetchRoute = React.useCallback(async (force = false) => {
     if (navigationState === 'setup' || sortedMissions.length === 0) {
         setCurrentRouteGeometry(null);
@@ -786,7 +770,7 @@ export default function StartNavigationPage() {
     }
     
     const now = Date.now();
-    if (!force && now - lastFetchTimeRef.current < 2000) return;
+    if (!force && now - lastFetchTimeRef.current < 3000) return;
     
     setIsCalculatingRoute(true);
     lastFetchTimeRef.current = now;
@@ -809,6 +793,14 @@ export default function StartNavigationPage() {
             setCurrentRouteGeometry(route.geometry);
             setDisplayedRouteGeometry(turf.feature(route.geometry));
             setRouteInfo({ duration: route.duration, distance: route.distance });
+            
+            // Guess speed limit based on duration/distance if not explicitly provided
+            // Average highway > 80, city ~ 50, zone ~ 30
+            const avgSpeed = (route.distance / route.duration) * 3.6;
+            if (avgSpeed > 70) setCurrentSpeedLimit(100);
+            else if (avgSpeed > 45) setCurrentSpeedLimit(80);
+            else if (avgSpeed > 25) setCurrentSpeedLimit(50);
+            else setCurrentSpeedLimit(30);
         }
     } catch (e) { 
         console.error("Route error:", e); 
@@ -827,6 +819,32 @@ export default function StartNavigationPage() {
     }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
+  // VLOEIENDE INTERPOLATIE LOOP
+  React.useEffect(() => {
+    let animId: number;
+    const updateVisualPos = () => {
+        if (navigationState === 'navigating' && lastSnappedPosRef.current) {
+            if (!visualPosRef.current) {
+                visualPosRef.current = { ...lastSnappedPosRef.current };
+            } else {
+                // Interpolatie factor (boterzacht glijden)
+                const factor = 0.08; 
+                visualPosRef.current.lng += (lastSnappedPosRef.current.lng - visualPosRef.current.lng) * factor;
+                visualPosRef.current.lat += (lastSnappedPosRef.current.lat - visualPosRef.current.lat) * factor;
+            }
+            setSmoothLocation((prev: any) => ({
+                ...prev,
+                longitude: visualPosRef.current?.lng,
+                latitude: visualPosRef.current?.lat,
+                heading: lastHeadingRef.current
+            }));
+        }
+        animId = requestAnimationFrame(updateVisualPos);
+    };
+    animId = requestAnimationFrame(updateVisualPos);
+    return () => cancelAnimationFrame(animId);
+  }, [navigationState]);
+
   React.useEffect(() => {
     if (!navigator.geolocation || isSimulationMode) return;
     
@@ -835,62 +853,60 @@ export default function StartNavigationPage() {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             setUserLocation(loc);
             
-            if (navigationState === 'navigating' && currentRouteGeometry && !isCalculatingRoute) {
-                const line = turf.lineString(currentRouteGeometry.coordinates);
-                const rawPt = turf.point([loc.longitude, loc.latitude]);
-                const distanceOffRoute = turf.pointToLineDistance(rawPt, line, { units: 'meters' });
-                if (distanceOffRoute > 50) {
-                    fetchRoute(true);
-                }
-            }
+            const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
+            setSpeedKmh(currentSpeed);
 
-            let activeLoc = { ...loc, heading: lastHeadingRef.current };
-
-            if (currentRouteGeometry) {
+            if (navigationState === 'navigating' && currentRouteGeometry) {
                 try {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
                     const currPt = turf.point([loc.longitude, loc.latitude]);
+                    
+                    // LOCK OP DE LIJN: We snappen ALTIJD naar de dichtstbijzijnde punt op de route
                     const snapped = turf.nearestPointOnLine(line, currPt);
                     
-                    activeLoc.longitude = snapped.geometry.coordinates[0];
-                    activeLoc.latitude = snapped.geometry.coordinates[1];
+                    // Update snapped ref voor de interpolatie loop
+                    lastSnappedPosRef.current = {
+                        lng: snapped.geometry.coordinates[0],
+                        lat: snapped.geometry.coordinates[1]
+                    };
 
                     const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
                     const distAlong = turf.length(alongRoute, { units: 'meters' });
-                    const ahead = turf.along(line, distAlong + 10, { units: 'meters' });
+                    const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
                     const calculatedHeading = (turf.bearing(snapped, ahead) + 360) % 360;
-                    activeLoc.heading = calculatedHeading;
                     lastHeadingRef.current = calculatedHeading;
 
                     const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
                     setDisplayedRouteGeometry(forwardPart);
+
+                    // Re-calculate route if too far off
+                    const distanceOffRoute = turf.pointToLineDistance(currPt, line, { units: 'meters' });
+                    if (distanceOffRoute > 60 && !isCalculatingRoute) {
+                        fetchRoute(true);
+                    }
                 } catch (e) {}
+            } else {
+                setSmoothLocation({ ...loc, heading: lastHeadingRef.current });
             }
 
-            setSmoothLocation(activeLoc);
-            const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
-            setSpeedKmh(currentSpeed);
-
-            if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
+            if (navigationState === 'navigating' && mapRef.current && !isManualMode && visualPosRef.current) {
                 const map = mapRef.current.getMap();
                 const targetZoom = dynamicZoomEnabled 
-                    ? Math.max(15, Math.min(19, 19 - (currentSpeed / 20)))
+                    ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25)))
                     : navZoom;
 
                 map.easeTo({
-                    center: [activeLoc.longitude, activeLoc.latitude],
-                    bearing: activeLoc.heading,
+                    center: [visualPosRef.current.lng, visualPosRef.current.lat],
+                    bearing: lastHeadingRef.current,
                     zoom: targetZoom,
                     pitch: navPitch,
                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                    duration: 500, 
+                    duration: 1000, 
                     easing: (t) => t 
                 });
             }
         },
-        (err) => {
-            console.error("GPS Error:", err);
-        },
+        (err) => console.error("GPS Error:", err),
         { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
@@ -940,10 +956,16 @@ export default function StartNavigationPage() {
     setCurrentRouteGeometry(null);
     setDisplayedRouteGeometry(null);
     setRouteInfo(null);
+    visualPosRef.current = null;
+    lastSnappedPosRef.current = null;
 
     setIsLocating(true);
     const beginNavigation = (loc: { latitude: number, longitude: number }, heading: number) => {
-        setSmoothLocation({ ...loc, heading });
+        const startPos = { ...loc, heading };
+        setSmoothLocation(startPos);
+        lastSnappedPosRef.current = { lng: loc.longitude, lat: loc.latitude };
+        visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
+        
         setIsSimulationMode(false);
         setNavigationState('navigating');
         setIsLocating(false);
@@ -992,6 +1014,8 @@ export default function StartNavigationPage() {
     setDisplayedRouteGeometry(null);
     setRouteInfo(null);
     setIsManualMode(false);
+    visualPosRef.current = null;
+    lastSnappedPosRef.current = null;
     
     const map = mapRef.current?.getMap();
     if (map) {
@@ -1007,7 +1031,7 @@ export default function StartNavigationPage() {
             center: [smoothLocation.longitude, smoothLocation.latitude],
             zoom: 18,
             pitch: navPitch,
-            bearing: smoothLocation.heading,
+            bearing: lastHeadingRef.current,
             padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
             duration: 1000
         });
@@ -1113,7 +1137,7 @@ export default function StartNavigationPage() {
                         <ArrowRight className="h-4 w-4 text-primary shrink-0" />
                         <div className="flex flex-col items-center">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aankomst</span>
-                            <span className="text-lg font-black text-primary leading-none">
+                            <span className="text-lg font-black text-primary-foreground leading-none">
                                 {formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}
                             </span>
                         </div>
