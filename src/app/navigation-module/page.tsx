@@ -55,6 +55,7 @@ import {
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useProject } from '@/context/project-context';
 import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
@@ -815,30 +816,22 @@ export default function StartNavigationPage() {
     }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
-  // Realtime Speed Limit fetching logic
   React.useEffect(() => {
     const fetchSpeedLimit = async () => {
       if (!userLocation || isSimulationMode) return;
-      
       try {
         const { longitude, latitude } = userLocation;
-        // Mapbox TileQuery API to get the current road's metadata including speed limit
         const url = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${longitude},${latitude}.json?layers=road&radius=25&limit=1&access_token=${MAPBOX_TOKEN}`;
         const res = await fetch(url);
         const data = await res.json();
-        
         if (data.features && data.features.length > 0) {
           const limitValue = data.features[0].properties.speed_limit;
           if (limitValue && typeof limitValue === 'number') {
             setCurrentSpeedLimit(limitValue);
           }
         }
-      } catch (e) {
-        console.warn("Could not fetch speed limit", e);
-      }
+      } catch (e) { console.warn("Could not fetch speed limit", e); }
     };
-
-    // Throttle checks to every 5 seconds to stay within API limits and avoid spamming
     const timer = setTimeout(fetchSpeedLimit, 5000);
     return () => clearTimeout(timer);
   }, [userLocation, isSimulationMode]);
@@ -1072,16 +1065,6 @@ export default function StartNavigationPage() {
             <div className="flex items-center gap-2 pointer-events-auto">
                 {navigationState === 'navigating' && (
                     <div className="flex items-center gap-2">
-                        {isManualMode && (
-                            <Button 
-                                variant="default" 
-                                size="icon" 
-                                className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-primary text-white border-2 border-white transition-all active:scale-95 flex items-center justify-center animate-in zoom-in duration-300"
-                                onClick={handleHervatNavigatie}
-                            >
-                                <Navigation className="h-6 w-6 fill-current" />
-                            </Button>
-                        )}
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-6 w-6 text-slate-600" /></Button>
@@ -1150,6 +1133,18 @@ export default function StartNavigationPage() {
                             <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
+
+                    {/* Hervat Navigatie Button - Opposite the Speedometer */}
+                    {isManualMode && (
+                        <Button 
+                            variant="default" 
+                            size="icon" 
+                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-primary text-white border-[4px] sm:border-[6px] border-white transition-all active:scale-95 flex items-center justify-center animate-in zoom-in duration-300 pointer-events-auto"
+                            onClick={handleHervatNavigatie}
+                        >
+                            <Navigation className="h-8 w-8 fill-current" />
+                        </Button>
+                    )}
                 </div>
 
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
