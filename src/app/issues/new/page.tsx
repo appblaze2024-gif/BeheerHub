@@ -1167,10 +1167,28 @@ export default function NewIssuePage() {
                         <AccordionContent className="p-4 pt-0 space-y-4">
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>} onAdd={isSuperAdmin ? () => setIsManageHoofdtypeOpen(true) : undefined}>
-                              <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></FormItem>)} />
+                              <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (
+                                <FormItem>
+                                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
+                                    <FormControl>
+                                      <SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )} />
                             </FormRow>
                             <FormRow label={<>Subtype<span className="text-red-500">*</span></>} onAdd={isSuperAdmin ? () => setIsManageSubtypeOpen(true) : undefined}>
-                              <FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}><FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
+                              <FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (
+                                <FormItem>
+                                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}>
+                                    <FormControl>
+                                      <SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )} />
                             </FormRow>
                           </div>
                           <FormRow label="Memo">
@@ -1293,7 +1311,9 @@ export default function NewIssuePage() {
                               <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                    <FormControl>
+                                      <SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                    </FormControl>
                                     <SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
@@ -1303,7 +1323,9 @@ export default function NewIssuePage() {
                               <FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}>
-                                    <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                    <FormControl>
+                                      <SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                    </FormControl>
                                     <SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
