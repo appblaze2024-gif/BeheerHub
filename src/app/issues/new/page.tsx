@@ -426,7 +426,10 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
 
             <div className="space-y-6 bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100 shadow-inner">
               <div className="flex items-center justify-between">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Configureer Icoon</Label>
+                <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase text-slate-400">Configureer Icoon</Label>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase italic">Selecteer een bron en pas het icoon aan.</p>
+                </div>
                 <div className="h-16 w-16 bg-white rounded-2xl border-2 border-primary/10 flex items-center justify-center shadow-lg overflow-hidden">
                     {activeTab === 'preset' ? (
                         <div style={{ color: selectedColor }}>
@@ -519,7 +522,10 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             </div>
 
             <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huidige Types ({currentOptions.length})</Label>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huidige Types ({currentOptions.length})</Label>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Scroll naar beneden voor alle types.</p>
+                </div>
                 <div className="grid gap-2">
                 {currentOptions.map(name => (
                     <div key={name} className={cn("flex items-center justify-between p-3 bg-white border-2 rounded-2xl group transition-all shadow-sm", editTarget === name ? "border-primary bg-primary/5" : "border-slate-100 hover:border-primary/20")}>
