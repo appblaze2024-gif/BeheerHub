@@ -329,15 +329,15 @@ function IntegratedWerkbonOverlay({
                     <div className="space-y-1">
                         <h2 className="text-xl font-bold text-slate-900">Intakenummer: {melding.intakenummer}</h2>
                         <div className="space-y-1.5">
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-50">
                                 <MapPin className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-50">
                                 <Tag className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.hoofdcategorie} • {melding.subcategorie}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-50">
                                 <Hash className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.containernummer || 'Geen unit gekoppeld'}</span>
                             </div>
@@ -643,6 +643,44 @@ export default function StartNavigationPage() {
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
   const categoryIcons = dbOptions?.categoryIcons || {};
+
+  const isSvg = (str: string) => {
+    if (!str) return false;
+    const trimmed = str.trim().toLowerCase();
+    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
+  };
+
+  const renderMarkerIcon = (category: string) => {
+    const iconVal = categoryIcons[category];
+    if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-white" />;
+    
+    if (isSvg(iconVal)) {
+        return (
+            <div 
+                className="h-5 w-5 flex items-center justify-center text-white [&>svg]:h-full [&>svg]:w-full" 
+                dangerouslySetInnerHTML={{ __html: iconVal }} 
+            />
+        );
+    }
+    
+    if (iconVal.startsWith('http')) {
+        return (
+            <div className="h-5 w-5 relative flex items-center justify-center overflow-hidden rounded-full">
+                <img src={iconVal} alt="icon" className="h-full w-full object-cover" />
+            </div>
+        );
+    }
+
+    if (iconVal.startsWith('lucide:')) {
+        const parts = iconVal.split(':');
+        const name = parts[1];
+        const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
+        return <IconComp className="h-5 w-5 text-white" />;
+    }
+
+    const IconComp = (Icons as any)[iconVal] || Icons.AlertCircle;
+    return <IconComp className="h-5 w-5 text-white" />;
+  };
 
   React.useEffect(() => {
     if (profile) {
@@ -1069,8 +1107,6 @@ export default function StartNavigationPage() {
                     </Marker>
                 )}
                 {filteredMeldingen.map((m) => {
-                    const iconName = categoryIcons[m.hoofdcategorie] || 'AlertCircle';
-                    const IconComp = (Icons as any)[iconName] || Icons.AlertCircle;
                     const isCompleted = m.status === 'Afgerond';
                     const isNext = nextMission?.id === m.id && navigationState === 'navigating';
 
@@ -1091,7 +1127,7 @@ export default function StartNavigationPage() {
                                     isCompleted ? "bg-green-500" : "bg-primary",
                                     isNext && "ring-4 ring-black/20 scale-125"
                                 )}>
-                                    <IconComp className="h-5 w-5 text-white" />
+                                    {renderMarkerIcon(m.hoofdcategorie)}
                                     {isCompleted ? (
                                         <div className="absolute -top-1.5 -right-1.5 bg-green-500 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden animate-in zoom-in duration-300">
                                             <Check className="h-3.5 w-3.5 text-white" />
