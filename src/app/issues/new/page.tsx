@@ -286,7 +286,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             setHtmlIcon(currentIcon);
         } else if (currentIcon.startsWith('http')) {
             setActiveTab('upload');
-            // Extract the URL? selectedIcon stores the full value
+            setHtmlIcon(currentIcon);
         } else if (currentIcon.startsWith('lucide:')) {
             setActiveTab('preset');
             const [_, name, color] = currentIcon.split(':');
@@ -309,13 +309,11 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     try {
         const snapshot = await uploadBytesResumable(ref(storage, path), file);
         const url = await getDownloadURL(snapshot.ref);
-        // Special marker for uploaded images
-        // We set this as the icon value temporarily
-        setHtmlIcon(url); // Reusing state for the URL
-        toast({ title: "Icoon geüpload" });
+        setHtmlIcon(url);
+        toast({ title: "Afbeelding geüpload" });
     } catch (err: any) {
         console.error("Icon upload error:", err);
-        toast({ variant: 'destructive', title: "Upload mislukt", description: err.message || "Onbekende fout." });
+        toast({ variant: 'destructive', title: "Upload mislukt" });
     } finally {
         setIsUploading(false);
     }
@@ -330,7 +328,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
       if (activeTab === 'html') {
           finalIcon = htmlIcon.trim();
       } else if (activeTab === 'upload') {
-          finalIcon = htmlIcon; // Contains the URL
+          finalIcon = htmlIcon;
       } else {
           finalIcon = `lucide:${selectedIconName}:${selectedColor}`;
       }
@@ -405,31 +403,31 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
-      <DialogContent className="sm:max-w-2xl max-h-[95vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 border-b bg-slate-50">
-          <DialogTitle className="font-black uppercase">{editTarget ? `Icoon wijzigen: ${editTarget}` : 'Hoofdtypes Beheren'}</DialogTitle>
-          <DialogDescription>Voeg types toe en koppel een eigen icoon, afbeelding of SVG.</DialogDescription>
+      <DialogContent className="sm:max-w-2xl max-h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
+          <DialogTitle className="font-black uppercase tracking-tight">
+            {editTarget ? `Hoofdtype bewerken: ${editTarget}` : 'Hoofdtypes Beheren'}
+          </DialogTitle>
+          <DialogDescription className="text-slate-400 font-bold">Voeg types toe en koppel een eigen icoon, afbeelding of SVG.</DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 bg-white">
           <div className="space-y-8 p-6">
             {!editTarget && (
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Naam nieuw hoofdtype</Label>
-                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Verlichting..." className="font-bold h-11" />
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam nieuw hoofdtype</Label>
+                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Verlichting..." className="font-bold h-11 rounded-xl" />
               </div>
             )}
 
-            <div className="space-y-6 bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 shadow-inner">
+            <div className="space-y-6 bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100 shadow-inner">
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] font-black uppercase text-slate-400">Configureer Icoon</Label>
-                <div className="h-16 w-16 bg-white rounded-2xl border-2 border-primary/10 flex items-center justify-center shadow-lg">
+                <div className="h-16 w-16 bg-white rounded-2xl border-2 border-primary/10 flex items-center justify-center shadow-lg overflow-hidden">
                     {activeTab === 'preset' ? (
                         <div style={{ color: selectedColor }}>
                             {renderCurrentIcon(`lucide:${selectedIconName}:${selectedColor}`, true)}
                         </div>
-                    ) : activeTab === 'upload' ? (
-                        renderCurrentIcon(htmlIcon, true)
                     ) : (
                         renderCurrentIcon(htmlIcon, true)
                     )}
@@ -445,7 +443,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
 
                   <TabsContent value="preset" className="space-y-6 mt-0">
                       <div className="space-y-3">
-                          <Label className="text-[10px] font-black uppercase text-slate-400">Kies Kleur</Label>
+                          <Label className="text-[10px] font-black uppercase text-slate-400">Kleur</Label>
                           <div className="flex flex-wrap gap-2">
                               {PRESET_COLORS.map(c => (
                                   <button
@@ -457,16 +455,10 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                                       )}
                                       style={{ backgroundColor: c.value }}
                                       onClick={() => setSelectedColor(c.value)}
-                                      title={c.name}
                                   />
                               ))}
                               <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-slate-200">
-                                  <input 
-                                      type="color" 
-                                      value={selectedColor} 
-                                      onChange={e => setSelectedColor(e.target.value)}
-                                      className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
-                                  />
+                                  <input type="color" value={selectedColor} onChange={e => setSelectedColor(e.target.value)} className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer" />
                                   <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
                               </div>
                           </div>
@@ -475,14 +467,9 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                       <div className="space-y-3">
                           <div className="relative">
                               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                              <Input 
-                                  placeholder="Zoek icoon..." 
-                                  className="h-10 pl-9 font-bold rounded-xl border-slate-200 bg-white"
-                                  value={iconSearch}
-                                  onChange={e => setIconSearch(e.target.value)}
-                              />
+                              <Input placeholder="Zoek icoon..." className="h-10 pl-9 font-bold rounded-xl border-slate-200 bg-white" value={iconSearch} onChange={e => setIconSearch(e.target.value)} />
                           </div>
-                          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar p-1">
+                          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar p-1">
                               {filteredIcons.map(name => {
                                   const Icon = (Icons as any)[name];
                                   return (
@@ -493,7 +480,6 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                                           size="icon" 
                                           className="h-10 w-10 p-0 rounded-xl" 
                                           onClick={() => setSelectedIconName(name)}
-                                          title={name}
                                       >
                                           <Icon className="h-5 w-5" style={{ color: selectedIconName === name ? undefined : selectedColor }} />
                                       </Button>
@@ -504,13 +490,11 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                   </TabsContent>
 
                   <TabsContent value="upload" className="space-y-4 mt-0">
-                      <div className="flex items-center gap-4">
-                          <Button variant="outline" className="h-24 w-full flex-col gap-2 rounded-3xl border-dashed border-2 border-slate-200 bg-white" onClick={() => document.getElementById('icon-upload-input')?.click()} disabled={isUploading}>
-                              {isUploading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <Upload className="h-8 w-8 text-slate-300" />}
-                              <span className="text-[10px] font-black uppercase text-slate-400">Kies Afbeelding</span>
-                          </Button>
-                          <input type="file" id="icon-upload-input" className="hidden" accept="image/*" onChange={handleFileUpload} />
-                      </div>
+                      <Button variant="outline" className="h-24 w-full flex-col gap-2 rounded-3xl border-dashed border-2 border-slate-200 bg-white" onClick={() => document.getElementById('icon-upload-input')?.click()} disabled={isUploading}>
+                          {isUploading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <Upload className="h-8 w-8 text-slate-300" />}
+                          <span className="text-[10px] font-black uppercase text-slate-400">Kies Afbeelding</span>
+                      </Button>
+                      <input type="file" id="icon-upload-input" className="hidden" accept="image/*" onChange={handleFileUpload} />
                   </TabsContent>
 
                   <TabsContent value="html" className="space-y-4 mt-0">
@@ -527,34 +511,32 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                 {editTarget ? 'Wijzigingen Opslaan' : 'Nieuw Type Toevoegen'}
               </Button>
-              {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-black uppercase text-[10px] text-slate-400">Annuleren</Button>}
+              {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-black uppercase text-[10px] text-slate-400">Bewerken annuleren</Button>}
             </div>
 
-            {!editTarget && (
-              <div className="space-y-3">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huidige Types ({currentOptions.length})</Label>
-                  <div className="grid gap-2">
-                  {currentOptions.map(name => (
-                      <div key={name} className="flex items-center justify-between p-3 bg-white border-2 border-slate-100 rounded-2xl group hover:border-primary/20 transition-all shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-inner flex items-center justify-center w-10 h-10 shrink-0">
-                                {renderCurrentIcon(categoryIcons[name])}
-                            </div>
-                            <span className="text-sm font-black uppercase tracking-tight text-slate-700">{name}</span>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
-                                <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </div>
+            <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huidige Types ({currentOptions.length})</Label>
+                <div className="grid gap-2">
+                {currentOptions.map(name => (
+                    <div key={name} className={cn("flex items-center justify-between p-3 bg-white border-2 rounded-2xl group transition-all shadow-sm", editTarget === name ? "border-primary bg-primary/5" : "border-slate-100 hover:border-primary/20")}>
+                      <div className="flex items-center gap-4">
+                          <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-inner flex items-center justify-center w-10 h-10 shrink-0">
+                              {renderCurrentIcon(categoryIcons[name])}
+                          </div>
+                          <span className="text-sm font-black uppercase tracking-tight text-slate-700">{name}</span>
                       </div>
-                  ))}
-                  </div>
-              </div>
-            )}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
+                              <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
+                              <Trash2 className="h-4 w-4" />
+                          </Button>
+                      </div>
+                    </div>
+                ))}
+                </div>
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>
@@ -645,6 +627,77 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
       </DialogContent>
     </Dialog>
   );
+}
+
+const FormRow = ({ label, children, onAdd }: { label: React.ReactNode; children: React.ReactNode; onAdd?: () => void }) => (
+    <div className="flex flex-col gap-1 py-2 border-b border-slate-100 last:border-0 min-h-[44px]">
+        <div className="flex items-center justify-between">
+            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{label}</Label>
+            {onAdd && (
+                <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-5 w-5 text-slate-300 hover:text-primary transition-colors" 
+                    onClick={onAdd}
+                >
+                    <PlusCircle className="h-4 w-4" />
+                </Button>
+            )}
+        </div>
+        <div className="flex-1 min-w-0">
+            {children}
+        </div>
+    </div>
+);
+
+function SmartPasteDialog({ onParsed, instructions, trigger }: { onParsed: (data: any) => void, instructions: string, trigger?: React.ReactNode }) {
+    const [text, setText] = React.useState('');
+    const [isProcessing, setIsProcessing] = React.useState(false);
+    const { toast } = useToast();
+
+    const handlePaste = async () => {
+        if (!text.trim()) return;
+        setIsProcessing(true);
+        try {
+            const result = await parseIssuePdf({ textContent: text, instructions });
+            if (result.meldingen && result.meldingen.length > 0) {
+                onParsed(result.meldingen[0]);
+                toast({ title: "Tekst geanalyseerd", description: "Velden zijn automatisch ingevuld." });
+            }
+        } catch (err) {
+            toast({ variant: 'destructive', title: "Fout bij inlezen", description: "AI kon de tekst niet verwerken." });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                {trigger || (
+                    <Button variant="outline" size="sm" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold">
+                        <ClipboardPaste className="mr-2 h-3.5 w-3.5" />
+                        Smart Paste
+                    </Button>
+                )}
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle className="font-black uppercase tracking-tight">AI Smart Paste</DialogTitle>
+                    <DialogDescription className="font-bold text-slate-500">Plak tekst uit een ander systeem om velden automatisch in te vullen.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4"><Textarea placeholder="Plak hier de tekst..." className="min-h-[200px] text-xs font-medium" value={text} onChange={(e) => setText(e.target.value)} /></div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">Annuleren</Button></DialogClose>
+                    <Button onClick={handlePaste} disabled={isProcessing || !text.trim()} className="font-black uppercase">
+                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        Verwerken
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 export default function NewIssuePage() {
