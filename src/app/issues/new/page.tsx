@@ -269,10 +269,16 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   const [isUploading, setIsUploading] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<string | null>(null);
 
+  const isSvg = (str: string) => {
+    if (!str) return false;
+    const trimmed = str.trim().toLowerCase();
+    return trimmed.startsWith('<svg') || trimmed.includes('<svg');
+  };
+
   React.useEffect(() => {
     if (editTarget) {
         const currentIcon = categoryIcons[editTarget] || 'AlertCircle';
-        if (currentIcon.startsWith('<svg')) {
+        if (isSvg(currentIcon)) {
             setActiveTab('html');
             setHtmlIcon(currentIcon);
         } else if (currentIcon.startsWith('http')) {
@@ -309,7 +315,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     if (!target || !firestore) return;
     setIsSaving(true);
     try {
-      const finalIcon = activeTab === 'html' ? htmlIcon : selectedIcon;
+      const finalIcon = activeTab === 'html' ? htmlIcon.trim() : selectedIcon;
       const updatedOptions = editTarget ? currentOptions : Array.from(new Set([...currentOptions, target]));
       const updatedIcons = { ...categoryIcons, [target]: finalIcon };
       
@@ -351,8 +357,13 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   const renderCurrentIcon = (val: string) => {
     if (!val) return <CircleHelp className="h-4 w-4 text-slate-300" />;
     
-    if (val.startsWith('<svg')) {
-        return <div className="h-4 w-4 text-primary flex items-center justify-center" dangerouslySetInnerHTML={{ __html: val }} />;
+    if (isSvg(val)) {
+        return (
+            <div 
+                className="h-4 w-4 text-primary flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" 
+                dangerouslySetInnerHTML={{ __html: val }} 
+            />
+        );
     }
     
     if (val.startsWith('http')) {
@@ -425,13 +436,19 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                         )}
                     </div>
                 </TabsContent>
-                <TabsContent value="html" className="pt-4">
+                <TabsContent value="html" className="pt-4 space-y-4">
                     <Textarea 
                         placeholder="Plak hier uw <svg> code..." 
                         className="font-mono text-[10px] min-h-[100px] rounded-xl"
                         value={htmlIcon}
                         onChange={e => setHtmlIcon(e.target.value)}
                     />
+                    {isSvg(htmlIcon) && (
+                        <div className="space-y-2">
+                            <Label className="text-[9px] font-black uppercase text-slate-400">Voorbeeld Rendering</Label>
+                            <div className="h-12 w-12 rounded-xl border bg-white flex items-center justify-center p-2 shadow-sm [&>svg]:h-full [&>svg]:w-full text-primary" dangerouslySetInnerHTML={{ __html: htmlIcon }} />
+                        </div>
+                    )}
                 </TabsContent>
             </Tabs>
             <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-11 font-black uppercase shadow-lg shadow-primary/20">

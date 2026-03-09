@@ -153,12 +153,23 @@ export function MapboxView({
     }
   }, [wijkPolygons, longitude, latitude, highlightedObject, uniqueObjects]);
 
+  const isSvg = (str: string) => {
+    if (!str) return false;
+    const trimmed = str.trim().toLowerCase();
+    return trimmed.startsWith('<svg') || trimmed.includes('<svg');
+  };
+
   const renderMarkerIcon = (hoofdcategorie: string) => {
     const iconVal = categoryIcons[hoofdcategorie];
     if (!iconVal) return <Icons.CircleHelp className="h-5 w-5 text-white" />;
     
-    if (iconVal.startsWith('<svg')) {
-        return <div className="h-5 w-5 flex items-center justify-center text-white" dangerouslySetInnerHTML={{ __html: iconVal }} />;
+    if (isSvg(iconVal)) {
+        return (
+            <div 
+                className="h-5 w-5 flex items-center justify-center text-white [&>svg]:h-full [&>svg]:w-full" 
+                dangerouslySetInnerHTML={{ __html: iconVal }} 
+            />
+        );
     }
     
     if (iconVal.startsWith('http')) {
