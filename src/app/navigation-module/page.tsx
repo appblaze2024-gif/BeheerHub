@@ -329,15 +329,15 @@ function IntegratedWerkbonOverlay({
                     <div className="space-y-1">
                         <h2 className="text-xl font-bold text-slate-900">Intakenummer: {melding.intakenummer}</h2>
                         <div className="space-y-1.5">
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-50">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
                                 <MapPin className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-50">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
                                 <Tag className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.hoofdcategorie} • {melding.subcategorie}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-50">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
                                 <Hash className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{melding.containernummer || 'Geen unit gekoppeld'}</span>
                             </div>
@@ -652,42 +652,37 @@ export default function StartNavigationPage() {
 
   const renderMarkerIcon = (category: string) => {
     const iconVal = categoryIcons[category];
-    
-    let iconColor = '#ffffff';
-    if (iconVal?.startsWith('lucide:')) {
-        const parts = iconVal.split(':');
-        iconColor = parts[2] || '#3b82f6';
-    }
+    if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-slate-400" />;
 
-    if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-white" />;
-    
-    if (isSvg(iconVal)) {
-        return (
-            <div 
-                className="h-5 w-5 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" 
-                style={{ color: iconColor === '#ffffff' ? '#3b82f6' : iconColor }}
-                dangerouslySetInnerHTML={{ __html: iconVal }} 
-            />
-        );
-    }
-    
-    if (iconVal.startsWith('http')) {
-        return (
-            <div className="h-5 w-5 relative flex items-center justify-center overflow-hidden rounded-full">
-                <img src={iconVal} alt="icon" className="h-full w-full object-cover" />
-            </div>
-        );
-    }
+    let iconColor = '#3b82f6'; // Default blue
+    let iconName = 'AlertCircle';
 
     if (iconVal.startsWith('lucide:')) {
-        const parts = iconVal.split(':');
-        const name = parts[1];
-        const color = parts[2] || '#3b82f6';
-        const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className="h-5 w-5" style={{ color }} />;
+      const parts = iconVal.split(':');
+      iconName = parts[1] || 'AlertCircle';
+      iconColor = parts[2] || '#3b82f6';
+      const IconComp = (Icons as any)[iconName] || Icons.AlertCircle;
+      return <IconComp className="h-5 w-5" style={{ color: iconColor }} />;
     }
 
-    const IconComp = (Icons as any)[iconVal] || Icons.AlertCircle;
+    if (isSvg(iconVal)) {
+      return (
+        <div 
+          className="h-5 w-5 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" 
+          dangerouslySetInnerHTML={{ __html: iconVal }} 
+        />
+      );
+    }
+
+    if (iconVal.startsWith('http')) {
+      return (
+        <div className="h-5 w-5 relative flex items-center justify-center overflow-hidden rounded-full">
+          <img src={iconVal} alt="icon" className="h-full w-full object-cover" />
+        </div>
+      );
+    }
+
+    const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
     return <IconComp className="h-5 w-5" style={{ color: '#3b82f6' }} />;
   };
 
@@ -1133,7 +1128,7 @@ export default function StartNavigationPage() {
                                 )}
                                 <div className={cn(
                                     "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-xl transition-all z-10",
-                                    isCompleted ? "bg-green-500" : "bg-white/60 backdrop-blur-[2px]",
+                                    isCompleted ? "bg-green-500" : "bg-white/20 backdrop-blur-[2px]",
                                     isNext && "ring-4 ring-black/20 scale-125"
                                 )}>
                                     {renderMarkerIcon(m.hoofdcategorie)}
