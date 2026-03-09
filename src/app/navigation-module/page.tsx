@@ -918,7 +918,7 @@ export default function StartNavigationPage() {
             pitch: navPitch, 
             bearing: lastHeadingRef.current || 0, 
             padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }, 
-            duration: 800,
+            duration: 1, // Changed from 800 to 1ms for instant jump
             essential: true
         });
     }
@@ -961,7 +961,7 @@ export default function StartNavigationPage() {
                                     </div>
                                 )}
                                 {(isNext || isClicked) && (
-                                    <div className={cn("absolute inset-0 rounded-full border-[4px] border-slate-900 opacity-80", isNext && "animate-pulse", isClicked && "border-primary")} />
+                                    <div className={cn("absolute inset-0 rounded-full border-[4px] border-black opacity-80", isNext && "animate-pulse", isClicked && "border-primary")} />
                                 )}
                                 <div className={cn(
                                     "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10",
@@ -1100,27 +1100,10 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {isManualMode && !activeWerkbonId && (
-            <div className={cn(
-                "absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6",
-                navigationState === 'navigating' ? "bottom-8" : "bottom-[260px]"
-            )}>
-                {navigationState === 'navigating' ? (
-                    <Button variant="default" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-primary text-white border-2 border-white transition-all active:scale-95 flex items-center justify-center" onClick={handleHervatNavigatie}>
-                        <Navigation className="h-7 w-7 fill-current" />
-                    </Button>
-                ) : (
-                    <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}>
-                        <MapIcon className="h-7 w-7 text-slate-600" />
-                    </Button>
-                )}
-            </div>
-        )}
-
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <div className="mb-4 flex justify-start items-center gap-3 pointer-events-auto">
-                    <div className="relative">
+                <div className="mb-4 flex justify-between items-center gap-3 w-full">
+                    <div className="relative pointer-events-auto">
                         <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
                             <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
                             <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
@@ -1129,6 +1112,17 @@ export default function StartNavigationPage() {
                             <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
+
+                    {isManualMode && (
+                        <Button 
+                            variant="default" 
+                            size="icon" 
+                            className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-primary text-white border-2 border-white transition-all active:scale-95 flex items-center justify-center pointer-events-auto animate-in fade-in zoom-in duration-300"
+                            onClick={handleHervatNavigatie}
+                        >
+                            <Navigation className="h-7 w-7 fill-current" />
+                        </Button>
+                    )}
                 </div>
 
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
@@ -1163,6 +1157,14 @@ export default function StartNavigationPage() {
                         </div>
                     </CardContent>
                 </Card>
+            </div>
+        )}
+
+        {isManualMode && !activeWerkbonId && navigationState === 'setup' && (
+            <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-[260px]">
+                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}>
+                    <MapIcon className="h-7 w-7 text-slate-600" />
+                </Button>
             </div>
         )}
 
