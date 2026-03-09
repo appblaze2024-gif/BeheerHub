@@ -1134,7 +1134,6 @@ export default function StartNavigationPage() {
                         </div>
                     </div>
 
-                    {/* Hervat Navigatie Button - Opposite the Speedometer */}
                     {isManualMode && (
                         <Button 
                             variant="default" 
@@ -1226,60 +1225,44 @@ export default function StartNavigationPage() {
                 </div>
             </div>
             <ScrollArea className="flex-1 bg-white">
-                <div className="min-w-full inline-block align-middle">
-                    <Table className="border-collapse w-full border-slate-200 min-w-[1200px]">
-                        <TableHeader className="bg-slate-100 sticky top-0 z-10">
-                            <TableRow className="hover:bg-transparent h-10 border-b-2 border-slate-200">
-                                {visibleColumns.intakenummer && <TableHead className="py-2 px-3 font-black uppercase tracking-widest text-[9px] text-slate-500 border-r border-slate-200">Nummer</TableHead>}
-                                {visibleColumns.locatie && <TableHead className="py-2 px-3 font-black uppercase tracking-widest text-[9px] text-slate-500 border-r border-slate-200">Locatie</TableHead>}
-                                {visibleColumns.memo && <TableHead className="py-2 px-3 font-black uppercase tracking-widest text-[9px] text-slate-500 border-r border-slate-200">Omschrijving</TableHead>}
-                                {visibleColumns.hoofdcategorie && <TableHead className="py-2 px-3 font-black uppercase tracking-widest text-[9px] text-slate-500 border-r border-slate-200">Hoofdtype</TableHead>}
-                                {visibleColumns.subcategorie && <TableHead className="py-2 px-3 font-black uppercase tracking-widest text-[9px] text-slate-500 border-r border-slate-200">Subtype</TableHead>}
-                                {visibleColumns.werkgebied && <TableHead className="py-2 px-3 font-black uppercase tracking-widest text-[9px] text-slate-500 border-r border-slate-200">Gebied</TableHead>}
-                                {visibleColumns.afstand && <TableHead className="py-2 px-3 font-black uppercase tracking-widest text-[9px] text-slate-500">Afstand</TableHead>}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredMeldingen.map((m) => {
-                                const isCompleted = m.status === 'Afgerond';
-                                const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
-                                
-                                return (
-                                    <TableRow 
-                                        key={m.id} 
-                                        onClick={() => setClickedMarkerId(m.id)}
-                                        className={cn(
-                                            "cursor-pointer h-10 hover:bg-slate-50 transition-colors border-b border-slate-100",
-                                            isCompleted && "bg-green-50/30 opacity-60"
-                                        )}
-                                    >
-                                        {visibleColumns.intakenummer && (
-                                            <TableCell className="py-1 px-3 border-r border-slate-100">
-                                                <div className="flex items-center gap-1.5">
-                                                    <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
-                                                    <span className="font-black text-[10px] uppercase text-slate-900">{m.intakenummer}</span>
-                                                </div>
-                                            </TableCell>
-                                        )}
-                                        {visibleColumns.locatie && (
-                                            <TableCell className="py-1 px-3 border-r border-slate-100 truncate max-w-[150px] text-[10px] font-bold">
-                                                {[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}
-                                            </TableCell>
-                                        )}
-                                        {visibleColumns.memo && (
-                                            <TableCell className="py-1 px-3 border-r border-slate-100 truncate max-w-[200px] text-[10px] text-slate-500 italic">
-                                                {m.extra_informatie || '-'}
-                                            </TableCell>
-                                        )}
-                                        {visibleColumns.hoofdcategorie && <TableCell className="py-1 px-3 border-r border-slate-100 text-[9px] font-black uppercase text-slate-400">{m.hoofdcategorie}</TableCell>}
-                                        {visibleColumns.subcategorie && <TableCell className="py-1 px-3 border-r border-slate-100 text-[10px] font-black uppercase text-primary">{m.subcategorie}</TableCell>}
-                                        {visibleColumns.werkgebied && <TableCell className="py-1 px-3 border-r border-slate-100 text-[10px] font-bold text-slate-600">{m.werkgebied || '-'}</TableCell>}
-                                        {visibleColumns.afstand && <TableCell className="py-1 px-3 text-[10px] font-black text-slate-400">{dist} km</TableCell>}
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
+                <div className="p-3 grid grid-rows-2 grid-flow-col gap-3 auto-cols-[280px] h-[180px] overflow-x-auto no-scrollbar">
+                    {filteredMeldingen.map((m) => {
+                        const isCompleted = m.status === 'Afgerond';
+                        const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
+                        
+                        return (
+                            <Card 
+                                key={m.id} 
+                                onClick={() => setClickedMarkerId(m.id)}
+                                className={cn(
+                                    "h-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden",
+                                    isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20"
+                                )}
+                            >
+                                <div className="flex justify-between items-start gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
+                                            <span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span>
+                                        </div>
+                                        <p className="text-[11px] font-bold text-slate-700 truncate leading-tight">
+                                            {[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}
+                                        </p>
+                                    </div>
+                                    <Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge>
+                                </div>
+                                <div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto">
+                                    <span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span>
+                                    <span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{dist} km</span>
+                                </div>
+                                {isCompleted && (
+                                    <div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl">
+                                        <Check className="h-2 w-2 text-white" />
+                                    </div>
+                                )}
+                            </Card>
+                        );
+                    })}
                 </div>
             </ScrollArea>
         </div>
