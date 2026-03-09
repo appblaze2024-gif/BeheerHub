@@ -1370,9 +1370,6 @@ export default function StartNavigationPage() {
                     </Button>
                 ) : !activeWerkbonId && (
                     <div className="flex flex-col gap-2 items-end">
-                        {priorityMissionId && (
-                            <Badge className="bg-primary text-white border-none font-black uppercase text-[8px] tracking-widest shadow-xl animate-bounce">Focus Actief</Badge>
-                        )}
                         <Button 
                             variant="secondary" 
                             size="icon"
