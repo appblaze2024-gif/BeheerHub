@@ -834,14 +834,16 @@ export default function StartNavigationPage() {
   React.useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
-        if (navigationState === 'navigating' && lastSnappedPosRef.current) {
+        if (navigationState === 'navigating' && lastSnappedPosRef.current && !isNaN(lastSnappedPosRef.current.lng)) {
             if (!visualPosRef.current) visualPosRef.current = { ...lastSnappedPosRef.current };
             else {
                 const factor = 0.08; 
                 visualPosRef.current.lng += (lastSnappedPosRef.current.lng - visualPosRef.current.lng) * factor;
                 visualPosRef.current.lat += (lastSnappedPosRef.current.lat - visualPosRef.current.lat) * factor;
             }
-            setSmoothLocation((prev: any) => ({ ...prev, longitude: visualPosRef.current?.lng, latitude: visualPosRef.current?.lat, heading: lastHeadingRef.current }));
+            if (visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
+                setSmoothLocation((prev: any) => ({ ...prev, longitude: visualPosRef.current?.lng, latitude: visualPosRef.current?.lat, heading: lastHeadingRef.current }));
+            }
         }
         animId = requestAnimationFrame(updateVisualPos);
     };
@@ -854,6 +856,7 @@ export default function StartNavigationPage() {
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            if (isNaN(loc.latitude) || isNaN(loc.longitude)) return;
             setUserLocation(loc);
             const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
             setSpeedKmh(currentSpeed);
@@ -862,16 +865,20 @@ export default function StartNavigationPage() {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
                     const currPt = turf.point([loc.longitude, loc.latitude]);
                     const snapped = turf.nearestPointOnLine(line, currPt);
-                    lastSnappedPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
-                    const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
-                    const distAlong = turf.length(alongRoute, { units: 'meters' });
-                    const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
-                    lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
-                    setDisplayedRouteGeometry(turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line));
-                    if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 60 && !isCalculatingRoute) fetchRoute(true);
+                    if (!isNaN(snapped.geometry.coordinates[0])) {
+                        lastSnappedPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
+                        const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
+                        const distAlong = turf.length(alongRoute, { units: 'meters' });
+                        const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
+                        lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
+                        setDisplayedRouteGeometry(turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line));
+                        if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 60 && !isCalculatingRoute) fetchRoute(true);
+                    }
                 } catch (e) {}
-            } else setSmoothLocation({ ...loc, heading: lastHeadingRef.current });
-            if (navigationState === 'navigating' && mapRef.current && !isManualMode && visualPosRef.current) {
+            } else if (!isNaN(loc.latitude)) {
+                setSmoothLocation({ ...loc, heading: lastHeadingRef.current });
+            }
+            if (navigationState === 'navigating' && mapRef.current && !isManualMode && visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
                 const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
                 mapRef.current.getMap().easeTo({ center: [visualPosRef.current.lng, visualPosRef.current.lat], bearing: lastHeadingRef.current, zoom: targetZoom, pitch: navPitch, padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }, duration: 1000, easing: (t) => t });
             }
@@ -894,6 +901,7 @@ export default function StartNavigationPage() {
     setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); visualPosRef.current = null; lastSnappedPosRef.current = null;
     setIsLocating(true);
     const beginNav = (loc: { latitude: number, longitude: number }, heading: number) => {
+        if (isNaN(loc.latitude) || isNaN(loc.longitude)) { setIsLocating(false); return; }
         setSmoothLocation({ ...loc, heading }); lastSnappedPosRef.current = { lng: loc.longitude, lat: loc.latitude }; visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         setIsSimulationMode(false); setNavigationState('navigating'); setIsLocating(false); setIsManualMode(false);
         if (mapRef.current) mapRef.current.getMap().jumpTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: navPitch, bearing: heading, padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 } });
@@ -910,7 +918,7 @@ export default function StartNavigationPage() {
 
   const handleHervatNavigatie = () => {
     setIsManualMode(false);
-    if (mapRef.current && smoothLocation) {
+    if (mapRef.current && smoothLocation && !isNaN(smoothLocation.longitude)) {
         const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (speedKmh / 25))) : navZoom;
         mapRef.current.getMap().flyTo({ 
             center: [smoothLocation.longitude, smoothLocation.latitude], 
@@ -918,7 +926,7 @@ export default function StartNavigationPage() {
             pitch: navPitch, 
             bearing: lastHeadingRef.current || 0, 
             padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }, 
-            duration: 1, // Changed from 800 to 1ms for instant jump
+            duration: 1, 
             essential: true
         });
     }
@@ -939,7 +947,7 @@ export default function StartNavigationPage() {
                 mapboxAccessToken={MAPBOX_TOKEN} 
                 onMove={(evt) => { if (evt.originalEvent) setIsManualMode(true); }}
             >
-                {smoothLocation && (
+                {smoothLocation && !isNaN(smoothLocation.longitude) && !isNaN(smoothLocation.latitude) && (
                     <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center">
                         <div className="relative flex items-center justify-center w-16 h-16">
                             <div className="absolute h-10 w-10 bg-primary/20 rounded-full animate-ping" />
@@ -948,6 +956,7 @@ export default function StartNavigationPage() {
                     </Marker>
                 )}
                 {filteredMeldingen.map((m) => {
+                    if (isNaN(m.longitude) || isNaN(m.latitude)) return null;
                     const isCompleted = m.status === 'Afgerond';
                     const isNext = nextMission?.id === m.id && navigationState === 'navigating';
                     const isClicked = clickedMarkerId === m.id;
