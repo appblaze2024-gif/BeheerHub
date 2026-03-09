@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -58,6 +57,7 @@ import {
   Hash,
   Minus
 } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
@@ -640,6 +640,10 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
+  const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
+  const { data: dbOptions } = useDoc<any>(optionsRef);
+  const categoryIcons = dbOptions?.categoryIcons || {};
+
   React.useEffect(() => {
     if (profile) {
         if (profile.navZoom !== undefined) setNavZoomState(Number(profile.navZoom));
@@ -795,7 +799,6 @@ export default function StartNavigationPage() {
             setRouteInfo({ duration: route.duration, distance: route.distance });
             
             // Guess speed limit based on duration/distance if not explicitly provided
-            // Average highway > 80, city ~ 50, zone ~ 30
             const avgSpeed = (route.distance / route.duration) * 3.6;
             if (avgSpeed > 70) setCurrentSpeedLimit(100);
             else if (avgSpeed > 45) setCurrentSpeedLimit(80);
@@ -827,7 +830,6 @@ export default function StartNavigationPage() {
             if (!visualPosRef.current) {
                 visualPosRef.current = { ...lastSnappedPosRef.current };
             } else {
-                // Interpolatie factor (boterzacht glijden)
                 const factor = 0.08; 
                 visualPosRef.current.lng += (lastSnappedPosRef.current.lng - visualPosRef.current.lng) * factor;
                 visualPosRef.current.lat += (lastSnappedPosRef.current.lat - visualPosRef.current.lat) * factor;
@@ -860,11 +862,8 @@ export default function StartNavigationPage() {
                 try {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
                     const currPt = turf.point([loc.longitude, loc.latitude]);
-                    
-                    // LOCK OP DE LIJN: We snappen ALTIJD naar de dichtstbijzijnde punt op de route
                     const snapped = turf.nearestPointOnLine(line, currPt);
                     
-                    // Update snapped ref voor de interpolatie loop
                     lastSnappedPosRef.current = {
                         lng: snapped.geometry.coordinates[0],
                         lat: snapped.geometry.coordinates[1]
@@ -879,7 +878,6 @@ export default function StartNavigationPage() {
                     const forwardPart = turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line);
                     setDisplayedRouteGeometry(forwardPart);
 
-                    // Re-calculate route if too far off
                     const distanceOffRoute = turf.pointToLineDistance(currPt, line, { units: 'meters' });
                     if (distanceOffRoute > 60 && !isCalculatingRoute) {
                         fetchRoute(true);
@@ -1070,37 +1068,44 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
                 )}
-                {filteredMeldingen.map((m) => (
-                    <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setActiveWerkbonId(m.id); }}>
-                        <div className="relative flex items-center justify-center w-14 h-14">
-                            {showAssignmentBubbles && m.behandelaar && (
-                                <div className="absolute bottom-full mb-2 bg-white/95 backdrop-blur-md border-2 border-slate-900 px-2 py-0.5 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap">
-                                    <span className="text-[8px] font-black uppercase text-slate-900 leading-none">{m.behandelaar}</span>
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-900" />
-                                </div>
-                            )}
-                            {nextMission?.id === m.id && navigationState === 'navigating' && (
-                                <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
-                            )}
-                            <div className="transition-transform hover:scale-125 cursor-pointer z-10 relative">
-                                <img 
-                                    src="https://i.ibb.co/0jg4jm6v/3d-printer-icon-sharp.png" 
-                                    alt="task" 
-                                    className={cn("h-10 w-10 object-contain drop-shadow-2xl", m.status === 'Afgerond' && "opacity-60 grayscale-[0.3]")} 
-                                />
-                                {m.status === 'Afgerond' ? (
-                                    <div className="absolute -top-1.5 -right-1.5 bg-green-500 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden animate-in zoom-in duration-300">
-                                        <Check className="h-3.5 w-3.5 text-white" />
-                                    </div>
-                                ) : (
-                                    <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden">
-                                        <Wrench className="h-3.5 w-3.5 text-slate-900" />
+                {filteredMeldingen.map((m) => {
+                    const iconName = categoryIcons[m.hoofdcategorie] || 'AlertCircle';
+                    const IconComp = (Icons as any)[iconName] || Icons.AlertCircle;
+                    const isCompleted = m.status === 'Afgerond';
+                    const isNext = nextMission?.id === m.id && navigationState === 'navigating';
+
+                    return (
+                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setActiveWerkbonId(m.id); }}>
+                            <div className="relative flex items-center justify-center w-14 h-14">
+                                {showAssignmentBubbles && m.behandelaar && (
+                                    <div className="absolute bottom-full mb-2 bg-white/95 backdrop-blur-md border-2 border-slate-900 px-2 py-0.5 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap">
+                                        <span className="text-[8px] font-black uppercase text-slate-900 leading-none">{m.behandelaar}</span>
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-900" />
                                     </div>
                                 )}
+                                {isNext && (
+                                    <div className="absolute inset-0 rounded-full border-[4px] border-slate-900 animate-pulse opacity-80" />
+                                )}
+                                <div className={cn(
+                                    "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-xl transition-all z-10",
+                                    isCompleted ? "bg-green-500" : "bg-primary",
+                                    isNext && "ring-4 ring-black/20 scale-125"
+                                )}>
+                                    <IconComp className="h-5 w-5 text-white" />
+                                    {isCompleted ? (
+                                        <div className="absolute -top-1.5 -right-1.5 bg-green-500 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden animate-in zoom-in duration-300">
+                                            <Check className="h-3.5 w-3.5 text-white" />
+                                        </div>
+                                    ) : (
+                                        <div className="absolute -top-1.5 -right-1.5 bg-yellow-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden">
+                                            <Wrench className="h-3.5 w-3.5 text-slate-900" />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </Marker>
-                ))}
+                        </Marker>
+                    );
+                })}
                 {navigationState === 'navigating' && displayedRouteGeometry && (
                     <Source id="route-line" type="geojson" data={displayedRouteGeometry}>
                         <Layer {...routeLayerCasing} />

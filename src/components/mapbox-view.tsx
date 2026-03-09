@@ -1,12 +1,13 @@
-
 'use client';
 
 import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import type { FillLayer, LineLayer } from 'react-map-gl';
 import * as turf from '@turf/turf';
+import * as Icons from 'lucide-react';
 import { useProfile } from '@/firebase/profile-provider';
-import { Trash2 } from 'lucide-react';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 
@@ -79,7 +80,12 @@ export function MapboxView({
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
   const [hoveredPin, setHoveredPin] = React.useState<MapObject | null>(null);
   const { profile } = useProfile();
+  const firestore = useFirestore();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
+
+  const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
+  const { data: dbOptions } = useDoc<any>(optionsRef);
+  const categoryIcons = dbOptions?.categoryIcons || {};
 
   // De-duplicate objects by location with priority
   const uniqueObjects = React.useMemo(() => {
@@ -156,12 +162,44 @@ export function MapboxView({
         const isHighlighted = highlightedObject?.id === obj.id;
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         
+        // Logic for Meldingen (Issues) vs Objects
+        // If it has a 'hoofdcategorie' it's an issue
+        const isIssue = !!obj.hoofdcategorie;
+        const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
+
+        if (isIssue) {
+          const iconName = categoryIcons[obj.hoofdcategorie] || 'AlertCircle';
+          const IconComp = (Icons as any)[iconName] || Icons.AlertCircle;
+          const isCompleted = obj.status === 'Afgerond';
+
+          return (
+            <Marker key={`issue-${obj.id}`} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={e => {
+              if (interactive) {
+                e.originalEvent.stopPropagation();
+                setSelectedPin(obj);
+              }
+            }}>
+              <div className={cn(
+                "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-xl transition-all",
+                isCompleted ? "bg-green-500" : "bg-primary",
+                isHighlighted && "ring-4 ring-black/20 scale-125",
+                interactive && "cursor-pointer hover:scale-110"
+              )}>
+                <IconComp className="h-5 w-5 text-white" />
+                {!isCompleted && (
+                  <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-white">
+                    <Icons.Wrench className="h-2.5 w-2.5 text-slate-900" />
+                  </div>
+                )}
+              </div>
+            </Marker>
+          );
+        }
+
         const isWasteOrRecycling = typeStr.includes('prullenbak') || 
                                   typeStr.includes('bak') ||
                                   typeStr.includes('container') || 
                                   typeStr.includes('ondergrond');
-        
-        const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
 
         return (
             <Marker key={`obj-${obj.id}`} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={e => {
@@ -184,7 +222,7 @@ export function MapboxView({
                     style={{ filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} 
                   />
                 ) : (
-                  <Trash2 className={cn("relative h-5 w-5 stroke-white stroke-[1.5] transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ fill: isSelected ? 'hsl(48, 96%, 56%)' : color, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
+                  <Icons.Trash2 className={cn("relative h-5 w-5 stroke-white stroke-[1.5] transition-transform", isSelected && "scale-125", interactive && "cursor-pointer")} style={{ fill: isSelected ? 'hsl(48, 96%, 56%)' : color, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))' }} />
                 )}
               </div>
             </Marker>
@@ -209,7 +247,7 @@ export function MapboxView({
         );
     }
     return markerElements;
-  }, [uniqueObjects, longitude, latitude, mainLocationLabel, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive]);
+  }, [uniqueObjects, longitude, latitude, mainLocationLabel, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive, categoryIcons]);
 
   const pinToShow = hoveredPin || selectedPin;
 
@@ -245,11 +283,11 @@ export function MapboxView({
             closeButton={!hoveredPin}
           >
             <div>
-              <h3 className="font-bold">{pinToShow.id}</h3>
+              <h3 className="font-bold">{pinToShow.intakenummer || pinToShow.id}</h3>
               {hoveredPin ? null : (
                   <>
-                      <p>{pinToShow.locatieSubType}</p>
-                      <p>{pinToShow.straatnaam} {pinToShow.huisnummer}</p>
+                      <p className="text-xs">{pinToShow.subcategorie || pinToShow.locatieSubType}</p>
+                      <p className="text-[10px] text-slate-500">{pinToShow.straatnaam} {pinToShow.huisnummer}</p>
                   </>
               )}
             </div>

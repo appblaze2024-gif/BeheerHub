@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useCollection, useFirestore, useFirebaseApp, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff, Check, AlertCircle, Sparkles } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +24,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import Image from 'next/image';
 import { Form } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { useUser } from '@/firebase';
+import { useUser, useDoc } from '@/firebase';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -108,6 +109,10 @@ export default function IssuesPage() {
 
   const meldingIdFromUrl = searchParams.get('id');
 
+  const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
+  const { data: dbOptions } = useDoc<any>(optionsRef);
+  const categoryIcons = dbOptions?.categoryIcons || {};
+
   // REDIRECT LOGIC: Als we geen specifiek ID hebben, ga direct naar de route op de kaart
   React.useEffect(() => {
     if (!meldingIdFromUrl) {
@@ -135,7 +140,6 @@ export default function IssuesPage() {
   const filteredMeldingen = React.useMemo(() => {
     if (!rawMeldingen) return [];
     
-    // FILTER: Standard employees only see their assigned reports
     let visibleMeldingen = rawMeldingen;
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
@@ -438,7 +442,8 @@ export default function IssuesPage() {
                                   longitude={selectedMelding.longitude} 
                                   mainLocationLabel={selectedMelding.containernummer}
                                   interactive={false} 
-                                  objects={nearbyObjects}
+                                  objects={rawMeldingen || []}
+                                  highlightedObject={selectedMelding}
                                 />
                             </div>
                         </div>
