@@ -407,7 +407,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
-      <DialogContent className="sm:max-w-2xl max-h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent className="sm:max-w-2xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
           <DialogTitle className="font-black uppercase tracking-tight">
             {editTarget ? `Hoofdtype bewerken: ${editTarget}` : 'Hoofdtypes Beheren'}
@@ -416,7 +416,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
         </DialogHeader>
         
         <ScrollArea className="flex-1 bg-white">
-          <div className="space-y-8 p-6">
+          <div className="space-y-8 p-6 pb-20">
             {!editTarget && (
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam nieuw hoofdtype</Label>
@@ -524,7 +524,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huidige Types ({currentOptions.length})</Label>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Scroll naar beneden voor alle types.</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Beheer bestaande instellingen</p>
                 </div>
                 <div className="grid gap-2">
                 {currentOptions.map(name => (
@@ -535,11 +535,11 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                           </div>
                           <span className="text-sm font-black uppercase tracking-tight text-slate-700">{name}</span>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
+                      <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
                               <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
                               <Trash2 className="h-4 w-4" />
                           </Button>
                       </div>
@@ -1288,7 +1288,7 @@ export default function NewIssuePage() {
                         <CardContent className="p-4 pt-2">
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>} onAdd={() => setIsManageHoofdtypeOpen(true)}>
-                              <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
+                              <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></FormItem>)} /></FormRow>
                             <FormRow label={<>Subtype<span className="text-red-500">*</span></>} onAdd={() => setIsManageSubtypeOpen(true)}>
                               <FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
                           </div>
