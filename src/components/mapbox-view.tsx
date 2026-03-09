@@ -155,17 +155,21 @@ export function MapboxView({
 
   const renderMarkerIcon = (hoofdcategorie: string) => {
     const iconVal = categoryIcons[hoofdcategorie];
-    if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-white" />;
+    if (!iconVal) return <Icons.CircleHelp className="h-5 w-5 text-white" />;
     
     if (iconVal.startsWith('<svg')) {
         return <div className="h-5 w-5 flex items-center justify-center text-white" dangerouslySetInnerHTML={{ __html: iconVal }} />;
     }
     
     if (iconVal.startsWith('http')) {
-        return <img src={iconVal} alt="icon" className="h-5 w-5 object-contain" />;
+        return (
+            <div className="h-5 w-5 relative flex items-center justify-center">
+                <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
+            </div>
+        );
     }
 
-    const IconComp = (Icons as any)[iconVal] || Icons.AlertCircle;
+    const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
     return <IconComp className="h-5 w-5 text-white" />;
   };
 

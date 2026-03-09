@@ -29,7 +29,9 @@ import {
   Trash,
   Code,
   Upload,
-  Edit2
+  Edit2,
+  CircleHelp,
+  AlertCircle
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { 
@@ -275,6 +277,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             setHtmlIcon(currentIcon);
         } else if (currentIcon.startsWith('http')) {
             setActiveTab('upload');
+            setSelectedIcon(currentIcon);
         } else {
             setActiveTab('preset');
             setSelectedIcon(currentIcon);
@@ -293,8 +296,9 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
         const url = await getDownloadURL(snapshot.ref);
         setSelectedIcon(url);
         toast({ title: "Icoon geüpload" });
-    } catch (err) {
-        toast({ variant: 'destructive', title: "Upload mislukt" });
+    } catch (err: any) {
+        console.error("Icon upload error:", err);
+        toast({ variant: 'destructive', title: "Upload mislukt", description: err.message || "Onbekende fout." });
     } finally {
         setIsUploading(false);
     }
@@ -345,9 +349,21 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   };
 
   const renderCurrentIcon = (val: string) => {
-    if (val.startsWith('<svg')) return <div className="h-4 w-4 text-primary" dangerouslySetInnerHTML={{ __html: val }} />;
-    if (val.startsWith('http')) return <img src={val} alt="icon" className="h-4 w-4 object-contain" />;
-    const Icon = (Icons as any)[val] || Icons.HelpCircle;
+    if (!val) return <CircleHelp className="h-4 w-4 text-slate-300" />;
+    
+    if (val.startsWith('<svg')) {
+        return <div className="h-4 w-4 text-primary flex items-center justify-center" dangerouslySetInnerHTML={{ __html: val }} />;
+    }
+    
+    if (val.startsWith('http')) {
+        return (
+            <div className="h-4 w-4 relative flex items-center justify-center">
+                <img src={val} alt="icon" className="h-full w-full object-contain" />
+            </div>
+        );
+    }
+
+    const Icon = (Icons as any)[val] || Icons.CircleHelp;
     return <Icon className="h-4 w-4 text-primary" />;
   };
 
@@ -403,7 +419,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                         </Button>
                         <input type="file" id="icon-upload-input" className="hidden" accept="image/*" onChange={handleFileUpload} />
                         {selectedIcon.startsWith('http') && (
-                            <div className="h-20 w-20 rounded-2xl border bg-white flex items-center justify-center p-2">
+                            <div className="h-20 w-20 rounded-2xl border bg-white flex items-center justify-center p-2 shrink-0 shadow-sm">
                                 <img src={selectedIcon} alt="preview" className="h-full w-full object-contain" />
                             </div>
                         )}
@@ -432,8 +448,8 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                 {currentOptions.map(name => (
                     <div key={name} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg group">
                     <div className="flex items-center gap-3">
-                        <div className="bg-white p-1.5 rounded-lg border border-slate-100 shadow-sm flex items-center justify-center">
-                            {categoryIcons[name] ? renderCurrentIcon(categoryIcons[name]) : <Icons.HelpCircle className="h-4 w-4 text-slate-300" />}
+                        <div className="bg-white p-1.5 rounded-lg border border-slate-100 shadow-sm flex items-center justify-center w-8 h-8 shrink-0">
+                            {renderCurrentIcon(categoryIcons[name])}
                         </div>
                         <span className="text-sm font-bold text-slate-700">{name}</span>
                     </div>
