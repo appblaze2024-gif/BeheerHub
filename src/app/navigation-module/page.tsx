@@ -1089,10 +1089,18 @@ export default function StartNavigationPage() {
             </div>
         </div>
 
-        {isManualMode && navigationState === 'navigating' && !activeWerkbonId && (
-            <div className="absolute z-50 pointer-events-auto animate-in fade-in slide-in-from-right-2 duration-300 bottom-[180px] right-6">
-                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={handleHervatNavigatie}>
-                    <Navigation className="h-7 w-7 text-primary fill-current" />
+        {isManualMode && !activeWerkbonId && (
+            <div className={cn(
+                "absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6",
+                navigationState === 'navigating' ? "bottom-8" : "bottom-[260px]"
+            )}>
+                {navigationState === 'navigating' && (
+                    <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={handleHervatNavigatie}>
+                        <Navigation className="h-7 w-7 text-primary fill-current" />
+                    </Button>
+                )}
+                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}>
+                    <MapIcon className="h-7 w-7 text-slate-600" />
                 </Button>
             </div>
         )}
@@ -1154,11 +1162,6 @@ export default function StartNavigationPage() {
                         <Input placeholder="Zoek nummer..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
                     <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
-                        {/* Alles Tonen Knop */}
-                        <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setIsManualMode(false); goToOverview(); }}>
-                            <MapIcon className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Alles Tonen</span>
-                        </Button>
-
                         <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}>
                             <CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span>
                         </Button>

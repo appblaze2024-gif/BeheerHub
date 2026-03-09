@@ -5,9 +5,13 @@ service firebase.storage {
     /**
      * BEHEERHUB STORAGE RULES
      * Toegankelijk voor alle ingelogde gebruikers.
-     * Dit staat uploads toe voor logo's, schademeldingen en documenten.
      */
     match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Specifieke toegang voor instellingen en iconen
+    match /settings/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
   }
