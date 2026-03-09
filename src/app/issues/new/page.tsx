@@ -49,7 +49,7 @@ import {
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { useGlobalLoading } from '@/context/global-loading-context';
-import { collection, doc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, arrayUnion, query, where, limit, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
@@ -658,6 +658,7 @@ export default function NewIssuePage() {
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [containerSuggestions, setContainerSuggestions] = React.useState<MapObject[]>([]);
+  const [nearbyObjects, setNearbyObjects] = React.useState<MapObject[]>([]);
 
   // Category management state
   const [isManageHoofdtypeOpen, setIsManageHoofdtypeOpen] = React.useState(false);
@@ -686,9 +687,6 @@ export default function NewIssuePage() {
   }, [firestore, meldingId]);
 
   const { data: existingMelding } = useDoc<Melding>(meldingRef);
-
-  const objectsSearchQuery = useMemoFirebase(() => firestore ? collection(firestore, 'objects') : null, [firestore]);
-  const { data: allMapObjects } = useCollection<MapObject>(objectsSearchQuery);
 
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
@@ -757,16 +755,19 @@ export default function NewIssuePage() {
     return () => clearTimeout(timer);
   }, [watchStraat, watchHuisnummer, watchPlaats, isReadOnly]);
 
-  // Filter nearby objects for the map preview (100m radius)
-  const nearbyObjects = React.useMemo(() => {
-    if (!allMapObjects || !location) return [];
-    const issuePt = turf.point([location.longitude, location.latitude]);
-    return allMapObjects.filter(obj => {
-      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-      const objPt = turf.point([obj.longitude, obj.latitude]);
-      return turf.distance(issuePt, objPt, { units: 'meters' }) <= 100;
-    });
-  }, [allMapObjects, location]);
+  // Fetch nearby objects for map preview on demand to save reads
+  React.useEffect(() => {
+    const fetchNearby = async () => {
+      if (!location || !firestore || isReadOnly) return;
+      try {
+        const objectsRef = collection(firestore, 'objects');
+        const nearbyQuery = query(objectsRef, limit(50));
+        const snapshot = await getDocs(nearbyQuery);
+        setNearbyObjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MapObject)));
+      } catch (e) {}
+    };
+    fetchNearby();
+  }, [location, firestore, isReadOnly]);
 
   // Effect to automatically determine Werkgebied (Wijk) based on location
   React.useEffect(() => {
@@ -803,18 +804,35 @@ export default function NewIssuePage() {
   }, [location, projects, form, isReadOnly]);
 
   const watchContainernummer = form.watch('containernummer');
+  
+  // Optimized Container Search: Targeted Firestore query instead of loading all objects
   React.useEffect(() => {
-    if (!watchContainernummer || watchContainernummer.length < 2 || isReadOnly || !allMapObjects) {
-      setContainerSuggestions([]);
-      return;
-    }
-    const q = watchContainernummer.toLowerCase();
-    const filtered = allMapObjects.filter(obj => 
-      (obj.idNummer || '').toLowerCase().includes(q) ||
-      (obj.id || '').toLowerCase().includes(q)
-    ).slice(0, 15);
-    setContainerSuggestions(filtered);
-  }, [watchContainernummer, allMapObjects, isReadOnly]);
+    const searchContainers = async () => {
+      if (!watchContainernummer || watchContainernummer.length < 2 || isReadOnly || !firestore) {
+        setContainerSuggestions([]);
+        return;
+      }
+
+      const q = watchContainernummer.toUpperCase();
+      try {
+        const objectsRef = collection(firestore, 'objects');
+        const searchQuery = query(
+          objectsRef,
+          where('idNummer', '>=', q),
+          where('idNummer', '<=', q + '\uf8ff'),
+          limit(15)
+        );
+        
+        const snapshot = await getDocs(searchQuery);
+        setContainerSuggestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MapObject)));
+      } catch (error) {
+        console.error("Firestore search error:", error);
+      }
+    };
+
+    const timer = setTimeout(searchContainers, 400);
+    return () => clearTimeout(timer);
+  }, [watchContainernummer, firestore, isReadOnly]);
 
   const handleContainerSelect = (obj: MapObject) => {
     form.setValue('containernummer', obj.idNummer || obj.id);
@@ -1054,7 +1072,7 @@ export default function NewIssuePage() {
               <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {isMobile ? (
                   <div className="space-y-4">
-                    <Accordion type="multiple" defaultValue={[]} className="w-full">
+                    <Accordion type="multiple" defaultValue={["section-1"]} className="w-full">
                       <AccordionItem value="section-1" className="border-none">
                         <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
                           <span className="text-xs font-black uppercase tracking-widest text-slate-900">Basisgegevens</span>
