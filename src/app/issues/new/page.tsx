@@ -33,7 +33,8 @@ import {
   CircleHelp,
   AlertCircle,
   Palette,
-  Search as SearchIcon
+  Search as SearchIcon,
+  ChevronLeft
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { 
@@ -48,7 +49,7 @@ import {
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { useGlobalLoading } from '@/context/global-loading-context';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
@@ -65,7 +66,9 @@ import {
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
-  SelectValue 
+  SelectValue,
+  SelectGroup,
+  SelectLabel
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -94,6 +97,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Accordion,
@@ -627,77 +631,6 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
       </DialogContent>
     </Dialog>
   );
-}
-
-const FormRow = ({ label, children, onAdd }: { label: React.ReactNode; children: React.ReactNode; onAdd?: () => void }) => (
-    <div className="flex flex-col gap-1 py-2 border-b border-slate-100 last:border-0 min-h-[44px]">
-        <div className="flex items-center justify-between">
-            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{label}</Label>
-            {onAdd && (
-                <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-5 w-5 text-slate-300 hover:text-primary transition-colors" 
-                    onClick={onAdd}
-                >
-                    <PlusCircle className="h-4 w-4" />
-                </Button>
-            )}
-        </div>
-        <div className="flex-1 min-w-0">
-            {children}
-        </div>
-    </div>
-);
-
-function SmartPasteDialog({ onParsed, instructions, trigger }: { onParsed: (data: any) => void, instructions: string, trigger?: React.ReactNode }) {
-    const [text, setText] = React.useState('');
-    const [isProcessing, setIsProcessing] = React.useState(false);
-    const { toast } = useToast();
-
-    const handlePaste = async () => {
-        if (!text.trim()) return;
-        setIsProcessing(true);
-        try {
-            const result = await parseIssuePdf({ textContent: text, instructions });
-            if (result.meldingen && result.meldingen.length > 0) {
-                onParsed(result.meldingen[0]);
-                toast({ title: "Tekst geanalyseerd", description: "Velden zijn automatisch ingevuld." });
-            }
-        } catch (err) {
-            toast({ variant: 'destructive', title: "Fout bij inlezen", description: "AI kon de tekst niet verwerken." });
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                {trigger || (
-                    <Button variant="outline" size="sm" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold">
-                        <ClipboardPaste className="mr-2 h-3.5 w-3.5" />
-                        Smart Paste
-                    </Button>
-                )}
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-xl">
-                <DialogHeader>
-                    <DialogTitle className="font-black uppercase tracking-tight">AI Smart Paste</DialogTitle>
-                    <DialogDescription className="font-bold text-slate-500">Plak tekst uit een ander systeem om velden automatisch in te vullen.</DialogDescription>
-                </DialogHeader>
-                <div className="py-4"><Textarea placeholder="Plak hier de tekst..." className="min-h-[200px] text-xs font-medium" value={text} onChange={(e) => setText(e.target.value)} /></div>
-                <DialogFooter>
-                    <DialogClose asChild><Button variant="ghost">Annuleren</Button></DialogClose>
-                    <Button onClick={handlePaste} disabled={isProcessing || !text.trim()} className="font-black uppercase">
-                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Verwerken
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
 }
 
 export default function NewIssuePage() {
