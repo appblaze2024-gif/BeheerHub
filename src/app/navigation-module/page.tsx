@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1243,23 +1242,23 @@ export default function StartNavigationPage() {
                 )}
                 
                 {navigationState === 'navigating' && routeInfo && (
-                    <div className="bg-white/95 backdrop-blur-md px-5 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                        <div className="flex items-center gap-3">
-                            <Clock className="h-5 w-5 text-primary" />
+                    <div className="bg-white/95 backdrop-blur-md px-3 h-10 md:h-12 rounded-xl shadow-2xl border-2 border-slate-100 flex items-center gap-3 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                        <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-primary" />
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aankomst</span>
-                                <span className="text-lg font-black text-slate-900 leading-none">
+                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none mb-0.5">Aankomst</span>
+                                <span className="text-sm md:text-base font-black text-slate-900 leading-none">
                                     {formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}
                                 </span>
                             </div>
                         </div>
-                        <Separator orientation="vertical" className="h-8" />
-                        <div className="flex items-center gap-3">
-                            <Navigation className="h-5 w-5 text-primary" />
+                        <Separator orientation="vertical" className="h-6" />
+                        <div className="flex items-center gap-2">
+                            <Navigation className="h-4 w-4 text-primary" />
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Afstand</span>
-                                <span className="text-lg font-black text-slate-900 leading-none">
-                                    {(routeInfo.distance / 1000).toFixed(1)} km
+                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none mb-0.5">Afstand</span>
+                                <span className="text-sm md:text-base font-black text-slate-900 leading-none">
+                                    {(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span>
                                 </span>
                             </div>
                         </div>
