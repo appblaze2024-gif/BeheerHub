@@ -12,6 +12,7 @@ import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ArrowLeft, 
   Play, 
@@ -88,7 +89,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Popover,
   PopoverContent,
@@ -1162,18 +1162,18 @@ export default function StartNavigationPage() {
                                     )} />
                                 )}
                                 <div className={cn(
-                                    "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-xl transition-all z-10",
+                                    "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10",
                                     isCompleted ? "bg-green-500" : "bg-white/20 backdrop-blur-md",
                                     (isNext || isClicked) && "ring-4 ring-black/20 scale-125",
                                     "cursor-pointer hover:scale-110"
                                 )}>
                                     {renderMarkerIcon(m.hoofdcategorie)}
                                     {isCompleted ? (
-                                        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full w-4 h-4 flex items-center justify-center border border-white shadow-lg overflow-hidden animate-in zoom-in duration-300">
+                                        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full w-4 h-4 flex items-center justify-center border border-black shadow-lg overflow-hidden animate-in zoom-in duration-300">
                                             <Check className="h-2.5 w-2.5 text-white" />
                                         </div>
                                     ) : (
-                                        <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-white shadow-lg overflow-hidden">
+                                        <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-black shadow-lg overflow-hidden">
                                             <Wrench className="h-2.5 w-2.5 text-slate-900" />
                                         </div>
                                     )}
