@@ -49,7 +49,8 @@ import {
   UploadCloud,
   Map as MapIcon,
   Hash,
-  Minus
+  Minus,
+  Tag
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -135,15 +136,6 @@ const routeLayerCasing: Layer = {
   paint: { 'line-color': '#1e40af', 'line-width': 12, 'line-opacity': 0.2 },
 };
 
-const translationLanguages = [
-  { code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' },
-  { code: 'en-US', name: 'English', flag: 'us', label: 'Engels' },
-  { code: 'pl-PL', name: 'Polish', flag: 'pl', label: 'Pools' },
-  { code: 'uk-UA', name: 'Ukrainian', flag: 'ua', label: 'Oekraïens' },
-  { code: 'de-DE', name: 'German', flag: 'de', label: 'Duits' },
-  { code: 'hu-HU', name: 'Hungarian', flag: 'hu', label: 'Hongaars' },
-];
-
 const getMeldingAgeColor = (datum?: string) => {
     if (!datum) return 'bg-slate-400';
     try {
@@ -205,8 +197,8 @@ function IntegratedWerkbonOverlay({
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = React.useState('');
     const [isListening, setIsListening] = React.useState(false);
-    const [sourceLang] = React.useState(translationLanguages[0]);
-    const [targetLang] = React.useState(translationLanguages[0]);
+    const [sourceLang] = React.useState({ code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' });
+    const [targetLang] = React.useState({ code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' });
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
@@ -934,6 +926,11 @@ export default function StartNavigationPage() {
 
   const clickedMelding = React.useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
 
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
@@ -1214,7 +1211,7 @@ export default function StartNavigationPage() {
             </div>
             <ScrollArea className="flex-1 bg-white">
                 <div className="min-w-full inline-block align-middle">
-                    <Table className="border-collapse w-full border-slate-200">
+                    <Table className="border-collapse w-full border-slate-200 min-w-[1200px]">
                         <TableHeader className="bg-slate-100 sticky top-0 z-10">
                             <TableRow className="hover:bg-transparent h-10 border-b-2 border-slate-200">
                                 {visibleColumns.intakenummer && <TableHead className="py-2 px-3 font-black uppercase tracking-widest text-[9px] text-slate-500 border-r border-slate-200">Nummer</TableHead>}
