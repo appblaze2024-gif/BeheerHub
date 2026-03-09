@@ -22,7 +22,8 @@ import {
   Plus,
   MoreHorizontal,
   LayoutGrid,
-  File as FileIcon
+  File as FileIcon,
+  ImageIcon
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -499,58 +500,77 @@ export default function NewIssuePage() {
 
   const renderMediaAndMap = () => (
     <div className="space-y-4">
-      {location && (
-        <Card className="rounded-2xl overflow-hidden shadow-sm border-slate-200">
-          <CardHeader className="bg-slate-50 border-b py-2 px-4">
-            <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie Preview</CardTitle>
-          </CardHeader>
-          <div className="h-48 w-full relative">
-            <MapboxView latitude={location.latitude} longitude={location.longitude} interactive={false} objects={nearbyObjects} />
-          </div>
-        </Card>
-      )}
+      <Card className="rounded-2xl overflow-hidden shadow-sm border-slate-200">
+        <CardHeader className="bg-slate-50 border-b py-2 px-4">
+          <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie Preview</CardTitle>
+        </CardHeader>
+        <div className="h-48 w-full relative bg-slate-100">
+          <MapboxView 
+            latitude={location?.latitude || 52.1326} 
+            longitude={location?.longitude || 5.2913} 
+            interactive={false} 
+            objects={nearbyObjects} 
+          />
+          {!location && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[1px]">
+              <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Wacht op locatiegegevens...</p>
+            </div>
+          )}
+        </div>
+      </Card>
 
-      {(uploadedFiles.length > 0 || uploadedPhotos.length > 0) && (
-        <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
-          <CardHeader className="bg-slate-50 border-b py-2 px-4">
-            <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Media & Bijlagen</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            {uploadedPhotos.length > 0 && (
-              <div className="grid grid-cols-3 gap-2">
-                {uploadedPhotos.map((p, i) => (
-                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border group">
-                    <Image src={p.url} alt="foto" fill className="object-cover" />
-                    <Button 
-                      variant="destructive" 
-                      size="icon" 
-                      className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+      <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
+        <CardHeader className="bg-slate-50 border-b py-2 px-4">
+          <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Media & Bijlagen</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 space-y-4">
+          {uploadedPhotos.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {uploadedPhotos.map((p, i) => (
+                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border group">
+                  <Image src={p.url} alt="foto" fill className="object-cover" />
+                  <Button 
+                    variant="destructive" 
+                    size="icon" 
+                    className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-4 text-center opacity-20">
+              <Camera className="h-6 w-6 mx-auto mb-1 text-slate-400" />
+              <p className="text-[8px] font-black uppercase tracking-widest">Geen foto's</p>
+            </div>
+          )}
+          
+          <Separator className="bg-slate-100" />
+
+          {uploadedFiles.length > 0 ? (
+            <div className="space-y-2">
+              {uploadedFiles.map((f, i) => (
+                <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center gap-2 truncate">
+                    <FileIcon className="h-4 w-4 text-blue-500 shrink-0" />
+                    <span className="text-xs font-bold truncate">{f.name}</span>
                   </div>
-                ))}
-              </div>
-            )}
-            {uploadedFiles.length > 0 && (
-              <div className="space-y-2">
-                {uploadedFiles.map((f, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="flex items-center gap-2 truncate">
-                      <FileIcon className="h-4 w-4 text-blue-500 shrink-0" />
-                      <span className="text-xs font-bold truncate">{f.name}</span>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-4 text-center opacity-20">
+              <FileIcon className="h-6 w-6 mx-auto mb-1 text-slate-400" />
+              <p className="text-[8px] font-black uppercase tracking-widest">Geen documenten</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 
@@ -559,7 +579,6 @@ export default function NewIssuePage() {
       <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit, onSaveError)} className="space-y-4">
         {isMobile ? (
           <div className="space-y-4">
-            {renderMediaAndMap()}
             <Accordion type="multiple" defaultValue={[]} className="w-full">
               <AccordionItem value="section-1" className="border-none">
                 <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
@@ -634,7 +653,9 @@ export default function NewIssuePage() {
                       <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
                     </FormRow>
                     <FormRow label="Werkgebied">
-                      <FormField control={form.control} name="werkgebied" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled className="h-11 font-black bg-slate-50 text-primary border-primary/20" /></FormControl></FormItem>)} />
+                      <FormField control={form.control} name="werkgebied" render={({ field }) => (
+                        <FormItem><FormControl><Input {...field} value={field.value || ''} disabled className="h-11 font-black bg-slate-50 text-primary border-primary/20" /></FormControl></FormItem>
+                      )} />
                     </FormRow>
                   </div>
                 </AccordionContent>
@@ -661,6 +682,9 @@ export default function NewIssuePage() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+            
+            {/* Always visible components on mobile */}
+            {renderMediaAndMap()}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -769,7 +793,7 @@ export default function NewIssuePage() {
                     <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
                     <FormRow label={<>Subtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
                   </div>
-                  <FormRow label="Omschrijving Melding">
+                  <FormRow label="Memo">
                     <FormField control={form.control} name="extra_informatie" render={({ field }) => (
                       <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[100px] text-xs font-medium border-slate-100 bg-slate-50/30" placeholder="Aanvullende info..." /></FormControl></FormItem>
                     )} />
@@ -836,7 +860,7 @@ export default function NewIssuePage() {
                         </DropdownMenu>
                         <Separator orientation="vertical" className="h-5 mx-1" />
                         <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-4 md:px-8 shadow-lg rounded-xl">
-                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} {meldingId ? 'BIJWERKEN' : 'OPSLAAN'}
+                            {isSubmitting ? <Loader2 className="mr-2 h-3 w-3 lg:h-4 lg:w-4 animate-spin" /> : <Check className="mr-2 h-3 w-3 lg:h-4 lg:w-4" />} {meldingId ? 'BIJWERKEN' : 'OPSLAAN'}
                         </Button>
                     </>
                 )}
