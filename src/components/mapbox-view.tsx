@@ -180,6 +180,12 @@ export function MapboxView({
         );
     }
 
+    if (iconVal.startsWith('lucide:')) {
+        const [_, name, color] = iconVal.split(':');
+        const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
+        return <IconComp className="h-5 w-5" style={{ color: color || 'white' }} />;
+    }
+
     const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
     return <IconComp className="h-5 w-5 text-white" />;
   };

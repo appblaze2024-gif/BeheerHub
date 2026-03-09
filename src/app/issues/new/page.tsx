@@ -31,7 +31,9 @@ import {
   Upload,
   Edit2,
   CircleHelp,
-  AlertCircle
+  AlertCircle,
+  Palette,
+  Search as SearchIcon
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { 
@@ -113,23 +115,15 @@ import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-const ICON_OPTIONS = [
-  { id: 'Trash2', label: 'Afval' },
-  { id: 'Trees', label: 'Groen' },
-  { id: 'Droplets', label: 'Water' },
-  { id: 'Construction', label: 'Wegwerk' },
-  { id: 'Lightbulb', label: 'Licht' },
-  { id: 'AlertTriangle', label: 'Gevaar' },
-  { id: 'Wrench', label: 'Techniek' },
-  { id: 'Info', label: 'Info' },
-  { id: 'MapPin', label: 'Locatie' },
-  { id: 'Camera', label: 'Foto' },
-  { id: 'Zap', label: 'Elektra' },
-  { id: 'Waves', label: 'Riool' },
-  { id: 'Box', label: 'Container' },
-  { id: 'Sofa', label: 'Meubilair' },
-  { id: 'Shield', label: 'Handhaving' },
-  { id: 'Car', label: 'Verkeer' },
+const PRESET_COLORS = [
+  { name: 'Primair', value: '#3b82f6' },
+  { name: 'Rood', value: '#ef4444' },
+  { name: 'Groen', value: '#22c55e' },
+  { name: 'Oranje', value: '#f97316' },
+  { name: 'Paars', value: '#a855f7' },
+  { name: 'Geel', value: '#eab308' },
+  { name: 'Grijs', value: '#64748b' },
+  { name: 'Zwart', value: '#0f172a' },
 ];
 
 const newMeldingSchema = z.object({
@@ -262,7 +256,9 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   const app = useFirebaseApp();
   const { toast } = useToast();
   const [newName, setNewName] = React.useState('');
-  const [selectedIcon, setSelectedIcon] = React.useState('AlertCircle');
+  const [selectedIconName, setSelectedIconName] = React.useState('AlertCircle');
+  const [selectedColor, setSelectedColor] = React.useState('#3b82f6');
+  const [iconSearch, setIconSearch] = React.useState('');
   const [isSaving, setIsSaving] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('preset');
   const [htmlIcon, setHtmlIcon] = React.useState('');
@@ -275,6 +271,13 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
   };
 
+  const filteredIcons = React.useMemo(() => {
+    const all = Object.keys(Icons).filter(name => typeof (Icons as any)[name] === 'function' || typeof (Icons as any)[name] === 'object');
+    if (!iconSearch.trim()) return all.slice(0, 100);
+    const q = iconSearch.toLowerCase();
+    return all.filter(name => name.toLowerCase().includes(q)).slice(0, 100);
+  }, [iconSearch]);
+
   React.useEffect(() => {
     if (editTarget) {
         const currentIcon = categoryIcons[editTarget] || 'AlertCircle';
@@ -283,10 +286,16 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             setHtmlIcon(currentIcon);
         } else if (currentIcon.startsWith('http')) {
             setActiveTab('upload');
-            setSelectedIcon(currentIcon);
+            // Extract the URL? selectedIcon stores the full value
+        } else if (currentIcon.startsWith('lucide:')) {
+            setActiveTab('preset');
+            const [_, name, color] = currentIcon.split(':');
+            setSelectedIconName(name || 'AlertCircle');
+            setSelectedColor(color || '#3b82f6');
         } else {
             setActiveTab('preset');
-            setSelectedIcon(currentIcon);
+            setSelectedIconName(currentIcon);
+            setSelectedColor('#3b82f6');
         }
     }
   }, [editTarget, categoryIcons]);
@@ -300,7 +309,9 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     try {
         const snapshot = await uploadBytesResumable(ref(storage, path), file);
         const url = await getDownloadURL(snapshot.ref);
-        setSelectedIcon(url);
+        // Special marker for uploaded images
+        // We set this as the icon value temporarily
+        setHtmlIcon(url); // Reusing state for the URL
         toast({ title: "Icoon geüpload" });
     } catch (err: any) {
         console.error("Icon upload error:", err);
@@ -315,7 +326,15 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     if (!target || !firestore) return;
     setIsSaving(true);
     try {
-      const finalIcon = activeTab === 'html' ? htmlIcon.trim() : selectedIcon;
+      let finalIcon = '';
+      if (activeTab === 'html') {
+          finalIcon = htmlIcon.trim();
+      } else if (activeTab === 'upload') {
+          finalIcon = htmlIcon; // Contains the URL
+      } else {
+          finalIcon = `lucide:${selectedIconName}:${selectedColor}`;
+      }
+
       const updatedOptions = editTarget ? currentOptions : Array.from(new Set([...currentOptions, target]));
       const updatedIcons = { ...categoryIcons, [target]: finalIcon };
       
@@ -354,13 +373,13 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     }
   };
 
-  const renderCurrentIcon = (val: string) => {
+  const renderCurrentIcon = (val: string, isPreview = false) => {
     if (!val) return <CircleHelp className="h-4 w-4 text-slate-300" />;
     
     if (isSvg(val)) {
         return (
             <div 
-                className="h-4 w-4 text-primary flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" 
+                className={cn("flex items-center justify-center [&>svg]:h-full [&>svg]:w-full", isPreview ? "h-12 w-12 text-primary" : "h-4 w-4 text-primary")} 
                 dangerouslySetInnerHTML={{ __html: val }} 
             />
         );
@@ -368,122 +387,176 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     
     if (val.startsWith('http')) {
         return (
-            <div className="h-4 w-4 relative flex items-center justify-center">
+            <div className={cn("relative flex items-center justify-center", isPreview ? "h-12 w-12" : "h-4 w-4")}>
                 <img src={val} alt="icon" className="h-full w-full object-contain" />
             </div>
         );
     }
 
+    if (val.startsWith('lucide:')) {
+        const [_, name, color] = val.split(':');
+        const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
+        return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-4 w-4")} style={{ color: color || '#3b82f6' }} />;
+    }
+
     const Icon = (Icons as any)[val] || Icons.CircleHelp;
-    return <Icon className="h-4 w-4 text-primary" />;
+    return <Icon className={cn(isPreview ? "h-12 w-12" : "h-4 w-4")} style={{ color: '#3b82f6' }} />;
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[95vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 border-b bg-slate-50">
           <DialogTitle className="font-black uppercase">{editTarget ? `Icoon wijzigen: ${editTarget}` : 'Hoofdtypes Beheren'}</DialogTitle>
           <DialogDescription>Voeg types toe en koppel een eigen icoon, afbeelding of SVG.</DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-6 py-4">
-          {!editTarget && (
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400">Naam nieuw hoofdtype</Label>
-              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Verlichting..." className="font-bold h-11" />
-            </div>
-          )}
+        <ScrollArea className="flex-1">
+          <div className="space-y-8 p-6">
+            {!editTarget && (
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400">Naam nieuw hoofdtype</Label>
+                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Verlichting..." className="font-bold h-11" />
+              </div>
+            )}
 
-          <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-inner">
-            <Label className="text-[10px] font-black uppercase text-slate-400">Kies Icoon Bron</Label>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-3 h-10 rounded-xl bg-slate-200">
-                    <TabsTrigger value="preset" className="text-[10px] font-black uppercase">Standaard</TabsTrigger>
-                    <TabsTrigger value="upload" className="text-[10px] font-black uppercase">Upload</TabsTrigger>
-                    <TabsTrigger value="html" className="text-[10px] font-black uppercase">HTML/SVG</TabsTrigger>
-                </TabsList>
-                <TabsContent value="preset" className="pt-4">
-                    <div className="grid grid-cols-8 gap-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
-                        {ICON_OPTIONS.map(opt => {
-                            const Icon = (Icons as any)[opt.id];
-                            return (
-                                <Button 
-                                    key={opt.id} 
-                                    type="button" 
-                                    variant={selectedIcon === opt.id && activeTab === 'preset' ? "default" : "outline"} 
-                                    size="icon" 
-                                    className="h-9 w-9 p-0" 
-                                    onClick={() => { setSelectedIcon(opt.id); setActiveTab('preset'); }}
-                                    title={opt.label}
-                                >
-                                    <Icon className="h-4 w-4" />
-                                </Button>
-                            );
-                        })}
-                    </div>
-                </TabsContent>
-                <TabsContent value="upload" className="pt-4 space-y-4">
-                    <div className="flex items-center gap-4">
-                        <Button variant="outline" className="h-20 w-full flex-col gap-2 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('icon-upload-input')?.click()} disabled={isUploading}>
-                            {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6 text-slate-400" />}
-                            <span className="text-[10px] font-black uppercase">Afbeelding Uploaden</span>
-                        </Button>
-                        <input type="file" id="icon-upload-input" className="hidden" accept="image/*" onChange={handleFileUpload} />
-                        {selectedIcon.startsWith('http') && (
-                            <div className="h-20 w-20 rounded-2xl border bg-white flex items-center justify-center p-2 shrink-0 shadow-sm">
-                                <img src={selectedIcon} alt="preview" className="h-full w-full object-contain" />
-                            </div>
-                        )}
-                    </div>
-                </TabsContent>
-                <TabsContent value="html" className="pt-4 space-y-4">
-                    <Textarea 
-                        placeholder="Plak hier uw <svg> code..." 
-                        className="font-mono text-[10px] min-h-[100px] rounded-xl"
-                        value={htmlIcon}
-                        onChange={e => setHtmlIcon(e.target.value)}
-                    />
-                    {isSvg(htmlIcon) && (
-                        <div className="space-y-2">
-                            <Label className="text-[9px] font-black uppercase text-slate-400">Voorbeeld Rendering</Label>
-                            <div className="h-12 w-12 rounded-xl border bg-white flex items-center justify-center p-2 shadow-sm [&>svg]:h-full [&>svg]:w-full text-primary" dangerouslySetInnerHTML={{ __html: htmlIcon }} />
+            <div className="space-y-6 bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 shadow-inner">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-black uppercase text-slate-400">Configureer Icoon</Label>
+                <div className="h-16 w-16 bg-white rounded-2xl border-2 border-primary/10 flex items-center justify-center shadow-lg">
+                    {activeTab === 'preset' ? (
+                        <div style={{ color: selectedColor }}>
+                            {renderCurrentIcon(`lucide:${selectedIconName}:${selectedColor}`, true)}
                         </div>
+                    ) : activeTab === 'upload' ? (
+                        renderCurrentIcon(htmlIcon, true)
+                    ) : (
+                        renderCurrentIcon(htmlIcon, true)
                     )}
-                </TabsContent>
-            </Tabs>
-            <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-11 font-black uppercase shadow-lg shadow-primary/20">
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-              {editTarget ? 'Wijzigingen Opslaan' : 'Type Toevoegen'}
-            </Button>
-            {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-bold text-slate-400">Annuleren</Button>}
-          </div>
+                </div>
+              </div>
 
-          {!editTarget && (
-            <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Huidige Types</Label>
-                <ScrollArea className="h-48 rounded-xl border p-2">
-                {currentOptions.map(name => (
-                    <div key={name} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg group">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-white p-1.5 rounded-lg border border-slate-100 shadow-sm flex items-center justify-center w-8 h-8 shrink-0">
-                            {renderCurrentIcon(categoryIcons[name])}
-                        </div>
-                        <span className="text-sm font-bold text-slate-700">{name}</span>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary" onClick={() => setEditTarget(name)}>
-                            <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600" onClick={() => handleDelete(name)}>
-                            <Trash className="h-3.5 w-3.5" />
-                        </Button>
-                    </div>
-                    </div>
-                ))}
-                </ScrollArea>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid grid-cols-3 h-11 rounded-xl bg-slate-200 p-1 mb-6">
+                      <TabsTrigger value="preset" className="text-[10px] font-black uppercase">Standaard</TabsTrigger>
+                      <TabsTrigger value="upload" className="text-[10px] font-black uppercase">Upload</TabsTrigger>
+                      <TabsTrigger value="html" className="text-[10px] font-black uppercase">HTML/SVG</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="preset" className="space-y-6 mt-0">
+                      <div className="space-y-3">
+                          <Label className="text-[10px] font-black uppercase text-slate-400">Kies Kleur</Label>
+                          <div className="flex flex-wrap gap-2">
+                              {PRESET_COLORS.map(c => (
+                                  <button
+                                      key={c.value}
+                                      type="button"
+                                      className={cn(
+                                          "h-8 w-8 rounded-full border-2 transition-all",
+                                          selectedColor === c.value ? "border-slate-900 scale-110 shadow-md" : "border-transparent"
+                                      )}
+                                      style={{ backgroundColor: c.value }}
+                                      onClick={() => setSelectedColor(c.value)}
+                                      title={c.name}
+                                  />
+                              ))}
+                              <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-slate-200">
+                                  <input 
+                                      type="color" 
+                                      value={selectedColor} 
+                                      onChange={e => setSelectedColor(e.target.value)}
+                                      className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
+                                  />
+                                  <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="space-y-3">
+                          <div className="relative">
+                              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Input 
+                                  placeholder="Zoek icoon..." 
+                                  className="h-10 pl-9 font-bold rounded-xl border-slate-200 bg-white"
+                                  value={iconSearch}
+                                  onChange={e => setIconSearch(e.target.value)}
+                              />
+                          </div>
+                          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar p-1">
+                              {filteredIcons.map(name => {
+                                  const Icon = (Icons as any)[name];
+                                  return (
+                                      <Button 
+                                          key={name} 
+                                          type="button" 
+                                          variant={selectedIconName === name ? "default" : "outline"} 
+                                          size="icon" 
+                                          className="h-10 w-10 p-0 rounded-xl" 
+                                          onClick={() => setSelectedIconName(name)}
+                                          title={name}
+                                      >
+                                          <Icon className="h-5 w-5" style={{ color: selectedIconName === name ? undefined : selectedColor }} />
+                                      </Button>
+                                  );
+                              })}
+                          </div>
+                      </div>
+                  </TabsContent>
+
+                  <TabsContent value="upload" className="space-y-4 mt-0">
+                      <div className="flex items-center gap-4">
+                          <Button variant="outline" className="h-24 w-full flex-col gap-2 rounded-3xl border-dashed border-2 border-slate-200 bg-white" onClick={() => document.getElementById('icon-upload-input')?.click()} disabled={isUploading}>
+                              {isUploading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <Upload className="h-8 w-8 text-slate-300" />}
+                              <span className="text-[10px] font-black uppercase text-slate-400">Kies Afbeelding</span>
+                          </Button>
+                          <input type="file" id="icon-upload-input" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                      </div>
+                  </TabsContent>
+
+                  <TabsContent value="html" className="space-y-4 mt-0">
+                      <Textarea 
+                          placeholder="Plak hier uw <svg> code..." 
+                          className="font-mono text-[10px] min-h-[150px] rounded-2xl border-slate-200 p-4 leading-relaxed"
+                          value={htmlIcon}
+                          onChange={e => setHtmlIcon(e.target.value)}
+                      />
+                  </TabsContent>
+              </Tabs>
+
+              <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-12 font-black uppercase shadow-xl shadow-primary/20 rounded-2xl text-xs">
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                {editTarget ? 'Wijzigingen Opslaan' : 'Nieuw Type Toevoegen'}
+              </Button>
+              {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-black uppercase text-[10px] text-slate-400">Annuleren</Button>}
             </div>
-          )}
-        </div>
+
+            {!editTarget && (
+              <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huidige Types ({currentOptions.length})</Label>
+                  <div className="grid gap-2">
+                  {currentOptions.map(name => (
+                      <div key={name} className="flex items-center justify-between p-3 bg-white border-2 border-slate-100 rounded-2xl group hover:border-primary/20 transition-all shadow-sm">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-inner flex items-center justify-center w-10 h-10 shrink-0">
+                                {renderCurrentIcon(categoryIcons[name])}
+                            </div>
+                            <span className="text-sm font-black uppercase tracking-tight text-slate-700">{name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
+                                <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                      </div>
+                  ))}
+                  </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
@@ -540,30 +613,32 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl">
+        <DialogHeader className="p-6 bg-slate-50 border-b">
           <DialogTitle className="font-black uppercase">Subtypes voor: {parentCategory}</DialogTitle>
           <DialogDescription>Beheer specifieke onderdelen binnen dit hoofdtype.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 p-6">
           <div className="flex gap-2">
-            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nieuw subtype..." className="font-bold h-11" />
-            <Button onClick={handleAdd} disabled={!newName.trim() || isSaving} className="h-11 font-black uppercase">
+            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nieuw subtype..." className="font-bold h-11 rounded-xl" />
+            <Button onClick={handleAdd} disabled={!newName.trim() || isSaving} className="h-11 font-black uppercase rounded-xl px-6">
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </Button>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase text-slate-400">Actieve Subtypes</Label>
-            <ScrollArea className="h-48 rounded-xl border p-2">
-              {currentSubtypes.map(name => (
-                <div key={name} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg">
-                  <span className="text-sm font-bold text-slate-700">{name}</span>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600" onClick={() => handleDelete(name)}>
-                    <Trash className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
+            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Actieve Subtypes</Label>
+            <ScrollArea className="h-64 rounded-2xl border-2 border-slate-50 p-2 bg-slate-50/30 shadow-inner">
+              <div className="grid gap-1">
+                {currentSubtypes.map(name => (
+                  <div key={name} className="flex items-center justify-between p-3 bg-white rounded-xl border border-transparent shadow-sm group">
+                    <span className="text-xs font-black uppercase tracking-tight text-slate-700">{name}</span>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(name)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </ScrollArea>
           </div>
         </div>

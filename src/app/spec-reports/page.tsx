@@ -19,6 +19,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useProject } from '@/context/project-context';
 import { LoadingScreen } from '@/components/loading-screen';
 import { useDoc } from '@/firebase';
+import * as Icons from 'lucide-react';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -175,7 +176,7 @@ export default function SpecReportsPage() {
 
   const renderMarkerIcon = (category: string) => {
     const iconVal = categoryIcons[category];
-    if (!iconVal) return <Bell className="h-5 w-5 text-white" />;
+    if (!iconVal) return <Icons.Bell className="h-5 w-5 text-white" />;
     
     if (isSvg(iconVal)) {
         return (
@@ -194,7 +195,13 @@ export default function SpecReportsPage() {
         );
     }
 
-    const IconComp = (Icons as any)[iconVal] || Bell;
+    if (iconVal.startsWith('lucide:')) {
+        const [_, name, color] = iconVal.split(':');
+        const IconComp = (Icons as any)[name || 'Bell'] || Icons.Bell;
+        return <IconComp className="h-5 w-5" style={{ color: color || 'white' }} />;
+    }
+
+    const IconComp = (Icons as any)[iconVal] || Icons.Bell;
     return <IconComp className="h-5 w-5 text-white" />;
   };
 
