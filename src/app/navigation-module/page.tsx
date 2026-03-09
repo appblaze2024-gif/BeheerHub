@@ -652,12 +652,20 @@ export default function StartNavigationPage() {
 
   const renderMarkerIcon = (category: string) => {
     const iconVal = categoryIcons[category];
+    
+    let iconColor = '#ffffff';
+    if (iconVal?.startsWith('lucide:')) {
+        const parts = iconVal.split(':');
+        iconColor = parts[2] || '#3b82f6';
+    }
+
     if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-white" />;
     
     if (isSvg(iconVal)) {
         return (
             <div 
-                className="h-5 w-5 flex items-center justify-center text-white [&>svg]:h-full [&>svg]:w-full" 
+                className="h-5 w-5 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" 
+                style={{ color: iconColor === '#ffffff' ? '#3b82f6' : iconColor }}
                 dangerouslySetInnerHTML={{ __html: iconVal }} 
             />
         );
@@ -674,12 +682,13 @@ export default function StartNavigationPage() {
     if (iconVal.startsWith('lucide:')) {
         const parts = iconVal.split(':');
         const name = parts[1];
+        const color = parts[2] || '#3b82f6';
         const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className="h-5 w-5 text-white" />;
+        return <IconComp className="h-5 w-5" style={{ color }} />;
     }
 
     const IconComp = (Icons as any)[iconVal] || Icons.AlertCircle;
-    return <IconComp className="h-5 w-5 text-white" />;
+    return <IconComp className="h-5 w-5" style={{ color: '#3b82f6' }} />;
   };
 
   React.useEffect(() => {
@@ -1124,7 +1133,7 @@ export default function StartNavigationPage() {
                                 )}
                                 <div className={cn(
                                     "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-xl transition-all z-10",
-                                    isCompleted ? "bg-green-500" : "bg-primary",
+                                    isCompleted ? "bg-green-500" : "bg-white/60 backdrop-blur-[2px]",
                                     isNext && "ring-4 ring-black/20 scale-125"
                                 )}>
                                     {renderMarkerIcon(m.hoofdcategorie)}
