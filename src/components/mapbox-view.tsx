@@ -156,11 +156,11 @@ export function MapboxView({
   const isSvg = (str: string) => {
     if (!str) return false;
     const trimmed = str.trim().toLowerCase();
-    return trimmed.startsWith('<svg') || trimmed.includes('<svg');
+    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
   };
 
-  const renderMarkerIcon = (hoofdcategorie: string) => {
-    const iconVal = categoryIcons[hoofdcategorie];
+  const renderMarkerIcon = (category: string) => {
+    const iconVal = categoryIcons[category];
     if (!iconVal) return <Icons.CircleHelp className="h-5 w-5 text-white" />;
     
     if (isSvg(iconVal)) {
@@ -194,7 +194,9 @@ export function MapboxView({
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         
         // Logic for Meldingen (Issues) vs Objects
-        const isIssue = !!obj.hoofdcategorie;
+        // Meldingen have 'hoofdcategorie', Spec Meldingen have 'werksoort'
+        const categoryKey = obj.hoofdcategorie || obj.werksoort;
+        const isIssue = !!categoryKey;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
 
         if (isIssue) {
@@ -213,7 +215,7 @@ export function MapboxView({
                 isHighlighted && "ring-4 ring-black/20 scale-125",
                 interactive && "cursor-pointer hover:scale-110"
               )}>
-                {renderMarkerIcon(obj.hoofdcategorie)}
+                {renderMarkerIcon(categoryKey)}
                 {!isCompleted && (
                   <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-white">
                     <Icons.Wrench className="h-2.5 w-2.5 text-slate-900" />

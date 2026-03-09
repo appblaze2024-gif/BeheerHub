@@ -272,7 +272,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   const isSvg = (str: string) => {
     if (!str) return false;
     const trimmed = str.trim().toLowerCase();
-    return trimmed.startsWith('<svg') || trimmed.includes('<svg');
+    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
   };
 
   React.useEffect(() => {
@@ -452,7 +452,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                 </TabsContent>
             </Tabs>
             <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-11 font-black uppercase shadow-lg shadow-primary/20">
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
               {editTarget ? 'Wijzigingen Opslaan' : 'Type Toevoegen'}
             </Button>
             {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-bold text-slate-400">Annuleren</Button>}

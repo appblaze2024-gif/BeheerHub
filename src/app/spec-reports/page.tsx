@@ -3,7 +3,7 @@
 import * as React from 'react';
 import MapGL, { Marker, Popup } from 'react-map-gl';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { Plus, Search, List, Map as MapIcon, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import type { Project } from '@/app/projects/page';
 import { useProfile } from '@/firebase/profile-provider';
 import { useProject } from '@/context/project-context';
 import { LoadingScreen } from '@/components/loading-screen';
+import { useDoc } from '@/firebase';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -93,6 +94,10 @@ export default function SpecReportsPage() {
   const canEdit = isSuperUser || !!profile?.permissions?.specReports?.edit;
   const canDelete = isSuperUser || !!profile?.permissions?.specReports?.delete;
 
+  const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
+  const { data: dbOptions } = useDoc<any>(optionsRef);
+  const categoryIcons = dbOptions?.categoryIcons || {};
+
   const projectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
@@ -162,6 +167,37 @@ export default function SpecReportsPage() {
     setIsDialogOpen(true);
   };
   
+  const isSvg = (str: string) => {
+    if (!str) return false;
+    const trimmed = str.trim().toLowerCase();
+    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
+  };
+
+  const renderMarkerIcon = (category: string) => {
+    const iconVal = categoryIcons[category];
+    if (!iconVal) return <Bell className="h-5 w-5 text-white" />;
+    
+    if (isSvg(iconVal)) {
+        return (
+            <div 
+                className="h-5 w-5 flex items-center justify-center text-white [&>svg]:h-full [&>svg]:w-full" 
+                dangerouslySetInnerHTML={{ __html: iconVal }} 
+            />
+        );
+    }
+    
+    if (iconVal.startsWith('http')) {
+        return (
+            <div className="h-5 w-5 relative flex items-center justify-center">
+                <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
+            </div>
+        );
+    }
+
+    const IconComp = (Icons as any)[iconVal] || Bell;
+    return <IconComp className="h-5 w-5 text-white" />;
+  };
+
   React.useEffect(() => {
     if (selectedMelding && !isDialogOpen) {
       setIsDialogOpen(true);
@@ -226,20 +262,24 @@ export default function SpecReportsPage() {
             mapboxAccessToken={MAPBOX_TOKEN}
             cursor="default"
         >
-            {filteredMeldingen?.map(melding => (
-                <Marker
-                    key={melding.id}
-                    longitude={melding.longitude}
-                    latitude={melding.latitude}
-                    onClick={(e) => handleMarkerClick(e, melding)}
-                >
-                    <div
-                        aria-label="Map marker"
-                        className="w-4 h-4 rounded-full cursor-pointer border-2 border-white"
-                        style={{ backgroundColor: statusConfig[melding.status]?.color || '#ccc' }}
-                    />
-                </Marker>
-            ))}
+            {filteredMeldingen?.map(m => {
+                const isCompleted = m.status === 'Afgerond';
+                return (
+                    <Marker
+                        key={m.id}
+                        longitude={m.longitude}
+                        latitude={m.latitude}
+                        onClick={(e) => handleMarkerClick(e, m)}
+                    >
+                        <div className={cn(
+                            "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-xl transition-all cursor-pointer hover:scale-110",
+                            isCompleted ? "bg-green-500" : "bg-primary"
+                        )}>
+                            {renderMarkerIcon(m.werksoort)}
+                        </div>
+                    </Marker>
+                )
+            })}
 
             {selectedMelding && (
                 <Popup
