@@ -272,7 +272,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   const isSvg = (str: string) => {
     if (!str) return false;
     const trimmed = str.trim().toLowerCase();
-    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
+    return trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
   };
 
   const filteredIcons = React.useMemo(() => {
@@ -293,9 +293,9 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             setHtmlIcon(currentIcon);
         } else if (currentIcon.startsWith('lucide:')) {
             setActiveTab('preset');
-            const [_, name, color] = currentIcon.split(':');
-            setSelectedIconName(name || 'AlertCircle');
-            setSelectedColor(color || '#3b82f6');
+            const parts = currentIcon.split(':');
+            setSelectedIconName(parts[1] || 'AlertCircle');
+            setSelectedColor(parts[2] || '#3b82f6');
         } else {
             setActiveTab('preset');
             setSelectedIconName(currentIcon);
@@ -376,12 +376,12 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   };
 
   const renderCurrentIcon = (val: string, isPreview = false) => {
-    if (!val) return <CircleHelp className="h-4 w-4 text-slate-300" />;
+    if (!val) return <CircleHelp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: '#cbd5e1' }} />;
     
     if (isSvg(val)) {
         return (
             <div 
-                className={cn("flex items-center justify-center [&>svg]:h-full [&>svg]:w-full", isPreview ? "h-12 w-12 text-primary" : "h-4 w-4 text-primary")} 
+                className={cn("flex items-center justify-center [&>svg]:h-full [&>svg]:w-full", isPreview ? "h-12 w-12 text-primary" : "h-5 w-5 text-primary")} 
                 dangerouslySetInnerHTML={{ __html: val }} 
             />
         );
@@ -389,20 +389,22 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     
     if (val.startsWith('http')) {
         return (
-            <div className={cn("relative flex items-center justify-center", isPreview ? "h-12 w-12" : "h-4 w-4")}>
-                <img src={val} alt="icon" className="h-full w-full object-contain" />
+            <div className={cn("relative flex items-center justify-center overflow-hidden", isPreview ? "h-12 w-12 rounded-2xl" : "h-5 w-5 rounded-lg")}>
+                <img src={val} alt="icon" className="h-full w-full object-cover" />
             </div>
         );
     }
 
     if (val.startsWith('lucide:')) {
-        const [_, name, color] = val.split(':');
+        const parts = val.split(':');
+        const name = parts[1];
+        const color = parts[2];
         const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-4 w-4")} style={{ color: color || '#3b82f6' }} />;
+        return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: color || '#3b82f6' }} />;
     }
 
-    const Icon = (Icons as any)[val] || Icons.CircleHelp;
-    return <Icon className={cn(isPreview ? "h-12 w-12" : "h-4 w-4")} style={{ color: '#3b82f6' }} />;
+    const IconComp = (Icons as any)[val] || Icons.CircleHelp;
+    return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: '#3b82f6' }} />;
   };
 
   return (
@@ -410,7 +412,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
       <DialogContent className="sm:max-w-2xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
           <DialogTitle className="font-black uppercase tracking-tight">
-            {editTarget ? `Hoofdtype bewerken: ${editTarget}` : 'Hoofdtypes Beheren'}
+            {editTarget ? `Icoon wijzigen: ${editTarget}` : 'Hoofdtypes Beheren'}
           </DialogTitle>
           <DialogDescription className="text-slate-400 font-bold">Voeg types toe en koppel een eigen icoon, afbeelding of SVG.</DialogDescription>
         </DialogHeader>
@@ -518,28 +520,28 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                 {editTarget ? 'Wijzigingen Opslaan' : 'Nieuw Type Toevoegen'}
               </Button>
-              {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-black uppercase text-[10px] text-slate-400">Bewerken annuleren</Button>}
+              {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-black uppercase text-[10px] text-slate-400">Annuleren</Button>}
             </div>
 
             <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huidige Types ({currentOptions.length})</Label>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Beheer bestaande instellingen</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Klik op een icoon om te bewerken</p>
                 </div>
                 <div className="grid gap-2">
                 {currentOptions.map(name => (
                     <div key={name} className={cn("flex items-center justify-between p-3 bg-white border-2 rounded-2xl group transition-all shadow-sm", editTarget === name ? "border-primary bg-primary/5" : "border-slate-100 hover:border-primary/20")}>
-                      <div className="flex items-center gap-4">
-                          <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-inner flex items-center justify-center w-10 h-10 shrink-0">
+                      <div className="flex items-center gap-4 flex-1 min-w-0" onClick={() => setEditTarget(name)}>
+                          <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-inner flex items-center justify-center w-10 h-10 shrink-0 cursor-pointer">
                               {renderCurrentIcon(categoryIcons[name])}
                           </div>
-                          <span className="text-sm font-black uppercase tracking-tight text-slate-700">{name}</span>
+                          <span className="text-sm font-black uppercase tracking-tight text-slate-700 truncate">{name}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
                               <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
                               <Trash2 className="h-4 w-4" />
                           </Button>
                       </div>
