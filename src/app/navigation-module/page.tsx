@@ -1242,23 +1242,23 @@ export default function StartNavigationPage() {
                 )}
                 
                 {navigationState === 'navigating' && routeInfo && (
-                    <div className="bg-white/95 backdrop-blur-md px-3 h-8 md:h-10 rounded-xl shadow-2xl border-2 border-slate-100 flex items-center gap-2 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                        <div className="flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-primary" />
+                    <div className="bg-white/95 backdrop-blur-md px-4 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-4 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                        <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-primary" />
                             <div className="flex flex-col">
-                                <span className="text-[6px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span>
-                                <span className="text-xs md:text-sm font-black text-slate-900 leading-none">
+                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span>
+                                <span className="text-sm md:text-base font-black text-slate-900 leading-none">
                                     {formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}
                                 </span>
                             </div>
                         </div>
-                        <Separator orientation="vertical" className="h-4" />
-                        <div className="flex items-center gap-1.5">
-                            <Navigation className="h-3.5 w-3.5 text-primary" />
+                        <Separator orientation="vertical" className="h-6" />
+                        <div className="flex items-center gap-2">
+                            <Navigation className="h-4 w-4 text-primary" />
                             <div className="flex flex-col">
-                                <span className="text-[6px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span>
-                                <span className="text-xs md:text-sm font-black text-slate-900 leading-none">
-                                    {(routeInfo.distance / 1000).toFixed(1)} <span className="text-[8px]">km</span>
+                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span>
+                                <span className="text-sm md:text-base font-black text-slate-900 leading-none">
+                                    {(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span>
                                 </span>
                             </div>
                         </div>
