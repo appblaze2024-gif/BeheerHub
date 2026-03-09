@@ -661,6 +661,8 @@ export default function NewIssuePage() {
   const [isManageHoofdtypeOpen, setIsManageHoofdtypeOpen] = React.useState(false);
   const [isManageSubtypeOpen, setIsManageSubtypeOpen] = React.useState(false);
 
+  const isSuperAdmin = profile?.role === 'Super admin';
+
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
 
@@ -1164,10 +1166,10 @@ export default function NewIssuePage() {
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0 space-y-4">
                           <div className="grid grid-cols-2 gap-3">
-                            <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>} onAdd={() => setIsManageHoofdtypeOpen(true)}>
-                              <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
+                            <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>} onAdd={isSuperAdmin ? () => setIsManageHoofdtypeOpen(true) : undefined}>
+                              <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></FormItem>)} />
                             </FormRow>
-                            <FormRow label={<>Subtype<span className="text-red-500">*</span></>} onAdd={() => setIsManageSubtypeOpen(true)}>
+                            <FormRow label={<>Subtype<span className="text-red-500">*</span></>} onAdd={isSuperAdmin ? () => setIsManageSubtypeOpen(true) : undefined}>
                               <FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}><FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
                             </FormRow>
                           </div>
@@ -1233,7 +1235,7 @@ export default function NewIssuePage() {
                                     <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                                       <ScrollArea className="max-h-60">
                                         {containerSuggestions.map(obj => (
-                                          <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleContainerSelect(obj)}>
+                                          <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex items-center justify-between group" onClick={() => handleContainerSelect(obj)}>
                                             <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
                                             <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer} • {obj.plaats}</p>
                                           </button>
@@ -1287,10 +1289,26 @@ export default function NewIssuePage() {
                         <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
                         <CardContent className="p-4 pt-2">
                           <div className="grid grid-cols-2 gap-3">
-                            <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>} onAdd={() => setIsManageHoofdtypeOpen(true)}>
-                              <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
-                            <FormRow label={<>Subtype<span className="text-red-500">*</span></>} onAdd={() => setIsManageSubtypeOpen(true)}>
-                              <FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
+                            <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>} onAdd={isSuperAdmin ? () => setIsManageHoofdtypeOpen(true) : undefined}>
+                              <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (
+                                <FormItem>
+                                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
+                                    <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                    <SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )} />
+                            </FormRow>
+                            <FormRow label={<>Subtype<span className="text-red-500">*</span></>} onAdd={isSuperAdmin ? () => setIsManageSubtypeOpen(true) : undefined}>
+                              <FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (
+                                <FormItem>
+                                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}>
+                                    <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                    <SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )} />
+                            </FormRow>
                           </div>
                           <FormRow label="Memo">
                             <FormField control={form.control} name="extra_informatie" render={({ field }) => (
