@@ -409,7 +409,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
-      <DialogContent className="sm:max-w-2xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
           <DialogTitle className="font-black uppercase tracking-tight">
             {editTarget ? `Icoon wijzigen: ${editTarget}` : 'Hoofdtypes Beheren'}
@@ -659,6 +659,9 @@ export default function NewIssuePage() {
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [containerSuggestions, setContainerSuggestions] = React.useState<MapObject[]>([]);
   const [nearbyObjects, setNearbyObjects] = React.useState<MapObject[]>([]);
+  
+  // Track if we should skip the geocoding effect (to avoid jumps after container selection)
+  const skipGeocodeRef = React.useRef(false);
 
   // Category management state
   const [isManageHoofdtypeOpen, setIsManageHoofdtypeOpen] = React.useState(false);
@@ -734,6 +737,12 @@ export default function NewIssuePage() {
 
   React.useEffect(() => {
     const geocodeAddress = async () => {
+      // If triggered by handleContainerSelect, skip and reset flag
+      if (skipGeocodeRef.current) {
+        skipGeocodeRef.current = false;
+        return;
+      }
+
       if (!watchStraat || !watchPlaats || isReadOnly) return;
       
       const fullAddress = `${watchStraat} ${watchHuisnummer || ''}, ${watchPlaats}, Nederland`;
@@ -835,6 +844,9 @@ export default function NewIssuePage() {
   }, [watchContainernummer, firestore, isReadOnly]);
 
   const handleContainerSelect = (obj: MapObject) => {
+    // Flag to skip the next geocode effect trigger
+    skipGeocodeRef.current = true;
+
     form.setValue('containernummer', obj.idNummer || obj.id);
     
     let rawStreet = obj.straatnaam || '';
@@ -1126,7 +1138,7 @@ export default function NewIssuePage() {
                                     <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                                       <ScrollArea className="max-h-60">
                                         {containerSuggestions.map(obj => (
-                                          <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleContainerSelect(obj)}>
+                                          <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleObjectSelect(obj)}>
                                             <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
                                             <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer} • {obj.plaats}</p>
                                           </button>
