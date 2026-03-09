@@ -729,17 +729,6 @@ export default function StartNavigationPage() {
 
   const { data: rawSearchResults } = useCollection<Melding>(backendSearchQuery);
 
-  const objectsQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedProject?.objectFilter) return null;
-    return query(
-        collection(firestore, 'objects'), 
-        where('locatieType', '==', selectedProject.objectFilter),
-        limit(500)
-    );
-  }, [firestore, selectedProject?.objectFilter]);
-
-  const { data: allMapObjects } = useCollection<MapObject>(objectsQuery);
-
   const filteredMeldingen = React.useMemo(() => {
     const poolMap = new Map<string, Melding>();
     rawActiveMeldingen?.forEach(m => { if (!completedObjects.includes(m.id)) poolMap.set(m.id, m); });
@@ -781,10 +770,17 @@ export default function StartNavigationPage() {
     const startPos = userLocation || SIMULATION_START_LOCATION;
     const points: [number, number][] = [[startPos.longitude, startPos.latitude]];
     filteredMeldingen.forEach(m => { if (m.longitude && m.latitude) points.push([m.longitude, m.latitude]); });
+    
     if (points.length > 1) {
-        const coll = turf.featureCollection(points.map(p => turf.point(p)));
-        const bbox = turf.bbox(coll);
-        map.fitBounds(bbox as [number, number, number, number], { padding: { top: 80, bottom: 350, left: 80, right: 80 }, duration: 800, maxZoom: 14, linear: false });
+        try {
+            const coll = turf.featureCollection(points.map(p => turf.point(p)));
+            const bbox = turf.bbox(coll);
+            if (bbox[0] !== Infinity && !isNaN(bbox[0])) {
+                map.fitBounds(bbox as [number, number, number, number], { padding: { top: 80, bottom: 350, left: 80, right: 80 }, duration: 800, maxZoom: 14, linear: false });
+            }
+        } catch (e) {
+            map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 800 });
+        }
     } else {
         map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 800 });
     }
@@ -1158,6 +1154,11 @@ export default function StartNavigationPage() {
                         <Input placeholder="Zoek nummer..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
                     <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
+                        {/* Alles Tonen Knop */}
+                        <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setIsManualMode(false); goToOverview(); }}>
+                            <MapIcon className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Alles Tonen</span>
+                        </Button>
+
                         <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}>
                             <CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span>
                         </Button>
