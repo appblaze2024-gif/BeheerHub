@@ -1137,7 +1137,7 @@ export default function StartNavigationPage() {
                         <ArrowRight className="h-4 w-4 text-primary shrink-0" />
                         <div className="flex flex-col items-center">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aankomst</span>
-                            <span className="text-lg font-black text-primary-foreground leading-none">
+                            <span className="text-lg font-black text-primary leading-none">
                                 {formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}
                             </span>
                         </div>
