@@ -1187,23 +1187,23 @@ export default function StartNavigationPage() {
 
         {/* Choice Overlay when a marker is clicked */}
         {clickedMarkerId && clickedMelding && (
-            <div className="absolute inset-0 z-[80] bg-black/20 backdrop-blur-[2px] flex items-center justify-center p-6 animate-in fade-in duration-300">
-                <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border-4 border-white">
-                    <div className="p-6 bg-slate-900 text-white flex justify-between items-start">
+            <div className="absolute inset-0 z-[80] bg-white/40 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+                <div className="bg-white w-full max-w-sm rounded-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
+                    <div className="p-6 bg-slate-50 text-slate-900 flex justify-between items-start border-b">
                         <div className="space-y-1">
                             <Badge className="bg-primary border-none text-[8px] font-black uppercase tracking-widest px-2 h-5">Melding Geselecteerd</Badge>
                             <h3 className="text-xl font-black uppercase tracking-tight">{clickedMelding.intakenummer}</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[200px]">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[200px]">
                                 {clickedMelding.straatnaam} {clickedMelding.huisnummer}
                             </p>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-white hover:bg-white/10" onClick={() => setClickedMarkerId(null)}>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none text-slate-400 hover:bg-slate-100" onClick={() => setClickedMarkerId(null)}>
                             <X className="h-6 w-6" />
                         </Button>
                     </div>
                     <div className="p-6 grid grid-cols-1 gap-3">
                         <Button 
-                            className="h-16 rounded-2xl font-black uppercase tracking-widest shadow-lg bg-slate-100 text-slate-900 hover:bg-slate-200 border-none gap-3"
+                            className="h-16 rounded-none font-black uppercase tracking-widest shadow-sm bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200 gap-3"
                             onClick={() => {
                                 setActiveWerkbonId(clickedMarkerId);
                                 setClickedMarkerId(null);
@@ -1213,7 +1213,7 @@ export default function StartNavigationPage() {
                             Open Werkbon
                         </Button>
                         <Button 
-                            className="h-16 rounded-2xl font-black uppercase tracking-widest shadow-xl bg-primary text-white hover:bg-primary/90 border-none gap-3"
+                            className="h-16 rounded-none font-black uppercase tracking-widest shadow-lg bg-primary text-white hover:bg-primary/90 border-none gap-3"
                             onClick={() => {
                                 setPriorityMissionId(clickedMarkerId);
                                 handleStartRit(false);
@@ -1242,23 +1242,23 @@ export default function StartNavigationPage() {
                 )}
                 
                 {navigationState === 'navigating' && routeInfo && (
-                    <div className="bg-white/95 backdrop-blur-md px-3 h-10 md:h-12 rounded-xl shadow-2xl border-2 border-slate-100 flex items-center gap-3 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-primary" />
+                    <div className="bg-white/95 backdrop-blur-md px-3 h-8 md:h-10 rounded-xl shadow-2xl border-2 border-slate-100 flex items-center gap-2 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                        <div className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-primary" />
                             <div className="flex flex-col">
-                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none mb-0.5">Aankomst</span>
-                                <span className="text-sm md:text-base font-black text-slate-900 leading-none">
+                                <span className="text-[6px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span>
+                                <span className="text-xs md:text-sm font-black text-slate-900 leading-none">
                                     {formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}
                                 </span>
                             </div>
                         </div>
-                        <Separator orientation="vertical" className="h-6" />
-                        <div className="flex items-center gap-2">
-                            <Navigation className="h-4 w-4 text-primary" />
+                        <Separator orientation="vertical" className="h-4" />
+                        <div className="flex items-center gap-1.5">
+                            <Navigation className="h-3.5 w-3.5 text-primary" />
                             <div className="flex flex-col">
-                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none mb-0.5">Afstand</span>
-                                <span className="text-sm md:text-base font-black text-slate-900 leading-none">
-                                    {(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span>
+                                <span className="text-[6px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span>
+                                <span className="text-xs md:text-sm font-black text-slate-900 leading-none">
+                                    {(routeInfo.distance / 1000).toFixed(1)} <span className="text-[8px]">km</span>
                                 </span>
                             </div>
                         </div>
