@@ -26,7 +26,10 @@ import {
   ImageIcon,
   PlusCircle,
   Settings2,
-  Trash
+  Trash,
+  Code,
+  Upload,
+  Edit2
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { 
@@ -94,6 +97,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import * as turf from '@turf/turf';
 
@@ -253,26 +257,68 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   categoryIcons: Record<string, string>
 }) {
   const firestore = useFirestore();
+  const app = useFirebaseApp();
   const { toast } = useToast();
   const [newName, setNewName] = React.useState('');
   const [selectedIcon, setSelectedIcon] = React.useState('AlertCircle');
   const [isSaving, setIsSaving] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState('preset');
+  const [htmlIcon, setHtmlIcon] = React.useState('');
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [editTarget, setEditTarget] = React.useState<string | null>(null);
 
-  const handleAdd = async () => {
-    if (!newName.trim() || !firestore) return;
+  React.useEffect(() => {
+    if (editTarget) {
+        const currentIcon = categoryIcons[editTarget] || 'AlertCircle';
+        if (currentIcon.startsWith('<svg')) {
+            setActiveTab('html');
+            setHtmlIcon(currentIcon);
+        } else if (currentIcon.startsWith('http')) {
+            setActiveTab('upload');
+        } else {
+            setActiveTab('preset');
+            setSelectedIcon(currentIcon);
+        }
+    }
+  }, [editTarget, categoryIcons]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !app) return;
+    setIsUploading(true);
+    const storage = getStorage(app);
+    const path = `settings/icons/${Date.now()}_${file.name}`;
+    try {
+        const snapshot = await uploadBytesResumable(ref(storage, path), file);
+        const url = await getDownloadURL(snapshot.ref);
+        setSelectedIcon(url);
+        toast({ title: "Icoon geüpload" });
+    } catch (err) {
+        toast({ variant: 'destructive', title: "Upload mislukt" });
+    } finally {
+        setIsUploading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    const target = editTarget || newName.trim();
+    if (!target || !firestore) return;
     setIsSaving(true);
     try {
-      const updatedOptions = Array.from(new Set([...currentOptions, newName.trim()]));
-      const updatedIcons = { ...categoryIcons, [newName.trim()]: selectedIcon };
+      const finalIcon = activeTab === 'html' ? htmlIcon : selectedIcon;
+      const updatedOptions = editTarget ? currentOptions : Array.from(new Set([...currentOptions, target]));
+      const updatedIcons = { ...categoryIcons, [target]: finalIcon };
       
       await setDocumentNonBlocking(doc(firestore, 'settings', 'issue_options'), {
         hoofdcategorieen: updatedOptions,
         categoryIcons: updatedIcons
       }, { merge: true });
       
-      toast({ title: 'Hoofdtype toegevoegd' });
+      toast({ title: editTarget ? 'Icoon bijgewerkt' : 'Hoofdtype toegevoegd' });
       setNewName('');
-      onOpenChange(false);
+      setHtmlIcon('');
+      setEditTarget(null);
+      if (!editTarget) onOpenChange(false);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Fout bij opslaan' });
     } finally {
@@ -293,67 +339,117 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
       }, { merge: true });
       
       toast({ title: 'Hoofdtype verwijderd' });
-    } catch (e) {
+    } catch (error) {
       toast({ variant: 'destructive', title: 'Fout bij verwijderen' });
     }
   };
 
+  const renderCurrentIcon = (val: string) => {
+    if (val.startsWith('<svg')) return <div className="h-4 w-4 text-primary" dangerouslySetInnerHTML={{ __html: val }} />;
+    if (val.startsWith('http')) return <img src={val} alt="icon" className="h-4 w-4 object-contain" />;
+    const Icon = (Icons as any)[val] || Icons.HelpCircle;
+    return <Icon className="h-4 w-4 text-primary" />;
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-black uppercase">Hoofdtypes Beheren</DialogTitle>
-          <DialogDescription>Voeg types toe en koppel een icoon voor de kaart.</DialogDescription>
+          <DialogTitle className="font-black uppercase">{editTarget ? `Icoon wijzigen: ${editTarget}` : 'Hoofdtypes Beheren'}</DialogTitle>
+          <DialogDescription>Voeg types toe en koppel een eigen icoon, afbeelding of SVG.</DialogDescription>
         </DialogHeader>
+        
         <div className="space-y-6 py-4">
-          <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-inner">
+          {!editTarget && (
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase text-slate-400">Naam nieuw hoofdtype</Label>
               <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Verlichting..." className="font-bold h-11" />
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400">Kies Icoon</Label>
-              <div className="grid grid-cols-8 gap-2">
-                {ICON_OPTIONS.map(opt => {
-                  const Icon = (Icons as any)[opt.id];
-                  return (
-                    <Button 
-                      key={opt.id} 
-                      type="button" 
-                      variant={selectedIcon === opt.id ? "default" : "outline"} 
-                      size="icon" 
-                      className="h-9 w-9 p-0" 
-                      onClick={() => setSelectedIcon(opt.id)}
-                      title={opt.label}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-            <Button onClick={handleAdd} disabled={!newName.trim() || isSaving} className="w-full h-11 font-black uppercase shadow-lg shadow-primary/20">
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-              Type Toevoegen
+          )}
+
+          <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-inner">
+            <Label className="text-[10px] font-black uppercase text-slate-400">Kies Icoon Bron</Label>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid grid-cols-3 h-10 rounded-xl bg-slate-200">
+                    <TabsTrigger value="preset" className="text-[10px] font-black uppercase">Standaard</TabsTrigger>
+                    <TabsTrigger value="upload" className="text-[10px] font-black uppercase">Upload</TabsTrigger>
+                    <TabsTrigger value="html" className="text-[10px] font-black uppercase">HTML/SVG</TabsTrigger>
+                </TabsList>
+                <TabsContent value="preset" className="pt-4">
+                    <div className="grid grid-cols-8 gap-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
+                        {ICON_OPTIONS.map(opt => {
+                            const Icon = (Icons as any)[opt.id];
+                            return (
+                                <Button 
+                                    key={opt.id} 
+                                    type="button" 
+                                    variant={selectedIcon === opt.id && activeTab === 'preset' ? "default" : "outline"} 
+                                    size="icon" 
+                                    className="h-9 w-9 p-0" 
+                                    onClick={() => { setSelectedIcon(opt.id); setActiveTab('preset'); }}
+                                    title={opt.label}
+                                >
+                                    <Icon className="h-4 w-4" />
+                                </Button>
+                            );
+                        })}
+                    </div>
+                </TabsContent>
+                <TabsContent value="upload" className="pt-4 space-y-4">
+                    <div className="flex items-center gap-4">
+                        <Button variant="outline" className="h-20 w-full flex-col gap-2 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('icon-upload-input')?.click()} disabled={isUploading}>
+                            {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6 text-slate-400" />}
+                            <span className="text-[10px] font-black uppercase">Afbeelding Uploaden</span>
+                        </Button>
+                        <input type="file" id="icon-upload-input" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                        {selectedIcon.startsWith('http') && (
+                            <div className="h-20 w-20 rounded-2xl border bg-white flex items-center justify-center p-2">
+                                <img src={selectedIcon} alt="preview" className="h-full w-full object-contain" />
+                            </div>
+                        )}
+                    </div>
+                </TabsContent>
+                <TabsContent value="html" className="pt-4">
+                    <Textarea 
+                        placeholder="Plak hier uw <svg> code..." 
+                        className="font-mono text-[10px] min-h-[100px] rounded-xl"
+                        value={htmlIcon}
+                        onChange={e => setHtmlIcon(e.target.value)}
+                    />
+                </TabsContent>
+            </Tabs>
+            <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-11 font-black uppercase shadow-lg shadow-primary/20">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+              {editTarget ? 'Wijzigingen Opslaan' : 'Type Toevoegen'}
             </Button>
+            {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-bold text-slate-400">Annuleren</Button>}
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase text-slate-400">Huidige Types</Label>
-            <ScrollArea className="h-48 rounded-xl border p-2">
-              {currentOptions.map(name => (
-                <div key={name} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    {categoryIcons[name] ? React.createElement((Icons as any)[categoryIcons[name]], { className: "h-4 w-4 text-primary" }) : <Icons.HelpCircle className="h-4 w-4 text-slate-300" />}
-                    <span className="text-sm font-bold text-slate-700">{name}</span>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600" onClick={() => handleDelete(name)}>
-                    <Trash className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </ScrollArea>
-          </div>
+          {!editTarget && (
+            <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400">Huidige Types</Label>
+                <ScrollArea className="h-48 rounded-xl border p-2">
+                {currentOptions.map(name => (
+                    <div key={name} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg group">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white p-1.5 rounded-lg border border-slate-100 shadow-sm flex items-center justify-center">
+                            {categoryIcons[name] ? renderCurrentIcon(categoryIcons[name]) : <Icons.HelpCircle className="h-4 w-4 text-slate-300" />}
+                        </div>
+                        <span className="text-sm font-bold text-slate-700">{name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary" onClick={() => setEditTarget(name)}>
+                            <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600" onClick={() => handleDelete(name)}>
+                            <Trash className="h-3.5 w-3.5" />
+                        </Button>
+                    </div>
+                    </div>
+                ))}
+                </ScrollArea>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -404,7 +500,7 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
       }, { merge: true });
       
       toast({ title: 'Subtype verwijderd' });
-    } catch (e) {
+    } catch (error) {
       toast({ variant: 'destructive', title: 'Fout bij verwijderen' });
     }
   };
@@ -731,7 +827,7 @@ export default function NewIssuePage() {
           />
           {!location && (
             <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[1px]">
-              <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Wacht op locatiegegevens...</p>
+              <p className="text-[9px] font-black uppercase tracking-widest">Wacht op locatiegegevens...</p>
             </div>
           )}
         </div>

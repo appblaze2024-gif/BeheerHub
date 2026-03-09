@@ -153,6 +153,22 @@ export function MapboxView({
     }
   }, [wijkPolygons, longitude, latitude, highlightedObject, uniqueObjects]);
 
+  const renderMarkerIcon = (hoofdcategorie: string) => {
+    const iconVal = categoryIcons[hoofdcategorie];
+    if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-white" />;
+    
+    if (iconVal.startsWith('<svg')) {
+        return <div className="h-5 w-5 flex items-center justify-center text-white" dangerouslySetInnerHTML={{ __html: iconVal }} />;
+    }
+    
+    if (iconVal.startsWith('http')) {
+        return <img src={iconVal} alt="icon" className="h-5 w-5 object-contain" />;
+    }
+
+    const IconComp = (Icons as any)[iconVal] || Icons.AlertCircle;
+    return <IconComp className="h-5 w-5 text-white" />;
+  };
+
   const markers = React.useMemo(() => {
     const markerElements: React.ReactNode[] = [];
 
@@ -163,13 +179,10 @@ export function MapboxView({
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         
         // Logic for Meldingen (Issues) vs Objects
-        // If it has a 'hoofdcategorie' it's an issue
         const isIssue = !!obj.hoofdcategorie;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
 
         if (isIssue) {
-          const iconName = categoryIcons[obj.hoofdcategorie] || 'AlertCircle';
-          const IconComp = (Icons as any)[iconName] || Icons.AlertCircle;
           const isCompleted = obj.status === 'Afgerond';
 
           return (
@@ -185,7 +198,7 @@ export function MapboxView({
                 isHighlighted && "ring-4 ring-black/20 scale-125",
                 interactive && "cursor-pointer hover:scale-110"
               )}>
-                <IconComp className="h-5 w-5 text-white" />
+                {renderMarkerIcon(obj.hoofdcategorie)}
                 {!isCompleted && (
                   <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-white">
                     <Icons.Wrench className="h-2.5 w-2.5 text-slate-900" />
