@@ -50,36 +50,36 @@ function Header() {
 
   return (
     <header className="h-20 flex items-center justify-end px-4 lg:px-8 bg-transparent shrink-0 sticky top-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="flex items-center gap-2 bg-white px-4 py-1.5 rounded-full shadow-lg border border-slate-100 pointer-events-auto">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 sm:gap-2 bg-white px-2 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-100 pointer-events-auto max-w-[90vw] sm:max-w-none">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           <NotificationCenter />
           <AppInfoDialog>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-blue-400 hover:bg-blue-50">
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-blue-400 hover:bg-blue-50">
               <Info className="h-4 w-4" />
             </Button>
           </AppInfoDialog>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 rounded-full text-blue-400 hover:bg-blue-50"
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-blue-400 hover:bg-blue-50"
             onClick={() => signOut(auth)}
           >
             <LogOutIcon className="h-4 w-4" />
           </Button>
         </div>
         
-        <div className="h-8 w-px bg-slate-100 mx-2" />
+        <div className="h-6 sm:h-8 w-px bg-slate-100 mx-1 sm:mx-2" />
         
-        <div className="flex flex-col items-end mr-2 min-w-0">
-          <p className="text-[8px] font-bold text-slate-400 leading-none mb-0.5 uppercase tracking-widest truncate max-w-[120px]">
+        <div className="flex flex-col items-end mr-1 sm:mr-2 min-w-0">
+          <p className="text-[7px] sm:text-[8px] font-bold text-slate-400 leading-none mb-0.5 uppercase tracking-widest truncate max-w-[80px] sm:max-w-[120px]">
             {profile?.schouwenGemeente || 'BODEGRAVEN-REEUWIJK'}
           </p>
-          <p className="text-[11px] font-black text-slate-900 leading-none truncate max-w-[150px]">
+          <p className="text-[10px] sm:text-[11px] font-black text-slate-900 leading-none truncate max-w-[100px] sm:max-w-[150px]">
             {profile?.firstName} {profile?.lastName}
           </p>
           {profile?.role && (
             <Badge className={cn(
-              "mt-1 h-3.5 px-1.5 text-[7px] font-black uppercase border-none rounded-sm",
+              "mt-0.5 sm:mt-1 h-3 sm:h-3.5 px-1 sm:px-1.5 text-[6px] sm:text-[7px] font-black uppercase border-none rounded-sm",
               profile.role === 'Super admin' ? "bg-red-600 text-white" : "bg-blue-500 text-white"
             )}>
               {profile.role}
@@ -87,7 +87,7 @@ function Header() {
           )}
         </div>
         
-        <Avatar className="h-9 w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0">
+        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0">
           <AvatarFallback className="text-[10px] bg-blue-100 text-blue-600 font-black uppercase">
             {profile?.firstName?.[0]}{profile?.lastName?.[0]}
           </AvatarFallback>
