@@ -13,7 +13,7 @@ import {
   useDoc, 
   setDocumentNonBlocking 
 } from '@/firebase';
-import { collection, doc, query, where, writeBatch, limit } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch, limit, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -479,7 +479,7 @@ function IntegratedWerkbonOverlay({
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         {melding.fotos && melding.fotos.length > 0 ? (
                                             melding.fotos.map((p, i) => (
-                                                <div key={`bron-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => { setZoomScale(1); setPreviewImage(p.url); }}>
+                                                <div key={`bron-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => { setZoomScale(1); setZoomOffset({x:0, y:0}); setPreviewImage(p.url); }}>
                                                     <Image src={p.url} alt="bron" fill className="object-cover" />
                                                 </div>
                                             ))
@@ -503,7 +503,7 @@ function IntegratedWerkbonOverlay({
                                     <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         {afhandelingFotos.map((p, i) => (
-                                            <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group cursor-pointer" onClick={() => { setZoomScale(1); setPreviewImage(p.url); }}>
+                                            <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group cursor-pointer" onClick={() => { setZoomScale(1); setZoomOffset({x:0, y:0}); setPreviewImage(p.url); }}>
                                                 <Image src={p.url} alt="afhandeling" fill className="object-cover" />
                                                 <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
                                             </div>
@@ -892,9 +892,41 @@ export default function StartNavigationPage() {
   };
 
   const handleStopRit = () => {
-    setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null);
+    setNavigationState('setup');
+    setCurrentRouteGeometry(null);
+    setDisplayedRouteGeometry(null);
+    setRouteInfo(null);
+    setIsManualMode(false);
+    visualPosRef.current = null;
+    targetPosRef.current = null;
+    setPriorityMissionId(null);
+    
     const map = mapRef.current?.getMap();
-    if (map) { map.jumpTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 0 }); }
+    if (map) {
+      // Reset pitch and bearing immediately
+      map.easeTo({ 
+        pitch: 0, 
+        bearing: 0, 
+        padding: { top: 0, bottom: 0, left: 0, right: 0 },
+        duration: 1000 
+      });
+
+      // Zoom out to see all markers
+      if (filteredMeldingen.length > 0) {
+        const points = filteredMeldingen.map(m => [m.longitude, m.latitude]);
+        if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
+        
+        const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
+        const bbox = turf.bbox(pointsCollection);
+        
+        if (bbox[0] !== Infinity) {
+          map.fitBounds(bbox as [number, number, number, number], { 
+            padding: 80, 
+            duration: 1500 
+          });
+        }
+      }
+    }
   };
 
   const handleHervatNavigatie = () => {
