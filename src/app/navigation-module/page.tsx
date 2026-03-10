@@ -214,7 +214,6 @@ function IntegratedWerkbonOverlay({
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     
-    // Zoom/Preview state
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [zoomScale, setZoomScale] = useState(1);
     const [zoomOffset, setZoomOffset] = useState({ x: 0, y: 0 });
@@ -330,23 +329,19 @@ function IntegratedWerkbonOverlay({
             const touch1 = e.touches[0];
             const touch2 = e.touches[1];
             const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
-            
             const deltaScale = dist / lastTouchRef.current.dist;
             setZoomScale(prev => Math.max(1, Math.min(5, prev * deltaScale)));
-            
             lastTouchRef.current.dist = dist;
         }
     };
 
-    const handleTouchEnd = () => {
-        lastTouchRef.current = null;
-    };
+    const handleTouchEnd = () => { lastTouchRef.current = null; };
 
     if (isLoading || !melding) return <LoadingScreen message="Data laden..." />;
 
     const renderMainList = () => (
         <div className="flex flex-col h-full bg-slate-50">
-            <div className="bg-white p-6 space-y-4">
+            <div className="bg-white p-6 space-y-4 shadow-sm">
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
                         <h2 className="text-xl font-bold text-slate-900">Intakenummer: {melding.intakenummer}</h2>
@@ -379,24 +374,9 @@ function IntegratedWerkbonOverlay({
             <div className="mt-4 flex-1">
                 <SectionRow icon={Wrench} label="Werkzaamheden" value={afhandelingBijzonderheden ? 'Ingevuld' : ''} onClick={() => setSubView('werkzaamheden')} />
                 <SectionRow icon={MapIcon} label="Locatiegegevens" onClick={() => setSubView('map')} />
-                <SectionRow 
-                    icon={Paperclip} 
-                    label="Documenten" 
-                    badgeCount={uploadedFiles.length}
-                    onClick={() => setSubView('docs')} 
-                />
-                <SectionRow 
-                    icon={Camera} 
-                    label="Foto's" 
-                    badgeCount={afhandelingFotos.length + (melding.fotos?.length || 0)}
-                    onClick={() => setSubView('photos')} 
-                />
-                <SectionRow 
-                    icon={Briefcase} 
-                    label="Materialen" 
-                    badgeCount={hoeveelheden.length}
-                    onClick={() => setSubView('materials')} 
-                />
+                <SectionRow icon={Paperclip} label="Documenten" badgeCount={uploadedFiles.length} onClick={() => setSubView('docs')} />
+                <SectionRow icon={Camera} label="Foto's" badgeCount={afhandelingFotos.length + (melding.fotos?.length || 0)} onClick={() => setSubView('photos')} />
+                <SectionRow icon={Briefcase} label="Materialen" badgeCount={hoeveelheden.length} onClick={() => setSubView('materials')} />
             </div>
 
             <div className="p-6 bg-slate-50">
@@ -490,9 +470,7 @@ function IntegratedWerkbonOverlay({
                                         )}
                                     </div>
                                 </div>
-
                                 <Separator />
-
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-slate-400">Nieuwe Foto's (Uitvoering)</Label>
                                     <div className="grid grid-cols-2 gap-4">
@@ -555,7 +533,6 @@ function IntegratedWerkbonOverlay({
                 </div>
             )}
 
-            {/* Fullscreen Image Preview with Pinch-to-Zoom */}
             {previewImage && (
                 <div 
                     className="fixed inset-0 z-[200] bg-black/95 flex flex-col animate-in fade-in duration-200"
@@ -574,17 +551,12 @@ function IntegratedWerkbonOverlay({
                             src={previewImage} 
                             alt="Preview" 
                             className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-75"
-                            style={{ 
-                                transform: `scale(${zoomScale}) translate(${zoomOffset.x}px, ${zoomOffset.y}px)`,
-                                transformOrigin: 'center center'
-                            }}
+                            style={{ transform: `scale(${zoomScale}) translate(${zoomOffset.x}px, ${zoomOffset.y}px)`, transformOrigin: 'center center' }}
                             onClick={(e) => e.stopPropagation()} 
                         />
                     </div>
                     <div className="p-4 flex justify-center shrink-0">
-                        <Badge variant="outline" className="bg-white/10 text-white border-white/20 text-[10px] uppercase font-black">
-                            {zoomScale > 1 ? `Zoom: ${zoomScale.toFixed(1)}x` : 'Knijp om te zoomen'}
-                        </Badge>
+                        <Badge variant="outline" className="bg-white/10 text-white border-white/20 text-[10px] uppercase font-black">{zoomScale > 1 ? `Zoom: ${zoomScale.toFixed(1)}x` : 'Knijp om te zoomen'}</Badge>
                     </div>
                 </div>
             )}
@@ -767,24 +739,13 @@ export default function StartNavigationPage() {
     else if (navigationState === 'setup') { setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
-  // SMART ARRIVAL LOGIC
   useEffect(() => {
     if (navigationState !== 'navigating' || !autoOpenEnabled || !nextMission || !userLocation || activeWerkbonId) {
-      if (autoOpenTimerRef.current) {
-        clearTimeout(autoOpenTimerRef.current);
-        autoOpenTimerRef.current = null;
-      }
+      if (autoOpenTimerRef.current) { clearTimeout(autoOpenTimerRef.current); autoOpenTimerRef.current = null; }
       return;
     }
-
-    const dist = turf.distance(
-      turf.point([userLocation.longitude, userLocation.latitude]),
-      turf.point([nextMission.longitude, nextMission.latitude]),
-      { units: 'meters' }
-    );
-
+    const dist = turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([nextMission.longitude, nextMission.latitude]), { units: 'meters' });
     const isStationary = speedKmh < 3; 
-
     if (dist <= 50 && isStationary) {
       if (!autoOpenTimerRef.current) {
         autoOpenTimerRef.current = setTimeout(() => {
@@ -794,17 +755,9 @@ export default function StartNavigationPage() {
         }, 10000);
       }
     } else {
-      if (autoOpenTimerRef.current) {
-        clearTimeout(autoOpenTimerRef.current);
-        autoOpenTimerRef.current = null;
-      }
+      if (autoOpenTimerRef.current) { clearTimeout(autoOpenTimerRef.current); autoOpenTimerRef.current = null; }
     }
-
-    return () => {
-      if (autoOpenTimerRef.current) {
-        clearTimeout(autoOpenTimerRef.current);
-      }
-    };
+    return () => { if (autoOpenTimerRef.current) clearTimeout(autoOpenTimerRef.current); };
   }, [userLocation, speedKmh, nextMission, autoOpenEnabled, navigationState, activeWerkbonId, toast]);
 
   useEffect(() => {
@@ -819,13 +772,23 @@ export default function StartNavigationPage() {
             }
             if (!isNaN(visualPosRef.current.lng) && !isNaN(visualPosRef.current.lat)) {
                 setSmoothLocation({ longitude: visualPosRef.current.lng, latitude: visualPosRef.current.lat, heading: lastHeadingRef.current });
+                if (currentRouteGeometry && navigationState === 'navigating') {
+                    try {
+                        const line = turf.lineString(currentRouteGeometry.coordinates);
+                        const currPt = turf.point([visualPosRef.current.lng, visualPosRef.current.lat]);
+                        const snapped = turf.nearestPointOnLine(line, currPt);
+                        const endPt = turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]);
+                        const sliced = turf.lineSlice(snapped, endPt, line);
+                        setDisplayedRouteGeometry(sliced);
+                    } catch (e) {}
+                }
             }
         }
         animId = requestAnimationFrame(updateVisualPos);
     };
     animId = requestAnimationFrame(updateVisualPos);
     return () => cancelAnimationFrame(animId);
-  }, []);
+  }, [currentRouteGeometry, navigationState]);
 
   useEffect(() => {
     if (!navigator.geolocation || isSimulationMode) return;
@@ -847,8 +810,6 @@ export default function StartNavigationPage() {
                         const distAlong = turf.length(alongRoute, { units: 'meters' });
                         const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
                         lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
-                        setDisplayedRouteGeometry(turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line));
-                        // Increase re-routing threshold to 100m to prevent unprofessional flickering
                         if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 100 && !isCalculatingRoute) fetchRoute(true);
                     }
                 } catch (e) {}
@@ -892,39 +853,17 @@ export default function StartNavigationPage() {
   };
 
   const handleStopRit = () => {
-    setNavigationState('setup');
-    setCurrentRouteGeometry(null);
-    setDisplayedRouteGeometry(null);
-    setRouteInfo(null);
-    setIsManualMode(false);
-    visualPosRef.current = null;
-    targetPosRef.current = null;
-    setPriorityMissionId(null);
-    
+    setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
+    setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null);
     const map = mapRef.current?.getMap();
     if (map) {
-      // Reset pitch and bearing immediately
-      map.easeTo({ 
-        pitch: 0, 
-        bearing: 0, 
-        padding: { top: 0, bottom: 0, left: 0, right: 0 },
-        duration: 1000 
-      });
-
-      // Zoom out to see all markers
+      map.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 1000 });
       if (filteredMeldingen.length > 0) {
         const points = filteredMeldingen.map(m => [m.longitude, m.latitude]);
         if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
-        
         const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
         const bbox = turf.bbox(pointsCollection);
-        
-        if (bbox[0] !== Infinity) {
-          map.fitBounds(bbox as [number, number, number, number], { 
-            padding: 80, 
-            duration: 1500 
-          });
-        }
+        if (bbox[0] !== Infinity) map.fitBounds(bbox as [number, number, number, number], { padding: 80, duration: 1500 });
       }
     }
   };
@@ -935,12 +874,9 @@ export default function StartNavigationPage() {
         const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (speedKmh / 25))) : navZoom;
         mapRef.current.getMap().easeTo({ 
             center: [smoothLocation.longitude, smoothLocation.latitude], 
-            zoom: targetZoom, 
-            pitch: navPitch, 
-            bearing: lastHeadingRef.current || 0, 
+            zoom: targetZoom, pitch: navPitch, bearing: lastHeadingRef.current || 0, 
             padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }, 
-            duration: 1, 
-            essential: true
+            duration: 1, essential: true
         });
     }
   };
