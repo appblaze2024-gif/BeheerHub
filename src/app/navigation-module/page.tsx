@@ -67,13 +67,14 @@ import {
   Map as MapIcon,
   Hash,
   Minus,
-  Tag
+  Tag,
+  Sparkles
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -591,7 +592,7 @@ export default function StartNavigationPage() {
   const [navZoom, setNavZoomState] = React.useState(18);
   const [navPitch, setNavPitchState] = React.useState(60);
   const [navOffset, setNavOffsetState] = React.useState(450);
-  const [autoOpenEnabled, setAutoOpenEnabledState] = React.useState(false);
+  const [autoOpenEnabled, setAutoOpenEnabledState] = React.useState(true);
   const [dynamicZoomEnabled, setDynamicZoomEnabledState] = React.useState(true);
 
   const [smoothLocation, setSmoothLocation] = React.useState<any>(null);
@@ -604,6 +605,7 @@ export default function StartNavigationPage() {
 
   const mapRef = React.useRef<MapRef>(null);
   const lastFetchTimeRef = React.useRef<number>(0);
+  const autoOpenTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const targetPosRef = React.useRef<{lng: number, lat: number} | null>(null);
   const visualPosRef = React.useRef<{lng: number, lat: number} | null>(null);
@@ -667,38 +669,30 @@ export default function StartNavigationPage() {
 
   const { data: rawTodayCompleted } = useCollection<Melding>(todayCompletedQuery);
 
-  const backendSearchQuery = useMemoFirebase(() => {
-    if (!firestore || !debouncedSearchQuery) return null;
-    return query(collection(firestore, 'meldingen'), where('intakenummer', '>=', debouncedSearchQuery), where('intakenummer', '<=', debouncedSearchQuery + '\uf8ff'), limit(20));
-  }, [firestore, debouncedSearchQuery]);
-
-  const { data: rawSearchResults } = useCollection<Melding>(backendSearchQuery);
-
   const filteredMeldingen = React.useMemo(() => {
     const poolMap = new Map<string, Melding>();
     rawActiveMeldingen?.forEach(m => { if (!completedObjects.includes(m.id)) poolMap.set(m.id, m); });
     rawTodayCompleted?.forEach(m => poolMap.set(m.id, m));
-    rawSearchResults?.forEach(m => poolMap.set(m.id, m));
     let result = Array.from(poolMap.values());
     if (!isPrivileged) {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
         result = result.filter(m => m.behandelaar === userName);
     }
     return result;
-  }, [rawActiveMeldingen, rawTodayCompleted, rawSearchResults, isPrivileged, profile, completedObjects]);
+  }, [rawActiveMeldingen, rawTodayCompleted, isPrivileged, profile, completedObjects]);
 
   const sortedMissions = React.useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
     const base = userLocation || SIMULATION_START_LOCATION;
     const sorted = [...filteredMeldingen].filter(m => m.status !== 'Afgerond').sort((a, b) => {
-            const distA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]));
-            const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
+            const distA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]), { units: 'meters' });
+            const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]), { units: 'meters' });
             return distA - distB;
         });
     if (priorityMissionId) {
         const priorityIndex = sorted.findIndex(m => m.id === priorityMissionId);
         if (priorityIndex !== -1) {
-            const [priority] = sorted.splice(priorityMissionId ? sorted.findIndex(m => m.id === priorityMissionId) : 0, 1);
+            const [priority] = sorted.splice(priorityIndex, 1);
             sorted.unshift(priority);
         }
     }
@@ -706,23 +700,6 @@ export default function StartNavigationPage() {
   }, [filteredMeldingen, userLocation, priorityMissionId]);
 
   const nextMission = sortedMissions[0];
-
-  const goToOverview = React.useCallback(() => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const startPos = userLocation || SIMULATION_START_LOCATION;
-    const points: [number, number][] = [[startPos.longitude, startPos.latitude]];
-    filteredMeldingen.forEach(m => { if (m.longitude && m.latitude) points.push([m.longitude, m.latitude]); });
-    if (points.length > 1) {
-        try {
-            const coll = turf.featureCollection(points.map(p => turf.point(p)));
-            const bbox = turf.bbox(coll);
-            if (bbox[0] !== Infinity && !isNaN(bbox[0])) {
-                map.fitBounds(bbox as [number, number, number, number], { padding: { top: 80, bottom: 350, left: 80, right: 80 }, duration: 800, maxZoom: 14, linear: false });
-            }
-        } catch (e) { map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 800 }); }
-    } else { map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 800 }); }
-  }, [filteredMeldingen, userLocation]);
 
   const fetchRoute = React.useCallback(async (force = false) => {
     if (navigationState === 'setup' || sortedMissions.length === 0) {
@@ -754,23 +731,46 @@ export default function StartNavigationPage() {
     else if (navigationState === 'setup') { setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
+  // SMART ARRIVAL LOGIC
   React.useEffect(() => {
-    const fetchSpeedLimit = async () => {
-      if (!userLocation || isSimulationMode) return;
-      try {
-        const { longitude, latitude } = userLocation;
-        const url = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${longitude},${latitude}.json?layers=road&radius=25&limit=1&access_token=${MAPBOX_TOKEN}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.features && data.features.length > 0) {
-          const limitValue = data.features[0].properties.speed_limit;
-          if (limitValue && typeof limitValue === 'number') setCurrentSpeedLimit(limitValue);
-        }
-      } catch (e) { console.warn("Could not fetch speed limit", e); }
+    if (navigationState !== 'navigating' || !autoOpenEnabled || !nextMission || !userLocation || activeWerkbonId) {
+      if (autoOpenTimerRef.current) {
+        clearTimeout(autoOpenTimerRef.current);
+        autoOpenTimerRef.current = null;
+      }
+      return;
+    }
+
+    const dist = turf.distance(
+      turf.point([userLocation.longitude, userLocation.latitude]),
+      turf.point([nextMission.longitude, nextMission.latitude]),
+      { units: 'meters' }
+    );
+
+    // threshold for stationary or walking speed (under 3km/h)
+    const isStationary = speedKmh < 3; 
+
+    if (dist <= 50 && isStationary) {
+      if (!autoOpenTimerRef.current) {
+        autoOpenTimerRef.current = setTimeout(() => {
+          setActiveWerkbonId(nextMission.id);
+          autoOpenTimerRef.current = null;
+          toast({ title: 'Aankomst gedetecteerd', description: 'Werkbon automatisch geopend na 10s stilstand.' });
+        }, 10000);
+      }
+    } else {
+      if (autoOpenTimerRef.current) {
+        clearTimeout(autoOpenTimerRef.current);
+        autoOpenTimerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (autoOpenTimerRef.current) {
+        clearTimeout(autoOpenTimerRef.current);
+      }
     };
-    const timer = setTimeout(fetchSpeedLimit, 5000);
-    return () => clearTimeout(timer);
-  }, [userLocation, isSimulationMode]);
+  }, [userLocation, speedKmh, nextMission, autoOpenEnabled, navigationState, activeWerkbonId, toast]);
 
   React.useEffect(() => {
     let animId: number;
@@ -858,7 +858,7 @@ export default function StartNavigationPage() {
   const handleStopRit = () => {
     setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null);
     const map = mapRef.current?.getMap();
-    if (map) { map.jumpTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 0 }); setTimeout(() => goToOverview(), 50); }
+    if (map) { map.jumpTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 0 }); }
   };
 
   const handleHervatNavigatie = () => {
@@ -1046,8 +1046,10 @@ export default function StartNavigationPage() {
         )}
 
         {isManualMode && !activeWerkbonId && navigationState === 'setup' && (
-            <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-[260px]">
-                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}><MapIcon className="h-7 w-7 text-slate-600" /></Button>
+            <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-60">
+                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); }}>
+                    <MapIcon className="h-7 w-7 text-slate-600" />
+                </Button>
             </div>
         )}
 
@@ -1063,20 +1065,78 @@ export default function StartNavigationPage() {
                 </div>
             </div>
             <ScrollArea className="flex-1 bg-white">
+                {/* Mobile View: Vertical Cards */}
                 <div className="p-3 flex flex-col gap-3 lg:hidden">
                     {filteredMeldingen.map((m) => {
                         const isCompleted = m.status === 'Afgerond';
-                        const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
-                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{dist} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2 w-2 text-white" /></div>)}</Card>);
+                        const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0;
+                        const distKm = (dist / 1000).toFixed(1);
+                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2 w-2 text-white" /></div>)}</Card>);
                     })}
                 </div>
+                {/* Desktop View: Table */}
                 <div className="hidden lg:block p-0">
-                    <Table className="min-w-[1200px]"><TableHeader className="bg-slate-50/50 sticky top-0 z-10"><TableRow className="h-10 hover:bg-transparent"><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r">Nummer</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 text-right pr-6">Afstand</TableHead></TableRow></TableHeader><TableBody>{filteredMeldingen.map((m) => { const isCompleted = m.status === 'Afgerond'; const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-'; return (<TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-colors border-b", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50")}><TableCell className="pl-6 border-r"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} /><span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span></div></TableCell><TableCell className="border-r"><div className="flex flex-col"><span className="text-xs font-bold text-slate-700">{m.straatnaam} {m.huisnummer}</span><span className="text-[10px] font-bold uppercase text-slate-400 font-bold">{m.plaats}</span></div></TableCell><TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">{m.extra_informatie || '-'}</TableCell><TableCell className="border-r"><div className="flex flex-col"><span className="text-[10px] font-black uppercase text-primary">{m.hoofdcategorie}</span><span className="text-[9px] font-bold uppercase text-slate-400">{m.subcategorie}</span></div></TableCell><TableCell className="text-right pr-6 font-black text-[11px] tabular-nums text-slate-400">{dist} km</TableCell></TableRow>); })}</TableBody></Table>
+                    <Table className="min-w-[1200px]">
+                        <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+                            <TableRow className="h-10 hover:bg-transparent">
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r">Nummer</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 text-right pr-6">Afstand</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredMeldingen.map((m) => { 
+                                const isCompleted = m.status === 'Afgerond'; 
+                                const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0; 
+                                const distKm = (dist / 1000).toFixed(1);
+                                return (
+                                    <TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-colors border-b", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50")}>
+                                        <TableCell className="pl-6 border-r">
+                                            <div className="flex items-center gap-2">
+                                                <div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
+                                                <span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="border-r">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-slate-700">{m.straatnaam} {m.huisnummer}</span>
+                                                <span className="text-[10px] font-bold uppercase text-slate-400">{m.plaats}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">{m.extra_informatie || '-'}</TableCell>
+                                        <TableCell className="border-r">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase text-primary">{m.hoofdcategorie}</span>
+                                                <span className="text-[9px] font-bold uppercase text-slate-400">{m.subcategorie}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right pr-6 font-black text-[11px] tabular-nums text-slate-400">{distKm} km</TableCell>
+                                    </TableRow>
+                                ); 
+                            })}
+                        </TableBody>
+                    </Table>
                 </div>
             </ScrollArea>
         </div>
 
-        {activeWerkbonId && (<div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-300"><IntegratedWerkbonOverlay meldingId={activeWerkbonId} onClose={() => setActiveWerkbonId(null)} onCompleted={(id) => { setCompletedObjects(prev => [...prev, id]); setActiveWerkbonId(null); setIsManualMode(false); setPriorityMissionId(null); setTimeout(() => fetchRoute(true), 150); }} /></div>)}
+        {activeWerkbonId && (
+            <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-300">
+                <IntegratedWerkbonOverlay 
+                    meldingId={activeWerkbonId} 
+                    onClose={() => setActiveWerkbonId(null)} 
+                    onCompleted={(id) => { 
+                        setCompletedObjects(prev => [...prev, id]); 
+                        setActiveWerkbonId(null); 
+                        setIsManualMode(false); 
+                        setPriorityMissionId(null); 
+                        setTimeout(() => fetchRoute(true), 150); 
+                    }} 
+                />
+            </div>
+        )}
     </div>
   );
 }
