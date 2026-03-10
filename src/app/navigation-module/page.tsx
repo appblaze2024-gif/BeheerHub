@@ -1,8 +1,18 @@
+
 'use client';
 
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
-import { useCollection, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { 
+  useCollection, 
+  useFirestore, 
+  useUser, 
+  useMemoFirebase, 
+  updateDocumentNonBlocking, 
+  useFirebaseApp, 
+  useDoc, 
+  setDocumentNonBlocking 
+} from '@/firebase';
 import { collection, doc, query, where, writeBatch, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +23,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { 
   ArrowLeft, 
   Play, 
@@ -370,7 +388,7 @@ function IntegratedWerkbonOverlay({
             </div>
 
             <div className="p-6 bg-slate-50">
-                <AlertDialog open={isConfirmDialogOpen} onOpenChange={isConfirmDialogOpen}>
+                <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
                     <AlertDialogTrigger asChild>
                         <Button 
                             className="w-full h-14 text-white font-bold uppercase tracking-widest rounded-xl shadow-lg transition-all bg-[#FF5722] hover:bg-[#E64A19] shadow-orange-600/20"
@@ -917,7 +935,7 @@ export default function StartNavigationPage() {
     setIsManualMode(false);
     if (mapRef.current && smoothLocation && !isNaN(smoothLocation.longitude)) {
         const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (speedKmh / 25))) : navZoom;
-        mapRef.current.getMap().flyTo({ 
+        mapRef.current.getMap().easeTo({ 
             center: [smoothLocation.longitude, smoothLocation.latitude], 
             zoom: targetZoom, 
             pitch: navPitch, 
@@ -1055,50 +1073,58 @@ export default function StartNavigationPage() {
             </div>
 
             <div className="flex items-center gap-2 pointer-events-auto">
-                {navigationState === 'navigating' && (
-                    <div className="flex items-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-6 w-6 text-slate-600" /></Button>
-                            </PopoverTrigger>
-                            <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
+                {navigationState === 'navigating' && isManualMode && (
+                    <Button 
+                        variant="default" 
+                        size="icon" 
+                        className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-primary text-white border-2 border-white transition-all active:scale-95 flex items-center justify-center"
+                        onClick={handleHervatNavigatie}
+                    >
+                        <Navigation className="h-6 w-6 fill-current" />
+                    </Button>
+                )}
+                <div className="flex items-center gap-2">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-6 w-6 text-slate-600" /></Button>
+                        </PopoverTrigger>
+                        <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
                                 <div className="space-y-6">
-                                    <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
-                                    <div className="space-y-6">
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div>
-                                            <Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
-                                            <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
-                                        </div>
-                                        <Separator className="bg-slate-100" />
-                                        <div className="flex items-center justify-between">
-                                            <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Dynamisch zoomen</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Past zoom aan op snelheid</p></div>
-                                            <Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} />
-                                        </div>
-                                        {!dynamicZoomEnabled && (
-                                            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                                <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
-                                                <div className="flex items-center gap-2">
-                                                    <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button>
-                                                    <div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div>
-                                                    <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button>
-                                                </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div>
+                                        <Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
+                                        <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
+                                    </div>
+                                    <Separator className="bg-slate-100" />
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Dynamisch zoomen</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Past zoom aan op snelheid</p></div>
+                                        <Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} />
+                                    </div>
+                                    {!dynamicZoomEnabled && (
+                                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                            <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button>
+                                                <div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div>
+                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button>
                                             </div>
-                                        )}
-                                        <Separator className="bg-slate-100" />
-                                        <div className="flex items-center justify-between">
-                                            <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Opent werkbon na 10s stilstand</p></div>
-                                            <Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} />
                                         </div>
+                                    )}
+                                    <Separator className="bg-slate-100" />
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Opent werkbon na 10s stilstand</p></div>
+                                        <Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} />
                                     </div>
                                 </div>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                )}
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                </div>
                 {navigationState === 'setup' ? (
                     <Button className="h-12 md:h-14 px-5 md:px-10 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl transition-all active:scale-95 pointer-events-auto" onClick={handleStartRit}>
                         {isLocating ? <Loader2 className="h-6 w-6 md:mr-3 animate-spin" /> : <Play className="h-6 w-6 md:mr-3 fill-current" />} 
@@ -1125,17 +1151,6 @@ export default function StartNavigationPage() {
                             <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
-
-                    {isManualMode && (
-                        <Button 
-                            variant="default" 
-                            size="icon" 
-                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-primary text-white border-[4px] sm:border-[6px] border-white transition-all active:scale-95 flex items-center justify-center animate-in zoom-in duration-300 pointer-events-auto"
-                            onClick={handleHervatNavigatie}
-                        >
-                            <Navigation className="h-8 w-8 fill-current" />
-                        </Button>
-                    )}
                 </div>
 
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
@@ -1173,7 +1188,7 @@ export default function StartNavigationPage() {
             </div>
         )}
 
-        {isManualMode && !activeWerkbonId && navigationState === 'setup' && (
+        {isManualMode && !activeWerkbonId && (
             <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-[260px]">
                 <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}>
                     <MapIcon className="h-7 w-7 text-slate-600" />
@@ -1217,7 +1232,8 @@ export default function StartNavigationPage() {
                 </div>
             </div>
             <ScrollArea className="flex-1 bg-white">
-                <div className="p-3 flex flex-col gap-3">
+                {/* Mobile View: Vertical Cards */}
+                <div className="p-3 flex flex-col gap-3 md:hidden">
                     {filteredMeldingen.map((m) => {
                         const isCompleted = m.status === 'Afgerond';
                         const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
@@ -1255,6 +1271,62 @@ export default function StartNavigationPage() {
                             </Card>
                         );
                     })}
+                </div>
+
+                {/* Desktop View: Excel-style Table */}
+                <div className="hidden md:block p-0">
+                    <Table>
+                        <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+                            <TableRow className="h-10 hover:bg-transparent">
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r">Nummer</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 text-right pr-6">Afstand</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredMeldingen.map((m) => {
+                                const isCompleted = m.status === 'Afgerond';
+                                const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
+                                return (
+                                    <TableRow 
+                                        key={m.id} 
+                                        onClick={() => setClickedMarkerId(m.id)}
+                                        className={cn(
+                                            "cursor-pointer transition-colors border-b",
+                                            isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50"
+                                        )}
+                                    >
+                                        <TableCell className="pl-6 border-r">
+                                            <div className="flex items-center gap-2">
+                                                <div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
+                                                <span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="border-r">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-slate-700">{m.straatnaam} {m.huisnummer}</span>
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase">{m.plaats}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">
+                                            {m.extra_informatie || '-'}
+                                        </TableCell>
+                                        <TableCell className="border-r">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase text-primary">{m.hoofdcategorie}</span>
+                                                <span className="text-[9px] font-bold uppercase text-slate-400">{m.subcategorie}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right pr-6 font-black text-[11px] tabular-nums text-slate-400">
+                                            {dist} km
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
                 </div>
             </ScrollArea>
         </div>
