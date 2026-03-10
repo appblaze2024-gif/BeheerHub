@@ -370,7 +370,7 @@ function IntegratedWerkbonOverlay({
             </div>
 
             <div className="p-6 bg-slate-50">
-                <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+                <AlertDialog open={isConfirmDialogOpen} onOpenChange={isConfirmDialogOpen}>
                     <AlertDialogTrigger asChild>
                         <Button 
                             className="w-full h-14 text-white font-bold uppercase tracking-widest rounded-xl shadow-lg transition-all bg-[#FF5722] hover:bg-[#E64A19] shadow-orange-600/20"
@@ -1217,7 +1217,7 @@ export default function StartNavigationPage() {
                 </div>
             </div>
             <ScrollArea className="flex-1 bg-white">
-                <div className="p-3 flex flex-row gap-3 overflow-x-auto no-scrollbar h-[180px]">
+                <div className="p-3 flex flex-col gap-3">
                     {filteredMeldingen.map((m) => {
                         const isCompleted = m.status === 'Afgerond';
                         const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
@@ -1227,7 +1227,7 @@ export default function StartNavigationPage() {
                                 key={m.id} 
                                 onClick={() => setClickedMarkerId(m.id)}
                                 className={cn(
-                                    "h-full w-[280px] shrink-0 rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden",
+                                    "w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden",
                                     isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20"
                                 )}
                             >
