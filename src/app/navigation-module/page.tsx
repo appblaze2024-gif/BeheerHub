@@ -606,6 +606,7 @@ export default function StartNavigationPage() {
   const [routeInfo, setRouteInfo] = useState<{ duration: number; distance: number } | null>(null);
   const [speedKmh, setSpeedKmh] = useState(0);
   const [currentSpeedLimit, setCurrentSpeedLimit] = useState<number>(50);
+  const lastSpeedLimitFetchRef = useRef<{ lat: number, lng: number, time: number } | null>(null);
 
   const mapRef = useRef<MapRef>(null);
   const lastFetchTimeRef = useRef<number>(0);
@@ -622,6 +623,35 @@ export default function StartNavigationPage() {
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
   const categoryIcons = dbOptions?.categoryIcons || {};
+
+  const fetchSpeedLimit = useCallback(async (lat: number, lng: number) => {
+    const now = Date.now();
+    if (lastSpeedLimitFetchRef.current) {
+        const dist = turf.distance(
+            turf.point([lng, lat]), 
+            turf.point([lastSpeedLimitFetchRef.current.lng, lastSpeedLimitFetchRef.current.lat]),
+            { units: 'meters' }
+        );
+        // Only fetch if moved > 50m or 30s passed
+        if (dist < 50 && now - lastSpeedLimitFetchRef.current.time < 30000) return;
+    }
+
+    try {
+        const url = `https://api.mapbox.com/v1/tilesets/mapbox.mapbox-streets-v8/tilequery/${lng},${lat}.json?layers=road&access_token=${MAPBOX_TOKEN}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        // Find nearest road feature with maxspeed
+        const road = data.features?.find((f: any) => f.properties?.maxspeed);
+        if (road) {
+            const limit = parseInt(road.properties.maxspeed);
+            if (!isNaN(limit)) setCurrentSpeedLimit(limit);
+        }
+        lastSpeedLimitFetchRef.current = { lat, lng, time: now };
+    } catch (e) {
+        console.warn("Speed limit fetch error:", e);
+    }
+  }, []);
 
   const isSvg = (str: string) => {
     if (!str) return false;
@@ -799,6 +829,10 @@ export default function StartNavigationPage() {
             setUserLocation(loc);
             const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
             setSpeedKmh(currentSpeed);
+            
+            // Dynamic speed limit fetch
+            fetchSpeedLimit(loc.latitude, loc.longitude);
+
             if (navigationState === 'navigating' && currentRouteGeometry) {
                 try {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
@@ -828,7 +862,7 @@ export default function StartNavigationPage() {
             }
         }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute, dynamicZoomEnabled, navZoom, speedKmh]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute, dynamicZoomEnabled, navZoom, speedKmh, fetchSpeedLimit]);
 
   const updateNavPitch = (newPitch: number) => { setNavPitchState(Number(newPitch)); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: Number(newPitch) }, { merge: true }); mapRef.current?.getMap().jumpTo({ pitch: Number(newPitch) }); };
   const updateNavOffset = (newOffset: number) => { setNavOffsetState(Number(newOffset)); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: Number(newOffset) }, { merge: true }); mapRef.current?.getMap().jumpTo({ padding: { top: 0, bottom: Math.max(0, Number(newOffset)), left: 0, right: 0 } }); };
