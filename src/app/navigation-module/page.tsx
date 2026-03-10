@@ -46,7 +46,6 @@ import {
   LayoutGrid,
   X,
   FileText,
-  Sparkles,
   Trash2,
   User,
   Package,
@@ -313,15 +312,6 @@ function IntegratedWerkbonOverlay({
         recognition.start();
     };
 
-    const handleAITranslate = async () => {
-        if (!afhandelingBijzonderheden || isTranslating) return;
-        setIsTranslating(true);
-        try {
-            const result = await translateText(afhandelingBijzonderheden, targetLang.name);
-            setAfhandelingBijzonderheden(result.translatedText);
-        } catch (err) { toast({ variant: 'destructive', title: 'Vertaalfout' }); } finally { setIsTranslating(false); }
-    };
-
     if (isLoading || !melding) return <LoadingScreen message="Data laden..." />;
 
     const renderMainList = () => (
@@ -462,7 +452,7 @@ function IntegratedWerkbonOverlay({
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <Label className="text-[10px] font-black uppercase text-slate-400">Uitvoeringsnotities</Label>
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center">
                                             <Button 
                                                 variant={isListening ? "destructive" : "secondary"} 
                                                 size="icon" 
@@ -473,15 +463,6 @@ function IntegratedWerkbonOverlay({
                                                 onClick={toggleListening}
                                             >
                                                 {isListening ? <Loader2 className="h-8 w-8 animate-spin" /> : <Mic className="h-8 w-8 text-primary" />}
-                                            </Button>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="h-10 w-10 text-primary hover:bg-primary/5 rounded-full" 
-                                                onClick={handleAITranslate} 
-                                                disabled={isTranslating || !afhandelingBijzonderheden}
-                                            >
-                                                {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                                             </Button>
                                         </div>
                                     </div>
@@ -1104,6 +1085,15 @@ export default function StartNavigationPage() {
             </div>
 
             <div className="flex items-center gap-2 pointer-events-auto">
+                {isManualMode && navigationState === 'navigating' && (
+                    <Button 
+                        className="h-12 md:h-14 px-6 font-black uppercase rounded-2xl shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center gap-3"
+                        onClick={handleHervatNavigatie}
+                    >
+                        <Navigation className="h-6 w-6 fill-current" />
+                        <span className="hidden sm:inline text-xs">HERVAT</span>
+                    </Button>
+                )}
                 <div className="flex items-center gap-2">
                     <Popover>
                         <PopoverTrigger asChild>
@@ -1162,7 +1152,7 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <div className="mb-4 flex justify-between items-center gap-3 w-full">
+                <div className="mb-4 flex items-center gap-3 w-full">
                     <div className="relative pointer-events-auto">
                         <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
                             <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
@@ -1172,15 +1162,6 @@ export default function StartNavigationPage() {
                             <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
-
-                    {isManualMode && (
-                        <Button 
-                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-primary text-white border-[4px] border-white transition-all active:scale-95 flex items-center justify-center pointer-events-auto"
-                            onClick={handleHervatNavigatie}
-                        >
-                            <Navigation className="h-8 w-8 fill-current" />
-                        </Button>
-                    )}
                 </div>
 
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
@@ -1263,7 +1244,7 @@ export default function StartNavigationPage() {
             </div>
             <ScrollArea className="flex-1 bg-white">
                 {/* Mobiele Weergave: Verticale Kaarten */}
-                <div className="p-3 flex flex-col gap-3 md:hidden">
+                <div className="p-3 flex flex-col gap-3 lg:hidden">
                     {filteredMeldingen.map((m) => {
                         const isCompleted = m.status === 'Afgerond';
                         const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
@@ -1304,7 +1285,7 @@ export default function StartNavigationPage() {
                 </div>
 
                 {/* Desktop Weergave: Excel-stijl Tabel */}
-                <div className="hidden md:block p-0">
+                <div className="hidden lg:block p-0">
                     <Table>
                         <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
                             <TableRow className="h-10 hover:bg-transparent">
