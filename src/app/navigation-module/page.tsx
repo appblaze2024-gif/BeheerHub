@@ -462,13 +462,26 @@ function IntegratedWerkbonOverlay({
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <Label className="text-[10px] font-black uppercase text-slate-400">Uitvoeringsnotities</Label>
-                                        <div className="flex gap-2">
-                                            <Button variant="outline" size="sm" className={cn("h-8 rounded-full", isListening && "bg-red-50 text-red-600 border-red-200")} onClick={toggleListening}>
-                                                {isListening ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Mic className="h-3 w-3 mr-2" />}
-                                                Dictaat
+                                        <div className="flex items-center gap-4">
+                                            <Button 
+                                                variant={isListening ? "destructive" : "secondary"} 
+                                                size="icon" 
+                                                className={cn(
+                                                    "h-16 w-16 rounded-full shadow-2xl transition-all active:scale-90 border-4 border-white",
+                                                    isListening && "animate-pulse ring-4 ring-red-500/20"
+                                                )} 
+                                                onClick={toggleListening}
+                                            >
+                                                {isListening ? <Loader2 className="h-8 w-8 animate-spin" /> : <Mic className="h-8 w-8 text-primary" />}
                                             </Button>
-                                            <Button variant="ghost" size="sm" className="h-8 text-primary font-bold text-[10px] uppercase" onClick={handleAITranslate} disabled={isTranslating || !afhandelingBijzonderheden}>
-                                                <Sparkles className="h-3 w-3 mr-2" /> Vertaal
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-10 w-10 text-primary hover:bg-primary/5 rounded-full" 
+                                                onClick={handleAITranslate} 
+                                                disabled={isTranslating || !afhandelingBijzonderheden}
+                                            >
+                                                {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                                             </Button>
                                         </div>
                                     </div>
@@ -635,7 +648,6 @@ export default function StartNavigationPage() {
   // Smoothing refs for visual tracking
   const targetPosRef = React.useRef<{lng: number, lat: number} | null>(null);
   const visualPosRef = React.useRef<{lng: number, lat: number} | null>(null);
-  const lastSnappedPosRef = React.useRef<{lng: number, lat: number} | null>(null);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -856,18 +868,16 @@ export default function StartNavigationPage() {
         if (targetPosRef.current) {
             if (!visualPosRef.current) visualPosRef.current = { ...targetPosRef.current };
             else {
-                // Smoothing factor: how fast it catches up to raw GPS
                 const factor = 0.05; 
                 visualPosRef.current.lng += (targetPosRef.current.lng - visualPosRef.current.lng) * factor;
                 visualPosRef.current.lat += (targetPosRef.current.lat - visualPosRef.current.lat) * factor;
             }
-            if (!isNaN(visualPosRef.current.lng)) {
-                setSmoothLocation((prev: any) => ({
-                    ...prev,
-                    longitude: visualPosRef.current?.lng,
-                    latitude: visualPosRef.current?.lat,
+            if (!isNaN(visualPosRef.current.lng) && !isNaN(visualPosRef.current.lat)) {
+                setSmoothLocation({
+                    longitude: visualPosRef.current.lng,
+                    latitude: visualPosRef.current.lat,
                     heading: lastHeadingRef.current
-                }));
+                });
             }
         }
         animId = requestAnimationFrame(updateVisualPos);
@@ -910,7 +920,6 @@ export default function StartNavigationPage() {
                 targetPosRef.current = { lng: loc.longitude, lat: loc.latitude };
             }
 
-            // High-performance camera follow
             if (navigationState === 'navigating' && mapRef.current && !isManualMode && visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
                 const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
                 mapRef.current.getMap().easeTo({
@@ -1253,6 +1262,7 @@ export default function StartNavigationPage() {
                 </div>
             </div>
             <ScrollArea className="flex-1 bg-white">
+                {/* Mobiele Weergave: Verticale Kaarten */}
                 <div className="p-3 flex flex-col gap-3 md:hidden">
                     {filteredMeldingen.map((m) => {
                         const isCompleted = m.status === 'Afgerond';
@@ -1293,6 +1303,7 @@ export default function StartNavigationPage() {
                     })}
                 </div>
 
+                {/* Desktop Weergave: Excel-stijl Tabel */}
                 <div className="hidden md:block p-0">
                     <Table>
                         <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
