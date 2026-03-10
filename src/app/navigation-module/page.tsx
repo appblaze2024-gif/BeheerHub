@@ -208,8 +208,6 @@ function IntegratedWerkbonOverlay({
     const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = React.useState('');
     const [isListening, setIsListening] = React.useState(false);
     const [sourceLang] = React.useState({ code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' });
-    const [targetLang] = React.useState({ code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' });
-    const [isTranslating, setIsTranslating] = React.useState(false);
     const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
     const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
@@ -347,66 +345,28 @@ function IntegratedWerkbonOverlay({
             </div>
 
             <div className="mt-4 flex-1">
-                <SectionRow 
-                    icon={Wrench} 
-                    label="Werkzaamheden" 
-                    value={afhandelingBijzonderheden ? 'Ingevuld' : ''} 
-                    onClick={() => setSubView('werkzaamheden')} 
-                />
-                <SectionRow 
-                    icon={MapIcon} 
-                    label="Locatiegegevens" 
-                    onClick={() => setSubView('map')} 
-                />
-                <SectionRow 
-                    icon={Paperclip} 
-                    label="Documenten" 
-                    value={uploadedFiles.length > 0 ? `${uploadedFiles.length} files` : ''} 
-                    onClick={() => setSubView('docs')} 
-                />
-                <SectionRow 
-                    icon={Camera} 
-                    label="Foto's" 
-                    value={afhandelingFotos.length > 0 ? `${afhandelingFotos.length}` : ''} 
-                    onClick={() => setSubView('photos')} 
-                />
-                <SectionRow 
-                    icon={Briefcase} 
-                    label="Materialen" 
-                    value={hoeveelheden.length > 0 ? `${hoeveelheden.length} types` : ''} 
-                    onClick={() => setSubView('materials')} 
-                />
+                <SectionRow icon={Wrench} label="Werkzaamheden" value={afhandelingBijzonderheden ? 'Ingevuld' : ''} onClick={() => setSubView('werkzaamheden')} />
+                <SectionRow icon={MapIcon} label="Locatiegegevens" onClick={() => setSubView('map')} />
+                <SectionRow icon={Paperclip} label="Documenten" value={uploadedFiles.length > 0 ? `${uploadedFiles.length} files` : ''} onClick={() => setSubView('docs')} />
+                <SectionRow icon={Camera} label="Foto's" value={afhandelingFotos.length > 0 ? `${afhandelingFotos.length}` : ''} onClick={() => setSubView('photos')} />
+                <SectionRow icon={Briefcase} label="Materialen" value={hoeveelheden.length > 0 ? `${hoeveelheden.length} types` : ''} onClick={() => setSubView('materials')} />
             </div>
 
             <div className="p-6 bg-slate-50">
                 <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
                     <AlertDialogTrigger asChild>
-                        <Button 
-                            className="w-full h-14 text-white font-bold uppercase tracking-widest rounded-xl shadow-lg transition-all bg-[#FF5722] hover:bg-[#E64A19] shadow-orange-600/20"
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : (
-                                "MELDING AFMELDEN"
-                            )}
+                        <Button className="w-full h-14 text-white font-bold uppercase tracking-widest rounded-xl shadow-lg bg-[#FF5722] hover:bg-[#E64A19]" disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "MELDING AFMELDEN"}
                         </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="w-[calc(100%-2rem)] sm:max-w-lg rounded-3xl border-none">
+                    <AlertDialogContent className="w-[calc(100%-2rem)] sm:max-w-lg rounded-3xl border-none shadow-2xl">
                         <AlertDialogHeader>
                             <AlertDialogTitle className="font-black uppercase tracking-tight">Melding afmelden?</AlertDialogTitle>
-                            <AlertDialogDescription className="font-medium text-slate-500">
-                                Weet u zeker dat u deze melding wilt afmelden en de werkbon wilt voltooien?
-                            </AlertDialogDescription>
+                            <AlertDialogDescription className="font-medium text-slate-500">Weet u zeker dat u deze melding wilt afmelden en de werkbon wilt voltooien?</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel className="rounded-xl font-bold">Annuleren</AlertDialogCancel>
-                            <AlertDialogAction 
-                                onClick={handleAfronden} 
-                                className="bg-[#FF5722] hover:bg-[#E64A19] rounded-xl font-black uppercase tracking-tight"
-                            >
-                                Afmelden
-                            </AlertDialogAction>
+                            <AlertDialogAction onClick={handleAfronden} className="bg-[#FF5722] hover:bg-[#E64A19] rounded-xl font-black uppercase tracking-tight">Afmelden</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
@@ -416,9 +376,7 @@ function IntegratedWerkbonOverlay({
 
     const renderSubViewHeader = (title: string) => (
         <header className="h-16 bg-[#2C2E3E] text-white flex items-center justify-between px-4 shrink-0">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => setSubView('main')}>
-                <ArrowLeft className="h-6 w-6" />
-            </Button>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => setSubView('main')}><ArrowLeft className="h-6 w-6" /></Button>
             <h3 className="text-sm font-bold uppercase tracking-widest">{title}</h3>
             <div className="w-10" />
         </header>
@@ -429,9 +387,7 @@ function IntegratedWerkbonOverlay({
             {subView === 'main' ? (
                 <>
                     <header className="h-16 bg-[#2C2E3E] text-white flex items-center justify-between px-4 shrink-0">
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={onClose}>
-                            <ChevronLeft className="h-6 w-6" />
-                        </Button>
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={onClose}><ChevronLeft className="h-6 w-6" /></Button>
                         <h3 className="text-sm font-bold uppercase tracking-widest">Werkbon</h3>
                         <div className="w-10" />
                     </header>
@@ -445,33 +401,16 @@ function IntegratedWerkbonOverlay({
                             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-black uppercase text-slate-400">Klacht omschrijving</Label>
-                                    <div className="bg-slate-50 p-4 rounded-xl text-sm italic text-slate-600 border border-slate-100">
-                                        "{melding.extra_informatie}"
-                                    </div>
+                                    <div className="bg-slate-50 p-4 rounded-xl text-sm italic text-slate-600 border border-slate-100">"{melding.extra_informatie}"</div>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <Label className="text-[10px] font-black uppercase text-slate-400">Uitvoeringsnotities</Label>
-                                        <div className="flex items-center">
-                                            <Button 
-                                                variant={isListening ? "destructive" : "secondary"} 
-                                                size="icon" 
-                                                className={cn(
-                                                    "h-16 w-16 rounded-full shadow-2xl transition-all active:scale-90 border-4 border-white",
-                                                    isListening && "animate-pulse ring-4 ring-red-500/20"
-                                                )} 
-                                                onClick={toggleListening}
-                                            >
-                                                {isListening ? <Loader2 className="h-8 w-8 animate-spin" /> : <Mic className="h-8 w-8 text-primary" />}
-                                            </Button>
-                                        </div>
+                                        <Button variant={isListening ? "destructive" : "secondary"} size="icon" className={cn("h-16 w-16 rounded-full shadow-2xl transition-all active:scale-90 border-4 border-white", isListening && "animate-pulse ring-4 ring-red-500/20")} onClick={toggleListening}>
+                                            {isListening ? <Loader2 className="h-8 w-8 animate-spin" /> : <Mic className="h-8 w-8 text-primary" />}
+                                        </Button>
                                     </div>
-                                    <Textarea 
-                                        className="min-h-[300px] rounded-2xl border-slate-200 p-4 text-base"
-                                        placeholder="Noteer hier de voortgang of details..."
-                                        value={afhandelingBijzonderheden}
-                                        onChange={e => setAfhandelingBijzonderheden(e.target.value)}
-                                    />
+                                    <Textarea className="min-h-[300px] rounded-2xl border-slate-200 p-4 text-base" placeholder="Noteer hier de voortgang of details..." value={afhandelingBijzonderheden} onChange={e => setAfhandelingBijzonderheden(e.target.value)} />
                                 </div>
                             </div>
                         </>
@@ -489,25 +428,16 @@ function IntegratedWerkbonOverlay({
                             {renderSubViewHeader("Foto's")}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('cam-input')?.click()}>
-                                        <Camera className="h-8 w-8 text-slate-400" />
-                                        <span className="text-xs font-bold uppercase">Nieuwe Foto</span>
-                                    </Button>
-                                    <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('gal-input')?.click()}>
-                                        <ImageIcon className="h-8 w-8 text-slate-400" />
-                                        <span className="text-xs font-bold uppercase">Galerij</span>
-                                    </Button>
+                                    <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('cam-input')?.click()}><Camera className="h-8 w-8 text-slate-400" /><span className="text-xs font-bold uppercase">Nieuwe Foto</span></Button>
+                                    <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('gal-input')?.click()}><ImageIcon className="h-8 w-8 text-slate-400" /><span className="text-xs font-bold uppercase">Galerij</span></Button>
                                 </div>
                                 <input type="file" id="cam-input" className="hidden" accept="image/*" capture="environment" onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
                                 <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
-                                
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                     {afhandelingFotos.map((p, i) => (
                                         <div key={i} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
                                             <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                            <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}>
-                                                <X className="h-4 w-4" />
-                                            </Button>
+                                            <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><X className="h-4 w-4" /></Button>
                                         </div>
                                     ))}
                                 </div>
@@ -520,30 +450,16 @@ function IntegratedWerkbonOverlay({
                             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                                 <div className="bg-slate-50 p-6 rounded-2xl space-y-4">
                                     <div className="grid gap-4">
-                                        <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-slate-400">Product</Label>
-                                            <Input placeholder="Bv. Straatsteen..." value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} className="h-11 font-bold" />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-slate-400">Aantal</Label>
-                                            <Input type="number" placeholder="0" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} className="h-11 font-bold" />
-                                        </div>
-                                        <Button className="w-full h-11 font-black uppercase bg-[#FF5722]" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>
-                                            Toevoegen
-                                        </Button>
+                                        <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase text-slate-400">Product</Label><Input placeholder="Bv. Straatsteen..." value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} className="h-11 font-bold" /></div>
+                                        <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase text-slate-400">Aantal</Label><Input type="number" placeholder="0" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} className="h-11 font-bold" /></div>
+                                        <Button className="w-full h-11 font-black uppercase bg-[#FF5722]" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>Toevoegen</Button>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
                                     {hoeveelheden.map(h => (
                                         <div key={h.id} className="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold">{h.type}</span>
-                                                <span className="text-[10px] text-slate-400 uppercase font-black">{h.eenheid}</span>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <span className="text-xl font-black text-primary">{h.aantal}</span>
-                                                <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4" /></Button>
-                                            </div>
+                                            <div className="flex flex-col"><span className="text-sm font-bold">{h.type}</span><span className="text-[10px] text-slate-400 uppercase font-black">{h.eenheid}</span></div>
+                                            <div className="flex items-center gap-4"><span className="text-xl font-black text-primary">{h.aantal}</span><Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4" /></Button></div>
                                         </div>
                                     ))}
                                 </div>
@@ -554,17 +470,12 @@ function IntegratedWerkbonOverlay({
                         <>
                             {renderSubViewHeader('Documenten')}
                             <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                                <Button variant="outline" className="w-full h-16 border-dashed border-2 rounded-xl gap-3" onClick={() => document.getElementById('sub-doc-input')?.click()}>
-                                    <UploadCloud className="h-5 w-5 text-primary" /> Document Uploaden
-                                </Button>
+                                <Button variant="outline" className="w-full h-16 border-dashed border-2 rounded-xl gap-3" onClick={() => document.getElementById('sub-doc-input')?.click()}><UploadCloud className="h-5 w-5 text-primary" /> Document Uploaden</Button>
                                 <input type="file" id="sub-doc-input" className="hidden" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'documents')} />
                                 <div className="grid gap-2">
                                     {uploadedFiles.map(f => (
                                         <div key={f.storagePath} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                            <div className="flex items-center gap-3 truncate">
-                                                <FileText className="h-5 w-5 text-blue-600" />
-                                                <span className="text-xs font-bold truncate uppercase">{f.name}</span>
-                                            </div>
+                                            <div className="flex items-center gap-3 truncate"><FileText className="h-5 w-5 text-blue-600" /><span className="text-xs font-bold truncate uppercase">{f.name}</span></div>
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>
                                         </div>
                                     ))}
@@ -586,7 +497,7 @@ export default function StartNavigationPage() {
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { selectedProjectId, projects } = useProject();
+  const { selectedProjectId } = useProject();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
@@ -626,7 +537,6 @@ export default function StartNavigationPage() {
   const mapRef = React.useRef<MapRef>(null);
   const lastFetchTimeRef = React.useRef<number>(0);
 
-  // Smoothing refs for visual tracking
   const targetPosRef = React.useRef<{lng: number, lat: number} | null>(null);
   const visualPosRef = React.useRef<{lng: number, lat: number} | null>(null);
 
@@ -648,10 +558,8 @@ export default function StartNavigationPage() {
   const renderMarkerIcon = (category: string) => {
     const iconVal = categoryIcons[category];
     if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-slate-400" />;
-
     let iconColor = '#3b82f6';
     let iconName = 'AlertCircle';
-
     if (iconVal.startsWith('lucide:')) {
       const parts = iconVal.split(':');
       iconName = parts[1] || 'AlertCircle';
@@ -659,21 +567,8 @@ export default function StartNavigationPage() {
       const IconComp = (Icons as any)[iconName] || Icons.AlertCircle;
       return <IconComp className="h-5 w-5" style={{ color: iconColor }} />;
     }
-
-    if (isSvg(iconVal)) {
-      return (
-        <div className="h-5 w-5 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: iconVal }} />
-      );
-    }
-
-    if (iconVal.startsWith('http')) {
-      return (
-        <div className="h-5 w-5 relative flex items-center justify-center overflow-hidden rounded-full">
-          <img src={iconVal} alt="icon" className="h-full w-full object-cover" />
-        </div>
-      );
-    }
-
+    if (isSvg(iconVal)) return <div className="h-5 w-5 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: iconVal }} />;
+    if (iconVal.startsWith('http')) return <div className="h-5 w-5 relative flex items-center justify-center overflow-hidden rounded-full"><img src={iconVal} alt="icon" className="h-full w-full object-cover" /></div>;
     const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
     return <IconComp className="h-5 w-5" style={{ color: '#3b82f6' }} />;
   };
@@ -691,11 +586,7 @@ export default function StartNavigationPage() {
 
   const activeMeldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(
-      collection(firestore, 'meldingen'),
-      where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']),
-      limit(100)
-    );
+    return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']), limit(100));
   }, [firestore]);
 
   const { data: rawActiveMeldingen } = useCollection<Melding>(activeMeldingenQuery);
@@ -703,24 +594,14 @@ export default function StartNavigationPage() {
   const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
   const todayCompletedQuery = useMemoFirebase(() => {
     if (!firestore || !showTodayCompleted || debouncedSearchQuery) return null;
-    return query(
-      collection(firestore, 'meldingen'),
-      where('status', '==', 'Afgerond'),
-      where('afhandeling_datum', '==', todayStr),
-      limit(50)
-    );
+    return query(collection(firestore, 'meldingen'), where('status', '==', 'Afgerond'), where('afhandeling_datum', '==', todayStr), limit(50));
   }, [firestore, showTodayCompleted, debouncedSearchQuery, todayStr]);
 
   const { data: rawTodayCompleted } = useCollection<Melding>(todayCompletedQuery);
 
   const backendSearchQuery = useMemoFirebase(() => {
     if (!firestore || !debouncedSearchQuery) return null;
-    return query(
-      collection(firestore, 'meldingen'),
-      where('intakenummer', '>=', debouncedSearchQuery),
-      where('intakenummer', '<=', debouncedSearchQuery + '\uf8ff'),
-      limit(20)
-    );
+    return query(collection(firestore, 'meldingen'), where('intakenummer', '>=', debouncedSearchQuery), where('intakenummer', '<=', debouncedSearchQuery + '\uf8ff'), limit(20));
   }, [firestore, debouncedSearchQuery]);
 
   const { data: rawSearchResults } = useCollection<Melding>(backendSearchQuery);
@@ -741,9 +622,7 @@ export default function StartNavigationPage() {
   const sortedMissions = React.useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
     const base = userLocation || SIMULATION_START_LOCATION;
-    const sorted = [...filteredMeldingen]
-        .filter(m => m.status !== 'Afgerond')
-        .sort((a, b) => {
+    const sorted = [...filteredMeldingen].filter(m => m.status !== 'Afgerond').sort((a, b) => {
             const distA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]));
             const distB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
             return distA - distB;
@@ -766,7 +645,6 @@ export default function StartNavigationPage() {
     const startPos = userLocation || SIMULATION_START_LOCATION;
     const points: [number, number][] = [[startPos.longitude, startPos.latitude]];
     filteredMeldingen.forEach(m => { if (m.longitude && m.latitude) points.push([m.longitude, m.latitude]); });
-    
     if (points.length > 1) {
         try {
             const coll = turf.featureCollection(points.map(p => turf.point(p)));
@@ -774,19 +652,13 @@ export default function StartNavigationPage() {
             if (bbox[0] !== Infinity && !isNaN(bbox[0])) {
                 map.fitBounds(bbox as [number, number, number, number], { padding: { top: 80, bottom: 350, left: 80, right: 80 }, duration: 800, maxZoom: 14, linear: false });
             }
-        } catch (e) {
-            map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 800 });
-        }
-    } else {
-        map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 800 });
-    }
+        } catch (e) { map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 800 }); }
+    } else { map.easeTo({ center: [startPos.longitude, startPos.latitude], zoom: 11, pitch: 0, duration: 800 }); }
   }, [filteredMeldingen, userLocation]);
 
   const fetchRoute = React.useCallback(async (force = false) => {
     if (navigationState === 'setup' || sortedMissions.length === 0) {
-        setCurrentRouteGeometry(null);
-        setDisplayedRouteGeometry(null);
-        setRouteInfo(null);
+        setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
         return;
     }
     const now = Date.now();
@@ -806,20 +678,12 @@ export default function StartNavigationPage() {
             setDisplayedRouteGeometry(turf.feature(route.geometry));
             setRouteInfo({ duration: route.duration, distance: route.distance });
         }
-    } catch (e) { 
-        console.error("Route error:", e); 
-    } finally {
-        setIsCalculatingRoute(false);
-    }
+    } catch (e) { console.error("Route error:", e); } finally { setIsCalculatingRoute(false); }
   }, [sortedMissions, userLocation, navigationState]);
 
   React.useEffect(() => {
     if (navigationState === 'navigating' && sortedMissions.length > 0) fetchRoute(true);
-    else if (navigationState === 'setup') {
-        setCurrentRouteGeometry(null);
-        setDisplayedRouteGeometry(null);
-        setRouteInfo(null);
-    }
+    else if (navigationState === 'setup') { setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
   React.useEffect(() => {
@@ -832,9 +696,7 @@ export default function StartNavigationPage() {
         const data = await res.json();
         if (data.features && data.features.length > 0) {
           const limitValue = data.features[0].properties.speed_limit;
-          if (limitValue && typeof limitValue === 'number') {
-            setCurrentSpeedLimit(limitValue);
-          }
+          if (limitValue && typeof limitValue === 'number') setCurrentSpeedLimit(limitValue);
         }
       } catch (e) { console.warn("Could not fetch speed limit", e); }
     };
@@ -842,7 +704,6 @@ export default function StartNavigationPage() {
     return () => clearTimeout(timer);
   }, [userLocation, isSimulationMode]);
 
-  // Smoother Visual Tracking Loop
   React.useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
@@ -854,11 +715,7 @@ export default function StartNavigationPage() {
                 visualPosRef.current.lat += (targetPosRef.current.lat - visualPosRef.current.lat) * factor;
             }
             if (!isNaN(visualPosRef.current.lng) && !isNaN(visualPosRef.current.lat)) {
-                setSmoothLocation({
-                    longitude: visualPosRef.current.lng,
-                    latitude: visualPosRef.current.lat,
-                    heading: lastHeadingRef.current
-                });
+                setSmoothLocation({ longitude: visualPosRef.current.lng, latitude: visualPosRef.current.lat, heading: lastHeadingRef.current });
             }
         }
         animId = requestAnimationFrame(updateVisualPos);
@@ -874,33 +731,24 @@ export default function StartNavigationPage() {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             if (isNaN(loc.latitude) || isNaN(loc.longitude)) return;
             setUserLocation(loc);
-            
             const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
             setSpeedKmh(currentSpeed);
-
             if (navigationState === 'navigating' && currentRouteGeometry) {
                 try {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
                     const currPt = turf.point([loc.longitude, loc.latitude]);
                     const snapped = turf.nearestPointOnLine(line, currPt);
-                    
                     if (!isNaN(snapped.geometry.coordinates[0])) {
                         targetPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
-                        
                         const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
                         const distAlong = turf.length(alongRoute, { units: 'meters' });
                         const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
                         lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
-                        
                         setDisplayedRouteGeometry(turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line));
-                        
                         if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 60 && !isCalculatingRoute) fetchRoute(true);
                     }
                 } catch (e) {}
-            } else {
-                targetPosRef.current = { lng: loc.longitude, lat: loc.latitude };
-            }
-
+            } else { targetPosRef.current = { lng: loc.longitude, lat: loc.latitude }; }
             if (navigationState === 'navigating' && mapRef.current && !isManualMode && visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
                 const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
                 mapRef.current.getMap().easeTo({
@@ -913,10 +761,7 @@ export default function StartNavigationPage() {
                     easing: (t) => t 
                 });
             }
-        },
-        () => {},
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
-    );
+        }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
     return () => navigator.geolocation.clearWatch(watchId);
   }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute, dynamicZoomEnabled, navZoom, speedKmh]);
 
@@ -971,14 +816,7 @@ export default function StartNavigationPage() {
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
         
         <div className="absolute inset-0 z-0" style={{ touchAction: 'none' }}>
-            <MapGL 
-                ref={mapRef} 
-                initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 13 }} 
-                style={{ width: '100%', height: '100%' }} 
-                mapStyle={mapStyle} 
-                mapboxAccessToken={MAPBOX_TOKEN} 
-                onMove={(evt) => { if (evt.originalEvent) setIsManualMode(true); }}
-            >
+            <MapGL ref={mapRef} initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onMove={(evt) => { if (evt.originalEvent) setIsManualMode(true); }}>
                 {smoothLocation && !isNaN(smoothLocation.longitude) && !isNaN(smoothLocation.latitude) && (
                     <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center">
                         <div className="relative flex items-center justify-center w-16 h-16">
@@ -1004,17 +842,9 @@ export default function StartNavigationPage() {
                                 {(isNext || isClicked) && (
                                     <div className={cn("absolute inset-0 rounded-full border-[4px] border-black opacity-80", isNext && "animate-pulse", isClicked && "border-primary")} />
                                 )}
-                                <div className={cn(
-                                    "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10",
-                                    isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md",
-                                    (isNext || isClicked) && "ring-4 ring-black/20 scale-125",
-                                    "cursor-pointer hover:scale-110"
-                                )}>
+                                <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
                                     {renderMarkerIcon(m.hoofdcategorie)}
-                                    <div className={cn(
-                                        "absolute -top-1 -right-1 rounded-full w-4 h-4 flex items-center justify-center border border-black shadow-lg overflow-hidden",
-                                        isCompleted ? "bg-green-500" : "bg-yellow-400"
-                                    )}>
+                                    <div className={cn("absolute -top-1 -right-1 rounded-full w-4 h-4 flex items-center justify-center border border-black shadow-lg overflow-hidden", isCompleted ? "bg-green-500" : "bg-yellow-400")}>
                                         {isCompleted ? <Check className="h-2.5 w-2.5 text-white" /> : <Wrench className="h-2.5 w-2.5 text-slate-900" />}
                                     </div>
                                 </div>
@@ -1023,10 +853,7 @@ export default function StartNavigationPage() {
                     );
                 })}
                 {navigationState === 'navigating' && displayedRouteGeometry && (
-                    <Source id="route-line" type="geojson" data={displayedRouteGeometry}>
-                        <Layer {...routeLayerCasing} />
-                        <Layer {...routeLayer} />
-                    </Source>
+                    <Source id="route-line" type="geojson" data={displayedRouteGeometry}><Layer {...routeLayerCasing} /><Layer {...routeLayer} /></Source>
                 )}
             </MapGL>
         </div>
@@ -1038,19 +865,13 @@ export default function StartNavigationPage() {
                         <div className="space-y-1">
                             <Badge className="bg-primary border-none text-[8px] font-black uppercase tracking-widest px-2 h-5 text-white">Melding Geselecteerd</Badge>
                             <h3 className="text-xl font-black uppercase tracking-tight">{clickedMelding.intakenummer}</h3>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[200px]">
-                                {clickedMelding.straatnaam} {clickedMelding.huisnummer}
-                            </p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[200px]">{clickedMelding.straatnaam} {clickedMelding.huisnummer}</p>
                         </div>
                         <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none text-slate-400 hover:bg-slate-100" onClick={() => setClickedMarkerId(null)}><X className="h-6 w-6" /></Button>
                     </div>
                     <div className="p-6 grid grid-cols-1 gap-3">
-                        <Button className="h-16 rounded-none font-black uppercase tracking-widest shadow-sm bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200 gap-3" onClick={() => { setActiveWerkbonId(clickedMarkerId); setClickedMarkerId(null); }}>
-                            <FileText className="h-6 w-6 text-primary" /> Open Werkbon
-                        </Button>
-                        <Button className="h-16 rounded-none font-black uppercase tracking-widest shadow-lg bg-primary text-white hover:bg-primary/90 border-none gap-3" onClick={() => { setPriorityMissionId(clickedMarkerId); handleStartRit(); setClickedMarkerId(null); }}>
-                            <Navigation className="h-6 w-6 text-white fill-current" /> Navigeer Hierheen
-                        </Button>
+                        <Button className="h-16 rounded-none font-black uppercase tracking-widest shadow-sm bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200 gap-3" onClick={() => { setActiveWerkbonId(clickedMarkerId); setClickedMarkerId(null); }}><FileText className="h-6 w-6 text-primary" /> Open Werkbon</Button>
+                        <Button className="h-16 rounded-none font-black uppercase tracking-widest shadow-lg bg-primary text-white hover:bg-primary/90 border-none gap-3" onClick={() => { setPriorityMissionId(clickedMarkerId); handleStartRit(); setClickedMarkerId(null); }}><Navigation className="h-6 w-6 text-white fill-current" /> Navigeer Hierheen</Button>
                     </div>
                 </div>
             </div>
@@ -1065,83 +886,43 @@ export default function StartNavigationPage() {
                 )}
                 {navigationState === 'navigating' && routeInfo && (
                     <div className="bg-white/95 backdrop-blur-md px-4 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-4 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-primary" />
-                            <div className="flex flex-col">
-                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span>
-                                <span className="text-sm md:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
-                            </div>
-                        </div>
+                        <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
                         <Separator orientation="vertical" className="h-6" />
-                        <div className="flex items-center gap-2">
-                            <Navigation className="h-4 w-4 text-primary" />
-                            <div className="flex flex-col">
-                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span>
-                                <span className="text-sm md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span>
-                            </div>
-                        </div>
+                        <div className="flex items-center gap-2"><Navigation className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
                     </div>
                 )}
             </div>
 
             <div className="flex items-center gap-2 pointer-events-auto">
-                {isManualMode && navigationState === 'navigating' && (
-                    <Button 
-                        className="h-12 md:h-14 px-6 font-black uppercase rounded-2xl shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center gap-3"
-                        onClick={handleHervatNavigatie}
-                    >
-                        <Navigation className="h-6 w-6 fill-current" />
-                        <span className="hidden sm:inline text-xs">HERVAT</span>
-                    </Button>
-                )}
-                <div className="flex items-center gap-2">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-6 w-6 text-slate-600" /></Button>
-                        </PopoverTrigger>
-                        <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
+                <Popover>
+                    <PopoverTrigger asChild><Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-6 w-6 text-slate-600" /></Button></PopoverTrigger>
+                    <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
                             <div className="space-y-6">
-                                <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div>
-                                        <Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} />
+                                <div className="space-y-2"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div>
+                                <div className="space-y-2"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div>
+                                <Separator className="bg-slate-100" />
+                                <div className="flex items-center justify-between"><div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Dynamisch zoomen</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Past zoom aan op snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} /></div>
+                                {!dynamicZoomEnabled && (
+                                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
+                                        <div className="flex items-center gap-2"><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div>
-                                        <Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} />
-                                    </div>
-                                    <Separator className="bg-slate-100" />
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Dynamisch zoomen</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Past zoom aan op snelheid</p></div>
-                                        <Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} />
-                                    </div>
-                                    {!dynamicZoomEnabled && (
-                                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                            <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
-                                            <div className="flex items-center gap-2">
-                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button>
-                                                <div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div>
-                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <Separator className="bg-slate-100" />
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Opent werkbon na 10s stilstand</p></div>
-                                        <Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} />
-                                    </div>
-                                </div>
+                                )}
+                                <Separator className="bg-slate-100" />
+                                <div className="flex items-center justify-between"><div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Opent werkbon na 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} /></div>
                             </div>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                {navigationState === 'setup' ? (
+                        </div>
+                    </PopoverContent>
+                </Popover>
+                {navigationState === 'setup' && (
                     <Button className="h-12 md:h-14 px-5 md:px-10 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl transition-all active:scale-95 pointer-events-auto" onClick={handleStartRit}>
                         {isLocating ? <Loader2 className="h-6 w-6 md:mr-3 animate-spin" /> : <Play className="h-6 w-6 md:mr-3 fill-current" />} 
                         <span className="hidden md:inline text-sm">START RIT</span>
                     </Button>
-                ) : (
+                )}
+                {navigationState === 'navigating' && (
                     <Button variant="destructive" className="h-12 md:h-14 px-5 md:px-10 font-black uppercase rounded-2xl shadow-2xl transition-all active:scale-95 pointer-events-auto" onClick={handleStopRit}>
                       <span className="hidden md:inline">STOP RIT</span>
                       <span className="md:hidden">STOP</span>
@@ -1152,7 +933,7 @@ export default function StartNavigationPage() {
 
         {navigationState === 'navigating' && !activeWerkbonId && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <div className="mb-4 flex items-center gap-3 w-full">
+                <div className="mb-4 flex items-center justify-between gap-3 w-full">
                     <div className="relative pointer-events-auto">
                         <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
                             <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
@@ -1162,6 +943,13 @@ export default function StartNavigationPage() {
                             <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
+
+                    {isManualMode && (
+                        <Button className="h-12 md:h-16 px-6 md:px-8 font-black uppercase rounded-2xl shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center gap-3 pointer-events-auto shadow-primary/30" onClick={handleHervatNavigatie}>
+                            <Navigation className="h-5 w-5 md:h-6 md:w-6 fill-current" />
+                            <span className="text-xs md:text-sm">HERVAT</span>
+                        </Button>
+                    )}
                 </div>
 
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
@@ -1169,29 +957,16 @@ export default function StartNavigationPage() {
                         <div className="flex flex-col gap-3 min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="space-y-0.5 min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-[8px] font-black uppercase text-slate-500">Intakenummer</p>
-                                        {priorityMissionId === nextMission?.id && <Badge className="bg-primary/10 text-primary border-none h-4 text-[7px] font-black uppercase px-1">Geprioriteerd</Badge>}
-                                    </div>
+                                    <div className="flex items-center gap-2"><p className="text-[8px] font-black uppercase text-slate-500">Intakenummer</p>{priorityMissionId === nextMission?.id && <Badge className="bg-primary/10 text-primary border-none h-4 text-[7px] font-black uppercase px-1">Geprioriteerd</Badge>}</div>
                                     <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    {nextMission?.containernummer && (
-                                        <div className="flex flex-col items-end">
-                                            <p className="text-[8px] font-black uppercase text-slate-400 mb-0.5">Objectnummer</p>
-                                            <Badge variant="secondary" className="text-[10px] h-6 font-black uppercase bg-yellow-400 text-slate-900 border-2 border-white shadow-sm px-2">{nextMission.containernummer}</Badge>
-                                        </div>
-                                    )}
+                                    {nextMission?.containernummer && (<div className="flex flex-col items-end"><p className="text-[8px] font-black uppercase text-slate-400 mb-0.5">Objectnummer</p><Badge variant="secondary" className="text-[10px] h-6 font-black uppercase bg-yellow-400 text-slate-900 border-2 border-white shadow-sm px-2">{nextMission.containernummer}</Badge></div>)}
                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-slate-100 transition-colors pointer-events-auto" onClick={() => setIsCockpitExpanded(!isCockpitExpanded)}>{isCockpitExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</Button>
                                 </div>
                             </div>
                             <div className="space-y-0.5 min-w-0"><p className="text-[10px] font-black text-slate-800 truncate">{nextMission?.straatnaam} {nextMission?.huisnummer} {nextMission?.postcode} {nextMission?.plaats}</p></div>
-                            {isCockpitExpanded && (
-                                <div className="pt-2 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Melding omschrijving</p>
-                                    <p className="text-[11px] font-medium text-slate-600 leading-relaxed italic">"{nextMission?.extra_informatie || 'Geen omschrijving beschikbaar.'}"</p>
-                                </div>
-                            )}
+                            {isCockpitExpanded && (<div className="pt-2 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300"><p className="text-[10px] font-black uppercase text-slate-400 mb-1">Melding omschrijving</p><p className="text-[11px] font-medium text-slate-600 leading-relaxed italic">"{nextMission?.extra_informatie || 'Geen omschrijving beschikbaar.'}"</p></div>)}
                             <Progress value={100} className="h-1 bg-slate-100 mt-1" />
                         </div>
                     </CardContent>
@@ -1201,162 +976,36 @@ export default function StartNavigationPage() {
 
         {isManualMode && !activeWerkbonId && navigationState === 'setup' && (
             <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-[260px]">
-                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}>
-                    <MapIcon className="h-7 w-7 text-slate-600" />
-                </Button>
+                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}><MapIcon className="h-7 w-7 text-slate-600" /></Button>
             </div>
         )}
 
         <div className={cn("absolute bottom-0 left-0 right-0 z-40 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl h-[244px] transition-all duration-500", navigationState === 'navigating' ? "translate-y-full opacity-0" : "translate-y-0 opacity-100")}>
             <div className="h-12 flex items-center justify-between px-4 sm:px-6 cursor-default shrink-0 border-b bg-slate-50">
                 <div className="flex items-center justify-between flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
-                    <div className="relative w-40 sm:w-64 shrink-0">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                        <Input placeholder="Zoek nummer..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                    </div>
+                    <div className="relative w-40 sm:w-64 shrink-0"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Zoek nummer..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
                     <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
-                        <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}>
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span>
-                        </Button>
-                        {isPrivileged && (
-                            <Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}>
-                                <User className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}</span>
-                            </Button>
-                        )}
-                        <Popover>
-                            <PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><Layout className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger>
-                            <PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md">
-                                <div className="space-y-4">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p>
-                                    <div className="space-y-2">
-                                        {Object.keys(ROUTE_COLUMNS_CONFIG).map(colId => (
-                                            <div key={colId} className="flex items-center space-x-3 p-1">
-                                                <Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" />
-                                                <Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{ROUTE_COLUMN_LABELS_CONFIG[colId]}</Label>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
+                        <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span></Button>
+                        {isPrivileged && (<Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}><User className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}</span></Button>)}
+                        <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><Layout className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md"><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p><div className="space-y-2">{Object.keys(ROUTE_COLUMNS_CONFIG).map(colId => (<div key={colId} className="flex items-center space-x-3 p-1"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" /><Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{ROUTE_COLUMN_LABELS_CONFIG[colId]}</Label></div>))}</div></div></PopoverContent></Popover>
                     </div>
                 </div>
             </div>
             <ScrollArea className="flex-1 bg-white">
-                {/* Mobiele Weergave: Verticale Kaarten */}
                 <div className="p-3 flex flex-col gap-3 lg:hidden">
                     {filteredMeldingen.map((m) => {
                         const isCompleted = m.status === 'Afgerond';
                         const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
-                        
-                        return (
-                            <Card 
-                                key={m.id} 
-                                onClick={() => setClickedMarkerId(m.id)}
-                                className={cn(
-                                    "w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden",
-                                    isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20"
-                                )}
-                            >
-                                <div className="flex justify-between items-start gap-3">
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
-                                            <span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span>
-                                        </div>
-                                        <p className="text-[11px] font-bold text-slate-700 truncate leading-tight">
-                                            {[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}
-                                        </p>
-                                    </div>
-                                    <Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge>
-                                </div>
-                                <div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto">
-                                    <span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span>
-                                    <span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{dist} km</span>
-                                </div>
-                                {isCompleted && (
-                                    <div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl">
-                                        <Check className="h-2 w-2 text-white" />
-                                    </div>
-                                )}
-                            </Card>
-                        );
+                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{dist} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2 w-2 text-white" /></div>)}</Card>);
                     })}
                 </div>
-
-                {/* Desktop Weergave: Excel-stijl Tabel */}
                 <div className="hidden lg:block p-0">
-                    <Table>
-                        <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
-                            <TableRow className="h-10 hover:bg-transparent">
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r">Nummer</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 text-right pr-6">Afstand</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredMeldingen.map((m) => {
-                                const isCompleted = m.status === 'Afgerond';
-                                const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
-                                return (
-                                    <TableRow 
-                                        key={m.id} 
-                                        onClick={() => setClickedMarkerId(m.id)}
-                                        className={cn(
-                                            "cursor-pointer transition-colors border-b",
-                                            isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50"
-                                        )}
-                                    >
-                                        <TableCell className="pl-6 border-r">
-                                            <div className="flex items-center gap-2">
-                                                <div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
-                                                <span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="border-r">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-bold text-slate-700">{m.straatnaam} {m.huisnummer}</span>
-                                                <span className="text-[10px] text-slate-400 font-bold uppercase">{m.plaats}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">
-                                            {m.extra_informatie || '-'}
-                                        </TableCell>
-                                        <TableCell className="border-r">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase text-primary">{m.hoofdcategorie}</span>
-                                                <span className="text-[9px] font-bold uppercase text-slate-400">{m.subcategorie}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right pr-6 font-black text-[11px] tabular-nums text-slate-400">
-                                            {dist} km
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
+                    <Table><TableHeader className="bg-slate-50/50 sticky top-0 z-10"><TableRow className="h-10 hover:bg-transparent"><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r">Nummer</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 text-right pr-6">Afstand</TableHead></TableRow></TableHeader><TableBody>{filteredMeldingen.map((m) => { const isCompleted = m.status === 'Afgerond'; const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-'; return (<TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-colors border-b", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50")}><TableCell className="pl-6 border-r"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} /><span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span></div></TableCell><TableCell className="border-r"><div className="flex flex-col"><span className="text-xs font-bold text-slate-700">{m.straatnaam} {m.huisnummer}</span><span className="text-[10px] text-slate-400 font-bold uppercase">{m.plaats}</span></div></TableCell><TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">{m.extra_informatie || '-'}</TableCell><TableCell className="border-r"><div className="flex flex-col"><span className="text-[10px] font-black uppercase text-primary">{m.hoofdcategorie}</span><span className="text-[9px] font-bold uppercase text-slate-400">{m.subcategorie}</span></div></TableCell><TableCell className="text-right pr-6 font-black text-[11px] tabular-nums text-slate-400">{dist} km</TableCell></TableRow>); })}</TableBody></Table>
                 </div>
             </ScrollArea>
         </div>
 
-        {activeWerkbonId && (
-            <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-300">
-                <IntegratedWerkbonOverlay 
-                    meldingId={activeWerkbonId} 
-                    onClose={() => setActiveWerkbonId(null)} 
-                    onCompleted={(id) => {
-                        setCompletedObjects(prev => [...prev, id]);
-                        setActiveWerkbonId(null);
-                        setIsManualMode(false); 
-                        setPriorityMissionId(null);
-                        setTimeout(() => fetchRoute(true), 150);
-                    }} 
-                />
-            </div>
-        )}
+        {activeWerkbonId && (<div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-300"><IntegratedWerkbonOverlay meldingId={activeWerkbonId} onClose={() => setActiveWerkbonId(null)} onCompleted={(id) => { setCompletedObjects(prev => [...prev, id]); setActiveWerkbonId(null); setIsManualMode(false); setPriorityMissionId(null); setTimeout(() => fetchRoute(true), 150); }} /></div>)}
     </div>
   );
 }
