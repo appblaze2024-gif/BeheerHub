@@ -106,6 +106,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Textarea } from '@/components/ui/textarea';
+import { MapboxView } from '@/components/mapbox-view';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -631,7 +632,8 @@ export default function StartNavigationPage() {
   const mapRef = React.useRef<MapRef>(null);
   const lastFetchTimeRef = React.useRef<number>(0);
 
-  // Smoothing refs
+  // Smoothing refs for visual tracking
+  const targetPosRef = React.useRef<{lng: number, lat: number} | null>(null);
   const visualPosRef = React.useRef<{lng: number, lat: number} | null>(null);
   const lastSnappedPosRef = React.useRef<{lng: number, lat: number} | null>(null);
 
@@ -851,16 +853,15 @@ export default function StartNavigationPage() {
   React.useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
-        if (navigationState === 'navigating' && lastSnappedPosRef.current && !isNaN(lastSnappedPosRef.current.lng)) {
-            if (!visualPosRef.current) visualPosRef.current = { ...lastSnappedPosRef.current };
+        if (targetPosRef.current) {
+            if (!visualPosRef.current) visualPosRef.current = { ...targetPosRef.current };
             else {
-                // Smoothing factor: Increase for faster tracking, decrease for smoother movement
-                // 0.08 is a good balance for standard navigation
-                const factor = 0.08; 
-                visualPosRef.current.lng += (lastSnappedPosRef.current.lng - visualPosRef.current.lng) * factor;
-                visualPosRef.current.lat += (lastSnappedPosRef.current.lat - visualPosRef.current.lat) * factor;
+                // Smoothing factor: how fast it catches up to raw GPS
+                const factor = 0.05; 
+                visualPosRef.current.lng += (targetPosRef.current.lng - visualPosRef.current.lng) * factor;
+                visualPosRef.current.lat += (targetPosRef.current.lat - visualPosRef.current.lat) * factor;
             }
-            if (visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
+            if (!isNaN(visualPosRef.current.lng)) {
                 setSmoothLocation((prev: any) => ({
                     ...prev,
                     longitude: visualPosRef.current?.lng,
@@ -873,7 +874,7 @@ export default function StartNavigationPage() {
     };
     animId = requestAnimationFrame(updateVisualPos);
     return () => cancelAnimationFrame(animId);
-  }, [navigationState]);
+  }, []);
 
   React.useEffect(() => {
     if (!navigator.geolocation || isSimulationMode) return;
@@ -893,7 +894,7 @@ export default function StartNavigationPage() {
                     const snapped = turf.nearestPointOnLine(line, currPt);
                     
                     if (!isNaN(snapped.geometry.coordinates[0])) {
-                        lastSnappedPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
+                        targetPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
                         
                         const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
                         const distAlong = turf.length(alongRoute, { units: 'meters' });
@@ -905,11 +906,11 @@ export default function StartNavigationPage() {
                         if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 60 && !isCalculatingRoute) fetchRoute(true);
                     }
                 } catch (e) {}
-            } else if (!isNaN(loc.latitude)) {
-                setSmoothLocation({ ...loc, heading: lastHeadingRef.current });
+            } else {
+                targetPosRef.current = { lng: loc.longitude, lat: loc.latitude };
             }
 
-            // High-performance camera easing
+            // High-performance camera follow
             if (navigationState === 'navigating' && mapRef.current && !isManualMode && visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
                 const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
                 mapRef.current.getMap().easeTo({
@@ -919,7 +920,7 @@ export default function StartNavigationPage() {
                     pitch: navPitch,
                     padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
                     duration: 1000,
-                    easing: (t) => t // Linear easing for smoothest constant movement
+                    easing: (t) => t 
                 });
             }
         },
@@ -938,12 +939,11 @@ export default function StartNavigationPage() {
 
   const handleStartRit = () => {
     if (sortedMissions.length === 0) return;
-    setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); visualPosRef.current = null; lastSnappedPosRef.current = null;
+    setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); visualPosRef.current = null; targetPosRef.current = null;
     setIsLocating(true);
     const beginNav = (loc: { latitude: number, longitude: number }, heading: number) => {
         if (isNaN(loc.latitude) || isNaN(loc.longitude)) { setIsLocating(false); return; }
-        setSmoothLocation({ ...loc, heading });
-        lastSnappedPosRef.current = { lng: loc.longitude, lat: loc.latitude };
+        targetPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         setIsSimulationMode(false); setNavigationState('navigating'); setIsLocating(false); setIsManualMode(false);
         if (mapRef.current) mapRef.current.getMap().jumpTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: navPitch, bearing: heading, padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 } });
@@ -953,7 +953,7 @@ export default function StartNavigationPage() {
   };
 
   const handleStopRit = () => {
-    setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); setIsManualMode(false); visualPosRef.current = null; lastSnappedPosRef.current = null; setPriorityMissionId(null);
+    setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null);
     const map = mapRef.current?.getMap();
     if (map) { map.jumpTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 0 }); setTimeout(() => goToOverview(), 50); }
   };
@@ -975,11 +975,6 @@ export default function StartNavigationPage() {
   };
 
   const clickedMelding = React.useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
@@ -1100,16 +1095,6 @@ export default function StartNavigationPage() {
             </div>
 
             <div className="flex items-center gap-2 pointer-events-auto">
-                {navigationState === 'navigating' && isManualMode && (
-                    <Button 
-                        variant="default" 
-                        size="icon" 
-                        className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-primary text-white border-2 border-white transition-all active:scale-95 flex items-center justify-center"
-                        onClick={handleHervatNavigatie}
-                    >
-                        <Navigation className="h-6 w-6 fill-current" />
-                    </Button>
-                )}
                 <div className="flex items-center gap-2">
                     <Popover>
                         <PopoverTrigger asChild>
@@ -1178,6 +1163,15 @@ export default function StartNavigationPage() {
                             <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
                         </div>
                     </div>
+
+                    {isManualMode && (
+                        <Button 
+                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-primary text-white border-[4px] border-white transition-all active:scale-95 flex items-center justify-center pointer-events-auto"
+                            onClick={handleHervatNavigatie}
+                        >
+                            <Navigation className="h-8 w-8 fill-current" />
+                        </Button>
+                    )}
                 </div>
 
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
@@ -1215,7 +1209,7 @@ export default function StartNavigationPage() {
             </div>
         )}
 
-        {isManualMode && !activeWerkbonId && (
+        {isManualMode && !activeWerkbonId && navigationState === 'setup' && (
             <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-[260px]">
                 <Button variant="secondary" size="icon" className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); goToOverview(); }}>
                     <MapIcon className="h-7 w-7 text-slate-600" />
@@ -1259,7 +1253,6 @@ export default function StartNavigationPage() {
                 </div>
             </div>
             <ScrollArea className="flex-1 bg-white">
-                {/* Mobile View: Vertical Cards */}
                 <div className="p-3 flex flex-col gap-3 md:hidden">
                     {filteredMeldingen.map((m) => {
                         const isCompleted = m.status === 'Afgerond';
@@ -1300,7 +1293,6 @@ export default function StartNavigationPage() {
                     })}
                 </div>
 
-                {/* Desktop View: Excel-style Table */}
                 <div className="hidden md:block p-0">
                     <Table>
                         <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
