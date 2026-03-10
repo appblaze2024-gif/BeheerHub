@@ -1046,7 +1046,7 @@ export default function StartNavigationPage() {
         )}
 
         {isManualMode && !activeWerkbonId && navigationState === 'setup' && (
-            <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-60">
+            <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-72">
                 <Button variant="secondary" size="icon" className="h-14 w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); }}>
                     <MapIcon className="h-7 w-7 text-slate-600" />
                 </Button>
