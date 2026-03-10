@@ -65,14 +65,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { addSeconds, format as formatDate, differenceInCalendarDays } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -1225,7 +1217,7 @@ export default function StartNavigationPage() {
                 </div>
             </div>
             <ScrollArea className="flex-1 bg-white">
-                <div className="p-3 grid grid-rows-2 grid-flow-col gap-3 auto-cols-[280px] h-[180px] overflow-x-auto no-scrollbar">
+                <div className="p-3 flex flex-row gap-3 overflow-x-auto no-scrollbar h-[180px]">
                     {filteredMeldingen.map((m) => {
                         const isCompleted = m.status === 'Afgerond';
                         const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-';
@@ -1235,7 +1227,7 @@ export default function StartNavigationPage() {
                                 key={m.id} 
                                 onClick={() => setClickedMarkerId(m.id)}
                                 className={cn(
-                                    "h-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden",
+                                    "h-full w-[280px] shrink-0 rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden",
                                     isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20"
                                 )}
                             >

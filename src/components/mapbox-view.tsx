@@ -199,8 +199,6 @@ export function MapboxView({
         const isHighlighted = highlightedObject?.id === obj.id;
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         
-        // Logic for Meldingen (Issues) vs Objects
-        // Meldingen have 'hoofdcategorie', Spec Meldingen have 'werksoort'
         const categoryKey = obj.hoofdcategorie || obj.werksoort;
         const isIssue = !!categoryKey;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
@@ -216,14 +214,14 @@ export function MapboxView({
               }
             }}>
               <div className={cn(
-                "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-white shadow-xl transition-all",
+                "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all",
                 isCompleted ? "bg-green-500" : "bg-primary",
                 isHighlighted && "ring-4 ring-black/20 scale-125",
                 interactive && "cursor-pointer hover:scale-110"
               )}>
                 {renderMarkerIcon(categoryKey)}
                 {!isCompleted && (
-                  <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-white">
+                  <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-black">
                     <Icons.Wrench className="h-2.5 w-2.5 text-slate-900" />
                   </div>
                 )}
