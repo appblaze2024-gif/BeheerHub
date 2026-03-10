@@ -212,7 +212,7 @@ function IntegratedWerkbonOverlay({
     const { profile } = useProfile();
     const { toast } = useToast();
 
-    const [subView, setSubView] = React.useState<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials'>('main');
+    const [subView, setSubView] =<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials'>('main');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = React.useState('');
     const [isListening, setIsListening] = React.useState(false);
@@ -451,19 +451,41 @@ function IntegratedWerkbonOverlay({
                         <>
                             {renderSubViewHeader("Foto's")}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('cam-input')?.click()}><Camera className="h-8 w-8 text-slate-400" /><span className="text-xs font-bold uppercase">Nieuwe Foto</span></Button>
-                                    <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('gal-input')?.click()}><ImageIcon className="h-8 w-8 text-slate-400" /><span className="text-xs font-bold uppercase">Galerij</span></Button>
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase text-slate-400">Bronfoto's (Melding)</Label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                        {melding.fotos && melding.fotos.length > 0 ? (
+                                            melding.fotos.map((p, i) => (
+                                                <div key={`bron-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm">
+                                                    <Image src={p.url} alt="bron" fill className="object-cover" />
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="col-span-full py-8 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100">
+                                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Geen bronfoto's</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <input type="file" id="cam-input" className="hidden" accept="image/*" capture="environment" onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
-                                <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                    {afhandelingFotos.map((p, i) => (
-                                        <div key={i} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
-                                            <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                            <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><X className="h-4 w-4" /></Button>
-                                        </div>
-                                    ))}
+
+                                <Separator />
+
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase text-slate-400">Nieuwe Foto's (Uitvoering)</Label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('cam-input')?.click()}><Camera className="h-8 w-8 text-slate-400" /><span className="text-xs font-bold uppercase">Camera</span></Button>
+                                        <Button variant="outline" className="h-32 flex-col gap-3 rounded-2xl border-dashed border-2" onClick={() => document.getElementById('gal-input')?.click()}><ImageIcon className="h-8 w-8 text-slate-400" /><span className="text-xs font-bold uppercase">Gallerij</span></Button>
+                                    </div>
+                                    <input type="file" id="cam-input" className="hidden" accept="image/*" capture="environment" onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
+                                    <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                        {afhandelingFotos.map((p, i) => (
+                                            <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
+                                                <Image src={p.url} alt="afhandeling" fill className="object-cover" />
+                                                <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><X className="h-4 w-4" /></Button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </>
@@ -970,7 +992,7 @@ export default function StartNavigationPage() {
                     {isManualMode && (
                         <Button 
                             size="icon"
-                            className="h-16 w-16 md:h-20 md:w-20 rounded-2xl shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center pointer-events-auto shadow-primary/30" 
+                            className="h-16 w-16 md:h-20 md:w-20 rounded-full shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center pointer-events-auto shadow-primary/30" 
                             onClick={handleHervatNavigatie}
                         >
                             <Navigation className="h-10 w-10 md:h-12 md:w-12 fill-current" />
@@ -1026,7 +1048,7 @@ export default function StartNavigationPage() {
                     })}
                 </div>
                 <div className="hidden lg:block p-0">
-                    <Table><TableHeader className="bg-slate-50/50 sticky top-0 z-10"><TableRow className="h-10 hover:bg-transparent"><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r">Nummer</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 text-right pr-6">Afstand</TableHead></TableRow></TableHeader><TableBody>{filteredMeldingen.map((m) => { const isCompleted = m.status === 'Afgerond'; const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-'; return (<TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-colors border-b", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50")}><TableCell className="pl-6 border-r"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} /><span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span></div></TableCell><TableCell className="border-r"><div className="flex flex-col"><span className="text-xs font-bold text-slate-700">{m.straatnaam} {m.huisnummer}</span><span className="text-[10px] font-bold uppercase text-slate-400 font-bold">{m.plaats}</span></div></TableCell><TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">{m.extra_informatie || '-'}</TableCell><TableCell className="border-r"><div className="flex flex-col"><span className="text-[10px] font-black uppercase text-primary">{m.hoofdcategorie}</span><span className="text-[9px] font-bold uppercase text-slate-400">{m.subcategorie}</span></div></TableCell><TableCell className="text-right pr-6 font-black text-[11px] tabular-nums text-slate-400">{dist} km</TableCell></TableRow>); })}</TableBody></Table>
+                    <Table className="min-w-[1200px]"><TableHeader className="bg-slate-50/50 sticky top-0 z-10"><TableRow className="h-10 hover:bg-transparent"><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r">Nummer</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead><TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 text-right pr-6">Afstand</TableHead></TableRow></TableHeader><TableBody>{filteredMeldingen.map((m) => { const isCompleted = m.status === 'Afgerond'; const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude])).toFixed(1) : '-'; return (<TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-colors border-b", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50")}><TableCell className="pl-6 border-r"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} /><span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span></div></TableCell><TableCell className="border-r"><div className="flex flex-col"><span className="text-xs font-bold text-slate-700">{m.straatnaam} {m.huisnummer}</span><span className="text-[10px] font-bold uppercase text-slate-400 font-bold">{m.plaats}</span></div></TableCell><TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">{m.extra_informatie || '-'}</TableCell><TableCell className="border-r"><div className="flex flex-col"><span className="text-[10px] font-black uppercase text-primary">{m.hoofdcategorie}</span><span className="text-[9px] font-bold uppercase text-slate-400">{m.subcategorie}</span></div></TableCell><TableCell className="text-right pr-6 font-black text-[11px] tabular-nums text-slate-400">{dist} km</TableCell></TableRow>); })}</TableBody></Table>
                 </div>
             </ScrollArea>
         </div>
