@@ -80,7 +80,7 @@ import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
-import { addSeconds, format as formatDate, differenceInCalendarDays } from 'date-fns';
+import { addSeconds, format as formatDate } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import {
   AlertDialog,
@@ -848,7 +848,8 @@ export default function StartNavigationPage() {
                         const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
                         lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
                         setDisplayedRouteGeometry(turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line));
-                        if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 60 && !isCalculatingRoute) fetchRoute(true);
+                        // Increase re-routing threshold to 100m to prevent unprofessional flickering
+                        if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 100 && !isCalculatingRoute) fetchRoute(true);
                     }
                 } catch (e) {}
             } else { targetPosRef.current = { lng: loc.longitude, lat: loc.latitude }; }
