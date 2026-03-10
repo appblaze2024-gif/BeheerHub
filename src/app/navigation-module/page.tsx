@@ -224,6 +224,7 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = React.useState(false);
+    const [previewImage, setPreviewImage] = React.useState<string | null>(null);
     const recognitionRef = React.useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
@@ -456,7 +457,7 @@ function IntegratedWerkbonOverlay({
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         {melding.fotos && melding.fotos.length > 0 ? (
                                             melding.fotos.map((p, i) => (
-                                                <div key={`bron-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm">
+                                                <div key={`bron-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => setPreviewImage(p.url)}>
                                                     <Image src={p.url} alt="bron" fill className="object-cover" />
                                                 </div>
                                             ))
@@ -480,9 +481,9 @@ function IntegratedWerkbonOverlay({
                                     <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         {afhandelingFotos.map((p, i) => (
-                                            <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
+                                            <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group cursor-pointer" onClick={() => setPreviewImage(p.url)}>
                                                 <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                                <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><X className="h-4 w-4" /></Button>
+                                                <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
                                             </div>
                                         ))}
                                     </div>
@@ -529,6 +530,28 @@ function IntegratedWerkbonOverlay({
                             </div>
                         </>
                     )}
+                </div>
+            )}
+
+            {/* Fullscreen Image Preview */}
+            {previewImage && (
+                <div 
+                    className="fixed inset-0 z-[200] bg-black/95 flex flex-col animate-in fade-in duration-200"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <div className="flex justify-end p-4">
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-12 w-12">
+                            <X className="h-8 w-8" />
+                        </Button>
+                    </div>
+                    <div className="flex-1 relative flex items-center justify-center p-4">
+                        <img 
+                            src={previewImage} 
+                            alt="Preview" 
+                            className="max-w-full max-h-full object-contain shadow-2xl"
+                            onClick={(e) => e.stopPropagation()} 
+                        />
+                    </div>
                 </div>
             )}
         </div>
