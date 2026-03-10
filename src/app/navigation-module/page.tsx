@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -161,11 +162,13 @@ function SectionRow({
     icon: Icon, 
     label, 
     value, 
+    badgeCount,
     onClick 
 }: { 
     icon: React.ElementType, 
     label: string, 
     value?: string | number, 
+    badgeCount?: number,
     onClick: () => void 
 }) {
     return (
@@ -174,8 +177,15 @@ function SectionRow({
             className="w-full flex items-center justify-between p-4 bg-white border-b border-slate-100 active:bg-slate-50 transition-colors"
         >
             <div className="flex items-center gap-4">
-                <div className="bg-[#FF5722] p-2 rounded-lg">
-                    <Icon className="h-5 w-5 text-white" />
+                <div className="relative">
+                    <div className="bg-[#FF5722] p-2 rounded-lg">
+                        <Icon className="h-5 w-5 text-white" />
+                    </div>
+                    {badgeCount !== undefined && badgeCount > 0 && (
+                        <div className="absolute -top-2 -right-2 bg-black text-white text-[10px] font-black h-5 w-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                            {badgeCount}
+                        </div>
+                    )}
                 </div>
                 <span className="text-sm font-semibold text-slate-700">{label}</span>
             </div>
@@ -346,9 +356,24 @@ function IntegratedWerkbonOverlay({
             <div className="mt-4 flex-1">
                 <SectionRow icon={Wrench} label="Werkzaamheden" value={afhandelingBijzonderheden ? 'Ingevuld' : ''} onClick={() => setSubView('werkzaamheden')} />
                 <SectionRow icon={MapIcon} label="Locatiegegevens" onClick={() => setSubView('map')} />
-                <SectionRow icon={Paperclip} label="Documenten" value={uploadedFiles.length > 0 ? `${uploadedFiles.length} files` : ''} onClick={() => setSubView('docs')} />
-                <SectionRow icon={Camera} label="Foto's" value={afhandelingFotos.length > 0 ? `${afhandelingFotos.length}` : ''} onClick={() => setSubView('photos')} />
-                <SectionRow icon={Briefcase} label="Materialen" value={hoeveelheden.length > 0 ? `${hoeveelheden.length} types` : ''} onClick={() => setSubView('materials')} />
+                <SectionRow 
+                    icon={Paperclip} 
+                    label="Documenten" 
+                    badgeCount={uploadedFiles.length}
+                    onClick={() => setSubView('docs')} 
+                />
+                <SectionRow 
+                    icon={Camera} 
+                    label="Foto's" 
+                    badgeCount={afhandelingFotos.length + (melding.fotos?.length || 0)}
+                    onClick={() => setSubView('photos')} 
+                />
+                <SectionRow 
+                    icon={Briefcase} 
+                    label="Materialen" 
+                    badgeCount={hoeveelheden.length}
+                    onClick={() => setSubView('materials')} 
+                />
             </div>
 
             <div className="p-6 bg-slate-50">
@@ -449,7 +474,7 @@ function IntegratedWerkbonOverlay({
                             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                                 <div className="bg-slate-50 p-6 rounded-2xl space-y-4">
                                     <div className="grid gap-4">
-                                        <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase text-slate-400">Product</Label><Input placeholder="Bv. Straatsteen..." value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} className="h-11 font-bold" /></div>
+                                        <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase text-slate-400">Product</Label><Input placeholder="Bv. Zand..." value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} className="h-11 font-bold" /></div>
                                         <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase text-slate-400">Aantal</Label><Input type="number" placeholder="0" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} className="h-11 font-bold" /></div>
                                         <Button className="w-full h-11 font-black uppercase bg-[#FF5722]" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>Toevoegen</Button>
                                     </div>
@@ -628,7 +653,7 @@ export default function StartNavigationPage() {
     if (priorityMissionId) {
         const priorityIndex = sorted.findIndex(m => m.id === priorityMissionId);
         if (priorityIndex !== -1) {
-            const [priority] = sorted.splice(priorityIndex, 1);
+            const [priority] = sorted.splice(priorityMissionId ? sorted.findIndex(m => m.id === priorityMissionId) : 0, 1);
             sorted.unshift(priority);
         }
     }
