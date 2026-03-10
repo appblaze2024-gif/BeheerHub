@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { 
   useCollection, 
@@ -213,20 +214,20 @@ function IntegratedWerkbonOverlay({
     const { profile } = useProfile();
     const { toast } = useToast();
 
-    const [subView, setSubView] = React.useState<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials'>('main');
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
-    const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = React.useState('');
-    const [isListening, setIsListening] = React.useState(false);
-    const [sourceLang] = React.useState({ code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' });
-    const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
-    const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
-    const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
+    const [subView, setSubView] = useState<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials'>('main');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = useState('');
+    const [isListening, setIsListening] = useState(false);
+    const [sourceLang] = useState({ code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' });
+    const [hoeveelheden, setHoeveelheden] = useState<Hoeveelheid[]>([]);
+    const [newHoeveelheidType, setNewHoeveelheidType] = useState('');
+    const [newHoeveelheidAantal, setNewHoeveelheidAantal] = useState('');
     
-    const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
-    const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
-    const [isConfirmDialogOpen, setIsConfirmDialogOpen] = React.useState(false);
-    const [previewImage, setPreviewImage] = React.useState<string | null>(null);
-    const recognitionRef = React.useRef<any>(null);
+    const [afhandelingFotos, setAfhandelingFotos] = useState<UploadedFile[]>([]);
+    const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+    const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const recognitionRef = useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
@@ -238,7 +239,7 @@ function IntegratedWerkbonOverlay({
     
     const { data: allObjects } = useCollection<MapObject>(objectsQuery);
 
-    const nearbyObjects = React.useMemo(() => {
+    const nearbyObjects = useMemo(() => {
         if (!allObjects || !melding) return [];
         const issuePt = turf.point([melding.longitude, melding.latitude]);
         return allObjects.filter(obj => {
@@ -248,7 +249,7 @@ function IntegratedWerkbonOverlay({
         });
     }, [allObjects, melding]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (melding) {
             setAfhandelingBijzonderheden(melding.afhandeling_bijzonderheden || '');
             setHoeveelheden(melding.hoeveelheden || []);
@@ -286,7 +287,7 @@ function IntegratedWerkbonOverlay({
         }
     };
 
-    const handleFileUpload = React.useCallback(async (files: FileList | File[], type: 'documents' | 'afhandeling_fotos') => {
+    const handleFileUpload = useCallback(async (files: FileList | File[], type: 'documents' | 'afhandeling_fotos') => {
         if (!files || !meldingId || !app) return;
         const storage = getStorage(app);
         for (const file of Array.from(files)) {
@@ -571,46 +572,46 @@ export default function StartNavigationPage() {
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
   
-  const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
-  const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
-  const [isSimulationMode, setIsSimulationMode] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
-  const [isLocating, setIsLocating] = React.useState(false);
-  const [activeWerkbonId, setActiveWerkbonId] = React.useState<string | null>(null);
-  const [clickedMarkerId, setClickedMarkerId] = React.useState<string | null>(null);
-  const [priorityMissionId, setPriorityMissionId] = React.useState<string | null>(null);
-  const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
-  const [isManualMode, setIsManualMode] = React.useState(false);
-  const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
-  const [isCockpitExpanded, setIsCockpitExpanded] = React.useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [navigationState, setNavigationState] = useState<'setup' | 'navigating'>('setup');
+  const [isSimulationMode, setIsSimulationMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
+  const [activeWerkbonId, setActiveWerkbonId] = useState<string | null>(null);
+  const [clickedMarkerId, setClickedMarkerId] = useState<string | null>(null);
+  const [priorityMissionId, setPriorityMissionId] = useState<string | null>(null);
+  const [completedObjects, setCompletedObjects] = useState<string[]>([]);
+  const [isManualMode, setIsManualMode] = useState(false);
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+  const [isCockpitExpanded, setIsCockpitExpanded] = useState(false);
 
-  const [showTodayCompleted, setShowTodayCompleted] = React.useState(false);
-  const [showAssignmentBubbles, setShowAssignmentBubbles] = React.useState(false);
-  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>(ROUTE_COLUMNS_CONFIG);
+  const [showTodayCompleted, setShowTodayCompleted] = useState(false);
+  const [showAssignmentBubbles, setShowAssignmentBubbles] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(ROUTE_COLUMNS_CONFIG);
 
-  const [navZoom, setNavZoomState] = React.useState(18);
-  const [navPitch, setNavPitchState] = React.useState(60);
-  const [navOffset, setNavOffsetState] = React.useState(450);
-  const [autoOpenEnabled, setAutoOpenEnabledState] = React.useState(true);
-  const [dynamicZoomEnabled, setDynamicZoomEnabledState] = React.useState(true);
+  const [navZoom, setNavZoomState] = useState(18);
+  const [navPitch, setNavPitchState] = useState(60);
+  const [navOffset, setNavOffsetState] = useState(450);
+  const [autoOpenEnabled, setAutoOpenEnabledState] = useState(true);
+  const [dynamicZoomEnabled, setDynamicZoomEnabledState] = useState(true);
 
-  const [smoothLocation, setSmoothLocation] = React.useState<any>(null);
-  const lastHeadingRef = React.useRef(0);
-  const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
-  const [displayedRouteGeometry, setDisplayedRouteGeometry] = React.useState<any>(null);
-  const [routeInfo, setRouteInfo] = React.useState<{ duration: number; distance: number } | null>(null);
-  const [speedKmh, setSpeedKmh] = React.useState(0);
-  const [currentSpeedLimit, setCurrentSpeedLimit] = React.useState<number>(50);
+  const [smoothLocation, setSmoothLocation] = useState<any>(null);
+  const lastHeadingRef = useRef(0);
+  const [currentRouteGeometry, setCurrentRouteGeometry] = useState<any>(null);
+  const [displayedRouteGeometry, setDisplayedRouteGeometry] = useState<any>(null);
+  const [routeInfo, setRouteInfo] = useState<{ duration: number; distance: number } | null>(null);
+  const [speedKmh, setSpeedKmh] = useState(0);
+  const [currentSpeedLimit, setCurrentSpeedLimit] = useState<number>(50);
 
-  const mapRef = React.useRef<MapRef>(null);
-  const lastFetchTimeRef = React.useRef<number>(0);
-  const autoOpenTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const mapRef = useRef<MapRef>(null);
+  const lastFetchTimeRef = useRef<number>(0);
+  const autoOpenTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const targetPosRef = React.useRef<{lng: number, lat: number} | null>(null);
-  const visualPosRef = React.useRef<{lng: number, lat: number} | null>(null);
+  const targetPosRef = useRef<{lng: number, lat: number} | null>(null);
+  const visualPosRef = useRef<{lng: number, lat: number} | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setIsHeaderVisible(false);
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
@@ -643,7 +644,7 @@ export default function StartNavigationPage() {
     return <IconComp className="h-5 w-5" style={{ color: '#3b82f6' }} />;
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (profile) {
         if (profile.navZoom !== undefined) setNavZoomState(Number(profile.navZoom));
         if (profile.navPitch !== undefined) setNavPitchState(Number(profile.navPitch));
@@ -669,7 +670,7 @@ export default function StartNavigationPage() {
 
   const { data: rawTodayCompleted } = useCollection<Melding>(todayCompletedQuery);
 
-  const filteredMeldingen = React.useMemo(() => {
+  const filteredMeldingen = useMemo(() => {
     const poolMap = new Map<string, Melding>();
     rawActiveMeldingen?.forEach(m => { if (!completedObjects.includes(m.id)) poolMap.set(m.id, m); });
     rawTodayCompleted?.forEach(m => poolMap.set(m.id, m));
@@ -678,10 +679,14 @@ export default function StartNavigationPage() {
         const userName = profile?.displayName || profile?.email || 'Onbekend';
         result = result.filter(m => m.behandelaar === userName);
     }
+    if (debouncedSearchQuery) {
+        const q = debouncedSearchQuery.toLowerCase();
+        result = result.filter(m => m.intakenummer.toLowerCase().includes(q));
+    }
     return result;
-  }, [rawActiveMeldingen, rawTodayCompleted, isPrivileged, profile, completedObjects]);
+  }, [rawActiveMeldingen, rawTodayCompleted, isPrivileged, profile, completedObjects, debouncedSearchQuery]);
 
-  const sortedMissions = React.useMemo(() => {
+  const sortedMissions = useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
     const base = userLocation || SIMULATION_START_LOCATION;
     const sorted = [...filteredMeldingen].filter(m => m.status !== 'Afgerond').sort((a, b) => {
@@ -701,7 +706,7 @@ export default function StartNavigationPage() {
 
   const nextMission = sortedMissions[0];
 
-  const fetchRoute = React.useCallback(async (force = false) => {
+  const fetchRoute = useCallback(async (force = false) => {
     if (navigationState === 'setup' || sortedMissions.length === 0) {
         setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
         return;
@@ -726,13 +731,13 @@ export default function StartNavigationPage() {
     } catch (e) { console.error("Route error:", e); } finally { setIsCalculatingRoute(false); }
   }, [sortedMissions, userLocation, navigationState]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (navigationState === 'navigating' && sortedMissions.length > 0) fetchRoute(true);
     else if (navigationState === 'setup') { setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
   // SMART ARRIVAL LOGIC
-  React.useEffect(() => {
+  useEffect(() => {
     if (navigationState !== 'navigating' || !autoOpenEnabled || !nextMission || !userLocation || activeWerkbonId) {
       if (autoOpenTimerRef.current) {
         clearTimeout(autoOpenTimerRef.current);
@@ -747,7 +752,6 @@ export default function StartNavigationPage() {
       { units: 'meters' }
     );
 
-    // threshold for stationary or walking speed (under 3km/h)
     const isStationary = speedKmh < 3; 
 
     if (dist <= 50 && isStationary) {
@@ -772,7 +776,7 @@ export default function StartNavigationPage() {
     };
   }, [userLocation, speedKmh, nextMission, autoOpenEnabled, navigationState, activeWerkbonId, toast]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
         if (targetPosRef.current) {
@@ -792,7 +796,7 @@ export default function StartNavigationPage() {
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!navigator.geolocation || isSimulationMode) return;
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -877,7 +881,7 @@ export default function StartNavigationPage() {
     }
   };
 
-  const clickedMelding = React.useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
+  const clickedMelding = useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
@@ -956,7 +960,7 @@ export default function StartNavigationPage() {
                     <div className="bg-white/95 backdrop-blur-md px-4 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-4 min-w-fit animate-in slide-in-from-left-4 duration-500">
                         <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
                         <Separator orientation="vertical" className="h-6" />
-                        <div className="flex items-center gap-2"><Navigation className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
+                        <div className="flex items-center gap-2"><Navigation className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter longitude-none">Afstand</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
                     </div>
                 )}
             </div>
@@ -1047,7 +1051,16 @@ export default function StartNavigationPage() {
 
         {isManualMode && !activeWerkbonId && navigationState === 'setup' && (
             <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-72">
-                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { setIsManualMode(false); }}>
+                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { 
+                    setIsManualMode(false);
+                    if (mapRef.current && filteredMeldingen.length > 0) {
+                        const points = filteredMeldingen.map(m => [m.longitude, m.latitude]);
+                        if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
+                        const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
+                        const bbox = turf.bbox(pointsCollection);
+                        mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 80, duration: 1000 });
+                    }
+                }}>
                     <MapIcon className="h-7 w-7 text-slate-600" />
                 </Button>
             </div>
@@ -1065,7 +1078,6 @@ export default function StartNavigationPage() {
                 </div>
             </div>
             <ScrollArea className="flex-1 bg-white">
-                {/* Mobile View: Vertical Cards */}
                 <div className="p-3 flex flex-col gap-3 lg:hidden">
                     {filteredMeldingen.map((m) => {
                         const isCompleted = m.status === 'Afgerond';
@@ -1074,7 +1086,6 @@ export default function StartNavigationPage() {
                         return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2 w-2 text-white" /></div>)}</Card>);
                     })}
                 </div>
-                {/* Desktop View: Table */}
                 <div className="hidden lg:block p-0">
                     <Table className="min-w-[1200px]">
                         <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
