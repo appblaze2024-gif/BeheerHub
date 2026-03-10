@@ -631,6 +631,7 @@ export default function StartNavigationPage() {
   const mapRef = React.useRef<MapRef>(null);
   const lastFetchTimeRef = React.useRef<number>(0);
 
+  // Smoothing refs
   const visualPosRef = React.useRef<{lng: number, lat: number} | null>(null);
   const lastSnappedPosRef = React.useRef<{lng: number, lat: number} | null>(null);
 
@@ -846,18 +847,26 @@ export default function StartNavigationPage() {
     return () => clearTimeout(timer);
   }, [userLocation, isSimulationMode]);
 
+  // Smoother Visual Tracking Loop
   React.useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
         if (navigationState === 'navigating' && lastSnappedPosRef.current && !isNaN(lastSnappedPosRef.current.lng)) {
             if (!visualPosRef.current) visualPosRef.current = { ...lastSnappedPosRef.current };
             else {
+                // Smoothing factor: Increase for faster tracking, decrease for smoother movement
+                // 0.08 is a good balance for standard navigation
                 const factor = 0.08; 
                 visualPosRef.current.lng += (lastSnappedPosRef.current.lng - visualPosRef.current.lng) * factor;
                 visualPosRef.current.lat += (lastSnappedPosRef.current.lat - visualPosRef.current.lat) * factor;
             }
             if (visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
-                setSmoothLocation((prev: any) => ({ ...prev, longitude: visualPosRef.current?.lng, latitude: visualPosRef.current?.lat, heading: lastHeadingRef.current }));
+                setSmoothLocation((prev: any) => ({
+                    ...prev,
+                    longitude: visualPosRef.current?.lng,
+                    latitude: visualPosRef.current?.lat,
+                    heading: lastHeadingRef.current
+                }));
             }
         }
         animId = requestAnimationFrame(updateVisualPos);
@@ -873,29 +882,45 @@ export default function StartNavigationPage() {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             if (isNaN(loc.latitude) || isNaN(loc.longitude)) return;
             setUserLocation(loc);
+            
             const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
             setSpeedKmh(currentSpeed);
+
             if (navigationState === 'navigating' && currentRouteGeometry) {
                 try {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
                     const currPt = turf.point([loc.longitude, loc.latitude]);
                     const snapped = turf.nearestPointOnLine(line, currPt);
+                    
                     if (!isNaN(snapped.geometry.coordinates[0])) {
                         lastSnappedPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
+                        
                         const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
                         const distAlong = turf.length(alongRoute, { units: 'meters' });
                         const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
                         lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
+                        
                         setDisplayedRouteGeometry(turf.lineSlice(snapped, turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]), line));
+                        
                         if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 60 && !isCalculatingRoute) fetchRoute(true);
                     }
                 } catch (e) {}
             } else if (!isNaN(loc.latitude)) {
                 setSmoothLocation({ ...loc, heading: lastHeadingRef.current });
             }
+
+            // High-performance camera easing
             if (navigationState === 'navigating' && mapRef.current && !isManualMode && visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
                 const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
-                mapRef.current.getMap().easeTo({ center: [visualPosRef.current.lng, visualPosRef.current.lat], bearing: lastHeadingRef.current, zoom: targetZoom, pitch: navPitch, padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }, duration: 1000, easing: (t) => t });
+                mapRef.current.getMap().easeTo({
+                    center: [visualPosRef.current.lng, visualPosRef.current.lat],
+                    bearing: lastHeadingRef.current,
+                    zoom: targetZoom,
+                    pitch: navPitch,
+                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
+                    duration: 1000,
+                    easing: (t) => t // Linear easing for smoothest constant movement
+                });
             }
         },
         () => {},
@@ -917,7 +942,9 @@ export default function StartNavigationPage() {
     setIsLocating(true);
     const beginNav = (loc: { latitude: number, longitude: number }, heading: number) => {
         if (isNaN(loc.latitude) || isNaN(loc.longitude)) { setIsLocating(false); return; }
-        setSmoothLocation({ ...loc, heading }); lastSnappedPosRef.current = { lng: loc.longitude, lat: loc.latitude }; visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
+        setSmoothLocation({ ...loc, heading });
+        lastSnappedPosRef.current = { lng: loc.longitude, lat: loc.latitude };
+        visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         setIsSimulationMode(false); setNavigationState('navigating'); setIsLocating(false); setIsManualMode(false);
         if (mapRef.current) mapRef.current.getMap().jumpTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: navPitch, bearing: heading, padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 } });
     };
@@ -994,7 +1021,7 @@ export default function StartNavigationPage() {
                                 )}
                                 <div className={cn(
                                     "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10",
-                                    isCompleted ? "bg-green-500" : "bg-white/20 backdrop-blur-md",
+                                    isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md",
                                     (isNext || isClicked) && "ring-4 ring-black/20 scale-125",
                                     "cursor-pointer hover:scale-110"
                                 )}>
