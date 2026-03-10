@@ -212,7 +212,7 @@ function IntegratedWerkbonOverlay({
     const { profile } = useProfile();
     const { toast } = useToast();
 
-    const [subView, setSubView] =<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials'>('main');
+    const [subView, setSubView] = React.useState<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials'>('main');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = React.useState('');
     const [isListening, setIsListening] = React.useState(false);
