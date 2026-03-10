@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -148,18 +147,6 @@ const routeLayerCasing: Layer = {
   paint: { 'line-color': '#1e40af', 'line-width': 12, 'line-opacity': 0.2 },
 };
 
-const getMeldingAgeColor = (datum?: string) => {
-    if (!datum) return 'bg-slate-400';
-    try {
-        const d = new Date(datum);
-        const diffDays = Math.abs(differenceInCalendarDays(new Date(), d));
-        if (diffDays <= 1) return 'bg-slate-400'; 
-        if (diffDays === 2) return 'bg-yellow-400'; 
-        if (diffDays === 3) return 'bg-orange-500'; 
-        return 'bg-red-600'; 
-    } catch (e) { return 'bg-slate-400'; }
-};
-
 function SectionRow({ 
     icon: Icon, 
     label, 
@@ -226,7 +213,13 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+    
+    // Zoom/Preview state
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [zoomScale, setZoomScale] = useState(1);
+    const [zoomOffset, setZoomOffset] = useState({ x: 0, y: 0 });
+    const lastTouchRef = useRef<{ dist: number; center: { x: number; y: number } } | null>(null);
+    
     const recognitionRef = useRef<any>(null);
 
     const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
@@ -320,6 +313,33 @@ function IntegratedWerkbonOverlay({
         };
         recognitionRef.current = recognition;
         recognition.start();
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+            const center = { x: (touch1.clientX + touch2.clientX) / 2, y: (touch1.clientY + touch2.clientY) / 2 };
+            lastTouchRef.current = { dist, center };
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 2 && lastTouchRef.current) {
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+            
+            const deltaScale = dist / lastTouchRef.current.dist;
+            setZoomScale(prev => Math.max(1, Math.min(5, prev * deltaScale)));
+            
+            lastTouchRef.current.dist = dist;
+        }
+    };
+
+    const handleTouchEnd = () => {
+        lastTouchRef.current = null;
     };
 
     if (isLoading || !melding) return <LoadingScreen message="Data laden..." />;
@@ -459,7 +479,7 @@ function IntegratedWerkbonOverlay({
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         {melding.fotos && melding.fotos.length > 0 ? (
                                             melding.fotos.map((p, i) => (
-                                                <div key={`bron-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => setPreviewImage(p.url)}>
+                                                <div key={`bron-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => { setZoomScale(1); setPreviewImage(p.url); }}>
                                                     <Image src={p.url} alt="bron" fill className="object-cover" />
                                                 </div>
                                             ))
@@ -483,9 +503,9 @@ function IntegratedWerkbonOverlay({
                                     <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         {afhandelingFotos.map((p, i) => (
-                                            <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group cursor-pointer" onClick={() => setPreviewImage(p.url)}>
+                                            <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group cursor-pointer" onClick={() => { setZoomScale(1); setPreviewImage(p.url); }}>
                                                 <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                                <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
+                                                <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
                                             </div>
                                         ))}
                                     </div>
@@ -535,24 +555,36 @@ function IntegratedWerkbonOverlay({
                 </div>
             )}
 
-            {/* Fullscreen Image Preview */}
+            {/* Fullscreen Image Preview with Pinch-to-Zoom */}
             {previewImage && (
                 <div 
                     className="fixed inset-0 z-[200] bg-black/95 flex flex-col animate-in fade-in duration-200"
                     onClick={() => setPreviewImage(null)}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                 >
-                    <div className="flex justify-end p-4">
+                    <div className="flex justify-end p-4 shrink-0">
                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-12 w-12">
                             <X className="h-8 w-8" />
                         </Button>
                     </div>
-                    <div className="flex-1 relative flex items-center justify-center p-4">
+                    <div className="flex-1 relative flex items-center justify-center overflow-hidden touch-none">
                         <img 
                             src={previewImage} 
                             alt="Preview" 
-                            className="max-w-full max-h-full object-contain shadow-2xl"
+                            className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-75"
+                            style={{ 
+                                transform: `scale(${zoomScale}) translate(${zoomOffset.x}px, ${zoomOffset.y}px)`,
+                                transformOrigin: 'center center'
+                            }}
                             onClick={(e) => e.stopPropagation()} 
                         />
+                    </div>
+                    <div className="p-4 flex justify-center shrink-0">
+                        <Badge variant="outline" className="bg-white/10 text-white border-white/20 text-[10px] uppercase font-black">
+                            {zoomScale > 1 ? `Zoom: ${zoomScale.toFixed(1)}x` : 'Knijp om te zoomen'}
+                        </Badge>
                     </div>
                 </div>
             )}
@@ -567,7 +599,6 @@ export default function StartNavigationPage() {
   const { profile } = useProfile();
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
-  const { selectedProjectId, projects } = useProject();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
@@ -1083,7 +1114,7 @@ export default function StartNavigationPage() {
                         const isCompleted = m.status === 'Afgerond';
                         const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0;
                         const distKm = (dist / 1000).toFixed(1);
-                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2 w-2 text-white" /></div>)}</Card>);
+                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2 w-2 text-white" /></div>)}</Card>);
                     })}
                 </div>
                 <div className="hidden lg:block p-0">
@@ -1106,7 +1137,7 @@ export default function StartNavigationPage() {
                                     <TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-colors border-b", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50")}>
                                         <TableCell className="pl-6 border-r">
                                             <div className="flex items-center gap-2">
-                                                <div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : getMeldingAgeColor(m.datum))} />
+                                                <div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : "bg-slate-400")} />
                                                 <span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span>
                                             </div>
                                         </TableCell>
