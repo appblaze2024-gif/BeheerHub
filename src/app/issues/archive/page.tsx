@@ -220,7 +220,7 @@ export default function ArchiveIssuesPage() {
         ) : (
             <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:hidden">
-                    {filteredMeldingen.map((melding) => (
+                    {filteredMeldingen.map((melding, index) => (
                         <Card 
                             key={melding.id} 
                             onClick={() => router.push(`/issues/new?id=${melding.id}`)}
@@ -228,9 +228,12 @@ export default function ArchiveIssuesPage() {
                         >
                             <CardContent className="p-0">
                                 <div className="p-4 bg-slate-50 border-b flex justify-between items-start">
-                                    <div className="space-y-0.5">
-                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Intakenummer</p>
-                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{melding.intakenummer}</p>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-black text-slate-300">{index + 1}</span>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Intakenummer</p>
+                                            <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{melding.intakenummer}</p>
+                                        </div>
                                     </div>
                                     <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-tighter h-5 px-2 bg-slate-200 text-slate-600 border-none">
                                         {melding.status}
@@ -304,6 +307,7 @@ export default function ArchiveIssuesPage() {
                         <Table className="border-collapse w-full">
                             <TableHeader className="sticky top-0 bg-slate-100 z-10">
                             <TableRow className="hover:bg-transparent border-b-2 border-slate-200">
+                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 w-[50px]">Nr.</TableHead>
                                 <TableHead onClick={() => handleSort('intakenummer')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
                                     <div className="flex items-center justify-between gap-1">
                                         Intakenr.
@@ -355,8 +359,9 @@ export default function ArchiveIssuesPage() {
                             </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredMeldingen.map((melding) => (
+                                {filteredMeldingen.map((melding, index) => (
                                     <TableRow key={melding.id} onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer h-12 hover:bg-slate-50 transition-colors border-b border-slate-100">
+                                        <TableCell className="font-bold py-2 px-4 border-r border-slate-100 text-slate-400 text-[10px] w-[50px]">{index + 1}</TableCell>
                                         <TableCell className="font-black py-2 px-4 border-r border-slate-100">{melding.intakenummer || '-'}</TableCell>
                                         <TableCell className="py-2 px-4 border-r border-slate-100 text-[11px] font-bold text-slate-500">{melding.extern_meldingsnummer || '-'}</TableCell>
                                         <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-bold text-slate-900">{[melding.straatnaam, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
