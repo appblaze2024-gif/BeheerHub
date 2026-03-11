@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -823,9 +824,25 @@ export default function StartNavigationPage() {
                     easing: (t) => t 
                 });
             }
+
+            // Smart Arrival Logic
+            if (navigationState === 'navigating' && nextMission && autoOpenEnabled) {
+                const dist = turf.distance(turf.point([loc.longitude, loc.latitude]), turf.point([nextMission.longitude, nextMission.latitude]), { units: 'meters' });
+                if (dist < 50 && currentSpeed < 3) {
+                    if (!autoOpenTimerRef.current) {
+                        autoOpenTimerRef.current = setTimeout(() => {
+                            setActiveWerkbonId(nextMission.id);
+                            autoOpenTimerRef.current = null;
+                        }, 10000);
+                    }
+                } else if (autoOpenTimerRef.current) {
+                    clearTimeout(autoOpenTimerRef.current);
+                    autoOpenTimerRef.current = null;
+                }
+            }
         }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute, dynamicZoomEnabled, navZoom, speedKmh, fetchSpeedLimit]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute, dynamicZoomEnabled, navZoom, speedKmh, fetchSpeedLimit, nextMission, autoOpenEnabled]);
 
   const updateNavPitch = (newPitch: number) => { setNavPitchState(Number(newPitch)); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: Number(newPitch) }, { merge: true }); mapRef.current?.getMap().jumpTo({ pitch: Number(newPitch) }); };
   const updateNavOffset = (newOffset: number) => { setNavOffsetState(Number(newOffset)); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: Number(newOffset) }, { merge: true }); mapRef.current?.getMap().jumpTo({ padding: { top: 0, bottom: Math.max(0, Number(newOffset)), left: 0, right: 0 } }); };
