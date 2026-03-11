@@ -48,19 +48,6 @@ import {
   FileText,
   Trash2,
   User,
-  Package,
-  Plus,
-  Settings,
-  Sliders,
-  AlertCircle,
-  RefreshCw,
-  Layout,
-  ImageIcon,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  Wrench,
-  Paperclip,
   Briefcase,
   ChevronLeft,
   UploadCloud,
@@ -68,7 +55,13 @@ import {
   Hash,
   Minus,
   Tag,
-  Sparkles
+  Sparkles,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Wrench,
+  Paperclip,
+  ImageIcon,
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -99,8 +92,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import Image from 'next/image';
-import { translateText } from '@/ai/flows/translate-text-flow';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Separator } from '@/components/ui/separator';
@@ -185,7 +176,6 @@ function IntegratedWerkbonOverlay({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = useState('');
     const [isListening, setIsListening] = useState(false);
-    const [sourceLang] = useState({ code: 'nl-NL', name: 'Dutch', flag: 'nl', label: 'Nederlands' });
     const [hoeveelheden, setHoeveelheden] = useState<Hoeveelheid[]>([]);
     const [newHoeveelheidType, setNewHoeveelheidType] = useState('');
     const [newHoeveelheidAantal, setNewHoeveelheidAantal] = useState('');
@@ -282,7 +272,7 @@ function IntegratedWerkbonOverlay({
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) return;
         const recognition = new SpeechRecognition();
-        recognition.lang = sourceLang.code;
+        recognition.lang = 'nl-NL';
         recognition.continuous = true;
         recognition.onstart = () => setIsListening(true);
         recognition.onend = () => setIsListening(false);
@@ -1086,7 +1076,7 @@ export default function StartNavigationPage() {
                     <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
                         <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span></Button>
                         {isPrivileged && (<Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}><User className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}</span></Button>)}
-                        <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><Layout className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md"><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p><div className="space-y-2">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-3 p-1"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" /><Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{(colId as any)}</Label></div>))}</div></div></PopoverContent></Popover>
+                        <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><LayoutGrid className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md text-sm"><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p><div className="space-y-2">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-3 p-1"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" /><Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{(colId as any)}</Label></div>))}</div></div></PopoverContent></Popover>
                     </div>
                 </div>
             </div>
