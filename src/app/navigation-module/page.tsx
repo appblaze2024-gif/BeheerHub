@@ -13,7 +13,7 @@ import {
   useDoc, 
   setDocumentNonBlocking 
 } from '@/firebase';
-import { collection, doc, query, where, writeBatch, limit, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, query, where, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -74,7 +74,7 @@ import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -110,26 +110,6 @@ import { MapboxView } from '@/components/mapbox-view';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
-
-const ROUTE_COLUMNS_CONFIG = {
-    intakenummer: true,
-    locatie: true,
-    memo: true,
-    hoofdcategorie: true,
-    subcategorie: true,
-    werkgebied: true,
-    afstand: true
-};
-
-const ROUTE_COLUMN_LABELS_CONFIG: Record<string, string> = {
-    intakenummer: 'Nummer',
-    locatie: 'Locatie',
-    memo: 'Omschrijving',
-    hoofdcategorie: 'Hoofdtype',
-    subcategorie: 'Subtype',
-    werkgebied: 'Gebied',
-    afstand: 'Afstand'
-};
 
 const routeLayer: Layer = {
   id: 'route',
@@ -591,7 +571,15 @@ export default function StartNavigationPage() {
 
   const [showTodayCompleted, setShowTodayCompleted] = useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(ROUTE_COLUMNS_CONFIG);
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    intakenummer: true,
+    locatie: true,
+    memo: true,
+    hoofdcategorie: true,
+    subcategorie: true,
+    werkgebied: true,
+    afstand: true
+  });
 
   const [navZoom, setNavZoomState] = useState(18);
   const [navPitch, setNavPitchState] = useState(60);
@@ -632,7 +620,6 @@ export default function StartNavigationPage() {
             turf.point([lastSpeedLimitFetchRef.current.lng, lastSpeedLimitFetchRef.current.lat]),
             { units: 'meters' }
         );
-        // Only fetch if moved > 50m or 30s passed
         if (dist < 50 && now - lastSpeedLimitFetchRef.current.time < 30000) return;
     }
 
@@ -640,8 +627,6 @@ export default function StartNavigationPage() {
         const url = `https://api.mapbox.com/v1/tilesets/mapbox.mapbox-streets-v8/tilequery/${lng},${lat}.json?layers=road&access_token=${MAPBOX_TOKEN}`;
         const res = await fetch(url);
         const data = await res.json();
-        
-        // Find nearest road feature with maxspeed
         const road = data.features?.find((f: any) => f.properties?.maxspeed);
         if (road) {
             const limit = parseInt(road.properties.maxspeed);
@@ -770,27 +755,6 @@ export default function StartNavigationPage() {
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
   useEffect(() => {
-    if (navigationState !== 'navigating' || !autoOpenEnabled || !nextMission || !userLocation || activeWerkbonId) {
-      if (autoOpenTimerRef.current) { clearTimeout(autoOpenTimerRef.current); autoOpenTimerRef.current = null; }
-      return;
-    }
-    const dist = turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([nextMission.longitude, nextMission.latitude]), { units: 'meters' });
-    const isStationary = speedKmh < 3; 
-    if (dist <= 50 && isStationary) {
-      if (!autoOpenTimerRef.current) {
-        autoOpenTimerRef.current = setTimeout(() => {
-          setActiveWerkbonId(nextMission.id);
-          autoOpenTimerRef.current = null;
-          toast({ title: 'Aankomst gedetecteerd', description: 'Werkbon automatisch geopend na 10s stilstand.' });
-        }, 10000);
-      }
-    } else {
-      if (autoOpenTimerRef.current) { clearTimeout(autoOpenTimerRef.current); autoOpenTimerRef.current = null; }
-    }
-    return () => { if (autoOpenTimerRef.current) clearTimeout(autoOpenTimerRef.current); };
-  }, [userLocation, speedKmh, nextMission, autoOpenEnabled, navigationState, activeWerkbonId, toast]);
-
-  useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
         if (targetPosRef.current) {
@@ -829,8 +793,6 @@ export default function StartNavigationPage() {
             setUserLocation(loc);
             const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
             setSpeedKmh(currentSpeed);
-            
-            // Dynamic speed limit fetch
             fetchSpeedLimit(loc.latitude, loc.longitude);
 
             if (navigationState === 'navigating' && currentRouteGeometry) {
@@ -848,6 +810,7 @@ export default function StartNavigationPage() {
                     }
                 } catch (e) {}
             } else { targetPosRef.current = { lng: loc.longitude, lat: loc.latitude }; }
+            
             if (navigationState === 'navigating' && mapRef.current && !isManualMode && visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
                 const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
                 mapRef.current.getMap().easeTo({
@@ -1107,7 +1070,7 @@ export default function StartNavigationPage() {
                     <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
                         <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span></Button>
                         {isPrivileged && (<Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}><User className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}</span></Button>)}
-                        <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><Layout className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md"><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p><div className="space-y-2">{Object.keys(ROUTE_COLUMNS_CONFIG).map(colId => (<div key={colId} className="flex items-center space-x-3 p-1"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" /><Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{ROUTE_COLUMN_LABELS_CONFIG[colId]}</Label></div>))}</div></div></PopoverContent></Popover>
+                        <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><Layout className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md"><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p><div className="space-y-2">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-3 p-1"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" /><Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{(colId as any)}</Label></div>))}</div></div></PopoverContent></Popover>
                     </div>
                 </div>
             </div>
@@ -1117,7 +1080,7 @@ export default function StartNavigationPage() {
                         const isCompleted = m.status === 'Afgerond';
                         const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0;
                         const distKm = (dist / 1000).toFixed(1);
-                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2 w-2 text-white" /></div>)}</Card>);
+                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2.5 w-2.5 text-white" /></div>)}</Card>);
                     })}
                 </div>
                 <div className="hidden lg:block p-0">
