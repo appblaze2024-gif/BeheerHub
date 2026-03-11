@@ -69,7 +69,7 @@ import {
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -1104,12 +1104,25 @@ export default function StartNavigationPage() {
             <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-72">
                 <Button variant="secondary" size="icon" className="h-14 w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { 
                     setIsManualMode(false);
-                    if (mapRef.current && filteredMeldingen.length > 0) {
-                        const points = filteredMeldingen.map(m => [m.longitude, m.latitude]);
-                        if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
+                    const map = mapRef.current?.getMap();
+                    if (!map) return;
+
+                    const points: number[][] = filteredMeldingen.map(m => [m.longitude, m.latitude]);
+                    if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
+                    else points.push([SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude]);
+
+                    if (points.length > 0) {
                         const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
                         const bbox = turf.bbox(pointsCollection);
-                        mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 80, duration: 1000 });
+                        if (bbox[0] !== Infinity) {
+                            map.fitBounds(bbox as [number, number, number, number], { 
+                                padding: 80, 
+                                duration: 1000,
+                                pitch: 0,
+                                bearing: 0,
+                                maxZoom: 18
+                            });
+                        }
                     }
                 }}>
                     <MapIcon className="h-7 w-7 text-slate-600" />
