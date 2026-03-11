@@ -62,6 +62,8 @@ import {
   Wrench,
   Paperclip,
   ImageIcon,
+  Settings,
+  Sliders,
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
