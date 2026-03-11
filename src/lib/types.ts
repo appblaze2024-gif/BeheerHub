@@ -38,6 +38,7 @@ export type UserProfile = {
   dynamicZoomEnabled?: boolean;
   quickKeys?: string[];
   navigatingToMissionId?: string | null;
+  archiveSortConfig?: { field: string; order: 'asc' | 'desc' };
 };
 
 export interface Message {
@@ -288,7 +289,7 @@ export interface Hoeveelheid {
   eenheid: string;
 }
 
-export type Melding = {
+export type Melding {
   id: string;
   intakenummer: string;
   containernummer?: string;

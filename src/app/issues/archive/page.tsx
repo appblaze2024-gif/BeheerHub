@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, Info, Clock, MessageSquare, MapPin, Calendar, User, Tag } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase, useUser, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { Search, ListFilter, ArrowLeft, Info, Clock, MessageSquare, MapPin, Calendar, User, Tag, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding, UserProfile } from '@/lib/types';
@@ -23,16 +23,22 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { useProfile } from '@/firebase/profile-provider';
 
 const closedStatuses = ["Afgerond", "Niet in beheer", "Geweigerd", "Dubbel gemeld"];
 
 export default function ArchiveIssuesPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { profile } = useProfile();
   const router = useRouter();
   const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
+  const [sortConfig, setSortConfig] = React.useState<{ field: string; order: 'asc' | 'desc' }>({ 
+    field: 'afhandeling_datum', 
+    order: 'desc' 
+  });
 
   const archiveQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -70,6 +76,26 @@ export default function ArchiveIssuesPage() {
     };
   }, [searchTerm]);
 
+  React.useEffect(() => {
+    if (profile?.archiveSortConfig) {
+      setSortConfig(profile.archiveSortConfig);
+    }
+  }, [profile]);
+
+  const handleSort = (field: string) => {
+    let newOrder: 'asc' | 'desc' = 'asc';
+    if (sortConfig.field === field && sortConfig.order === 'asc') {
+      newOrder = 'desc';
+    }
+    const newConfig = { field, order: newOrder };
+    setSortConfig(newConfig);
+    
+    if (firestore && user) {
+      const userRef = doc(firestore, 'users', user.uid);
+      updateDocumentNonBlocking(userRef, { archiveSortConfig: newConfig });
+    }
+  };
+
   const filteredMeldingen = React.useMemo(() => {
     if (!archivedMeldingen) return [];
     
@@ -85,13 +111,30 @@ export default function ArchiveIssuesPage() {
     }
 
     result.sort((a, b) => {
-        const dateA = a.afhandeling_datum ? new Date(a.afhandeling_datum).getTime() : 0;
-        const dateB = b.afhandeling_datum ? new Date(b.afhandeling_datum).getTime() : 0;
-        return dateB - dateA;
+        let valA: any = (a as any)[sortConfig.field];
+        let valB: any = (b as any)[sortConfig.field];
+
+        if (sortConfig.field === 'afhandeling_datum' || sortConfig.field === 'datum') {
+            valA = valA ? new Date(valA).getTime() : 0;
+            valB = valB ? new Date(valB).getTime() : 0;
+        } else if (typeof valA === 'string') {
+            valA = valA.toLowerCase();
+            valB = (valB || '').toLowerCase();
+        } else if (typeof valA === 'number') {
+            valA = valA || 0;
+            valB = valB || 0;
+        } else {
+            valA = valA || '';
+            valB = valB || '';
+        }
+
+        if (valA < valB) return sortConfig.order === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.order === 'asc' ? 1 : -1;
+        return 0;
     });
 
     return result;
-  }, [archivedMeldingen, debouncedSearchTerm]);
+  }, [archivedMeldingen, debouncedSearchTerm, sortConfig]);
 
   const formatDisplayName = (nameOrEmail?: string) => {
     if (!nameOrEmail) return '-';
@@ -126,6 +169,11 @@ export default function ArchiveIssuesPage() {
     return `${hours}u ${mins}m`;
   };
 
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortConfig.field !== field) return <ArrowUpDown className="h-3 w-3 opacity-20" />;
+    return sortConfig.order === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />;
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-6.1rem)] overflow-hidden bg-background">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
@@ -157,7 +205,7 @@ export default function ArchiveIssuesPage() {
             <LoadingScreen message="Archief laden..." />
         ) : filteredMeldingen.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
-                <Info className="h-12 w-12 text-slate-300 mb-4 opacity-20" />
+                <Info className="h-12 w-12 text-slate-300 mb-4" />
                 <p className="font-black uppercase tracking-tight text-slate-900">Geen afgeronde meldingen</p>
                 <p className="text-sm text-slate-500 mt-1">Het archief is momenteel leeg.</p>
             </div>
@@ -248,14 +296,54 @@ export default function ArchiveIssuesPage() {
                         <Table className="border-collapse w-full">
                             <TableHeader className="sticky top-0 bg-slate-100 z-10">
                             <TableRow className="hover:bg-transparent border-b-2 border-slate-200">
-                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Intakenr.</TableHead>
-                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Extern nr.</TableHead>
-                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Adres</TableHead>
-                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Meld Datum</TableHead>
-                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Afgehandeld op</TableHead>
-                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Duur</TableHead>
-                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Door</TableHead>
-                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500">Opmerkingen</TableHead>
+                                <TableHead onClick={() => handleSort('intakenummer')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between gap-1">
+                                        Intakenr.
+                                        <SortIcon field="intakenummer" />
+                                    </div>
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('extern_meldingsnummer')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between gap-1">
+                                        Extern nr.
+                                        <SortIcon field="extern_meldingsnummer" />
+                                    </div>
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('straatnaam')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between gap-1">
+                                        Adres
+                                        <SortIcon field="straatnaam" />
+                                    </div>
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('datum')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between gap-1">
+                                        Meld Datum
+                                        <SortIcon field="datum" />
+                                    </div>
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('afhandeling_datum')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between gap-1">
+                                        Afgehandeld op
+                                        <SortIcon field="afhandeling_datum" />
+                                    </div>
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('gewerkteMinuten')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between gap-1">
+                                        Duur
+                                        <SortIcon field="gewerkteMinuten" />
+                                    </div>
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('afgehandeld_door')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between gap-1">
+                                        Door
+                                        <SortIcon field="afgehandeld_door" />
+                                    </div>
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('afhandeling_bijzonderheden')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 cursor-pointer hover:bg-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between gap-1">
+                                        Opmerkingen
+                                        <SortIcon field="afhandeling_bijzonderheden" />
+                                    </div>
+                                </TableHead>
                             </TableRow>
                             </TableHeader>
                             <TableBody>
