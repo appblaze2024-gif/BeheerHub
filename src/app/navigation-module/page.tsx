@@ -69,7 +69,7 @@ import {
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -681,6 +681,24 @@ export default function StartNavigationPage() {
 
   const { data: rawTodayCompleted } = useCollection<Melding>(todayCompletedQuery);
 
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users');
+  }, [firestore, user]);
+  const { data: allUsers } = useCollection<UserProfile>(usersQuery);
+
+  const navigatingUsersMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    allUsers?.forEach(u => {
+      if (u.navigatingToMissionId) {
+        const list = map.get(u.navigatingToMissionId) || [];
+        list.push(u.displayName || u.email || 'Onbekend');
+        map.set(u.navigatingToMissionId, list);
+      }
+    });
+    return map;
+  }, [allUsers]);
+
   const filteredMeldingen = useMemo(() => {
     const poolMap = new Map<string, Melding>();
     rawActiveMeldingen?.forEach(m => { if (!completedObjects.includes(m.id)) poolMap.set(m.id, m); });
@@ -716,6 +734,12 @@ export default function StartNavigationPage() {
   }, [filteredMeldingen, userLocation, priorityMissionId]);
 
   const nextMission = sortedMissions[0];
+
+  useEffect(() => {
+    if (nextMission?.id && navigationState === 'navigating' && user && firestore) {
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navigatingToMissionId: nextMission.id });
+    }
+  }, [nextMission?.id, navigationState, user, firestore]);
 
   const fetchRoute = useCallback(async (force = false) => {
     if (navigationState === 'setup' || sortedMissions.length === 0) {
@@ -853,6 +877,9 @@ export default function StartNavigationPage() {
         visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         setIsSimulationMode(false); setNavigationState('navigating'); setIsLocating(false); setIsManualMode(false);
         if (mapRef.current) mapRef.current.getMap().jumpTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: navPitch, bearing: heading, padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 } });
+        if (nextMission?.id && user && firestore) {
+            updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navigatingToMissionId: nextMission.id });
+        }
     };
     if (userLocation) beginNav(userLocation, lastHeadingRef.current || 0);
     else navigator.geolocation.getCurrentPosition((pos) => { const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude }; setUserLocation(loc); beginNav(loc, pos.coords.heading || 0); }, () => beginNav(SIMULATION_START_LOCATION, 0), { enableHighAccuracy: true, timeout: 10000 });
@@ -861,6 +888,9 @@ export default function StartNavigationPage() {
   const handleStopRit = () => {
     setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
     setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null);
+    if (user && firestore) {
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navigatingToMissionId: null });
+    }
     const map = mapRef.current?.getMap();
     if (map) {
       map.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 1000 });
@@ -906,8 +936,11 @@ export default function StartNavigationPage() {
                 {filteredMeldingen.map((m) => {
                     if (isNaN(m.longitude) || isNaN(m.latitude)) return null;
                     const isCompleted = m.status === 'Afgerond';
+                    const beingNavigatedBy = navigatingUsersMap.get(m.id);
+                    const isBeingNavigated = beingNavigatedBy && beingNavigatedBy.length > 0;
                     const isNext = nextMission?.id === m.id && navigationState === 'navigating';
                     const isClicked = clickedMarkerId === m.id;
+                    
                     return (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setClickedMarkerId(m.id); }}>
                             <div className="relative flex items-center justify-center w-14 h-14">
@@ -917,10 +950,22 @@ export default function StartNavigationPage() {
                                         <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-900" />
                                     </div>
                                 )}
-                                {(isNext || isClicked) && (
-                                    <div className={cn("absolute inset-0 rounded-full border-[4px] border-black opacity-80", isNext && "animate-pulse", isClicked && "border-primary")} />
+                                {isBeingNavigated && !isNext && (
+                                    <div className="absolute bottom-full mb-2 bg-green-600 text-white px-2.5 py-1 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap flex items-center gap-1.5 border-2 border-white">
+                                        <Navigation className="h-3 w-3 fill-current" />
+                                        <span className="text-[9px] font-black uppercase tracking-tight">{beingNavigatedBy![0]} rijdt hierheen</span>
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-green-600" />
+                                    </div>
                                 )}
-                                <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
+                                {(isNext || isClicked || isBeingNavigated) && (
+                                    <div className={cn(
+                                        "absolute inset-0 rounded-full border-[4px] opacity-80 transition-colors duration-500", 
+                                        isBeingNavigated ? "border-green-500" : "border-black",
+                                        (isNext || isBeingNavigated) && "animate-pulse", 
+                                        isClicked && "border-primary"
+                                    )} />
+                                )}
+                                <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked || isBeingNavigated) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
                                     {renderMarkerIcon(m.hoofdcategorie)}
                                     <div className={cn("absolute -top-1 -right-1 rounded-full w-4 h-4 flex items-center justify-center border border-black shadow-lg overflow-hidden", isCompleted ? "bg-green-500" : "bg-yellow-400")}>
                                         {isCompleted ? <Check className="h-2.5 w-2.5 text-white" /> : <Wrench className="h-2.5 w-2.5 text-slate-900" />}
@@ -1149,6 +1194,9 @@ export default function StartNavigationPage() {
                         setActiveWerkbonId(null); 
                         setIsManualMode(false); 
                         setPriorityMissionId(null); 
+                        if (user && firestore) {
+                            updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navigatingToMissionId: null });
+                        }
                         setTimeout(() => fetchRoute(true), 150); 
                     }} 
                 />

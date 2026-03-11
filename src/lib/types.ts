@@ -37,6 +37,7 @@ export type UserProfile = {
   autoOpenEnabled?: boolean;
   dynamicZoomEnabled?: boolean;
   quickKeys?: string[];
+  navigatingToMissionId?: string | null;
 };
 
 export interface Message {
