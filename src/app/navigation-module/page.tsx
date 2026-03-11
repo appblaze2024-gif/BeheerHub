@@ -1130,18 +1130,19 @@ export default function StartNavigationPage() {
             </div>
             <ScrollArea className="flex-1 bg-white">
                 <div className="p-3 flex flex-col gap-3 lg:hidden">
-                    {filteredMeldingen.map((m) => {
+                    {filteredMeldingen.map((m, index) => {
                         const isCompleted = m.status === 'Afgerond';
                         const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0;
                         const distKm = (dist / 1000).toFixed(1);
-                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2.5 w-2.5 text-white" /></div>)}</Card>);
+                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><span className="text-[10px] font-black text-slate-300 w-4">{index + 1}</span><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight pl-6">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto pl-6"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2.5 w-2.5 text-white" /></div>)}</Card>);
                     })}
                 </div>
                 <div className="hidden lg:block p-0">
                     <Table className="min-w-[1200px]">
                         <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
                             <TableRow className="h-10 hover:bg-transparent">
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r">Nummer</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r w-[60px]">Nr.</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Nummer</TableHead>
                                 <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead>
                                 <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead>
                                 <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead>
@@ -1149,13 +1150,14 @@ export default function StartNavigationPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredMeldingen.map((m) => { 
+                            {filteredMeldingen.map((m, index) => { 
                                 const isCompleted = m.status === 'Afgerond'; 
                                 const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0; 
                                 const distKm = (dist / 1000).toFixed(1);
                                 return (
                                     <TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-colors border-b", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50")}>
-                                        <TableCell className="pl-6 border-r">
+                                        <TableCell className="pl-6 border-r font-bold text-slate-400 text-[10px]">{index + 1}</TableCell>
+                                        <TableCell className="border-r">
                                             <div className="flex items-center gap-2">
                                                 <div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : "bg-slate-400")} />
                                                 <span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span>
