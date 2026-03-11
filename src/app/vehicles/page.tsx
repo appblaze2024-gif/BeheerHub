@@ -285,16 +285,16 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
               <ScrollArea className="flex-1">
                 <div className="flex flex-col gap-4 sm:gap-6 pb-20 p-1">
                   <Card className="rounded-none shadow-xl border-none overflow-hidden shrink-0">
-                    <CardHeader className="bg-slate-900 text-white p-4 sm:p-6">
+                    <CardHeader className="bg-slate-50/50 border-b p-4 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className='flex items-center gap-3 min-w-0'>
                           {isTablet && (
-                              <Button variant="ghost" size="icon" onClick={() => setSelectedItem(null)} className="h-8 w-8 rounded-none bg-white/10 hover:bg-white/20 text-white border border-white/10 shrink-0">
+                              <Button variant="ghost" size="icon" onClick={() => setSelectedItem(null)} className="h-8 w-8 rounded-none bg-white border border-slate-200 text-slate-600 shrink-0">
                                 <ArrowLeft className="h-4 w-4" />
                               </Button>
                             )}
                             <div className="min-w-0">
-                                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-white leading-none mb-0.5 truncate">
+                                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-0.5 truncate">
                                 {selectedItem?.id}
                                 </h2>
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{selectedItem?.merk} {selectedItem?.model}</p>
