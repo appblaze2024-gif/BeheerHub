@@ -34,18 +34,16 @@ export default function ArchiveIssuesPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
 
-  // OPTIMIZED QUERY: Filter by status only to avoid composite index requirements
   const archiveQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(
       collection(firestore, 'meldingen'),
       where('status', 'in', closedStatuses)
     );
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: archivedMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(archiveQuery);
 
-  // Fetch users to map email to display name for older records
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return collection(firestore, 'users');
@@ -86,7 +84,6 @@ export default function ArchiveIssuesPage() {
         });
     }
 
-    // Sort in memory to handle missing fields and avoid index errors
     result.sort((a, b) => {
         const dateA = a.afhandeling_datum ? new Date(a.afhandeling_datum).getTime() : 0;
         const dateB = b.afhandeling_datum ? new Date(b.afhandeling_datum).getTime() : 0;
@@ -101,13 +98,11 @@ export default function ArchiveIssuesPage() {
     
     const normalized = nameOrEmail.toLowerCase();
     
-    // Check if it's an email we can map to a full name using our userMap
     if (userMap[normalized]) {
       return userMap[normalized];
     }
 
     if (nameOrEmail.includes('@')) {
-      // Try to format email like firstname.lastname@...
       const part = nameOrEmail.split('@')[0];
       if (part.includes('.')) {
         return part
@@ -118,10 +113,8 @@ export default function ArchiveIssuesPage() {
       return part.charAt(0).toUpperCase() + part.slice(1);
     }
     
-    // If it already looks like a full name (has space), return it
     if (nameOrEmail.includes(' ')) return nameOrEmail;
 
-    // Capitalize if it's a single word/username
     return nameOrEmail.charAt(0).toUpperCase() + nameOrEmail.slice(1);
   };
 
@@ -170,7 +163,6 @@ export default function ArchiveIssuesPage() {
             </div>
         ) : (
             <div className="space-y-4">
-                {/* Mobile View: Card List */}
                 <div className="grid grid-cols-1 gap-4 md:hidden">
                     {filteredMeldingen.map((melding) => (
                         <Card 
@@ -251,7 +243,6 @@ export default function ArchiveIssuesPage() {
                     ))}
                 </div>
 
-                {/* Desktop View: Table */}
                 <div className="hidden md:block border rounded-xl overflow-hidden shadow-sm bg-white">
                     <div className="overflow-x-auto">
                         <Table className="border-collapse w-full">

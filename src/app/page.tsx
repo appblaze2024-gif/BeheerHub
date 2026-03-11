@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, useCollection, useUser } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { allMenuItems, MenuItem, SubMenuItem } from '@/lib/menu-config';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const firestore = useFirestore();
+  const { user } = useUser();
   const { profile } = useProfile();
   const isMobile = useIsMobile();
   const [activeModule, setActiveModule] = React.useState<MenuItem | null>(null);
@@ -37,12 +38,10 @@ export default function DashboardPage() {
   const canViewSubItem = React.useCallback((parentModule: string | undefined, sub: SubMenuItem) => {
     if (profile?.role === 'Super admin') return true;
     
-    // Als het sub-item naar een eigen module verwijst
     if (sub.module) {
       return !!profile?.permissions?.[sub.module]?.view;
     }
 
-    // Als het een tab is in de module van de ouder
     if (parentModule) {
       const modulePerms = profile?.permissions?.[parentModule];
       if (modulePerms?.tabs) {
@@ -53,7 +52,6 @@ export default function DashboardPage() {
     return true;
   }, [profile]);
 
-  // Handle deep linking to sub-modules via URL param ?module=...
   React.useEffect(() => {
     if (!profile) return;
     
@@ -72,34 +70,30 @@ export default function DashboardPage() {
     }
   }, [searchParams, profile, canViewModule, canViewSubItem]);
 
-  // Reset scroll position when switching between main menu and submenus
   React.useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = 0;
     }
   }, [activeModule]);
 
-  // Fetch new reports for the notification badge
   const portalQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(
       collection(firestore, 'meldingen'), 
       where('status', '==', 'Nieuw')
     );
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: newMeldingen } = useCollection<Melding>(portalQuery);
   const newCount = newMeldingen?.length || 0;
 
-  // Filter modules voor de grid
   const mainNavItems = React.useMemo(() => {
     return allMenuItems
-      .filter(item => item.href !== '/') // Dashboard zelf niet tonen
+      .filter(item => item.href !== '/')
       .filter(item => canViewModule(item.module));
   }, [profile, canViewModule]);
 
   const handleCardClick = (item: MenuItem) => {
-    // Filter subItems op permissies
     const visibleSubItems = item.subItems?.filter(sub => canViewSubItem(item.module, sub));
     
     if (visibleSubItems && visibleSubItems.length > 0) {
@@ -179,7 +173,6 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* Notification Badge for Meldingen card */}
                     {item.label === 'Meldingen' && newCount > 0 && (
                       <Badge 
                         variant="destructive" 
@@ -190,7 +183,6 @@ export default function DashboardPage() {
                     )}
                   </CardContent>
                   
-                  {/* Large faint background icon */}
                   <div className="absolute right-4 bottom-4 opacity-[0.03] group-hover:opacity-10 group-hover:text-primary transition-all duration-700 pointer-events-none transform translate-x-4 translate-y-4 group-hover:translate-x-0 group-hover:translate-y-0">
                     <Icon className="h-20 w-20" />
                   </div>
@@ -234,7 +226,6 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* Notification Badge for Portaal sub-item */}
                     {isPortalSubItem && newCount > 0 && (
                       <Badge 
                         variant="destructive" 
@@ -245,7 +236,6 @@ export default function DashboardPage() {
                     )}
                   </CardContent>
                   
-                  {/* Large faint background icon */}
                   <div className="absolute right-4 bottom-4 opacity-[0.03] group-hover:opacity-10 group-hover:text-primary transition-all duration-700 pointer-events-none transform translate-x-4 translate-y-4 group-hover:translate-x-0 group-hover:translate-y-0">
                     <Icon className="h-20 w-20" />
                   </div>

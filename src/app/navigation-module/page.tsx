@@ -67,8 +67,7 @@ import {
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useProject } from '@/context/project-context';
+import { useRouter } from 'next/navigation';
 import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
@@ -818,7 +817,6 @@ export default function StartNavigationPage() {
                 });
             }
 
-            // Smart Arrival Logic
             if (navigationState === 'navigating' && nextMission && autoOpenEnabled) {
                 const dist = turf.distance(turf.point([loc.longitude, loc.latitude]), turf.point([nextMission.longitude, nextMission.latitude]), { units: 'meters' });
                 if (dist < 50 && currentSpeed < 3) {
