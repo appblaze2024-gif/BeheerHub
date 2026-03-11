@@ -114,9 +114,17 @@ export default function ArchiveIssuesPage() {
         let valA: any = (a as any)[sortConfig.field];
         let valB: any = (b as any)[sortConfig.field];
 
-        if (sortConfig.field === 'afhandeling_datum' || sortConfig.field === 'datum') {
-            valA = valA ? new Date(valA).getTime() : 0;
-            valB = valB ? new Date(valB).getTime() : 0;
+        // Specific sorting logic for dates including time
+        if (sortConfig.field === 'afhandeling_datum') {
+            const timeA = (a as any).afhandeling_tijdstip || '00:00';
+            const timeB = (b as any).afhandeling_tijdstip || '00:00';
+            valA = valA ? new Date(`${valA}T${timeA}`).getTime() : 0;
+            valB = valB ? new Date(`${valB}T${timeB}`).getTime() : 0;
+        } else if (sortConfig.field === 'datum') {
+            const timeA = (a as any).tijdstip || '00:00';
+            const timeB = (b as any).tijdstip || '00:00';
+            valA = valA ? new Date(`${valA}T${timeA}`).getTime() : 0;
+            valB = valB ? new Date(`${valB}T${timeB}`).getTime() : 0;
         } else if (typeof valA === 'string') {
             valA = valA.toLowerCase();
             valB = (valB || '').toLowerCase();
@@ -258,7 +266,7 @@ export default function ArchiveIssuesPage() {
                                             <div className="flex items-center gap-2">
                                                 <Calendar className="h-3 w-3 text-slate-300" />
                                                 <span className="text-[10px] font-bold text-slate-500">
-                                                    Afgehandeld: {melding.afhandeling_datum ? format(new Date(melding.afhandeling_datum), 'dd MMM yyyy') : '-'}
+                                                    Afgehandeld: {melding.afhandeling_datum ? format(new Date(`${melding.afhandeling_datum}T${melding.afhandeling_tijdstip || '00:00'}`), 'dd MMM yyyy, HH:mm') : '-'}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -316,13 +324,13 @@ export default function ArchiveIssuesPage() {
                                 </TableHead>
                                 <TableHead onClick={() => handleSort('datum')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
                                     <div className="flex items-center justify-between gap-1">
-                                        Meld Datum
+                                        Meld Datum/Tijd
                                         <SortIcon field="datum" />
                                     </div>
                                 </TableHead>
                                 <TableHead onClick={() => handleSort('afhandeling_datum')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
                                     <div className="flex items-center justify-between gap-1">
-                                        Afgehandeld op
+                                        Afgehandeld op (incl. tijd)
                                         <SortIcon field="afhandeling_datum" />
                                     </div>
                                 </TableHead>
@@ -352,7 +360,12 @@ export default function ArchiveIssuesPage() {
                                         <TableCell className="font-black py-2 px-4 border-r border-slate-100">{melding.intakenummer || '-'}</TableCell>
                                         <TableCell className="py-2 px-4 border-r border-slate-100 text-[11px] font-bold text-slate-500">{melding.extern_meldingsnummer || '-'}</TableCell>
                                         <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-bold text-slate-900">{[melding.straatnaam, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
-                                        <TableCell className="py-2 px-4 border-r border-slate-100 text-[11px] font-bold text-slate-600">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</TableCell>
+                                        <TableCell className="py-2 px-4 border-r border-slate-100">
+                                            <div className="flex flex-col">
+                                                <span className="text-[11px] font-bold text-slate-600">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</span>
+                                                <span className="text-[9px] font-bold text-slate-400">{melding.tijdstip || '--:--'}</span>
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="py-2 px-4 border-r border-slate-100">
                                             <div className="flex flex-col">
                                                 <span className="text-[11px] font-black text-primary">{melding.afhandeling_datum ? format(new Date(melding.afhandeling_datum), 'dd-MM-yy') : '-'}</span>
