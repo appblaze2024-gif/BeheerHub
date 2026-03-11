@@ -32,6 +32,7 @@ import {
   useMemoFirebase,
   useDoc,
   setDocumentNonBlocking,
+  useUser,
 } from '@/firebase';
 import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
@@ -204,12 +205,13 @@ function WerksoortenTab({
 
 function BoekingregelsTab({ projectId, canEdit }: { projectId: string | undefined; canEdit: boolean; }) {
   const firestore = useFirestore();
+  const { user } = useUser();
   const [newRegelNaam, setNewRegelNaam] = React.useState('');
 
   const boekingregelsCollection = useMemoFirebase(() => {
-    if (!firestore || !projectId) return null;
+    if (!firestore || !projectId || !user) return null;
     return collection(firestore, 'projects', projectId, 'boekingregels');
-  }, [firestore, projectId]);
+  }, [firestore, projectId, user]);
 
   const { data: boekingregels, isLoading } = useCollection<Boekingregel>(boekingregelsCollection);
 
@@ -290,13 +292,14 @@ function BoekingregelsTab({ projectId, canEdit }: { projectId: string | undefine
 
 function AfsprakenTab({ projectId, canEdit, canDelete }: { projectId: string | undefined, canEdit: boolean, canDelete: boolean }) {
   const firestore = useFirestore();
+  const { user } = useUser();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedAfspraak, setSelectedAfspraak] = React.useState<Afspraak | undefined>();
 
   const afsprakenCollection = useMemoFirebase(() => {
-    if (!firestore || !projectId) return null;
+    if (!firestore || !projectId || !user) return null;
     return collection(firestore, 'projects', projectId, 'afspraken');
-  }, [firestore, projectId]);
+  }, [firestore, projectId, user]);
 
   const { data: afspraken, isLoading } = useCollection<Afspraak>(afsprakenCollection);
 
@@ -373,13 +376,14 @@ function AfsprakenTab({ projectId, canEdit, canDelete }: { projectId: string | u
 
 function OrganisatieTab({ projectId, wijken, canEdit, canDelete }: { projectId: string | undefined, wijken?: Wijk[], canEdit: boolean, canDelete: boolean }) {
   const firestore = useFirestore();
+  const { user } = useUser();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<OrganisatieContact | undefined>();
 
   const organisatieCollection = useMemoFirebase(() => {
-    if (!firestore || !projectId) return null;
+    if (!firestore || !projectId || !user) return null;
     return collection(firestore, 'projects', projectId, 'organisatie');
-  }, [firestore, projectId]);
+  }, [firestore, projectId, user]);
 
   const { data: contacten, isLoading } = useCollection<OrganisatieContact>(organisatieCollection);
 
@@ -462,12 +466,13 @@ function OrganisatieTab({ projectId, wijken, canEdit, canDelete }: { projectId: 
 function BestandenTab({ projectId, canEdit, canDelete }: { projectId: string | undefined, canEdit: boolean, canDelete: boolean }) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
+  const { user } = useUser();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const bestandenCollection = useMemoFirebase(() => {
-    if (!firestore || !projectId) return null;
+    if (!firestore || !projectId || !user) return null;
     return collection(firestore, 'projects', projectId, 'bestanden');
-  }, [firestore, projectId]);
+  }, [firestore, projectId, user]);
 
   const { data: bestanden, isLoading } = useCollection<Bestand>(bestandenCollection);
   
@@ -1136,10 +1141,11 @@ function VoertuigenTab({
   canEdit: boolean;
 }) {
   const firestore = useFirestore();
+  const { user } = useUser();
   const [searchTerm, setSearchTerm] = React.useState('');
 
-  const voertuigenCol = useMemoFirebase(() => firestore ? collection(firestore, 'voertuigen') : null, [firestore]);
-  const machinesCol = useMemoFirebase(() => firestore ? collection(firestore, 'machines') : null, [firestore]);
+  const voertuigenCol = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'voertuigen') : null, [firestore, user]);
+  const machinesCol = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'machines') : null, [firestore, user]);
 
   const { data: voertuigen } = useCollection<Voertuig>(voertuigenCol);
   const { data: machines } = useCollection<Machine>(machinesCol);
@@ -1223,6 +1229,7 @@ function VoertuigenTab({
 
 export default function ProjectsPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const { profile, isLoading: isProfileLoading } = useProfile();
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [currentProject, setCurrentProject] = React.useState<Project>(EMPTY_PROJECT);
@@ -1235,23 +1242,23 @@ export default function ProjectsPage() {
   const canEdit = isSuperUser || !!profile?.permissions?.projects?.edit;
   const canDelete = isSuperUser || !!profile?.permissions?.projects?.delete;
 
-  const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
+  const filtersRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'settings', 'object_filters') : null, [firestore, user]);
   const { data: filtersData } = useDoc<{ custom: string[] }>(filtersRef);
   const customFilters = filtersData?.custom || [];
 
   const projectsCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'projects');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: projects, isLoading } = useCollection<Project>(
     projectsCollection
   );
   
   const objectsCollection = useMemoFirebase(() => {
-    if (!firestore || activeTab !== 'prullenbakkenroutes') return null;
+    if (!firestore || !user || activeTab !== 'prullenbakkenroutes') return null;
     return collection(firestore, 'objects');
-  }, [firestore, activeTab]);
+  }, [firestore, user, activeTab]);
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
 

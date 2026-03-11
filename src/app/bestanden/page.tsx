@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useCollection, useFirestore, useFirebaseApp, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useFirebaseApp, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where, getDocs, writeBatch, type DocumentReference, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { Label } from '@/components/ui/label';
@@ -115,21 +115,22 @@ const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level, handl
 export default function BestandenPage() {
   const firestore = useFirestore();
   const app = useFirebaseApp();
+  const { user } = useUser();
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedFolderId, setSelectedFolderId] = React.useState<string>('root');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [treeKey, setTreeKey] = React.useState(Date.now());
 
   const projectsCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'projects');
-  }, [firestore]);
+  }, [firestore, user]);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
   const allFoldersQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedProjectId) return null;
+    if (!firestore || !selectedProjectId || !user) return null;
     return collection(firestore, 'projects', selectedProjectId, 'folders');
-  }, [firestore, selectedProjectId]);
+  }, [firestore, selectedProjectId, user]);
   const { data: allFolders, isLoading: isLoadingAllFolders } = useCollection<Folder>(allFoldersQuery);
   
   const folderTree = React.useMemo(() => {
@@ -163,13 +164,13 @@ export default function BestandenPage() {
 
 
   const bestandenCollection = useMemoFirebase(() => {
-    if (!firestore || !selectedProjectId) return null;
+    if (!firestore || !selectedProjectId || !user) return null;
     const q = collection(firestore, 'projects', selectedProjectId, 'bestanden');
     if (selectedFolderId === 'root') {
         return query(q, where('folderId', 'in', [null, '']));
     }
     return query(q, where('folderId', '==', selectedFolderId));
-  }, [firestore, selectedProjectId, selectedFolderId]);
+  }, [firestore, selectedProjectId, selectedFolderId, user]);
 
   const { data: bestanden, isLoading: isLoadingBestanden } = useCollection<Bestand>(bestandenCollection);
   

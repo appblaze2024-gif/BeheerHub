@@ -54,6 +54,7 @@ import {
   Map as MapIcon,
   Hash,
   Minus,
+  Plus,
   Tag,
   Sparkles,
   ChevronRight,

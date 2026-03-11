@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Printer, Upload, Calendar, CalendarDays, ChevronLeft, ChevronRight, MoreHorizontal, ClipboardList } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import {
   startOfWeek,
@@ -75,14 +75,15 @@ type ReportRow = {
 
 export default function WeeklyReportsPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const isMobile = useIsMobile(1024);
 
   const projectsCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'projects');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: projects, isLoading: isLoadingProjects } =
     useCollection<Project>(projectsCollection);
@@ -92,7 +93,7 @@ export default function WeeklyReportsPage() {
   }, [projects, selectedProjectId]);
 
   const dienstenQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedProjectId) return null;
+    if (!firestore || !selectedProjectId || !user) return null;
     
     const start = startOfWeek(currentDate, { weekStartsOn: 1 });
     const end = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -104,7 +105,7 @@ export default function WeeklyReportsPage() {
       where('datum', '>=', startDateString),
       where('datum', '<=', endDateString)
     );
-  }, [firestore, selectedProjectId, currentDate]);
+  }, [firestore, selectedProjectId, currentDate, user]);
 
 
   const { data: diensten, isLoading: isLoadingDiensten } = useCollection<Dienst>(dienstenQuery);
