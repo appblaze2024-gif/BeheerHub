@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where, orderBy } from 'firebase/firestore';
 import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail, Info, CheckCircle2, XCircle, MessageSquare, LayoutGrid, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function MeldingenportaalPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -43,12 +44,12 @@ export default function MeldingenportaalPage() {
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
 
   const portalQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(
       collection(firestore, 'meldingen'), 
       where('status', '==', 'Nieuw')
     );
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(portalQuery);
 

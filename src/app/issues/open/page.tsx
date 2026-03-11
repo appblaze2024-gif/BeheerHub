@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { Search, ListFilter, ArrowLeft, Info, User, Pencil, LayoutGrid, Calendar, MapPin, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,7 @@ const openStatuses = [
 
 export default function OpenIssuesPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const router = useRouter();
   const { profile } = useProfile();
   const isMobile = useIsMobile();
@@ -48,12 +49,12 @@ export default function OpenIssuesPage() {
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
 
   const meldingenQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(
       collection(firestore, 'meldingen'),
       where('status', 'in', openStatuses)
     );
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: openMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
 

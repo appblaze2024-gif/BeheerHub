@@ -193,13 +193,13 @@ function IntegratedWerkbonOverlay({
     
     const recognitionRef = useRef<any>(null);
 
-    const meldingRef = useMemoFirebase(() => firestore ? doc(firestore, 'meldingen', meldingId) : null, [firestore, meldingId]);
+    const meldingRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'meldingen', meldingId) : null, [firestore, user, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
 
     const objectsQuery = useMemoFirebase(() => {
-        if (!firestore || !melding) return null;
+        if (!firestore || !user || !melding) return null;
         return query(collection(firestore, 'objects'), limit(200));
-    }, [firestore, melding]);
+    }, [firestore, user, melding]);
     
     const { data: allObjects } = useCollection<MapObject>(objectsQuery);
 
@@ -270,6 +270,7 @@ function IntegratedWerkbonOverlay({
     }, [meldingId, app]);
 
     const toggleListening = () => {
+        if (typeof window === 'undefined') return;
         if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) return;
@@ -600,7 +601,7 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
-  const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
+  const optionsRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'settings', 'issue_options') : null, [firestore, user]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
   const categoryIcons = dbOptions?.categoryIcons || {};
 
@@ -666,17 +667,17 @@ export default function StartNavigationPage() {
   }, [profile]);
 
   const activeMeldingenQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']), limit(100));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: rawActiveMeldingen } = useCollection<Melding>(activeMeldingenQuery);
 
   const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
   const todayCompletedQuery = useMemoFirebase(() => {
-    if (!firestore || !showTodayCompleted || debouncedSearchQuery) return null;
+    if (!firestore || !user || !showTodayCompleted || debouncedSearchQuery) return null;
     return query(collection(firestore, 'meldingen'), where('status', '==', 'Afgerond'), where('afhandeling_datum', '==', todayStr), limit(50));
-  }, [firestore, showTodayCompleted, debouncedSearchQuery, todayStr]);
+  }, [firestore, user, showTodayCompleted, debouncedSearchQuery, todayStr]);
 
   const { data: rawTodayCompleted } = useCollection<Melding>(todayCompletedQuery);
 
@@ -777,6 +778,7 @@ export default function StartNavigationPage() {
   }, [currentRouteGeometry, navigationState]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (!navigator.geolocation || isSimulationMode) return;
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
