@@ -690,11 +690,17 @@ export default function StartNavigationPage() {
 
   const navigatingUsersMap = useMemo(() => {
     const map = new Map<string, string[]>();
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    
     allUsers?.forEach(u => {
-      if (u.navigatingToMissionId) {
-        const list = map.get(u.navigatingToMissionId) || [];
-        list.push(u.displayName || u.email || 'Onbekend');
-        map.set(u.navigatingToMissionId, list);
+      if (u.navigatingToMissionId && u.navigatingToMissionStartedAt) {
+        const startedAt = new Date(u.navigatingToMissionStartedAt);
+        // Only show navigation indicators if started within the last hour
+        if (startedAt > oneHourAgo) {
+          const list = map.get(u.navigatingToMissionId) || [];
+          list.push(u.displayName || u.email || 'Onbekend');
+          map.set(u.navigatingToMissionId, list);
+        }
       }
     });
     return map;
@@ -738,7 +744,10 @@ export default function StartNavigationPage() {
 
   useEffect(() => {
     if (nextMission?.id && navigationState === 'navigating' && user && firestore) {
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navigatingToMissionId: nextMission.id });
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
+            navigatingToMissionId: nextMission.id,
+            navigatingToMissionStartedAt: new Date().toISOString()
+        });
     }
   }, [nextMission?.id, navigationState, user, firestore]);
 
@@ -929,7 +938,10 @@ export default function StartNavigationPage() {
         visualHeadingRef.current = heading;
         setIsSimulationMode(false); setNavigationState('navigating'); setIsLocating(false); setIsManualMode(false);
         if (nextMission?.id && user && firestore) {
-            updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navigatingToMissionId: nextMission.id });
+            updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
+                navigatingToMissionId: nextMission.id,
+                navigatingToMissionStartedAt: new Date().toISOString()
+            });
         }
     };
     if (userLocation) beginNav(userLocation, lastHeadingRef.current || 0);
@@ -940,7 +952,10 @@ export default function StartNavigationPage() {
     setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
     setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null);
     if (user && firestore) {
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navigatingToMissionId: null });
+        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
+            navigatingToMissionId: null,
+            navigatingToMissionStartedAt: null 
+        });
     }
     const map = mapRef.current?.getMap();
     if (map) {
@@ -1252,7 +1267,10 @@ export default function StartNavigationPage() {
                         setIsManualMode(false); 
                         setPriorityMissionId(null); 
                         if (user && firestore) {
-                            updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navigatingToMissionId: null });
+                            updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
+                                navigatingToMissionId: null,
+                                navigatingToMissionStartedAt: null 
+                            });
                         }
                         setTimeout(() => fetchRoute(true), 150); 
                     }} 
