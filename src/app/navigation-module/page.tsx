@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -583,6 +582,7 @@ export default function StartNavigationPage() {
 
   const [smoothLocation, setSmoothLocation] = useState<any>(null);
   const lastHeadingRef = useRef(0);
+  const visualHeadingRef = useRef(0);
   const [currentRouteGeometry, setCurrentRouteGeometry] = useState<any>(null);
   const [displayedRouteGeometry, setDisplayedRouteGeometry] = useState<any>(null);
   const [routeInfo, setRouteInfo] = useState<{ duration: number; distance: number } | null>(null);
@@ -608,7 +608,6 @@ export default function StartNavigationPage() {
 
   const fetchSpeedLimit = useCallback(async (lat: number, lng: number) => {
     const now = Date.now();
-    // Strenge throttle: Alleen nieuwe data ophalen als we 100m bewogen zijn OF 30 seconden later
     if (lastSpeedLimitFetchRef.current) {
         const dist = turf.distance(
             turf.point([lng, lat]), 
@@ -624,8 +623,8 @@ export default function StartNavigationPage() {
         const data = await res.json();
         const road = data.features?.find((f: any) => f.properties?.maxspeed);
         if (road) {
-            const limit = parseInt(road.properties.maxspeed);
-            if (!isNaN(limit)) setCurrentSpeedLimit(limit);
+            const limitValue = parseInt(road.properties.maxspeed);
+            if (!isNaN(limitValue)) setCurrentSpeedLimit(limitValue);
         }
         lastSpeedLimitFetchRef.current = { lat, lng, time: now };
     } catch (e) {
@@ -773,18 +772,46 @@ export default function StartNavigationPage() {
     else if (navigationState === 'setup') { setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
+  // SMOOTH GPS & CAMERA ANIMATION LOOP (60FPS)
   useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
         if (targetPosRef.current) {
-            if (!visualPosRef.current) visualPosRef.current = { ...targetPosRef.current };
-            else {
-                const factor = 0.05; 
-                visualPosRef.current.lng += (targetPosRef.current.lng - visualPosRef.current.lng) * factor;
-                visualPosRef.current.lat += (targetPosRef.current.lat - visualPosRef.current.lat) * factor;
+            if (!visualPosRef.current) {
+                visualPosRef.current = { ...targetPosRef.current };
+                visualHeadingRef.current = lastHeadingRef.current;
+            } else {
+                // Dampening factors for buttery smooth movement
+                const posFactor = 0.08; 
+                const headingFactor = 0.05;
+
+                visualPosRef.current.lng += (targetPosRef.current.lng - visualPosRef.current.lng) * posFactor;
+                visualPosRef.current.lat += (targetPosRef.current.lat - visualPosRef.current.lat) * posFactor;
+
+                // Handle angular wrapping for smooth rotations
+                let diff = lastHeadingRef.current - visualHeadingRef.current;
+                if (diff > 180) diff -= 360;
+                if (diff < -180) diff += 360;
+                visualHeadingRef.current += diff * headingFactor;
             }
+
             if (!isNaN(visualPosRef.current.lng) && !isNaN(visualPosRef.current.lat)) {
-                setSmoothLocation({ longitude: visualPosRef.current.lng, latitude: visualPosRef.current.lat, heading: lastHeadingRef.current });
+                setSmoothLocation({ longitude: visualPosRef.current.lng, latitude: visualPosRef.current.lat, heading: visualHeadingRef.current });
+                
+                // Track map in high frequency for 60fps smoothness
+                if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
+                    const currentSpeed = speedKmh;
+                    const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
+                    
+                    mapRef.current.getMap().jumpTo({
+                        center: [visualPosRef.current.lng, visualPosRef.current.lat],
+                        bearing: visualHeadingRef.current,
+                        zoom: targetZoom,
+                        pitch: navPitch,
+                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
+                    });
+                }
+
                 if (currentRouteGeometry && navigationState === 'navigating') {
                     try {
                         const line = turf.lineString(currentRouteGeometry.coordinates);
@@ -801,7 +828,7 @@ export default function StartNavigationPage() {
     };
     animId = requestAnimationFrame(updateVisualPos);
     return () => cancelAnimationFrame(animId);
-  }, [currentRouteGeometry, navigationState]);
+  }, [currentRouteGeometry, navigationState, isManualMode, dynamicZoomEnabled, navZoom, navPitch, navOffset, speedKmh]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -821,29 +848,24 @@ export default function StartNavigationPage() {
                     const currPt = turf.point([loc.longitude, loc.latitude]);
                     const snapped = turf.nearestPointOnLine(line, currPt);
                     if (!isNaN(snapped.geometry.coordinates[0])) {
+                        // Update target position for interpolation loop
                         targetPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
+                        
+                        // Calculate heading based on path ahead
                         const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
                         const distAlong = turf.length(alongRoute, { units: 'meters' });
                         const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
                         lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
+                        
+                        // Reroute if off track
                         if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 100 && !isCalculatingRoute) fetchRoute(true);
                     }
                 } catch (e) {}
-            } else { targetPosRef.current = { lng: loc.longitude, lat: loc.latitude }; }
-            
-            if (navigationState === 'navigating' && mapRef.current && !isManualMode && visualPosRef.current && !isNaN(visualPosRef.current.lng)) {
-                const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
-                mapRef.current.getMap().easeTo({
-                    center: [visualPosRef.current.lng, visualPosRef.current.lat],
-                    bearing: lastHeadingRef.current,
-                    zoom: targetZoom,
-                    pitch: navPitch,
-                    padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 },
-                    duration: 1000,
-                    easing: (t) => t 
-                });
+            } else { 
+                targetPosRef.current = { lng: loc.longitude, lat: loc.latitude }; 
             }
 
+            // Auto-open logic
             if (navigationState === 'navigating' && nextMission && autoOpenEnabled) {
                 const dist = turf.distance(turf.point([loc.longitude, loc.latitude]), turf.point([nextMission.longitude, nextMission.latitude]), { units: 'meters' });
                 if (dist < 50 && currentSpeed < 3) {
@@ -860,14 +882,41 @@ export default function StartNavigationPage() {
             }
         }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isManualMode, navPitch, navOffset, isCalculatingRoute, fetchRoute, dynamicZoomEnabled, navZoom, speedKmh, fetchSpeedLimit, nextMission, autoOpenEnabled]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isCalculatingRoute, fetchRoute, fetchSpeedLimit, nextMission, autoOpenEnabled]);
 
-  const updateNavPitch = (newPitch: number) => { setNavPitchState(Number(newPitch)); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: Number(newPitch) }, { merge: true }); mapRef.current?.getMap().jumpTo({ pitch: Number(newPitch) }); };
-  const updateNavOffset = (newOffset: number) => { setNavOffsetState(Number(newOffset)); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: Number(newOffset) }, { merge: true }); mapRef.current?.getMap().jumpTo({ padding: { top: 0, bottom: Math.max(0, Number(newOffset)), left: 0, right: 0 } }); };
-  const updateNavZoom = (newZoom: number) => { const val = Number(Math.max(10, Math.min(22, newZoom))); setNavZoomState(val); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val }, { merge: true }); if (!dynamicZoomEnabled) mapRef.current?.getMap().jumpTo({ zoom: val }); };
-  const setAutoOpenEnabled = (val: boolean) => { setAutoOpenEnabledState(val); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { autoOpenEnabled: val }, { merge: true }); };
-  const setDynamicZoomEnabled = (val: boolean) => { setDynamicZoomEnabledState(val); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { dynamicZoomEnabled: val }, { merge: true }); };
-  const toggleColumnVisibility = (colId: string) => { const next = { ...visibleColumns, [colId]: !visibleColumns[colId] }; setVisibleColumns(next); if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next }, { merge: true }); };
+  const updateNavPitch = (newPitch: number) => { 
+    const val = Number(newPitch);
+    setNavPitchState(val); 
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val }, { merge: true }); 
+  };
+  
+  const updateNavOffset = (newOffset: number) => { 
+    const val = Number(newOffset);
+    setNavOffsetState(val); 
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val }, { merge: true }); 
+  };
+  
+  const updateNavZoom = (newZoom: number) => { 
+    const val = Number(Math.max(10, Math.min(22, newZoom))); 
+    setNavZoomState(val); 
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val }, { merge: true }); 
+  };
+  
+  const setAutoOpenEnabled = (val: boolean) => { 
+    setAutoOpenEnabledState(val); 
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { autoOpenEnabled: val }, { merge: true }); 
+  };
+  
+  const setDynamicZoomEnabled = (val: boolean) => { 
+    setDynamicZoomEnabledState(val); 
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { dynamicZoomEnabled: val }, { merge: true }); 
+  };
+  
+  const toggleColumnVisibility = (colId: string) => { 
+    const next = { ...visibleColumns, [colId]: !visibleColumns[colId] }; 
+    setVisibleColumns(next); 
+    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next }, { merge: true }); 
+  };
 
   const handleStartRit = () => {
     if (sortedMissions.length === 0) return;
@@ -877,8 +926,8 @@ export default function StartNavigationPage() {
         if (isNaN(loc.latitude) || isNaN(loc.longitude)) { setIsLocating(false); return; }
         targetPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
+        visualHeadingRef.current = heading;
         setIsSimulationMode(false); setNavigationState('navigating'); setIsLocating(false); setIsManualMode(false);
-        if (mapRef.current) mapRef.current.getMap().jumpTo({ center: [loc.longitude, loc.latitude], zoom: 18, pitch: navPitch, bearing: heading, padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 } });
         if (nextMission?.id && user && firestore) {
             updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { navigatingToMissionId: nextMission.id });
         }
@@ -908,15 +957,6 @@ export default function StartNavigationPage() {
 
   const handleHervatNavigatie = () => {
     setIsManualMode(false);
-    if (mapRef.current && smoothLocation && !isNaN(smoothLocation.longitude)) {
-        const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (speedKmh / 25))) : navZoom;
-        mapRef.current.getMap().easeTo({ 
-            center: [smoothLocation.longitude, smoothLocation.latitude], 
-            zoom: targetZoom, pitch: navPitch, bearing: lastHeadingRef.current || 0, 
-            padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }, 
-            duration: 1, essential: true
-        });
-    }
   };
 
   const clickedMelding = useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
@@ -1013,7 +1053,7 @@ export default function StartNavigationPage() {
                     <div className="bg-white/95 backdrop-blur-md px-4 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-4 min-w-fit animate-in slide-in-from-left-4 duration-500">
                         <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
                         <Separator orientation="vertical" className="h-6" />
-                        <div className="flex items-center gap-2"><Navigation className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter longitude-none">Afstand</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
+                        <div className="flex items-center gap-2"><Navigation className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
                     </div>
                 )}
             </div>
@@ -1139,7 +1179,7 @@ export default function StartNavigationPage() {
                     <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
                         <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span></Button>
                         {isPrivileged && (<Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}><User className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}</span></Button>)}
-                        <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><LayoutGrid className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md text-sm"><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p><div className="space-y-2">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-3 p-1"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" /><Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{(colId as any)}</Label></div>))}</div></div></PopoverContent></Popover>
+                        <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><LayoutGrid className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md text-sm"><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p><div className="space-y-2">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-3 p-1"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" /><Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{colId}</Label></div>))}</div></div></PopoverContent></Popover>
                     </div>
                 </div>
             </div>
