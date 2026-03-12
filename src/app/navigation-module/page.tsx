@@ -73,6 +73,7 @@ import {
   Settings,
   Sliders,
   Trash,
+  Maximize,
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -453,7 +454,7 @@ function IntegratedWerkbonOverlay({
                     )}
                     {subView === 'photos' && (
                         <>
-                            {renderSubViewHeader("FOTO'S")}
+                            {renderSubViewHeaderHeader("FOTO'S")}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.1em]">Melding Foto's</Label>
@@ -625,7 +626,6 @@ export default function StartNavigationPage() {
   const [displayedRouteGeometry, setDisplayedRouteGeometry] = useState<any>(null);
   const [routeInfo, setRouteInfo] = useState<{ duration: number; distance: number } | null>(null);
   const [speedKmh, setSpeedKmh] = useState(0);
-  const [currentSpeedLimit, setCurrentSpeedLimit] = useState<number>(50);
   const lastSpeedLimitFetchRef = useRef<{ lat: number, lng: number, time: number } | null>(null);
 
   const mapRef = useRef<MapRef>(null);
@@ -689,32 +689,6 @@ export default function StartNavigationPage() {
         }
     }
   }, [assignments, navigationState, type]);
-
-  const fetchSpeedLimit = useCallback(async (lat: number, lng: number) => {
-    const now = Date.now();
-    if (lastSpeedLimitFetchRef.current) {
-        const dist = turf.distance(
-            turf.point([lng, lat]), 
-            turf.point([lastSpeedLimitFetchRef.current.lng, lastSpeedLimitFetchRef.current.lat]),
-            { units: 'meters' }
-        );
-        if (dist < 100 && now - lastSpeedLimitFetchRef.current.time < 30000) return;
-    }
-
-    try {
-        const url = `https://api.mapbox.com/v1/tilesets/mapbox.mapbox-streets-v8/tilequery/${lng},${lat}.json?layers=road&access_token=${MAPBOX_TOKEN}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        const road = data.features?.find((f: any) => f.properties?.maxspeed);
-        if (road) {
-            const limitValue = parseInt(road.properties.maxspeed);
-            if (!isNaN(limitValue)) setCurrentSpeedLimit(limitValue);
-        }
-        lastSpeedLimitFetchRef.current = { lat, lng, time: now };
-    } catch (e) {
-        console.warn("Speed limit fetch error:", e);
-    }
-  }, []);
 
   const isSvg = (str: string) => {
     if (!str) return false;
@@ -967,7 +941,6 @@ export default function StartNavigationPage() {
             setUserLocation(loc);
             const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
             setSpeedKmh(currentSpeed);
-            fetchSpeedLimit(loc.latitude, loc.longitude);
 
             if (navigationState === 'navigating' && currentRouteGeometry) {
                 try {
@@ -1003,7 +976,7 @@ export default function StartNavigationPage() {
             }
         }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isCalculatingRoute, fetchRoute, fetchSpeedLimit, nextMission, autoOpenEnabled]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, isCalculatingRoute, fetchRoute, nextMission, autoOpenEnabled]);
 
   const updateNavPitch = (newPitch: number) => { 
     const val = Number(newPitch);
@@ -1124,6 +1097,36 @@ export default function StartNavigationPage() {
 
   const handleHervatNavigatie = () => {
     setIsManualMode(false);
+  };
+
+  const handleZoomToAll = () => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    // Get coordinates of all visible meldingen
+    const points: [number, number][] = filteredMeldingen.map(m => [m.longitude, m.latitude]);
+    
+    // Add user location or simulation start to the bounds
+    if (userLocation) {
+      points.push([userLocation.longitude, userLocation.latitude]);
+    } else if (isSimulationMode) {
+      points.push([SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude]);
+    }
+
+    if (points.length > 0) {
+      const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
+      const bbox = turf.bbox(pointsCollection);
+      if (bbox[0] !== Infinity) {
+        map.fitBounds(bbox as [number, number, number, number], { 
+          padding: 80, 
+          duration: 1500,
+          pitch: 0,
+          bearing: 0
+        });
+        // Switch to manual mode so the map doesn't immediately snap back if navigating
+        setIsManualMode(true);
+      }
+    }
   };
 
   const clickedMelding = useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
@@ -1301,7 +1304,7 @@ export default function StartNavigationPage() {
                                 </div>
                                 <Separator orientation="vertical" className="h-4 sm:h-6" />
                                 <div className="flex items-center gap-1.5 sm:gap-2">
-                                    <Navigation className="h-3 sm:h-4 text-primary" />
+                                    <Navigation className="h-3 sm:sm:h-4 text-primary" />
                                     <div className="flex flex-col">
                                         <span className="text-[6px] sm:text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span>
                                         <span className="text-[10px] sm:text-xs font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[8px]">km</span></span>
@@ -1314,25 +1317,7 @@ export default function StartNavigationPage() {
                     <div className="flex items-center gap-2 pointer-events-auto">
                         <Popover>
                             <PopoverTrigger asChild><Button variant="secondary" size="icon" className="h-10 sm:h-12 w-10 sm:w-12 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
-                            <PopoverContent side="bottom" align="end" className="w-80 p-8 rounded-[2.5rem] shadow-2xl bg-white/95 backdrop-blur-md border-none text-sm">
-                                <div className="space-y-8">
-                                    <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div>
-                                    <div className="space-y-8">
-                                        <div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div>
-                                        <div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Kanteling</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div>
-                                        <Separator className="bg-slate-100" />
-                                        <div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Dynamisch zoomen</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Op basis van snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} className="data-[state=checked]:bg-primary" /></div>
-                                        {!dynamicZoomEnabled && (
-                                            <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
-                                                <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Vaste zoomhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{navZoom.toFixed(1)}</span></div>
-                                                <div className="flex items-center gap-3"><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div>
-                                            </div>
-                                        )}
-                                        <Separator className="bg-slate-100" />
-                                        <div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Auto-open</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Open bij 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} className="data-[state=checked]:bg-primary" /></div>
-                                    </div>
-                                </div>
-                            </PopoverContent>
+                            <PopoverContent side="bottom" align="end" className="w-80 p-8 rounded-[2.5rem] shadow-2xl bg-white/95 backdrop-blur-md border-none text-sm"><div className="space-y-8"><div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div><div className="space-y-8"><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Kanteling</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div><Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Dynamisch zoomen</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Op basis van snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} className="data-[state=checked]:bg-primary" /></div>{!dynamicZoomEnabled && (<div className="space-y-3 animate-in slide-in-from-top-2 duration-300"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Vaste zoomhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{navZoom.toFixed(1)}</span></div><div className="flex items-center gap-3"><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div></div>)}<Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Auto-open</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Open bij 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} className="data-[state=checked]:bg-primary" /></div></div></div></PopoverContent>
                         </Popover>
                         {navigationState === 'setup' && type === 'meldingen' && (
                             <Button className="h-10 sm:h-12 px-4 sm:px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-[1.25rem] transition-all active:scale-95 pointer-events-auto border-none tracking-widest" onClick={handleStartRit}>
@@ -1397,6 +1382,15 @@ export default function StartNavigationPage() {
                         <div className="flex items-center justify-between flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
                             <div className="relative w-48 sm:w-80 shrink-0"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input placeholder="Zoek opdracht..." className="h-10 pl-10 text-xs font-black uppercase tracking-tight rounded-2xl border-none shadow-inner bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
                             <div className="flex items-center gap-2.5 shrink-0 overflow-x-auto no-scrollbar ml-auto">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200" 
+                                    onClick={handleZoomToAll}
+                                >
+                                    <Maximize className="h-4 w-4 sm:mr-2" /> 
+                                    <span className="hidden sm:inline">Overzicht</span>
+                                </Button>
                                 {type === 'meldingen' && (
                                     <>
                                         <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg voltooid" : "Vandaag gereed"}</span></Button>

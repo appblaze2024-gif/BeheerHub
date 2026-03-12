@@ -694,7 +694,7 @@ export default function NewIssuePage() {
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
-      intakenummer: format(new Date(), 'yyyyMMdd'), 
+      intakenummer: format(new Date(), 'yyyyMMdd') + Math.floor(Math.random() * 100).toString().padStart(2, '0'), 
       status: 'Nieuw', 
       meldingsdatum: new Date(), 
       meldingsuur: format(new Date(), 'HH:mm'),
