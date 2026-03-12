@@ -67,6 +67,9 @@ export default function DashboardPage() {
           });
         }
       }
+    } else {
+      // Reset naar het hoofdmenu als er geen module in de URL staat
+      setActiveModule(null);
     }
   }, [searchParams, profile, canViewModule, canViewSubItem]);
 
@@ -119,7 +122,10 @@ export default function DashboardPage() {
               variant="ghost" 
               size="icon" 
               className="h-10 w-10 rounded-full bg-white shadow-md border border-slate-100 text-primary"
-              onClick={() => setActiveModule(null)}
+              onClick={() => {
+                setActiveModule(null);
+                router.push('/');
+              }}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
