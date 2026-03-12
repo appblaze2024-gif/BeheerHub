@@ -48,6 +48,24 @@ function Header() {
   const { profile } = useProfile();
   const router = useRouter();
 
+  const handleSignOut = async () => {
+    try {
+      // Wis impersonatie en andere lokale sessie-data
+      localStorage.removeItem('impersonatedUserProfileId');
+      localStorage.removeItem('lastSelectedProjectId');
+      
+      // Meld af bij Firebase
+      await signOut(auth);
+      
+      // Forceer redirect naar login
+      router.replace('/login');
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Zelfs bij fout, probeer te redirecten
+      window.location.href = '/login';
+    }
+  };
+
   return (
     <header className="h-20 flex items-center justify-end px-4 lg:px-8 bg-transparent shrink-0 sticky top-0 left-0 right-0 z-50 pointer-events-none">
       <div className="flex items-center gap-1 sm:gap-2 bg-white px-2 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-100 pointer-events-auto max-w-[90vw] sm:max-w-none">
@@ -62,7 +80,7 @@ function Header() {
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-blue-400 hover:bg-blue-50"
-            onClick={() => signOut(auth)}
+            onClick={handleSignOut}
           >
             <LogOutIcon className="h-4 w-4" />
           </Button>
@@ -132,12 +150,21 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (mounted && !isUserLoading) {
-      if (!user && !isPublicPage) router.push('/login');
-      else if (user && pathname === '/login') router.push('/');
+      if (!user && !isPublicPage) {
+        router.replace('/login');
+      } else if (user && pathname === '/login') {
+        router.replace('/');
+      }
     }
   }, [user, isUserLoading, pathname, mounted, isPublicPage, router]);
 
   if (!mounted) return null;
+  
+  // Als we niet ingelogd zijn en niet op een publieke pagina, toon niks (router pushed naar login)
+  if (!user && !isPublicPage) {
+    return <LoadingScreen className="h-screen" />;
+  }
+
   if (isPublicPage) return <>{children}</>;
 
   return <MainLayout>{children}</MainLayout>;
