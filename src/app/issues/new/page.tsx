@@ -226,21 +226,21 @@ function SmartPasteDialog({ onParsed, instructions, trigger }: { onParsed: (data
         <Dialog>
             <DialogTrigger asChild>
                 {trigger || (
-                    <Button variant="outline" size="sm" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold">
+                    <Button variant="outline" size="sm" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl">
                         <ClipboardPaste className="mr-2 h-3.5 w-3.5" />
                         Smart Paste
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="sm:max-w-xl rounded-3xl border-none shadow-2xl">
                 <DialogHeader>
                     <DialogTitle className="font-black uppercase tracking-tight">AI Smart Paste</DialogTitle>
                     <DialogDescription className="font-bold text-slate-500">Plak tekst uit een ander systeem om velden automatisch in te vullen.</DialogDescription>
                 </DialogHeader>
-                <div className="py-4"><Textarea placeholder="Plak hier de tekst..." className="min-h-[200px] text-xs font-medium" value={text} onChange={(e) => setText(e.target.value)} /></div>
+                <div className="py-4"><Textarea placeholder="Plak hier de tekst..." className="min-h-[200px] text-xs font-medium rounded-2xl border-slate-100 bg-slate-50" value={text} onChange={(e) => setText(e.target.value)} /></div>
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="ghost">Annuleren</Button></DialogClose>
-                    <Button onClick={handlePaste} disabled={isProcessing || !text.trim()} className="font-black uppercase">
+                    <DialogClose asChild><Button variant="ghost" className="font-bold">Annuleren</Button></DialogClose>
+                    <Button onClick={handlePaste} disabled={isProcessing || !text.trim()} className="font-black uppercase rounded-xl px-8 shadow-xl shadow-primary/20">
                         {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                         Verwerken
                     </Button>
@@ -261,7 +261,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   const { toast } = useToast();
   const [newName, setNewName] = React.useState('');
   const [selectedIconName, setSelectedIconName] = React.useState('AlertCircle');
-  const [selectedColor, setSelectedColor] = React.useState('#3b82f6');
+  const [selectedColor, setSelectedColor] = React.useState('#007AFF');
   const [iconSearch, setIconSearch] = React.useState('');
   const [isSaving, setIsSaving] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('preset');
@@ -295,11 +295,11 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             setActiveTab('preset');
             const parts = currentIcon.split(':');
             setSelectedIconName(parts[1] || 'AlertCircle');
-            setSelectedColor(parts[2] || '#3b82f6');
+            setSelectedColor(parts[2] || '#007AFF');
         } else {
             setActiveTab('preset');
             setSelectedIconName(currentIcon);
-            setSelectedColor('#3b82f6');
+            setSelectedColor('#007AFF');
         }
     }
   }, [editTarget, categoryIcons]);
@@ -400,16 +400,16 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
         const name = parts[1];
         const color = parts[2];
         const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: color || '#3b82f6' }} />;
+        return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: color || '#007AFF' }} />;
     }
 
     const IconComp = (Icons as any)[val] || Icons.CircleHelp;
-    return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: '#3b82f6' }} />;
+    return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: '#007AFF' }} />;
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
-      <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
           <DialogTitle className="font-black uppercase tracking-tight">
             {editTarget ? `Icoon wijzigen: ${editTarget}` : 'Hoofdtypes Beheren'}
@@ -509,7 +509,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                   <TabsContent value="html" className="space-y-4 mt-0">
                       <Textarea 
                           placeholder="Plak hier uw <svg> code..." 
-                          className="font-mono text-[10px] min-h-[150px] rounded-2xl border-slate-200 p-4 leading-relaxed"
+                          className="font-mono text-[10px] min-h-[150px] rounded-2xl border-slate-200 p-4 leading-relaxed bg-slate-50 shadow-inner"
                           value={htmlIcon}
                           onChange={e => setHtmlIcon(e.target.value)}
                       />
@@ -615,7 +615,7 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
         <div className="space-y-6 p-6">
           <div className="flex gap-2">
             <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nieuw subtype..." className="font-bold h-11 rounded-xl" />
-            <Button onClick={handleAdd} disabled={!newName.trim() || isSaving} className="h-11 font-black uppercase rounded-xl px-6">
+            <Button onClick={handleAdd} disabled={!newName.trim() || isSaving} className="h-11 font-black uppercase rounded-xl px-6 shadow-xl shadow-primary/20">
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </Button>
           </div>
@@ -936,7 +936,28 @@ export default function NewIssuePage() {
       addDocumentNonBlocking(collection(firestore, 'meldingen'), mData).then(() => {
         toast({ title: "Melding opgeslagen", description: `Melding ${data.intakenummer} is aangemaakt.` });
         startProcessing(1000);
-        router.push('/issues/portal');
+        
+        // Reset form for NEW entry instead of redirecting
+        form.reset({
+            intakenummer: format(new Date(), 'yyyyMMdd') + Math.floor(Math.random() * 100).toString().padStart(2, '0'),
+            status: 'Nieuw',
+            meldingsdatum: new Date(),
+            meldingsuur: format(new Date(), 'HH:mm'),
+            aangenomen_door: profile?.displayName || profile?.email || '',
+            voorvaldatum: new Date(),
+            voorvaltijd: format(new Date(), 'HH:mm'),
+            hoofdcategorie: '',
+            subcategorie: '',
+            straatnaam: '',
+            huisnummer: '',
+            postcode: '',
+            plaats: '',
+            extra_informatie: '',
+        });
+        setUploadedFiles([]);
+        setUploadedPhotos([]);
+        setLocation(null);
+        setIsSubmitting(false);
       }).catch(() => {
         setIsSubmitting(false);
       });
@@ -948,7 +969,7 @@ export default function NewIssuePage() {
 
   const renderMediaAndMap = () => (
     <div className="space-y-4">
-      <Card className="rounded-2xl overflow-hidden shadow-sm border-slate-200">
+      <Card className="rounded-[2rem] overflow-hidden shadow-sm border-slate-200">
         <CardHeader className="bg-slate-50 border-b py-2 px-4">
           <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie Preview</CardTitle>
         </CardHeader>
@@ -967,7 +988,7 @@ export default function NewIssuePage() {
         </div>
       </Card>
 
-      <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
+      <Card className="rounded-[2rem] bg-white shadow-sm border-slate-200 overflow-hidden">
         <CardHeader className="bg-slate-50 border-b py-2 px-4">
           <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Media & Bijlagen</CardTitle>
         </CardHeader>
@@ -975,7 +996,7 @@ export default function NewIssuePage() {
           {uploadedPhotos.length > 0 ? (
             <div className="grid grid-cols-3 gap-2">
               {uploadedPhotos.map((p, i) => (
-                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border group">
+                <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border group">
                   <Image src={p.url} alt="foto" fill className="object-cover" />
                   <Button 
                     variant="destructive" 
@@ -1024,7 +1045,7 @@ export default function NewIssuePage() {
 
   return (
     <div className={cn("flex flex-col bg-slate-50", !isMobile ? "h-[calc(100vh-5rem)] overflow-hidden" : "min-h-screen")}>
-        <header className="h-14 bg-white border-b flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm z-10 sticky top-0">
+        <header className="h-14 bg-white/80 backdrop-blur-lg border-b flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-2">
                 {!isReadOnly && (
                     <>
@@ -1048,15 +1069,15 @@ export default function NewIssuePage() {
                                     <MoreHorizontal className="h-4 w-4 text-slate-600" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2">
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-lg h-10 cursor-pointer font-bold text-green-600">
+                            <DropdownMenuContent align="end" className="w-56 rounded-2xl shadow-xl p-2 border-none">
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-xl h-10 cursor-pointer font-bold text-green-600">
                                     <IssueImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
                                         <div className="flex items-center w-full">
                                             <FileSpreadsheet className="mr-2 h-4 w-4" /> EXCEL Import
                                         </div>
                                     </IssueImportDialog>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-lg h-10 cursor-pointer font-bold text-slate-600">
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-xl h-10 cursor-pointer font-bold text-slate-600">
                                     <SmartPasteDialog 
                                         onParsed={(d) => form.reset({ ...form.getValues(), ...d })} 
                                         instructions={aiConfig?.instructions || ''} 
@@ -1070,12 +1091,12 @@ export default function NewIssuePage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <Separator orientation="vertical" className="h-5 mx-1" />
-                        <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-4 md:px-8 shadow-lg rounded-xl">
+                        <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-4 md:px-8 shadow-xl shadow-primary/20 rounded-xl">
                             {isSubmitting ? <Loader2 className="mr-2 h-3 w-3 lg:h-4 lg:w-4 animate-spin" /> : <Check className="mr-2 h-3 w-3 lg:h-4 lg:w-4" />} {meldingId ? 'BIJWERKEN' : 'OPSLAAN'}
                         </Button>
                     </>
                 )}
-                {isReadOnly && <Badge className="bg-primary text-white font-black uppercase px-4 h-9 rounded-xl">ARCHIEF (READ-ONLY)</Badge>}
+                {isReadOnly && <Badge className="bg-primary text-white font-black uppercase px-4 h-9 rounded-xl shadow-md">ARCHIEF (READ-ONLY)</Badge>}
             </div>
         </header>
 
@@ -1086,44 +1107,44 @@ export default function NewIssuePage() {
                   <div className="space-y-4">
                     <Accordion type="multiple" defaultValue={["section-1"]} className="w-full">
                       <AccordionItem value="section-1" className="border-none">
-                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
+                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-3xl mb-2 shadow-sm border border-slate-100">
                           <span className="text-xs font-black uppercase tracking-widest text-slate-900">Basisgegevens</span>
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0 space-y-2 relative overflow-visible">
                           <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="intakenummer" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label={<>Datum<span className="text-red-500">*</span></>}>
                               <FormField control={form.control} name="meldingsdatum" render={({ field, fieldState }) => (
-                                <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                               )} />
                             </FormRow>
                             <FormRow label={<>Tijdstip<span className="text-red-500">*</span></>}>
                               <FormField control={form.control} name="meldingsuur" render={({ field, fieldState }) => (
-                                <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                               )} />
                             </FormRow>
                           </div>
                           <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="aangenomen_door" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label="Extern Nr.">
                               <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
-                                <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>
+                                <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-xl" /></FormControl></FormItem>
                               )} />
                             </FormRow>
                             <FormRow label="Status">
                               <FormField control={form.control} name="status" render={({ field }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className="h-11 font-bold"><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent>{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <FormControl><SelectTrigger className="h-11 font-bold rounded-xl"><SelectValue /></SelectTrigger></FormControl>
+                                    <SelectContent className="rounded-2xl">{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1133,12 +1154,12 @@ export default function NewIssuePage() {
                             <FormRow label="Containernr.">
                               <FormField control={form.control} name="containernummer" render={({ field }) => (
                                 <FormItem className="relative">
-                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" autoComplete="off" /></FormControl>
+                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-xl" autoComplete="off" /></FormControl>
                                   {containerSuggestions.length > 0 && (
-                                    <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                    <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                                       <ScrollArea className="max-h-60">
                                         {containerSuggestions.map(obj => (
-                                          <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleObjectSelect(obj)}>
+                                          <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleContainerSelect(obj)}>
                                             <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
                                             <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer} • {obj.plaats}</p>
                                           </button>
@@ -1153,8 +1174,8 @@ export default function NewIssuePage() {
                               <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
-                                    <SelectContent>{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <FormControl><SelectTrigger className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                    <SelectContent className="rounded-2xl">{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1164,28 +1185,28 @@ export default function NewIssuePage() {
                       </AccordionItem>
 
                       <AccordionItem value="section-2" className="border-none">
-                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
+                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-3xl mb-2 shadow-sm border border-slate-100">
                           <span className="text-xs font-black uppercase tracking-widest text-slate-900">Locatie & Gebied</span>
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0 space-y-2">
                           <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}>
-                            <FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}>
-                              <FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl></FormItem>)} />
+                              <FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} />
                             </FormRow>
                             <FormRow label="Plaats">
-                              <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
+                              <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-xl" /></FormControl></FormItem>)} />
                             </FormRow>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label="Postcode">
-                              <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
+                              <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-xl" /></FormControl></FormItem>)} />
                             </FormRow>
                             <FormRow label="Werkgebied">
                               <FormField control={form.control} name="werkgebied" render={({ field }) => (
-                                <FormItem><FormControl><Input {...field} value={field.value || ''} disabled className="h-11 font-black bg-slate-50 text-primary border-primary/20" /></FormControl></FormItem>
+                                <FormItem><FormControl><Input {...field} value={field.value || ''} disabled className="h-11 font-black bg-slate-50 text-primary border-primary/20 rounded-xl" /></FormControl></FormItem>
                               )} />
                             </FormRow>
                           </div>
@@ -1193,7 +1214,7 @@ export default function NewIssuePage() {
                       </AccordionItem>
 
                       <AccordionItem value="section-3" className="border-none">
-                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
+                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-3xl mb-2 shadow-sm border border-slate-100">
                           <span className="text-xs font-black uppercase tracking-widest text-slate-900">Omschrijving</span>
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0 space-y-4">
@@ -1203,9 +1224,9 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                     <FormControl>
-                                      <SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                      <SelectTrigger className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-2xl">{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1215,9 +1236,9 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}>
                                     <FormControl>
-                                      <SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                      <SelectTrigger className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-2xl">{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1225,7 +1246,7 @@ export default function NewIssuePage() {
                           </div>
                           <FormRow label="Memo">
                             <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                              <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[120px] font-bold" placeholder="Aanvullende info..." /></FormControl></FormItem>
+                              <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[120px] font-bold rounded-2xl" placeholder="Aanvullende info..." /></FormControl></FormItem>
                             )} />
                           </FormRow>
                         </AccordionContent>
@@ -1238,39 +1259,39 @@ export default function NewIssuePage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-4">
-                      <Card className="rounded-2xl bg-white shadow-sm border-slate-200 relative overflow-visible">
+                      <Card className="rounded-[2.5rem] bg-white shadow-sm border-slate-200 relative overflow-visible">
                         <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
                         <CardContent className="p-4 pt-2">
                           <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="intakenummer" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label={<>Datum<span className="text-red-500">*</span></>}>
                               <FormField control={form.control} name="meldingsdatum" render={({ field, fieldState }) => (
-                                <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                               )} />
                             </FormRow>
                             <FormRow label={<>Tijdstip<span className="text-red-500">*</span></>}>
                               <FormField control={form.control} name="meldingsuur" render={({ field, fieldState }) => (
-                                <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                               )} />
                             </FormRow>
                           </div>
                           <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="aangenomen_door" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
-                            <FormRow label="Extern Nr."><FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label="Extern Nr."><FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-lg" /></FormControl></FormItem>)} /></FormRow>
                             <FormRow label="Status">
                               <FormField control={form.control} name="status" render={({ field }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent>{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <FormControl><SelectTrigger className="h-8 text-xs font-bold rounded-lg"><SelectValue /></SelectTrigger></FormControl>
+                                    <SelectContent className="rounded-xl">{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1280,7 +1301,7 @@ export default function NewIssuePage() {
                             <FormRow label="Containernr.">
                               <FormField control={form.control} name="containernummer" render={({ field }) => (
                                 <FormItem className="relative">
-                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" autoComplete="off" /></FormControl>
+                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-lg" autoComplete="off" /></FormControl>
                                   {containerSuggestions.length > 0 && (
                                     <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                                       <ScrollArea className="max-h-60">
@@ -1300,8 +1321,8 @@ export default function NewIssuePage() {
                               <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
-                                    <SelectContent>{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                    <SelectContent className="rounded-xl">{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1310,21 +1331,21 @@ export default function NewIssuePage() {
                         </CardContent>
                       </Card>
 
-                      <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
+                      <Card className="rounded-[2.5rem] bg-white shadow-sm border-slate-200 overflow-hidden">
                         <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
                         <CardContent className="p-4 pt-2 space-y-3">
-                          <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
+                          <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
-                            <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-lg" /></FormControl></FormItem>)} /></FormRow>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-lg" /></FormControl></FormItem>)} /></FormRow>
                             <FormRow label={<span className="flex items-center gap-1"><LayoutGrid className="h-3 w-3" /> Werkgebied</span>}>
                               <FormField control={form.control} name="werkgebied" render={({ field }) => (
                                 <FormItem>
                                   <FormControl>
-                                    <Input {...field} value={field.value || ''} disabled className="h-8 text-[10px] font-black uppercase bg-slate-50 text-primary border-primary/20 shadow-inner" placeholder="Wordt berekend..." />
+                                    <Input {...field} value={field.value || ''} disabled className="h-8 text-[10px] font-black uppercase bg-slate-50 text-primary border-primary/20 shadow-inner rounded-lg" placeholder="Wordt berekend..." />
                                   </FormControl>
                                 </FormItem>
                               )} />
@@ -1335,7 +1356,7 @@ export default function NewIssuePage() {
                     </div>
 
                     <div className="space-y-4">
-                      <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
+                      <Card className="rounded-[2.5rem] bg-white shadow-sm border-slate-200 overflow-hidden">
                         <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
                         <CardContent className="p-4 pt-2">
                           <div className="grid grid-cols-2 gap-3">
@@ -1344,9 +1365,9 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                     <FormControl>
-                                      <SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                      <SelectTrigger className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-xl">{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1356,9 +1377,9 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}>
                                     <FormControl>
-                                      <SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                      <SelectTrigger className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-xl">{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1366,7 +1387,7 @@ export default function NewIssuePage() {
                           </div>
                           <FormRow label="Memo">
                             <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                              <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[100px] text-xs font-medium border-slate-100 bg-slate-50/30" placeholder="Aanvullende info..." /></FormControl></FormItem>
+                              <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[100px] text-xs font-medium border-slate-100 bg-slate-50/30 rounded-xl" placeholder="Aanvullende info..." /></FormControl></FormItem>
                             )} />
                           </FormRow>
                         </CardContent>

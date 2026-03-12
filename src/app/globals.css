@@ -89,3 +89,8 @@ body[style*="pointer-events: none"] {
 .custom-scrollbar::-webkit-scrollbar-thumb {
   @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
 }
+
+/* iOS typical animations */
+.ios-transition {
+  @apply transition-all duration-300 ease-in-out;
+}

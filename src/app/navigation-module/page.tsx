@@ -65,7 +65,6 @@ import {
   Plus,
   Tag,
   Sparkles,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
   Wrench,
@@ -505,7 +504,7 @@ function IntegratedWerkbonOverlay({
                                     </div>
                                     <div className="grid gap-5">
                                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Product / Materiaal</Label><Input placeholder="Bv. Straatkolk..." value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} className="h-12 bg-white/10 border-none text-white font-black uppercase text-sm rounded-2xl focus:ring-primary/30" /></div>
-                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Aantal</Label><Input type="number" placeholder="0" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} className="h-12 bg-white/10 border-none text-white font-black uppercase text-sm rounded-2xl focus:ring-primary/30 text-center" /></div>
+                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest ml-1">Aantal</Label><Input type="number" placeholder="0" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} className="h-12 bg-white/10 border-none text-white font-black uppercase text-sm rounded-2xl focus:ring-primary/30 text-center" /></div>
                                         <Button className="w-full h-14 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 rounded-2xl shadow-xl transition-all active:scale-95 mt-2" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>TOEVOEGEN</Button>
                                     </div>
                                 </div>
@@ -1149,11 +1148,11 @@ export default function StartNavigationPage() {
                     <div className="space-y-1.5 text-left">
                         <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Kies Project</Label>
                         <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
-                            <SelectTrigger className="h-14 font-black rounded-3xl border-2 bg-white shadow-sm px-6">
+                            <SelectTrigger className="h-14 font-black rounded-3xl border-none bg-white shadow-inner px-6 text-slate-900">
                                 <SelectValue placeholder="Project..." />
                             </SelectTrigger>
-                            <SelectContent className="rounded-3xl shadow-2xl p-2">
-                                {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
+                            <SelectContent className="rounded-3xl shadow-2xl p-2 border-none">
+                                {projects?.map(p => <SelectItem key={p.id} value={p.id!} className="rounded-xl h-10">{p.projectnaam}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -1161,11 +1160,11 @@ export default function StartNavigationPage() {
                     <div className="space-y-1.5 text-left">
                         <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Kies Route</Label>
                         <Select value={selectedRouteId || ''} onValueChange={setSelectedRouteId} disabled={!selectedProjectId}>
-                            <SelectTrigger className="h-14 font-black rounded-3xl border-2 bg-white shadow-sm px-6">
+                            <SelectTrigger className="h-14 font-black rounded-3xl border-none bg-white shadow-inner px-6 text-slate-900">
                                 <SelectValue placeholder="Route..." />
                             </SelectTrigger>
-                            <SelectContent className="rounded-3xl shadow-2xl p-2">
-                                {availableRoutes?.map(r => <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>)}
+                            <SelectContent className="rounded-3xl shadow-2xl p-2 border-none">
+                                {availableRoutes?.map(r => <SelectItem key={r.id} value={r.id} className="rounded-xl h-10">{r.naam}</SelectItem>)}
                                 {(!availableRoutes || availableRoutes.length === 0) && <p className="p-4 text-xs font-bold text-slate-400 italic">Geen routes gevonden</p>}
                             </SelectContent>
                         </Select>
@@ -1173,7 +1172,7 @@ export default function StartNavigationPage() {
                 </div>
 
                 <Button 
-                    className="w-full h-16 font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/20 text-lg transition-all active:scale-95" 
+                    className="w-full h-16 font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/20 text-lg transition-all active:scale-95 bg-primary hover:bg-primary/90" 
                     disabled={!selectedRouteId || isLocating}
                     onClick={handleStartRit}
                 >
@@ -1275,7 +1274,7 @@ export default function StartNavigationPage() {
                         <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border-none">
                             <div className="p-8 bg-slate-50 text-slate-900 flex justify-between items-start border-b">
                                 <div className="space-y-1.5">
-                                    <Badge className="bg-primary border-none text-[9px] font-black uppercase tracking-widest px-3 h-6 text-white rounded-full">Bestemming</Badge>
+                                    <Badge className="bg-primary border-none text-[9px] font-black uppercase tracking-widest px-3 h-6 text-white rounded-full shadow-md">Bestemming</Badge>
                                     <h3 className="text-2xl font-black uppercase tracking-tight leading-none pt-1">{clickedMelding.intakenummer}</h3>
                                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[220px]">{clickedMelding.straatnaam} {clickedMelding.huisnummer}</p>
                                 </div>
@@ -1290,19 +1289,31 @@ export default function StartNavigationPage() {
                 )}
 
                 <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
-                    <div className="flex flex-col gap-3 pointer-events-auto">
+                    <div className="flex flex-col gap-2 pointer-events-auto">
                         {navigationState === 'navigating' && routeInfo && (
-                            <div className="bg-white/95 backdrop-blur-md px-3 h-8 md:h-10 rounded-2xl md:rounded-[2rem] shadow-2xl border-2 border-slate-100 flex items-center gap-2 md:gap-3 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                                <div className="flex items-center gap-1.5 md:gap-2"><Clock className="h-3 md:h-4 text-primary" /><div className="flex flex-col"><span className="text-[5px] md:text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-[10px] md:text-sm font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
-                                <Separator orientation="vertical" className="h-4 md:h-6" />
-                                <div className="flex items-center gap-1.5 md:gap-2"><Navigation className="h-3 md:h-4 text-primary" /><div className="flex flex-col"><span className="text-[5px] md:text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-[10px] md:text-sm font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[8px]">km</span></span></div></div>
+                            <div className="bg-white/95 backdrop-blur-md px-3 h-8 sm:h-10 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-2 sm:gap-3 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                    <Clock className="h-3 sm:h-4 text-primary" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[6px] sm:text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span>
+                                        <span className="text-[10px] sm:text-xs font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
+                                    </div>
+                                </div>
+                                <Separator orientation="vertical" className="h-4 sm:h-6" />
+                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                    <Navigation className="h-3 sm:h-4 text-primary" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[6px] sm:text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span>
+                                        <span className="text-[10px] sm:text-xs font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[8px]">km</span></span>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
 
                     <div className="flex items-center gap-2 pointer-events-auto">
                         <Popover>
-                            <PopoverTrigger asChild><Button variant="secondary" size="icon" className="h-10 md:h-12 w-10 md:w-12 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
+                            <PopoverTrigger asChild><Button variant="secondary" size="icon" className="h-10 sm:h-12 w-10 sm:w-12 rounded-[1.25rem] shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
                             <PopoverContent side="bottom" align="end" className="w-80 p-8 rounded-[2.5rem] shadow-2xl bg-white/95 backdrop-blur-md border-none text-sm">
                                 <div className="space-y-8">
                                     <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div>
@@ -1324,15 +1335,15 @@ export default function StartNavigationPage() {
                             </PopoverContent>
                         </Popover>
                         {navigationState === 'setup' && type === 'meldingen' && (
-                            <Button className="h-10 md:h-12 px-4 md:px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-3xl transition-all active:scale-95 pointer-events-auto border-none tracking-widest" onClick={handleStartRit}>
-                                {isLocating ? <Loader2 className="h-5 w-5 md:h-6 md:w-6 md:mr-3 animate-spin" /> : <Play className="h-5 w-5 md:h-6 md:w-6 md:mr-3 fill-current" />} 
-                                <span className="hidden md:inline text-sm">START RIT</span>
+                            <Button className="h-10 sm:h-12 px-4 sm:px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-[1.25rem] transition-all active:scale-95 pointer-events-auto border-none tracking-widest" onClick={handleStartRit}>
+                                {isLocating ? <Loader2 className="h-5 sm:h-6 sm:mr-3 animate-spin" /> : <Play className="h-5 sm:h-6 sm:mr-3 fill-current" />} 
+                                <span className="hidden sm:inline text-sm">START RIT</span>
                             </Button>
                         )}
                         {navigationState === 'navigating' && (
-                            <Button variant="destructive" className="h-10 md:h-12 px-4 md:px-8 font-black uppercase rounded-3xl shadow-2xl transition-all active:scale-95 pointer-events-auto border-none tracking-widest" onClick={handleStopRit}>
-                              <span className="hidden md:inline">STOP RIT</span>
-                              <span className="md:hidden">STOP</span>
+                            <Button variant="destructive" className="h-10 sm:h-12 px-4 sm:px-8 font-black uppercase rounded-[1.25rem] shadow-2xl transition-all active:scale-95 pointer-events-auto border-none tracking-widest" onClick={handleStopRit}>
+                              <span className="hidden sm:inline">STOP RIT</span>
+                              <span className="sm:hidden">STOP</span>
                             </Button>
                         )}
                     </div>

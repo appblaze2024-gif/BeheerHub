@@ -132,7 +132,7 @@ export default function RouteAssignmentPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] bg-slate-50 overflow-hidden">
-      <header className="h-16 border-b bg-white flex items-center justify-between px-6 shrink-0 shadow-sm">
+      <header className="h-16 border-b bg-white/80 backdrop-blur-lg flex items-center justify-between px-6 shrink-0 shadow-sm z-10 sticky top-0">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => router.push('/')}>
             <ArrowLeft className="h-6 w-6" />
@@ -140,19 +140,19 @@ export default function RouteAssignmentPage() {
           <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">Routetoewijzing</h1>
         </div>
         <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setSelectedDay(prev => addDays(prev, -1))}><ChevronLeft className="h-4 w-4" /></Button>
+            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => setSelectedDay(prev => addDays(prev, -1))}><ChevronLeft className="h-4 w-4" /></Button>
                 <div className="px-4 text-[10px] font-black uppercase tracking-widest text-slate-600">
                     {format(selectedDate, 'eeee d MMMM', { locale: nl })}
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setSelectedDay(prev => addDays(prev, 1))}><ChevronRight className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => setSelectedDay(prev => addDays(prev, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
             <Separator orientation="vertical" className="h-6" />
             <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
-                <SelectTrigger className="h-10 w-64 font-black border-2 rounded-2xl bg-white shadow-sm">
+                <SelectTrigger className="h-10 w-64 font-black border-none rounded-2xl bg-slate-100 shadow-inner">
                     <SelectValue placeholder="Kies project..." />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl shadow-2xl">
+                <SelectContent className="rounded-2xl shadow-2xl border-none">
                     {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
                 </SelectContent>
             </Select>
@@ -239,12 +239,12 @@ export default function RouteAssignmentPage() {
                         <div className="flex-1 space-y-3 w-full">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Selecteer Route</Label>
                             <Select value={selectedRouteId || ''} onValueChange={setSelectedRouteId} disabled={!selectedProjectId}>
-                                <SelectTrigger className="h-14 font-black rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-900 focus:ring-primary/30 px-6">
+                                <SelectTrigger className="h-14 font-black rounded-3xl border-none bg-slate-100 text-slate-900 focus:ring-primary/30 px-6 shadow-inner">
                                     <SelectValue placeholder="Kies een route..." />
                                 </SelectTrigger>
-                                <SelectContent className="rounded-2xl shadow-2xl p-2">
+                                <SelectContent className="rounded-3xl shadow-2xl p-2 border-none">
                                     {(selectedRouteType === 'veegroutes' ? activeProject?.veegroutes : activeProject?.prullenbakkenroutes)?.map(r => (
-                                        <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
+                                        <SelectItem key={r.id} value={r.id} className="rounded-xl h-10">{r.naam}</SelectItem>
                                     ))}
                                     {(!(selectedRouteType === 'veegroutes' ? activeProject?.veegroutes : activeProject?.prullenbakkenroutes)?.length) && (
                                         <p className="p-4 text-xs font-bold text-slate-400 italic">Geen routes beschikbaar</p>
@@ -254,7 +254,7 @@ export default function RouteAssignmentPage() {
                         </div>
 
                         <Button 
-                            className="h-14 px-10 font-black uppercase tracking-widest rounded-2xl shadow-2xl shadow-primary/20 bg-primary text-white hover:bg-primary/90 disabled:opacity-30 transition-all active:scale-95" 
+                            className="h-14 px-10 font-black uppercase tracking-widest rounded-[2rem] shadow-2xl shadow-primary/20 bg-primary text-white hover:bg-primary/90 disabled:opacity-30 transition-all active:scale-95" 
                             disabled={!selectedUserId || !selectedRouteId || isSubmitting}
                             onClick={handleAddAssignment}
                         >
@@ -270,7 +270,7 @@ export default function RouteAssignmentPage() {
                         <div className="bg-primary/10 p-2 rounded-xl"><LayoutGrid className="h-4 w-4 text-primary" /></div>
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-900">Actieve Toewijzingen</CardTitle>
                     </div>
-                    <Badge variant="outline" className="bg-white border-slate-200 font-black px-3">{assignments?.length || 0} Totaal</Badge>
+                    <Badge variant="outline" className="bg-white border-slate-200 font-black px-3 rounded-full">{assignments?.length || 0} Totaal</Badge>
                 </CardHeader>
                 <ScrollArea className="flex-1">
                     {isLoadingAssignments ? (
@@ -283,12 +283,12 @@ export default function RouteAssignmentPage() {
                                     <div key={a.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
                                         <div className="flex items-center gap-6 flex-1 min-w-0">
                                             <div className="flex items-center gap-3 w-48 shrink-0">
-                                                <div className="h-10 w-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-[10px] font-black uppercase">
+                                                <div className="h-10 w-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-[10px] font-black uppercase shadow-lg">
                                                     {user?.firstName?.[0]}{user?.lastName?.[0]}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="font-black text-xs uppercase text-slate-900 truncate">{user?.displayName || user?.email}</p>
-                                                    <Badge variant="outline" className="h-4 text-[7px] font-black uppercase tracking-tighter opacity-50">{user?.role}</Badge>
+                                                    <Badge variant="outline" className="h-4 text-[7px] font-black uppercase tracking-tighter opacity-50 border-none">{user?.role}</Badge>
                                                 </div>
                                             </div>
                                             
@@ -299,7 +299,7 @@ export default function RouteAssignmentPage() {
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{a.routeName}</span>
                                                     <Badge className={cn(
-                                                        "text-[8px] h-4 uppercase font-black tracking-widest border-none px-1.5",
+                                                        "text-[8px] h-4 uppercase font-black tracking-widest border-none px-1.5 rounded-lg",
                                                         a.routeType === 'veegroutes' ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
                                                     )}>
                                                         {a.routeType === 'veegroutes' ? 'Veeg' : 'Bak'}
@@ -311,7 +311,7 @@ export default function RouteAssignmentPage() {
                                                 <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1">Status</p>
                                                 <div className="flex items-center gap-2">
                                                     <div className={cn(
-                                                        "h-2 w-2 rounded-full",
+                                                        "h-2 w-2 rounded-full shadow-sm",
                                                         a.status === 'Completed' ? "bg-green-500" : a.status === 'Started' ? "bg-blue-500 animate-pulse" : "bg-slate-200"
                                                     )} />
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">{a.status}</span>
@@ -322,7 +322,7 @@ export default function RouteAssignmentPage() {
                                         <Button 
                                             variant="ghost" 
                                             size="icon" 
-                                            className="h-10 w-10 text-slate-200 hover:text-red-600 hover:bg-red-50 rounded-2xl opacity-0 group-hover:opacity-100 transition-all"
+                                            className="h-10 w-10 text-slate-200 hover:text-red-600 hover:bg-red-50 rounded-[1.25rem] opacity-0 group-hover:opacity-100 transition-all"
                                             onClick={() => handleDeleteAssignment(a.id)}
                                         >
                                             <Trash2 className="h-5 w-5" />
@@ -333,7 +333,7 @@ export default function RouteAssignmentPage() {
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center py-24 text-slate-300 text-center gap-4">
-                            <div className="bg-slate-50 p-8 rounded-[2.5rem] border-2 border-dashed border-slate-100">
+                            <div className="bg-slate-50 p-8 rounded-[2.5rem] border-2 border-dashed border-slate-100 shadow-inner">
                                 <Plus className="h-12 w-12 opacity-10" />
                             </div>
                             <p className="text-xs font-black uppercase tracking-widest max-w-xs mx-auto">Nog geen toewijzingen voor deze dag</p>
