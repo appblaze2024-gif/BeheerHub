@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy, where, limit } from 'firebase/firestore';
 import { Loader2, Calendar, User as UserIcon, CheckCircle2, XCircle, Clock, History, ArrowLeft, Search, Filter, LayoutGrid } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -53,6 +53,14 @@ export default function RouteHistoryPage() {
     return routes.filter(r => r.routeName.toLowerCase().includes(q));
   }, [routes, searchTerm]);
 
+  // Safe date formatting helper
+  const safeFormat = (dateStr: string | undefined, formatStr: string, options?: any) => {
+    if (!dateStr) return '--:--';
+    const date = new Date(dateStr);
+    if (!isValid(date)) return '??:??';
+    return format(date, formatStr, options);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] bg-slate-50 overflow-hidden">
       <header className="h-16 border-b bg-white flex items-center justify-between px-6 shrink-0 shadow-sm">
@@ -92,7 +100,7 @@ export default function RouteHistoryPage() {
             <div className="flex items-center justify-between mb-2 px-1">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gereden Ritten</Label>
                 <div className="relative w-32">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-300" />
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
                     <Input 
                         placeholder="Filter..." 
                         className="h-7 pl-7 text-[9px] font-bold rounded-lg border-slate-100 bg-slate-50"
@@ -120,11 +128,13 @@ export default function RouteHistoryPage() {
                     >
                       <div className="flex justify-between items-start">
                         <span className="font-black text-xs uppercase tracking-tight text-slate-900 truncate pr-2 leading-none">{r.routeName}</span>
-                        <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{format(new Date(r.startTime), 'dd MMM')}</span>
+                        <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                          {safeFormat(r.startTime, 'dd MMM')}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
                         <Clock className="h-3 w-3" />
-                        <span>{format(new Date(r.startTime), 'HH:mm')} - {r.endTime ? format(new Date(r.endTime), 'HH:mm') : '??:??'}</span>
+                        <span>{safeFormat(r.startTime, 'HH:mm')} - {safeFormat(r.endTime, 'HH:mm')}</span>
                       </div>
                       <div className="mt-1 space-y-1.5">
                           <Progress value={((r.completedObjects?.length || 0) / (r.totalObjects || 1)) * 100} className="h-1 bg-slate-100" />
@@ -162,9 +172,20 @@ export default function RouteHistoryPage() {
                   <Badge variant="outline" className="border-2 border-primary/20 text-primary bg-primary/5 px-3 py-0.5 text-[9px] font-black uppercase tracking-widest">Rit Details</Badge>
                   <h3 className="text-3xl font-black uppercase tracking-tighter leading-none text-slate-900">{selectedRoute.routeName}</h3>
                   <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-500 pt-1">
-                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-slate-300" /> {format(new Date(selectedRoute.startTime), 'eeee d MMMM yyyy', { locale: nl })}</div>
-                      <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-slate-300" /> {format(new Date(selectedRoute.startTime), 'HH:mm')} start</div>
-                      {selectedRoute.endTime && <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> {format(new Date(selectedRoute.endTime), 'HH:mm')} eind</div>}
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-slate-300" /> 
+                        {safeFormat(selectedRoute.startTime, 'eeee d MMMM yyyy', { locale: nl })}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-slate-300" /> 
+                        {safeFormat(selectedRoute.startTime, 'HH:mm')} start
+                      </div>
+                      {selectedRoute.endTime && (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" /> 
+                          {safeFormat(selectedRoute.endTime, 'HH:mm')} eind
+                        </div>
+                      )}
                   </div>
                 </div>
                 <div className="bg-slate-900 text-white p-6 rounded-[2rem] flex items-center gap-8 shadow-2xl">
