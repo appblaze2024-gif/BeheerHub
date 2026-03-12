@@ -50,7 +50,6 @@ export default function RouteAssignmentPage() {
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-  // Fetch Projects
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'projects'), orderBy('projectnaam', 'asc'));
@@ -59,14 +58,12 @@ export default function RouteAssignmentPage() {
 
   const activeProject = projects?.find(p => p.id === selectedProjectId);
 
-  // Fetch Users
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'users');
   }, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-  // Fetch Active Assignments for the selected day
   const assignmentsQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
     return query(
@@ -157,7 +154,6 @@ export default function RouteAssignmentPage() {
       </header>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 p-6 overflow-hidden">
-        {/* User Selection */}
         <Card className="lg:col-span-4 flex flex-col rounded-[2.5rem] overflow-hidden border-none shadow-xl bg-white">
           <CardHeader className="p-6 border-b bg-slate-50/50">
             <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Collega's</CardTitle>
@@ -202,7 +198,6 @@ export default function RouteAssignmentPage() {
           </ScrollArea>
         </Card>
 
-        {/* Assignment Controls */}
         <div className="lg:col-span-8 flex flex-col gap-6 min-h-0 overflow-hidden">
             <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden shrink-0">
                 <CardContent className="p-8">

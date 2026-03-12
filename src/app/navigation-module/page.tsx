@@ -1161,7 +1161,7 @@ export default function StartNavigationPage() {
                                 <SelectValue placeholder="Project..." />
                             </SelectTrigger>
                             <SelectContent className="rounded-3xl shadow-2xl p-2 border-none">
-                                {projects?.map(p => <SelectItem key={p.id} value={p.id!} className="rounded-xl h-10">{p.projectnaam}</SelectItem>)}
+                                {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -1286,42 +1286,49 @@ export default function StartNavigationPage() {
                     </div>
                 )}
 
-                <div className="absolute top-0 left-0 right-0 z-20 h-auto min-h-[4rem] flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 bg-white/80 backdrop-blur-lg border-b pointer-events-none gap-3">
-                    <div className="flex items-center gap-3 pointer-events-auto w-full sm:w-auto">
-                        {navigationState !== 'navigating' && (
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                                <ArrowLeft className="h-6 w-6 text-slate-600" />
-                            </Button>
-                        )}
+                <div className="absolute top-0 left-0 right-0 z-20 h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-none gap-2">
+                    <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
+                            <ArrowLeft className="h-6 w-6 text-slate-600" />
+                        </Button>
+                        
                         {navigationState === 'navigating' && routeInfo && (
-                            <div className="flex items-center gap-3 sm:gap-6 bg-slate-900/10 px-5 py-2.5 rounded-full border-2 border-slate-200 shadow-sm flex-1 sm:flex-none justify-center">
-                                <div className="flex items-center gap-2">
-                                    <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                                    <span className="text-sm sm:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
+                            <div className="hidden sm:flex items-center gap-3 bg-slate-900/5 px-3 py-1.5 rounded-full border-2 border-slate-200 shadow-sm">
+                                <div className="flex items-center gap-1.5">
+                                    <Clock className="h-4 w-4 text-primary" />
+                                    <span className="text-sm font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
                                 </div>
-                                <div className="h-6 w-0.5 bg-slate-300" />
-                                <div className="flex items-center gap-2">
-                                    <Navigation className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                                    <span className="text-sm sm:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} km</span>
+                                <div className="h-4 w-0.5 bg-slate-300" />
+                                <div className="flex items-center gap-1.5">
+                                    <Navigation className="h-4 w-4 text-primary" />
+                                    <span className="text-sm font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} km</span>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 pointer-events-auto w-full sm:w-auto justify-between sm:justify-end">
+                    {navigationState === 'navigating' && routeInfo && (
+                        <div className="sm:hidden flex items-center gap-3 bg-slate-900/5 px-3 py-1.5 rounded-full border-2 border-slate-200 shadow-sm pointer-events-auto">
+                            <span className="text-xs font-black text-slate-900">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
+                            <div className="h-3 w-px bg-slate-300" />
+                            <span className="text-xs font-black text-slate-900">{(routeInfo.distance / 1000).toFixed(1)}km</span>
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pointer-events-auto shrink-0">
                         <Popover>
                             <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
                             <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-[2.5rem] shadow-2xl bg-white/95 backdrop-blur-md border-none text-sm"><div className="space-y-8"><div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div><div className="space-y-8"><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Kanteling</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div><Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Dynamisch zoomen</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Op basis van snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} className="data-[state=checked]:bg-primary" /></div>{!dynamicZoomEnabled && (<div className="space-y-3 animate-in slide-in-from-top-2 duration-300"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Vaste zoomhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{navZoom.toFixed(1)}</span></div><div className="flex items-center gap-3"><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div></div>)}<Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Auto-open</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Open bij 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} className="data-[state=checked]:bg-primary" /></div></div></div></PopoverContent>
                         </Popover>
                         {navigationState === 'setup' && type === 'meldingen' && (
-                            <Button className="h-10 px-6 sm:px-8 font-black uppercase bg-[#007AFF] text-white hover:bg-blue-700 shadow-xl rounded-xl transition-all active:scale-95 border-none tracking-widest text-xs sm:text-sm flex-1 sm:flex-none" onClick={handleStartRit}>
-                                {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 mr-2 fill-current" />} 
-                                START RIT
+                            <Button className="h-10 px-4 font-black uppercase bg-[#007AFF] text-white hover:bg-blue-700 shadow-xl rounded-xl transition-all active:scale-95 border-none tracking-widest text-[10px] sm:text-xs" onClick={handleStartRit}>
+                                {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 mr-1 fill-current" />} 
+                                START
                             </Button>
                         )}
                         {navigationState === 'navigating' && (
-                            <Button variant="destructive" className="h-10 px-6 sm:px-8 font-black uppercase rounded-xl shadow-xl transition-all active:scale-95 border-none tracking-widest text-xs sm:text-sm flex-1 sm:flex-none" onClick={handleStopRit}>
-                              STOP RIT
+                            <Button variant="destructive" className="h-10 px-4 font-black uppercase rounded-xl shadow-xl transition-all active:scale-95 border-none tracking-widest text-[10px] sm:text-xs" onClick={handleStopRit}>
+                              STOP
                             </Button>
                         )}
                     </div>
