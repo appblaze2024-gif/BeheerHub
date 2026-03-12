@@ -337,7 +337,7 @@ export default function RouteAssignmentPage() {
                         </div>
                     )}
                 </ScrollArea>
-            </div>
+            </Card>
         </div>
       </div>
     </div>
