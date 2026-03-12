@@ -26,6 +26,12 @@ service cloud.firestore {
 
     // --- RULES ---
 
+    // Route assignments - EXPLICIET OPEN VOOR ALLE INGELOGDE GEBRUIKERS (moet bovenaan voor collection-level toegang)
+    match /route_assignments/{assignmentId} {
+      allow read, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
     // Gebruikersprofielen
     match /users/{userId} {
       allow read, list: if isSignedIn();
@@ -64,12 +70,6 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn();
       allow delete: if isPrivileged();
-    }
-
-    // Route assignments - OPEN VOOR ALLE INGELOGDE GEBRUIKERS
-    match /route_assignments/{assignmentId} {
-      allow read, list: if isSignedIn();
-      allow write: if isPrivileged();
     }
 
     // Wagenpark en Machines

@@ -904,9 +904,11 @@ export default function StartNavigationPage() {
                         const line = turf.lineString(currentRouteGeometry.coordinates);
                         const currPt = turf.point([visualPosRef.current.lng, visualPosRef.current.lat]);
                         const snapped = turf.nearestPointOnLine(line, currPt);
-                        const endPt = turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]);
-                        const sliced = turf.lineSlice(snapped, endPt, line);
-                        setDisplayedRouteGeometry(sliced);
+                        if (!isNaN(snapped.geometry.coordinates[0])) {
+                            const endPt = turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]);
+                            const sliced = turf.lineSlice(snapped, endPt, line);
+                            setDisplayedRouteGeometry(sliced);
+                        }
                     } catch (e) {}
                 }
             }
@@ -1027,7 +1029,6 @@ export default function StartNavigationPage() {
         visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         visualHeadingRef.current = heading;
         
-        // ROAD DISTANCE SORTING: If we have multiple candidates, find the one nearest via road
         if (filteredMeldingen.length > 1) {
             const topCandidates = sortedMissions.slice(0, 15);
             const coordinates = [[loc.longitude, loc.latitude], ...topCandidates.map(m => [m.longitude, m.latitude])];
@@ -1299,15 +1300,15 @@ export default function StartNavigationPage() {
                             </Button>
                         )}
                         {navigationState === 'navigating' && routeInfo && (
-                            <div className="flex items-center gap-2 sm:gap-4 bg-slate-900/5 px-3 py-1 rounded-full border border-slate-200/50">
-                                <div className="flex items-center gap-1.5">
-                                    <Clock className="h-3.5 w-3.5 text-primary" />
-                                    <span className="text-[10px] sm:text-xs font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
+                            <div className="flex items-center gap-3 sm:gap-6 bg-slate-900/10 px-5 py-2 rounded-full border-2 border-slate-200 shadow-sm">
+                                <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                                    <span className="text-xs sm:text-sm font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
                                 </div>
-                                <Separator orientation="vertical" className="h-4" />
-                                <div className="flex items-center gap-1.5">
-                                    <Navigation className="h-3.5 w-3.5 text-primary" />
-                                    <span className="text-[10px] sm:text-xs font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} km</span>
+                                <div className="h-5 w-0.5 bg-slate-200" />
+                                <div className="flex items-center gap-2">
+                                    <Navigation className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                                    <span className="text-xs sm:text-sm font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} km</span>
                                 </div>
                             </div>
                         )}
