@@ -2,8 +2,24 @@
 
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, getDocs, writeBatch, orderBy } from 'firebase/firestore';
-import { Loader2, Calendar, User as UserIcon, CheckCircle2, Navigation, ArrowLeft, Plus, Trash2, Sliders, LayoutGrid, Check, MapPin, Search } from 'lucide-react';
+import { collection, query, where, doc, orderBy } from 'firebase/firestore';
+import { 
+  Loader2, 
+  Calendar, 
+  User as UserIcon, 
+  CheckCircle2, 
+  Navigation, 
+  ArrowLeft, 
+  Plus, 
+  Trash2, 
+  Sliders, 
+  LayoutGrid, 
+  Check, 
+  MapPin, 
+  Search,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -12,11 +28,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { useProject } from '@/context/project-context';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { UserProfile, Project as ProjectType, RouteAssignment } from '@/lib/types';
 
 export default function RouteAssignmentPage() {
@@ -328,6 +346,3 @@ export default function RouteAssignmentPage() {
     </div>
   );
 }
-
-function ChevronLeft(props: any) { return <Icons.ChevronLeft {...props} />; }
-function ChevronRight(props: any) { return <Icons.ChevronRight {...props} />; }
