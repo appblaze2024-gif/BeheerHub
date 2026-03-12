@@ -215,7 +215,7 @@ function IntegratedWerkbonOverlay({
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     
-    const [previewImage, setPreviewImage] = string | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [zoomScale, setZoomScale] = useState(1);
     const [zoomOffset, setZoomOffset] = useState({ x: 0, y: 0 });
     const lastTouchRef = useRef<{ dist: number; center: { x: number; y: number } } | null>(null);
@@ -1292,17 +1292,17 @@ export default function StartNavigationPage() {
                 <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
                     <div className="flex flex-col gap-3 pointer-events-auto">
                         {navigationState === 'navigating' && routeInfo && (
-                            <div className="bg-white/95 backdrop-blur-md px-3 md:px-5 h-9 md:h-14 rounded-2xl md:rounded-[2rem] shadow-2xl border-2 border-slate-100 flex items-center gap-3 md:gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                                <div className="flex items-center gap-2 md:gap-3"><Clock className="h-3.5 w-3.5 md:h-5 md:w-5 text-primary" /><div className="flex flex-col"><span className="text-[6px] md:text-[8px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-xs md:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
-                                <Separator orientation="vertical" className="h-5 md:h-8" />
-                                <div className="flex items-center gap-2 md:gap-3"><Navigation className="h-3.5 w-3.5 md:h-5 md:w-5 text-primary" /><div className="flex flex-col"><span className="text-[6px] md:text-[8px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-xs md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
+                            <div className="bg-white/95 backdrop-blur-md px-3 h-8 md:h-10 rounded-2xl md:rounded-[2rem] shadow-2xl border-2 border-slate-100 flex items-center gap-2 md:gap-3 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                                <div className="flex items-center gap-1.5 md:gap-2"><Clock className="h-3 md:h-4 text-primary" /><div className="flex flex-col"><span className="text-[5px] md:text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-[10px] md:text-sm font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
+                                <Separator orientation="vertical" className="h-4 md:h-6" />
+                                <div className="flex items-center gap-1.5 md:gap-2"><Navigation className="h-3 md:h-4 text-primary" /><div className="flex flex-col"><span className="text-[5px] md:text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-[10px] md:text-sm font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[8px]">km</span></span></div></div>
                             </div>
                         )}
                     </div>
 
                     <div className="flex items-center gap-2 pointer-events-auto">
                         <Popover>
-                            <PopoverTrigger asChild><Button variant="secondary" size="icon" className="h-10 w-10 md:h-14 md:w-14 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-5 w-5 md:h-6 md:w-6 text-slate-600" /></Button></PopoverTrigger>
+                            <PopoverTrigger asChild><Button variant="secondary" size="icon" className="h-10 md:h-12 w-10 md:w-12 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
                             <PopoverContent side="bottom" align="end" className="w-80 p-8 rounded-[2.5rem] shadow-2xl bg-white/95 backdrop-blur-md border-none text-sm">
                                 <div className="space-y-8">
                                     <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div>
@@ -1324,13 +1324,13 @@ export default function StartNavigationPage() {
                             </PopoverContent>
                         </Popover>
                         {navigationState === 'setup' && type === 'meldingen' && (
-                            <Button className="h-10 md:h-14 px-6 md:px-10 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-3xl transition-all active:scale-95 pointer-events-auto border-none tracking-widest" onClick={handleStartRit}>
+                            <Button className="h-10 md:h-12 px-4 md:px-8 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-3xl transition-all active:scale-95 pointer-events-auto border-none tracking-widest" onClick={handleStartRit}>
                                 {isLocating ? <Loader2 className="h-5 w-5 md:h-6 md:w-6 md:mr-3 animate-spin" /> : <Play className="h-5 w-5 md:h-6 md:w-6 md:mr-3 fill-current" />} 
                                 <span className="hidden md:inline text-sm">START RIT</span>
                             </Button>
                         )}
                         {navigationState === 'navigating' && (
-                            <Button variant="destructive" className="h-10 md:h-14 px-6 md:px-10 font-black uppercase rounded-3xl shadow-2xl transition-all active:scale-95 pointer-events-auto border-none tracking-widest" onClick={handleStopRit}>
+                            <Button variant="destructive" className="h-10 md:h-12 px-4 md:px-8 font-black uppercase rounded-3xl shadow-2xl transition-all active:scale-95 pointer-events-auto border-none tracking-widest" onClick={handleStopRit}>
                               <span className="hidden md:inline">STOP RIT</span>
                               <span className="md:hidden">STOP</span>
                             </Button>
@@ -1345,9 +1345,6 @@ export default function StartNavigationPage() {
                                 <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
                                     <span className="text-2xl sm:text-4xl font-black text-slate-900 leading-none tabular-nums">{speedKmh}</span>
                                     <span className="text-[9px] sm:text-[11px] font-black uppercase text-primary tracking-tighter">km/h</span>
-                                </div>
-                                <div className="absolute -top-1 -right-1 h-9 w-9 sm:h-11 sm:w-11 rounded-full border-[4px] border-red-600 flex items-center justify-center bg-white shadow-2xl shrink-0 animate-in fade-in zoom-in duration-500 z-10">
-                                    <span className="text-xs sm:text-sm font-black text-slate-900 tabular-nums">{currentSpeedLimit}</span>
                                 </div>
                             </div>
 
