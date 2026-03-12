@@ -108,7 +108,6 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Textarea } from '@/components/ui/textarea';
-import { MapboxView } from '@/components/mapbox-view';
 import { useProject } from '@/context/project-context';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -905,6 +904,12 @@ export default function StartNavigationPage() {
                         const currPt = turf.point([visualPosRef.current.lng, visualPosRef.current.lat]);
                         const snapped = turf.nearestPointOnLine(line, currPt);
                         if (!isNaN(snapped.geometry.coordinates[0])) {
+                            targetPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
+                            const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
+                            const distAlong = turf.length(alongRoute, { units: 'meters' });
+                            const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
+                            lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
+                            
                             const endPt = turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]);
                             const sliced = turf.lineSlice(snapped, endPt, line);
                             setDisplayedRouteGeometry(sliced);
@@ -930,22 +935,8 @@ export default function StartNavigationPage() {
             const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
             setSpeedKmh(currentSpeed);
 
-            if (navigationState === 'navigating' && currentRouteGeometry) {
-                try {
-                    const line = turf.lineString(currentRouteGeometry.coordinates);
-                    const currPt = turf.point([loc.longitude, loc.latitude]);
-                    const snapped = turf.nearestPointOnLine(line, currPt);
-                    if (!isNaN(snapped.geometry.coordinates[0])) {
-                        targetPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
-                        const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
-                        const distAlong = turf.length(alongRoute, { units: 'meters' });
-                        const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
-                        lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
-                        if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 100 && !isCalculatingRoute) fetchRoute(true);
-                    }
-                } catch (e) {}
-            } else { 
-                targetPosRef.current = { lng: loc.longitude, lat: loc.latitude }; 
+            if (navigationState !== 'navigating' || !currentRouteGeometry) {
+                targetPosRef.current = { lng: loc.longitude, lat: loc.latitude };
             }
 
             if (navigationState === 'navigating' && nextMission && autoOpenEnabled) {
@@ -1292,41 +1283,41 @@ export default function StartNavigationPage() {
                     </div>
                 )}
 
-                <div className="absolute top-0 left-0 right-0 z-20 h-14 sm:h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-none">
-                    <div className="flex items-center gap-3 pointer-events-auto">
+                <div className="absolute top-0 left-0 right-0 z-20 h-auto min-h-[4rem] flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 bg-white/80 backdrop-blur-lg border-b pointer-events-none gap-3">
+                    <div className="flex items-center gap-3 pointer-events-auto w-full sm:w-auto">
                         {navigationState !== 'navigating' && (
                             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
                                 <ArrowLeft className="h-6 w-6 text-slate-600" />
                             </Button>
                         )}
                         {navigationState === 'navigating' && routeInfo && (
-                            <div className="flex items-center gap-3 sm:gap-6 bg-slate-900/10 px-5 py-2 rounded-full border-2 border-slate-200 shadow-sm">
+                            <div className="flex items-center gap-3 sm:gap-6 bg-slate-900/10 px-5 py-2.5 rounded-full border-2 border-slate-200 shadow-sm flex-1 sm:flex-none justify-center">
                                 <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                                    <span className="text-xs sm:text-sm font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
+                                    <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                                    <span className="text-sm sm:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
                                 </div>
-                                <div className="h-5 w-0.5 bg-slate-200" />
+                                <div className="h-6 w-0.5 bg-slate-300" />
                                 <div className="flex items-center gap-2">
-                                    <Navigation className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                                    <span className="text-xs sm:text-sm font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} km</span>
+                                    <Navigation className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                                    <span className="text-sm sm:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} km</span>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 pointer-events-auto">
+                    <div className="flex items-center gap-2 pointer-events-auto w-full sm:w-auto justify-between sm:justify-end">
                         <Popover>
                             <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
                             <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-[2.5rem] shadow-2xl bg-white/95 backdrop-blur-md border-none text-sm"><div className="space-y-8"><div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div><div className="space-y-8"><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Kanteling</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div><Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Dynamisch zoomen</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Op basis van snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} className="data-[state=checked]:bg-primary" /></div>{!dynamicZoomEnabled && (<div className="space-y-3 animate-in slide-in-from-top-2 duration-300"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Vaste zoomhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{navZoom.toFixed(1)}</span></div><div className="flex items-center gap-3"><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div></div>)}<Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Auto-open</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Open bij 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} className="data-[state=checked]:bg-primary" /></div></div></div></PopoverContent>
                         </Popover>
                         {navigationState === 'setup' && type === 'meldingen' && (
-                            <Button className="h-10 px-6 sm:px-8 font-black uppercase bg-[#007AFF] text-white hover:bg-blue-700 shadow-xl rounded-xl transition-all active:scale-95 border-none tracking-widest text-xs sm:text-sm" onClick={handleStartRit}>
+                            <Button className="h-10 px-6 sm:px-8 font-black uppercase bg-[#007AFF] text-white hover:bg-blue-700 shadow-xl rounded-xl transition-all active:scale-95 border-none tracking-widest text-xs sm:text-sm flex-1 sm:flex-none" onClick={handleStartRit}>
                                 {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 mr-2 fill-current" />} 
                                 START RIT
                             </Button>
                         )}
                         {navigationState === 'navigating' && (
-                            <Button variant="destructive" className="h-10 px-6 sm:px-8 font-black uppercase rounded-xl shadow-xl transition-all active:scale-95 border-none tracking-widest text-xs sm:text-sm" onClick={handleStopRit}>
+                            <Button variant="destructive" className="h-10 px-6 sm:px-8 font-black uppercase rounded-xl shadow-xl transition-all active:scale-95 border-none tracking-widest text-xs sm:text-sm flex-1 sm:flex-none" onClick={handleStopRit}>
                               STOP RIT
                             </Button>
                         )}
@@ -1371,18 +1362,76 @@ export default function StartNavigationPage() {
                 )}
 
                 <div className={cn("absolute bottom-0 left-0 right-0 z-40 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl h-[280px] transition-all duration-500", navigationState === 'navigating' ? "translate-y-full opacity-0" : "translate-y-0 opacity-100")}>
-                    <div className="h-14 flex items-center justify-between px-4 sm:px-8 cursor-default shrink-0 border-b bg-slate-50">
-                        <div className="flex items-center justify-between flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
-                            <div className="relative w-48 sm:w-80 shrink-0"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input placeholder="Zoek opdracht..." className="h-10 pl-10 text-xs font-black uppercase tracking-tight rounded-2xl border-none shadow-inner bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
-                            <div className="flex items-center gap-2.5 shrink-0 overflow-x-auto no-scrollbar ml-auto">
-                                <Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200" onClick={handleZoomToAll}><Maximize className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Overzicht</span></Button>
+                    <div className="h-auto min-h-[3.5rem] flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-2 sm:py-0 cursor-default shrink-0 border-b bg-slate-50 gap-3">
+                        <div className="flex flex-col sm:flex-row items-center justify-between w-full sm:flex-1 pointer-events-auto gap-3" onClick={e => e.stopPropagation()}>
+                            <div className="relative w-full sm:max-w-xs shrink-0">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input 
+                                    placeholder="Zoek opdracht..." 
+                                    className="h-10 pl-10 text-xs font-black uppercase tracking-tight rounded-2xl border-none shadow-inner bg-white focus:ring-primary/20" 
+                                    value={searchQuery} 
+                                    onChange={e => setSearchQuery(e.target.value)} 
+                                />
+                            </div>
+                            <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0 overflow-x-auto no-scrollbar py-1 justify-start sm:justify-end">
+                                <Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" onClick={handleZoomToAll}>
+                                    <Maximize className="h-4 w-4 sm:mr-2" /> 
+                                    <span className="hidden sm:inline">Overzicht</span>
+                                    <span className="sm:hidden ml-1">ZICHT</span>
+                                </Button>
                                 {type === 'meldingen' && (
                                     <>
-                                        <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg voltooid" : "Vandaag gereed"}</span></Button>
-                                        {isPrivileged && (<Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}><User className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg labels" : "Behandelaars"}</span></Button>)}
+                                        <Button 
+                                            variant={showTodayCompleted ? "default" : "outline"} 
+                                            size="sm" 
+                                            className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" 
+                                            onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}
+                                        >
+                                            <CheckCircle2 className="h-4 w-4 sm:mr-2" /> 
+                                            <span className="hidden sm:inline">{showTodayCompleted ? "Verberg voltooid" : "Vandaag gereed"}</span>
+                                            <span className="sm:hidden ml-1">GEREED</span>
+                                        </Button>
+                                        {isPrivileged && (
+                                            <Button 
+                                                variant={showAssignmentBubbles ? "default" : "outline"} 
+                                                size="sm" 
+                                                className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" 
+                                                onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}
+                                            >
+                                                <User className="h-4 w-4 sm:mr-2" /> 
+                                                <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg labels" : "Behandelaars"}</span>
+                                                <span className="sm:hidden ml-1">TEAM</span>
+                                            </Button>
+                                        )}
                                     </>
                                 )}
-                                <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 gap-2"><LayoutGrid className="h-4 w-4" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-64 p-6 rounded-3xl shadow-2xl border-none bg-white/95 backdrop-blur-md text-sm"><div className="space-y-6"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-3">Weergaveinstellingen</p><div className="space-y-3">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-slate-50 transition-colors"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md border-2" /><Label htmlFor={`col-${colId}`} className="text-xs font-black uppercase tracking-tight text-slate-700 cursor-pointer">{colId}</Label></div>))}</div></div></PopoverContent></Popover>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 gap-2 shrink-0">
+                                            <LayoutGrid className="h-4 w-4" /> 
+                                            <span className="hidden sm:inline">Kolommen</span>
+                                            <span className="sm:hidden">TAB</span>
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent align="end" className="w-64 p-6 rounded-3xl shadow-2xl border-none bg-white/95 backdrop-blur-md text-sm">
+                                        <div className="space-y-6">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-3">Weergaveinstellingen</p>
+                                            <div className="space-y-3">
+                                                {Object.keys(visibleColumns).map(colId => (
+                                                    <div key={colId} className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                                        <Checkbox 
+                                                            id={`col-${colId}`} 
+                                                            checked={visibleColumns[colId] ?? true} 
+                                                            onCheckedChange={() => toggleColumnVisibility(colId)} 
+                                                            className="rounded-md border-2" 
+                                                        />
+                                                        <Label htmlFor={`col-${colId}`} className="text-xs font-black uppercase tracking-tight text-slate-700 cursor-pointer">{colId}</Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
                     </div>
