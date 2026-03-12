@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, orderBy, where } from 'firebase/firestore';
+import { collection, query, orderBy, where, limit } from 'firebase/firestore';
 import { Loader2, Calendar, User as UserIcon, CheckCircle2, XCircle, Clock, History, ArrowLeft, Search, Filter, LayoutGrid } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -16,7 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import type { UserProfile, Route, Project } from '@/lib/types';
+import { Separator } from '@/components/ui/separator';
+import type { UserProfile, Route } from '@/lib/types';
 
 export default function RouteHistoryPage() {
   const firestore = useFirestore();
