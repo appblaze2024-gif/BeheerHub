@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -96,7 +95,16 @@ export const allMenuItems: MenuItem[] = [
       ]
     },
     { href: '/spec-reports', label: 'Bestek', icon: FileWarning, module: 'specReports' },
-    { href: '/navigation-module', label: 'Navigatie', icon: Navigation, module: 'navigation' },
+    { 
+      href: '/navigation-module', 
+      label: 'Navigatie', 
+      icon: Navigation, 
+      module: 'navigation',
+      subItems: [
+        { href: '/navigation-module?type=veegroutes', label: 'Veegroutes', id: 'veegroutes' },
+        { href: '/navigation-module?type=prullenbakken', label: 'Prullenbakken', id: 'prullenbakken' },
+      ]
+    },
     { href: '/iot', label: 'Internet of Things', icon: Cpu, module: 'iot' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
     { href: '/users', label: 'Gebruikers', icon: ShieldCheck, module: 'users' },

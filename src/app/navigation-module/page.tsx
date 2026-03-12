@@ -13,10 +13,10 @@ import {
   useDoc, 
   setDocumentNonBlocking 
 } from '@/firebase';
-import { collection, doc, query, where, limit } from 'firebase/firestore';
+import { collection, doc, query, where, limit, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -65,11 +65,12 @@ import {
   ImageIcon,
   Settings,
   Sliders,
+  Trash,
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
-import { useRouter } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile } from '@/lib/types';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile, Project as ProjectType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -100,11 +101,12 @@ import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Textarea } from '@/components/ui/textarea';
 import { MapboxView } from '@/components/mapbox-view';
+import { useProject } from '@/context/project-context';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
-const routeLayer: Layer = {
+const routeLayer: any = {
   id: 'route',
   type: 'line',
   source: 'route-line',
@@ -112,12 +114,31 @@ const routeLayer: Layer = {
   paint: { 'line-color': '#2563eb', 'line-width': 8, 'line-opacity': 0.8 },
 };
 
-const routeLayerCasing: Layer = {
+const routeLayerCasing: any = {
   id: 'route-casing',
   type: 'line',
   source: 'route-line',
   layout: { 'line-join': 'round', 'line-cap': 'round' },
   paint: { 'line-color': '#1e40af', 'line-width': 12, 'line-opacity': 0.2 },
+};
+
+const areaFillLayer: any = {
+  id: 'area-fill',
+  type: 'fill',
+  paint: {
+    'fill-color': '#9333ea',
+    'fill-opacity': 0.2
+  }
+};
+
+const areaOutlineLayer: any = {
+  id: 'area-outline',
+  type: 'line',
+  paint: {
+    'line-color': '#9333ea',
+    'line-width': 3,
+    'line-dasharray': [2, 1]
+  }
 };
 
 function SectionRow({ 
@@ -541,10 +562,13 @@ export default function StartNavigationPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { profile } = useProfile();
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
+  const { selectedProjectId, setSelectedProjectId } = useProject();
   
+  const type = searchParams.get('type'); // 'meldingen', 'veegroutes', 'prullenbakken'
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
   
@@ -561,6 +585,7 @@ export default function StartNavigationPage() {
   const [isManualMode, setIsManualMode] = useState(false);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [isCockpitExpanded, setIsCockpitExpanded] = useState(false);
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   const [showTodayCompleted, setShowTodayCompleted] = useState(false);
   const [showAssignmentBubbles, setShowAssignmentBubbles] = useState(false);
@@ -605,6 +630,22 @@ export default function StartNavigationPage() {
   const optionsRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'settings', 'issue_options') : null, [firestore, user]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
   const categoryIcons = dbOptions?.categoryIcons || {};
+
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const { data: projects } = useCollection<ProjectType>(projectsQuery);
+  const currentProject = projects?.find(p => p.id === selectedProjectId);
+
+  const objectsQuery = useMemoFirebase(() => {
+    if (!firestore || !user || type === 'meldingen') return null;
+    return collection(firestore, 'objects');
+  }, [firestore, user, type]);
+  const { data: allObjects } = useCollection<MapObject>(objectsQuery);
+
+  const activeMeldingenQuery = useMemoFirebase(() => {
+    if (!firestore || !user || type !== 'meldingen') return null;
+    return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']), limit(100));
+  }, [firestore, user, type]);
+  const { data: rawActiveMeldingen } = useCollection<Melding>(activeMeldingenQuery);
 
   const fetchSpeedLimit = useCallback(async (lat: number, lng: number) => {
     const now = Date.now();
@@ -667,18 +708,11 @@ export default function StartNavigationPage() {
     }
   }, [profile]);
 
-  const activeMeldingenQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']), limit(100));
-  }, [firestore, user]);
-
-  const { data: rawActiveMeldingen } = useCollection<Melding>(activeMeldingenQuery);
-
   const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
   const todayCompletedQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !showTodayCompleted || debouncedSearchQuery) return null;
+    if (!firestore || !user || !showTodayCompleted || type !== 'meldingen') return null;
     return query(collection(firestore, 'meldingen'), where('status', '==', 'Afgerond'), where('afhandeling_datum', '==', todayStr), limit(50));
-  }, [firestore, user, showTodayCompleted, debouncedSearchQuery, todayStr]);
+  }, [firestore, user, showTodayCompleted, todayStr, type]);
 
   const { data: rawTodayCompleted } = useCollection<Melding>(todayCompletedQuery);
 
@@ -695,7 +729,6 @@ export default function StartNavigationPage() {
     allUsers?.forEach(u => {
       if (u.navigatingToMissionId && u.navigatingToMissionStartedAt) {
         const startedAt = new Date(u.navigatingToMissionStartedAt);
-        // Only show navigation indicators if started within the last hour
         if (startedAt > oneHourAgo) {
           const list = map.get(u.navigatingToMissionId) || [];
           list.push(u.displayName || u.email || 'Onbekend');
@@ -707,20 +740,47 @@ export default function StartNavigationPage() {
   }, [allUsers]);
 
   const filteredMeldingen = useMemo(() => {
-    const poolMap = new Map<string, Melding>();
-    rawActiveMeldingen?.forEach(m => { if (!completedObjects.includes(m.id)) poolMap.set(m.id, m); });
-    rawTodayCompleted?.forEach(m => poolMap.set(m.id, m));
-    let result = Array.from(poolMap.values());
-    if (!isPrivileged) {
-        const userName = profile?.displayName || profile?.email || 'Onbekend';
-        result = result.filter(m => m.behandelaar === userName);
+    const poolMap = new Map<string, any>();
+    
+    if (type === 'meldingen') {
+        rawActiveMeldingen?.forEach(m => { if (!completedObjects.includes(m.id)) poolMap.set(m.id, m); });
+        rawTodayCompleted?.forEach(m => poolMap.set(m.id, m));
+        let result = Array.from(poolMap.values());
+        if (!isPrivileged) {
+            const userName = profile?.displayName || profile?.email || 'Onbekend';
+            result = result.filter(m => m.behandelaar === userName);
+        }
+        if (debouncedSearchQuery) {
+            const q = debouncedSearchQuery.toLowerCase();
+            result = result.filter(m => m.intakenummer.toLowerCase().includes(q));
+        }
+        return result;
+    } else if (type === 'prullenbakken' && selectedRouteId && currentProject && allObjects) {
+        const route = currentProject.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
+        if (!route) return [];
+        const objectsInRoute = allObjects.filter(obj => 
+            Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route.naam)
+        ).map(obj => ({
+            ...obj,
+            intakenummer: obj.idNummer || obj.id,
+            hoofdcategorie: 'Afval',
+            subcategorie: obj.locatieSubType || 'Prullenbak',
+            status: completedObjects.includes(obj.id) ? 'Afgerond' : 'Open'
+        }));
+        return objectsInRoute;
     }
-    if (debouncedSearchQuery) {
-        const q = debouncedSearchQuery.toLowerCase();
-        result = result.filter(m => m.intakenummer.toLowerCase().includes(q));
-    }
-    return result;
-  }, [rawActiveMeldingen, rawTodayCompleted, isPrivileged, profile, completedObjects, debouncedSearchQuery]);
+    return [];
+  }, [type, rawActiveMeldingen, rawTodayCompleted, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
+
+  const selectedVeegroutePolygons = useMemo(() => {
+    if (type !== 'veegroutes' || !selectedRouteId || !currentProject) return null;
+    const route = currentProject.veegroutes?.find(r => r.id === selectedRouteId);
+    if (!route?.subGebieden) return null;
+    try {
+        const features = JSON.parse(route.subGebieden);
+        return turf.featureCollection(features);
+    } catch(e) { return null; }
+  }, [type, selectedRouteId, currentProject]);
 
   const sortedMissions = useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
@@ -752,12 +812,17 @@ export default function StartNavigationPage() {
   }, [nextMission?.id, navigationState, user, firestore]);
 
   const fetchRoute = useCallback(async (force = false) => {
-    if (navigationState === 'setup' || sortedMissions.length === 0) {
+    if (navigationState === 'setup' || (type !== 'veegroutes' && sortedMissions.length === 0)) {
         setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
         return;
     }
     const now = Date.now();
     if (!force && now - lastFetchTimeRef.current < 3000) return;
+    
+    // In case of veegroute without missions, we don't calculate a route line to a mission,
+    // we just let the user follow the polygons visually. 
+    if (type === 'veegroutes' && sortedMissions.length === 0) return;
+
     setIsCalculatingRoute(true);
     lastFetchTimeRef.current = now;
     const startPos = userLocation || SIMULATION_START_LOCATION;
@@ -774,14 +839,13 @@ export default function StartNavigationPage() {
             setRouteInfo({ duration: route.duration, distance: route.distance });
         }
     } catch (e) { console.error("Route error:", e); } finally { setIsCalculatingRoute(false); }
-  }, [sortedMissions, userLocation, navigationState]);
+  }, [sortedMissions, userLocation, navigationState, type]);
 
   useEffect(() => {
-    if (navigationState === 'navigating' && sortedMissions.length > 0) fetchRoute(true);
+    if (navigationState === 'navigating' && (sortedMissions.length > 0)) fetchRoute(true);
     else if (navigationState === 'setup') { setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); }
   }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
 
-  // SMOOTH GPS & CAMERA ANIMATION LOOP (60FPS)
   useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
@@ -790,14 +854,10 @@ export default function StartNavigationPage() {
                 visualPosRef.current = { ...targetPosRef.current };
                 visualHeadingRef.current = lastHeadingRef.current;
             } else {
-                // Dampening factors for buttery smooth movement
                 const posFactor = 0.08; 
                 const headingFactor = 0.05;
-
                 visualPosRef.current.lng += (targetPosRef.current.lng - visualPosRef.current.lng) * posFactor;
                 visualPosRef.current.lat += (targetPosRef.current.lat - visualPosRef.current.lat) * posFactor;
-
-                // Handle angular wrapping for smooth rotations
                 let diff = lastHeadingRef.current - visualHeadingRef.current;
                 if (diff > 180) diff -= 360;
                 if (diff < -180) diff += 360;
@@ -806,12 +866,9 @@ export default function StartNavigationPage() {
 
             if (!isNaN(visualPosRef.current.lng) && !isNaN(visualPosRef.current.lat)) {
                 setSmoothLocation({ longitude: visualPosRef.current.lng, latitude: visualPosRef.current.lat, heading: visualHeadingRef.current });
-                
-                // Track map in high frequency for 60fps smoothness
                 if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
                     const currentSpeed = speedKmh;
                     const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
-                    
                     mapRef.current.getMap().jumpTo({
                         center: [visualPosRef.current.lng, visualPosRef.current.lat],
                         bearing: visualHeadingRef.current,
@@ -820,7 +877,6 @@ export default function StartNavigationPage() {
                         padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
                     });
                 }
-
                 if (currentRouteGeometry && navigationState === 'navigating') {
                     try {
                         const line = turf.lineString(currentRouteGeometry.coordinates);
@@ -857,16 +913,11 @@ export default function StartNavigationPage() {
                     const currPt = turf.point([loc.longitude, loc.latitude]);
                     const snapped = turf.nearestPointOnLine(line, currPt);
                     if (!isNaN(snapped.geometry.coordinates[0])) {
-                        // Update target position for interpolation loop
                         targetPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
-                        
-                        // Calculate heading based on path ahead
                         const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
                         const distAlong = turf.length(alongRoute, { units: 'meters' });
                         const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
                         lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
-                        
-                        // Reroute if off track
                         if (turf.pointToLineDistance(currPt, line, { units: 'meters' }) > 100 && !isCalculatingRoute) fetchRoute(true);
                     }
                 } catch (e) {}
@@ -874,7 +925,6 @@ export default function StartNavigationPage() {
                 targetPosRef.current = { lng: loc.longitude, lat: loc.latitude }; 
             }
 
-            // Auto-open logic
             if (navigationState === 'navigating' && nextMission && autoOpenEnabled) {
                 const dist = turf.distance(turf.point([loc.longitude, loc.latitude]), turf.point([nextMission.longitude, nextMission.latitude]), { units: 'meters' });
                 if (dist < 50 && currentSpeed < 3) {
@@ -898,29 +948,24 @@ export default function StartNavigationPage() {
     setNavPitchState(val); 
     if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val }, { merge: true }); 
   };
-  
   const updateNavOffset = (newOffset: number) => { 
     const val = Number(newOffset);
     setNavOffsetState(val); 
     if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val }, { merge: true }); 
   };
-  
   const updateNavZoom = (newZoom: number) => { 
     const val = Number(Math.max(10, Math.min(22, newZoom))); 
     setNavZoomState(val); 
     if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val }, { merge: true }); 
   };
-  
   const setAutoOpenEnabled = (val: boolean) => { 
     setAutoOpenEnabledState(val); 
     if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { autoOpenEnabled: val }, { merge: true }); 
   };
-  
   const setDynamicZoomEnabled = (val: boolean) => { 
     setDynamicZoomEnabledState(val); 
     if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { dynamicZoomEnabled: val }, { merge: true }); 
   };
-  
   const toggleColumnVisibility = (colId: string) => { 
     const next = { ...visibleColumns, [colId]: !visibleColumns[colId] }; 
     setVisibleColumns(next); 
@@ -928,7 +973,7 @@ export default function StartNavigationPage() {
   };
 
   const handleStartRit = () => {
-    if (sortedMissions.length === 0) return;
+    if (type !== 'veegroutes' && sortedMissions.length === 0) return;
     setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); visualPosRef.current = null; targetPosRef.current = null;
     setIsLocating(true);
     const beginNav = (loc: { latitude: number, longitude: number }, heading: number) => {
@@ -976,285 +1021,365 @@ export default function StartNavigationPage() {
 
   const clickedMelding = useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
 
+  const renderSetupUI = () => {
+    if (type === 'meldingen') return null;
+
+    const availableRoutes = type === 'veegroutes' ? currentProject?.veegroutes : currentProject?.prullenbakkenroutes;
+
+    return (
+        <div className="flex-1 overflow-y-auto bg-slate-50 p-6 flex flex-col items-center justify-center text-center">
+            <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                <div className="bg-white p-10 rounded-[3rem] shadow-2xl border-4 border-slate-100 mx-auto w-32 h-32 flex items-center justify-center">
+                    <Navigation className="h-16 w-16 text-primary animate-pulse" />
+                </div>
+                <div className="space-y-3">
+                    <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">Configureer Rit</h2>
+                    <p className="text-sm font-medium text-slate-500">Selecteer een project en route om te beginnen met navigeren.</p>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="space-y-1.5 text-left">
+                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Selecteer Project</Label>
+                        <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
+                            <SelectTrigger className="h-14 font-black rounded-2xl border-2 bg-white shadow-sm px-6">
+                                <SelectValue placeholder="Kies project..." />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl shadow-2xl p-2">
+                                {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-1.5 text-left">
+                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Selecteer Route</Label>
+                        <Select value={selectedRouteId || ''} onValueChange={setSelectedRouteId} disabled={!selectedProjectId}>
+                            <SelectTrigger className="h-14 font-black rounded-2xl border-2 bg-white shadow-sm px-6">
+                                <SelectValue placeholder="Kies route..." />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl shadow-2xl p-2">
+                                {availableRoutes?.map(r => <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>)}
+                                {(!availableRoutes || availableRoutes.length === 0) && <p className="p-4 text-xs font-bold text-slate-400 italic">Geen routes gevonden</p>}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+                <Button 
+                    className="w-full h-16 font-black uppercase tracking-widest rounded-2xl shadow-2xl shadow-primary/20 text-lg transition-all active:scale-95" 
+                    disabled={!selectedRouteId || isLocating}
+                    onClick={handleStartRit}
+                >
+                    {isLocating ? <Loader2 className="mr-3 animate-spin" /> : <Play className="mr-3 fill-current" />}
+                    START NAVIGATIE
+                </Button>
+            </div>
+        </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
         
-        <div className="absolute inset-0 z-0" style={{ touchAction: 'none' }}>
-            <MapGL ref={mapRef} initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onMove={(evt) => { if (evt.originalEvent) setIsManualMode(true); }}>
-                {smoothLocation && !isNaN(smoothLocation.longitude) && !isNaN(smoothLocation.latitude) && (
-                    <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center">
-                        <div className="relative flex items-center justify-center w-16 h-16">
-                            <div className="absolute h-10 w-10 bg-primary/20 rounded-full animate-ping" />
-                            <div className="h-6 w-6 rounded-full bg-primary border-4 border-white shadow-2xl relative z-10" />
+        {navigationState === 'setup' && type !== 'meldingen' ? (
+            <div className="flex flex-col h-full">
+                <header className="h-16 bg-white border-b flex items-center px-6 shrink-0">
+                    <Button variant="ghost" size="icon" className="mr-4 h-10 w-10 rounded-full" onClick={() => router.push('/')}>
+                        <ArrowLeft className="h-6 w-6" />
+                    </Button>
+                    <h1 className="text-xl font-black uppercase tracking-tighter text-primary">Navigatie Setup</h1>
+                </header>
+                {renderSetupUI()}
+            </div>
+        ) : (
+            <>
+                <div className="absolute inset-0 z-0" style={{ touchAction: 'none' }}>
+                    <MapGL ref={mapRef} initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onMove={(evt) => { if (evt.originalEvent) setIsManualMode(true); }}>
+                        {smoothLocation && !isNaN(smoothLocation.longitude) && !isNaN(smoothLocation.latitude) && (
+                            <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center">
+                                <div className="relative flex items-center justify-center w-16 h-16">
+                                    <div className="absolute h-10 w-10 bg-primary/20 rounded-full animate-ping" />
+                                    <div className="h-6 w-6 rounded-full bg-primary border-4 border-white shadow-2xl relative z-10" />
+                                </div>
+                            </Marker>
+                        )}
+                        {filteredMeldingen.map((m) => {
+                            if (isNaN(m.longitude) || isNaN(m.latitude)) return null;
+                            const isCompleted = m.status === 'Afgerond';
+                            const beingNavigatedBy = navigatingUsersMap.get(m.id);
+                            const isBeingNavigated = beingNavigatedBy && beingNavigatedBy.length > 0;
+                            const isNext = nextMission?.id === m.id && navigationState === 'navigating';
+                            const isClicked = clickedMarkerId === m.id;
+                            
+                            return (
+                                <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setClickedMarkerId(m.id); }}>
+                                    <div className="relative flex items-center justify-center w-14 h-14">
+                                        {showAssignmentBubbles && m.behandelaar && (
+                                            <div className="absolute bottom-full mb-2 bg-white/95 backdrop-blur-md border-2 border-slate-900 px-2 py-0.5 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap">
+                                                <span className="text-[8px] font-black uppercase text-slate-900 leading-none">{m.behandelaar}</span>
+                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-900" />
+                                            </div>
+                                        )}
+                                        {isBeingNavigated && !isNext && (
+                                            <div className="absolute bottom-full mb-2 bg-green-600 text-white px-2.5 py-1 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap flex items-center gap-1.5 border-2 border-white">
+                                                <Navigation className="h-3 w-3 fill-current" />
+                                                <span className="text-[9px] font-black uppercase tracking-tight">{beingNavigatedBy![0]} rijdt hierheen</span>
+                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-green-600" />
+                                            </div>
+                                        )}
+                                        {(isNext || isClicked || isBeingNavigated) && (
+                                            <div className={cn(
+                                                "absolute inset-0 rounded-full border-[4px] opacity-80 transition-colors duration-500", 
+                                                isBeingNavigated ? "border-green-500" : "border-black",
+                                                (isNext || isBeingNavigated) && "animate-pulse", 
+                                                isClicked && "border-primary"
+                                            )} />
+                                        )}
+                                        <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked || isBeingNavigated) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
+                                            {renderMarkerIcon(m.hoofdcategorie)}
+                                            <div className={cn("absolute -top-1 -right-1 rounded-full w-4 h-4 flex items-center justify-center border border-black shadow-lg overflow-hidden", isCompleted ? "bg-green-500" : "bg-yellow-400")}>
+                                                {isCompleted ? <Check className="h-2.5 w-2.5 text-white" /> : <Wrench className="h-2.5 w-2.5 text-slate-900" />}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Marker>
+                            );
+                        })}
+                        {navigationState === 'navigating' && displayedRouteGeometry && (
+                            <Source id="route-line" type="geojson" data={displayedRouteGeometry}><Layer {...routeLayerCasing} /><Layer {...routeLayer} /></Source>
+                        )}
+                        {type === 'veegroutes' && selectedVeegroutePolygons && (
+                            <Source id="veeg-polygons" type="geojson" data={selectedVeegroutePolygons}>
+                                <Layer {...areaFillLayer} />
+                                <Layer {...areaOutlineLayer} />
+                            </Source>
+                        )}
+                    </MapGL>
+                </div>
+
+                {clickedMarkerId && clickedMelding && (
+                    <div className="absolute inset-0 z-[80] bg-white/40 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+                        <div className="bg-white w-full max-w-sm rounded-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
+                            <div className="p-6 bg-slate-50 text-slate-900 flex justify-between items-start border-b">
+                                <div className="space-y-1">
+                                    <Badge className="bg-primary border-none text-[8px] font-black uppercase tracking-widest px-2 h-5 text-white">Object Geselecteerd</Badge>
+                                    <h3 className="text-xl font-black uppercase tracking-tight">{clickedMelding.intakenummer}</h3>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[200px]">{clickedMelding.straatnaam} {clickedMelding.huisnummer}</p>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none text-slate-400 hover:bg-slate-100" onClick={() => setClickedMarkerId(null)}><X className="h-6 w-6" /></Button>
+                            </div>
+                            <div className="p-6 grid grid-cols-1 gap-3">
+                                <Button className="h-16 rounded-none font-black uppercase tracking-widest shadow-sm bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200 gap-3" onClick={() => { setActiveWerkbonId(clickedMarkerId); setClickedMarkerId(null); }}><FileText className="h-6 w-6 text-primary" /> Open Werkbon</Button>
+                                <Button className="h-16 rounded-none font-black uppercase tracking-widest shadow-lg bg-primary text-white hover:bg-primary/90 border-none gap-3" onClick={() => { setPriorityMissionId(clickedMarkerId); handleStartRit(); setClickedMarkerId(null); }}><Navigation className="h-6 w-6 text-white fill-current" /> Navigeer Hierheen</Button>
+                            </div>
                         </div>
-                    </Marker>
+                    </div>
                 )}
-                {filteredMeldingen.map((m) => {
-                    if (isNaN(m.longitude) || isNaN(m.latitude)) return null;
-                    const isCompleted = m.status === 'Afgerond';
-                    const beingNavigatedBy = navigatingUsersMap.get(m.id);
-                    const isBeingNavigated = beingNavigatedBy && beingNavigatedBy.length > 0;
-                    const isNext = nextMission?.id === m.id && navigationState === 'navigating';
-                    const isClicked = clickedMarkerId === m.id;
-                    
-                    return (
-                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setClickedMarkerId(m.id); }}>
-                            <div className="relative flex items-center justify-center w-14 h-14">
-                                {showAssignmentBubbles && m.behandelaar && (
-                                    <div className="absolute bottom-full mb-2 bg-white/95 backdrop-blur-md border-2 border-slate-900 px-2 py-0.5 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap">
-                                        <span className="text-[8px] font-black uppercase text-slate-900 leading-none">{m.behandelaar}</span>
-                                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-900" />
-                                    </div>
-                                )}
-                                {isBeingNavigated && !isNext && (
-                                    <div className="absolute bottom-full mb-2 bg-green-600 text-white px-2.5 py-1 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap flex items-center gap-1.5 border-2 border-white">
-                                        <Navigation className="h-3 w-3 fill-current" />
-                                        <span className="text-[9px] font-black uppercase tracking-tight">{beingNavigatedBy![0]} rijdt hierheen</span>
-                                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-green-600" />
-                                    </div>
-                                )}
-                                {(isNext || isClicked || isBeingNavigated) && (
-                                    <div className={cn(
-                                        "absolute inset-0 rounded-full border-[4px] opacity-80 transition-colors duration-500", 
-                                        isBeingNavigated ? "border-green-500" : "border-black",
-                                        (isNext || isBeingNavigated) && "animate-pulse", 
-                                        isClicked && "border-primary"
-                                    )} />
-                                )}
-                                <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked || isBeingNavigated) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
-                                    {renderMarkerIcon(m.hoofdcategorie)}
-                                    <div className={cn("absolute -top-1 -right-1 rounded-full w-4 h-4 flex items-center justify-center border border-black shadow-lg overflow-hidden", isCompleted ? "bg-green-500" : "bg-yellow-400")}>
-                                        {isCompleted ? <Check className="h-2.5 w-2.5 text-white" /> : <Wrench className="h-2.5 w-2.5 text-slate-900" />}
+
+                <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
+                    <div className="flex flex-col gap-3 pointer-events-auto">
+                        {navigationState === 'setup' && (
+                            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => router.push('/')}>
+                                <ArrowLeft className="h-6 w-6 text-slate-600" />
+                            </Button>
+                        )}
+                        {navigationState === 'navigating' && routeInfo && (
+                            <div className="bg-white/95 backdrop-blur-md px-4 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-4 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
+                                <Separator orientation="vertical" className="h-6" />
+                                <div className="flex items-center gap-2"><Navigation className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2 pointer-events-auto">
+                        <Popover>
+                            <PopoverTrigger asChild><Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-6 w-6 text-slate-600" /></Button></PopoverTrigger>
+                            <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
+                                    <div className="space-y-6">
+                                        <div className="space-y-2"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div>
+                                        <div className="space-y-2"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div>
+                                        <Separator className="bg-slate-100" />
+                                        <div className="flex items-center justify-between"><div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Dynamisch zoomen</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Past zoom aan op snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} /></div>
+                                        {!dynamicZoomEnabled && (
+                                            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                                <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
+                                                <div className="flex items-center gap-2"><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div>
+                                            </div>
+                                        )}
+                                        <Separator className="bg-slate-100" />
+                                        <div className="flex items-center justify-between"><div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Opent werkbon na 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} /></div>
                                     </div>
                                 </div>
-                            </div>
-                        </Marker>
-                    );
-                })}
-                {navigationState === 'navigating' && displayedRouteGeometry && (
-                    <Source id="route-line" type="geojson" data={displayedRouteGeometry}><Layer {...routeLayerCasing} /><Layer {...routeLayer} /></Source>
-                )}
-            </MapGL>
-        </div>
-
-        {clickedMarkerId && clickedMelding && (
-            <div className="absolute inset-0 z-[80] bg-white/40 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
-                <div className="bg-white w-full max-w-sm rounded-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
-                    <div className="p-6 bg-slate-50 text-slate-900 flex justify-between items-start border-b">
-                        <div className="space-y-1">
-                            <Badge className="bg-primary border-none text-[8px] font-black uppercase tracking-widest px-2 h-5 text-white">Melding Geselecteerd</Badge>
-                            <h3 className="text-xl font-black uppercase tracking-tight">{clickedMelding.intakenummer}</h3>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[200px]">{clickedMelding.straatnaam} {clickedMelding.huisnummer}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none text-slate-400 hover:bg-slate-100" onClick={() => setClickedMarkerId(null)}><X className="h-6 w-6" /></Button>
-                    </div>
-                    <div className="p-6 grid grid-cols-1 gap-3">
-                        <Button className="h-16 rounded-none font-black uppercase tracking-widest shadow-sm bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200 gap-3" onClick={() => { setActiveWerkbonId(clickedMarkerId); setClickedMarkerId(null); }}><FileText className="h-6 w-6 text-primary" /> Open Werkbon</Button>
-                        <Button className="h-16 rounded-none font-black uppercase tracking-widest shadow-lg bg-primary text-white hover:bg-primary/90 border-none gap-3" onClick={() => { setPriorityMissionId(clickedMarkerId); handleStartRit(); setClickedMarkerId(null); }}><Navigation className="h-6 w-6 text-white fill-current" /> Navigeer Hierheen</Button>
+                            </PopoverContent>
+                        </Popover>
+                        {navigationState === 'setup' && type === 'meldingen' && (
+                            <Button className="h-12 md:h-14 px-5 md:px-10 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl transition-all active:scale-95 pointer-events-auto" onClick={handleStartRit}>
+                                {isLocating ? <Loader2 className="h-6 w-6 md:mr-3 animate-spin" /> : <Play className="h-6 w-6 md:mr-3 fill-current" />} 
+                                <span className="hidden md:inline text-sm">START RIT</span>
+                            </Button>
+                        )}
+                        {navigationState === 'navigating' && (
+                            <Button variant="destructive" className="h-12 md:h-14 px-5 md:px-10 font-black uppercase rounded-2xl shadow-2xl transition-all active:scale-95 pointer-events-auto" onClick={handleStopRit}>
+                              <span className="hidden md:inline">STOP RIT</span>
+                              <span className="md:hidden">STOP</span>
+                            </Button>
+                        )}
                     </div>
                 </div>
-            </div>
-        )}
 
-        <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
-            <div className="flex flex-col gap-3 pointer-events-auto">
-                {navigationState === 'setup' && (
-                    <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => router.push('/?module=issues')}>
-                        <ArrowLeft className="h-6 w-6 text-slate-600" />
-                    </Button>
-                )}
-                {navigationState === 'navigating' && routeInfo && (
-                    <div className="bg-white/95 backdrop-blur-md px-4 h-12 md:h-14 rounded-2xl shadow-2xl border-2 border-slate-100 flex items-center gap-4 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                        <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
-                        <Separator orientation="vertical" className="h-6" />
-                        <div className="flex items-center gap-2"><Navigation className="h-4 w-4 text-primary" /><div className="flex flex-col"><span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
-                    </div>
-                )}
-            </div>
-
-            <div className="flex items-center gap-2 pointer-events-auto">
-                <Popover>
-                    <PopoverTrigger asChild><Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95"><Settings className="h-6 w-6 text-slate-600" /></Button></PopoverTrigger>
-                    <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-3xl shadow-xl bg-white/95 backdrop-blur-md text-sm">
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-2 border-b pb-3"><Sliders className="h-4 w-4 text-primary" /><h4 className="font-black uppercase text-xs">Instellingen</h4></div>
-                            <div className="space-y-6">
-                                <div className="space-y-2"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-bold text-primary">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div>
-                                <div className="space-y-2"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Kanteling</Label><span className="text-[10px] font-bold text-primary">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div>
-                                <Separator className="bg-slate-100" />
-                                <div className="flex items-center justify-between"><div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Dynamisch zoomen</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Past zoom aan op snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} /></div>
-                                {!dynamicZoomEnabled && (
-                                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                        <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400">Vaste zoomhoogte</Label><span className="text-[10px] font-bold text-primary">{navZoom.toFixed(1)}</span></div>
-                                        <div className="flex items-center gap-2"><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div>
-                                    </div>
-                                )}
-                                <Separator className="bg-slate-100" />
-                                <div className="flex items-center justify-between"><div className="space-y-0.5"><Label className="text-[10px] font-black uppercase text-slate-900">Auto-open bij aankomst</Label><p className="text-[8px] font-bold text-slate-400 uppercase leading-none">Opent werkbon na 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} /></div>
+                {navigationState === 'navigating' && !activeWerkbonId && (
+                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
+                        <div className="mb-4 flex items-center justify-between gap-3 w-full">
+                            <div className="relative pointer-events-auto">
+                                <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
+                                    <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
+                                    <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
+                                </div>
+                                <div className="absolute -top-1 -right-1 h-7 w-7 sm:h-9 sm:w-9 rounded-full border-[3px] sm:border-[4px] border-red-600 flex items-center justify-center bg-white shadow-xl shrink-0 animate-in fade-in zoom-in duration-500 z-10">
+                                    <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
+                                </div>
                             </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-                {navigationState === 'setup' && (
-                    <Button className="h-12 md:h-14 px-5 md:px-10 font-black uppercase bg-orange-600 text-white hover:bg-orange-700 shadow-2xl rounded-2xl transition-all active:scale-95 pointer-events-auto" onClick={handleStartRit}>
-                        {isLocating ? <Loader2 className="h-6 w-6 md:mr-3 animate-spin" /> : <Play className="h-6 w-6 md:mr-3 fill-current" />} 
-                        <span className="hidden md:inline text-sm">START RIT</span>
-                    </Button>
-                )}
-                {navigationState === 'navigating' && (
-                    <Button variant="destructive" className="h-12 md:h-14 px-5 md:px-10 font-black uppercase rounded-2xl shadow-2xl transition-all active:scale-95 pointer-events-auto" onClick={handleStopRit}>
-                      <span className="hidden md:inline">STOP RIT</span>
-                      <span className="md:hidden">STOP</span>
-                    </Button>
-                )}
-            </div>
-        </div>
 
-        {navigationState === 'navigating' && !activeWerkbonId && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                <div className="mb-4 flex items-center justify-between gap-3 w-full">
-                    <div className="relative pointer-events-auto">
-                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-[4px] sm:border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
-                            <span className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{speedKmh}</span>
-                            <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary">km/h</span>
+                            {isManualMode && (
+                                <Button 
+                                    size="icon"
+                                    className="h-16 w-16 md:h-20 md:w-20 rounded-full shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center pointer-events-auto shadow-primary/30" 
+                                    onClick={handleHervatNavigatie}
+                                >
+                                    <Navigation className="h-10 w-10 md:h-12 md:w-12 fill-current" />
+                                </Button>
+                            )}
                         </div>
-                        <div className="absolute -top-1 -right-1 h-7 w-7 sm:h-9 sm:w-9 rounded-full border-[3px] sm:border-[4px] border-red-600 flex items-center justify-center bg-white shadow-xl shrink-0 animate-in fade-in zoom-in duration-500 z-10">
-                            <span className="text-[10px] sm:text-xs font-black text-slate-900">{currentSpeedLimit}</span>
-                        </div>
+
+                        <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
+                            <CardContent className="p-4 sm:p-6">
+                                <div className="flex flex-col gap-3 min-w-0 flex-1">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="space-y-0.5 min-w-0 flex-1">
+                                            <div className="flex items-center gap-2"><p className="text-[8px] font-black uppercase text-slate-500">Volgende Bestemming</p>{priorityMissionId === nextMission?.id && <Badge className="bg-primary/10 text-primary border-none h-4 text-[7px] font-black uppercase px-1">Geprioriteerd</Badge>}</div>
+                                            <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen bestemming'}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {nextMission?.containernummer && (<div className="flex flex-col items-end"><p className="text-[8px] font-black uppercase text-slate-400 mb-0.5">Objectnummer</p><Badge variant="secondary" className="text-[10px] h-6 font-black uppercase bg-yellow-400 text-slate-900 border-2 border-white shadow-sm px-2">{nextMission.containernummer}</Badge></div>)}
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-slate-100 transition-colors pointer-events-auto" onClick={() => setIsCockpitExpanded(!isCockpitExpanded)}>{isCockpitExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</Button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-0.5 min-w-0"><p className="text-[10px] font-black text-slate-800 truncate">{nextMission?.straatnaam} {nextMission?.huisnummer} {nextMission?.postcode} {nextMission?.plaats}</p></div>
+                                    {isCockpitExpanded && (<div className="pt-2 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300"><p className="text-[10px] font-black uppercase text-slate-400 mb-1">Informatie</p><p className="text-[11px] font-medium text-slate-600 leading-relaxed italic">"{nextMission?.extra_informatie || nextMission?.subcategorie || 'Geen details beschikbaar.'}"</p></div>)}
+                                    <Progress value={100} className="h-1 bg-slate-100 mt-1" />
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
+                )}
 
-                    {isManualMode && (
-                        <Button 
-                            size="icon"
-                            className="h-16 w-16 md:h-20 md:w-20 rounded-full shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center pointer-events-auto shadow-primary/30" 
-                            onClick={handleHervatNavigatie}
-                        >
-                            <Navigation className="h-10 w-10 md:h-12 md:w-12 fill-current" />
+                {isManualMode && !activeWerkbonId && (
+                    <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-72">
+                        <Button variant="secondary" size="icon" className="h-14 w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { 
+                            setIsManualMode(false);
+                            const map = mapRef.current?.getMap();
+                            if (!map) return;
+
+                            const points: number[][] = filteredMeldingen.map(m => [m.longitude, m.latitude]);
+                            if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
+                            else points.push([SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude]);
+
+                            if (points.length > 0) {
+                                const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
+                                const bbox = turf.bbox(pointsCollection);
+                                if (bbox[0] !== Infinity) {
+                                    map.fitBounds(bbox as [number, number, number, number], { 
+                                        padding: 80, 
+                                        duration: 1000,
+                                        pitch: 0,
+                                        bearing: 0,
+                                        maxZoom: 18
+                                    });
+                                }
+                            }
+                        }}>
+                            <MapIcon className="h-7 w-7 text-slate-600" />
                         </Button>
-                    )}
-                </div>
-
-                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-2 border-slate-100 rounded-[2rem] overflow-hidden pointer-events-auto transition-all duration-300">
-                    <CardContent className="p-4 sm:p-6">
-                        <div className="flex flex-col gap-3 min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="space-y-0.5 min-w-0 flex-1">
-                                    <div className="flex items-center gap-2"><p className="text-[8px] font-black uppercase text-slate-500">Intakenummer</p>{priorityMissionId === nextMission?.id && <Badge className="bg-primary/10 text-primary border-none h-4 text-[7px] font-black uppercase px-1">Geprioriteerd</Badge>}</div>
-                                    <p className="text-sm sm:text-lg font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Geen doel'}</p>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                    {nextMission?.containernummer && (<div className="flex flex-col items-end"><p className="text-[8px] font-black uppercase text-slate-400 mb-0.5">Objectnummer</p><Badge variant="secondary" className="text-[10px] h-6 font-black uppercase bg-yellow-400 text-slate-900 border-2 border-white shadow-sm px-2">{nextMission.containernummer}</Badge></div>)}
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-slate-100 transition-colors pointer-events-auto" onClick={() => setIsCockpitExpanded(!isCockpitExpanded)}>{isCockpitExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</Button>
-                                </div>
-                            </div>
-                            <div className="space-y-0.5 min-w-0"><p className="text-[10px] font-black text-slate-800 truncate">{nextMission?.straatnaam} {nextMission?.huisnummer} {nextMission?.postcode} {nextMission?.plaats}</p></div>
-                            {isCockpitExpanded && (<div className="pt-2 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300"><p className="text-[10px] font-black uppercase text-slate-400 mb-1">Melding omschrijving</p><p className="text-[11px] font-medium text-slate-600 leading-relaxed italic">"{nextMission?.extra_informatie || 'Geen omschrijving beschikbaar.'}"</p></div>)}
-                            <Progress value={100} className="h-1 bg-slate-100 mt-1" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        )}
-
-        {isManualMode && !activeWerkbonId && navigationState === 'setup' && (
-            <div className="absolute z-50 pointer-events-auto flex flex-col gap-3 animate-in fade-in slide-in-from-right-2 duration-300 right-6 bottom-72">
-                <Button variant="secondary" size="icon" className="h-14 w-14 rounded-2xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => { 
-                    setIsManualMode(false);
-                    const map = mapRef.current?.getMap();
-                    if (!map) return;
-
-                    const points: number[][] = filteredMeldingen.map(m => [m.longitude, m.latitude]);
-                    if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
-                    else points.push([SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude]);
-
-                    if (points.length > 0) {
-                        const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
-                        const bbox = turf.bbox(pointsCollection);
-                        if (bbox[0] !== Infinity) {
-                            map.fitBounds(bbox as [number, number, number, number], { 
-                                padding: 80, 
-                                duration: 1000,
-                                pitch: 0,
-                                bearing: 0,
-                                maxZoom: 18
-                            });
-                        }
-                    }
-                }}>
-                    <MapIcon className="h-7 w-7 text-slate-600" />
-                </Button>
-            </div>
-        )}
-
-        <div className={cn("absolute bottom-0 left-0 right-0 z-40 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl h-[244px] transition-all duration-500", navigationState === 'navigating' ? "translate-y-full opacity-0" : "translate-y-0 opacity-100")}>
-            <div className="h-12 flex items-center justify-between px-4 sm:px-6 cursor-default shrink-0 border-b bg-slate-50">
-                <div className="flex items-center justify-between flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
-                    <div className="relative w-40 sm:w-64 shrink-0"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Zoek nummer..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
-                    <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
-                        <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span></Button>
-                        {isPrivileged && (<Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}><User className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}</span></Button>)}
-                        <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><LayoutGrid className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md text-sm"><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p><div className="space-y-2">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-3 p-1"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" /><Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{colId}</Label></div>))}</div></div></PopoverContent></Popover>
                     </div>
-                </div>
-            </div>
-            <ScrollArea className="flex-1 bg-white">
-                <div className="p-3 flex flex-col gap-3 lg:hidden">
-                    {filteredMeldingen.map((m, index) => {
-                        const isCompleted = m.status === 'Afgerond';
-                        const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0;
-                        const distKm = (dist / 1000).toFixed(1);
-                        return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><span className="text-[10px] font-black text-slate-300 w-4">{index + 1}</span><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight pl-6">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto pl-6"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2.5 w-2.5 text-white" /></div>)}</Card>);
-                    })}
-                </div>
-                <div className="hidden lg:block p-0">
-                    <Table className="min-w-[1200px]">
-                        <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
-                            <TableRow className="h-10 hover:bg-transparent">
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r w-[60px]">Nr.</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Nummer</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 text-right pr-6">Afstand</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredMeldingen.map((m, index) => { 
-                                const isCompleted = m.status === 'Afgerond'; 
-                                const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0; 
+                )}
+
+                <div className={cn("absolute bottom-0 left-0 right-0 z-40 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl h-[244px] transition-all duration-500", navigationState === 'navigating' ? "translate-y-full opacity-0" : "translate-y-0 opacity-100")}>
+                    <div className="h-12 flex items-center justify-between px-4 sm:px-6 cursor-default shrink-0 border-b bg-slate-50">
+                        <div className="flex items-center justify-between flex-1 pointer-events-auto" onClick={e => e.stopPropagation()}>
+                            <div className="relative w-40 sm:w-64 shrink-0"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Zoek op nummer..." className="h-8 pl-8 text-[10px] font-bold rounded-xl border-slate-200 bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
+                            <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar ml-auto">
+                                {type === 'meldingen' && (
+                                    <>
+                                        <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showTodayCompleted ? "Verberg Klaar" : "Vandaag Afgemeld"}</span></Button>
+                                        {isPrivileged && (<Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}><User className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg Beheerder" : "Toegewezen"}</span></Button>)}
+                                    </>
+                                )}
+                                <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest border-slate-200 gap-2"><LayoutGrid className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Kolommen</span></Button></PopoverTrigger><PopoverContent align="end" className="w-56 p-4 rounded-2xl shadow-xl border-slate-100 bg-white/95 backdrop-blur-md text-sm"><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-2">Weergaveinstellingen</p><div className="space-y-2">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-3 p-1"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md" /><Label htmlFor={`col-${colId}`} className="text-xs font-bold uppercase tracking-tight text-slate-700 cursor-pointer">{colId}</Label></div>))}</div></div></PopoverContent></Popover>
+                            </div>
+                        </div>
+                    </div>
+                    <ScrollArea className="flex-1 bg-white">
+                        <div className="p-3 flex flex-col gap-3 lg:hidden">
+                            {filteredMeldingen.map((m, index) => {
+                                const isCompleted = m.status === 'Afgerond';
+                                const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0;
                                 const distKm = (dist / 1000).toFixed(1);
-                                return (
-                                    <TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-colors border-b", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50")}>
-                                        <TableCell className="pl-6 border-r font-bold text-slate-400 text-[10px]">{index + 1}</TableCell>
-                                        <TableCell className="border-r">
-                                            <div className="flex items-center gap-2">
-                                                <div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : "bg-slate-400")} />
-                                                <span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="border-r">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-bold text-slate-700">{m.straatnaam} {m.huisnummer}</span>
-                                                <span className="text-[10px] font-bold uppercase text-slate-400">{m.plaats}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">{m.extra_informatie || '-'}</TableCell>
-                                        <TableCell className="border-r">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase text-primary">{m.hoofdcategorie}</span>
-                                                <span className="text-[9px] font-bold uppercase text-slate-400">{m.subcategorie}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right pr-6 font-black text-[11px] tabular-nums text-slate-400">{distKm} km</TableCell>
-                                    </TableRow>
-                                ); 
+                                return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-2xl border-2 flex flex-col justify-between p-4 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/20")}><div className="flex justify-between items-start gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2 mb-1"><span className="text-[10px] font-black text-slate-300 w-4">{index + 1}</span><div className={cn("h-2 w-2 rounded-full shrink-0", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-[10px] uppercase text-slate-900 tracking-tighter truncate leading-none">{m.intakenummer}</span></div><p className="text-[11px] font-bold text-slate-700 truncate leading-tight pl-6">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[8px] font-black uppercase h-4 px-1.5 border-none bg-slate-50 text-slate-400 shrink-0">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-2 mt-auto pl-6"><span className="text-[9px] font-black uppercase text-primary truncate max-w-[140px] tracking-tight">{m.subcategorie}</span><span className="text-[9px] font-black text-slate-400 shrink-0 tabular-nums">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1 bg-green-500 rounded-bl-xl"><Check className="h-2.5 w-2.5 text-white" /></div>)}</Card>);
                             })}
-                        </TableBody>
-                    </Table>
+                        </div>
+                        <div className="hidden lg:block p-0">
+                            <Table className="min-w-[1200px]">
+                                <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+                                    <TableRow className="h-10 hover:bg-transparent">
+                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-6 border-r w-[60px]">Nr.</TableHead>
+                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Bestemming</TableHead>
+                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Locatie</TableHead>
+                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Omschrijving</TableHead>
+                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-r">Categorie</TableHead>
+                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 text-right pr-6">Afstand</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredMeldingen.map((m, index) => { 
+                                        const isCompleted = m.status === 'Afgerond'; 
+                                        const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0; 
+                                        const distKm = (dist / 1000).toFixed(1);
+                                        return (
+                                            <TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-colors border-b", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-slate-50")}>
+                                                <TableCell className="pl-6 border-r font-bold text-slate-400 text-[10px]">{index + 1}</TableCell>
+                                                <TableCell className="border-r">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={cn("h-2 w-2 rounded-full", isCompleted ? "bg-green-500" : "bg-slate-400")} />
+                                                        <span className="font-black text-[11px] uppercase text-slate-900">{m.intakenummer}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="border-r">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold text-slate-700">{m.straatnaam} {m.huisnummer}</span>
+                                                        <span className="text-[10px] font-bold uppercase text-slate-400">{m.plaats}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">{m.extra_informatie || '-'}</TableCell>
+                                                <TableCell className="border-r">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-black uppercase text-primary">{m.hoofdcategorie}</span>
+                                                        <span className="text-[9px] font-bold uppercase text-slate-400">{m.subcategorie}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right pr-6 font-black text-[11px] tabular-nums text-slate-400">{distKm} km</TableCell>
+                                            </TableRow>
+                                        ); 
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </ScrollArea>
                 </div>
-            </ScrollArea>
-        </div>
+            </>
+        )}
 
         {activeWerkbonId && (
             <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-300">
