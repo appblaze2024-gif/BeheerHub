@@ -20,6 +20,7 @@ import {
   LogOut as LogOutIcon,
   Info,
   Bell,
+  Home,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +71,14 @@ function Header() {
     <header className="h-20 flex items-center justify-end px-4 lg:px-8 bg-transparent shrink-0 sticky top-0 left-0 right-0 z-50 pointer-events-none">
       <div className="flex items-center gap-1 sm:gap-2 bg-white px-2 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-100 pointer-events-auto max-w-[90vw] sm:max-w-none">
         <div className="flex items-center gap-0.5 sm:gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-blue-400 hover:bg-blue-50"
+            onClick={() => router.push('/')}
+          >
+            <Home className="h-4 w-4" />
+          </Button>
           <NotificationCenter />
           <AppInfoDialog>
             <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-blue-400 hover:bg-blue-50">
@@ -98,7 +107,7 @@ function Header() {
           {profile?.role && (
             <Badge className={cn(
               "mt-0.5 sm:mt-1 h-3 sm:h-3.5 px-1 sm:px-1.5 text-[6px] sm:text-[7px] font-black uppercase border-none rounded-sm",
-              profile.role === 'Super admin' ? "bg-red-600 text-white" : "bg-blue-500 text-white"
+              profile.role === 'Super admin' ? "bg-red-600 text-white" : "bg-blue-50 text-white"
             )}>
               {profile.role}
             </Badge>
