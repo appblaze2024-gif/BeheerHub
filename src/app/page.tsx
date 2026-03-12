@@ -114,7 +114,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 md:p-8 pt-0 md:pt-0 space-y-4 flex flex-col h-full bg-background relative overflow-hidden">
-      <header className="space-y-1 relative z-10">
+      <header className="space-y-1 relative z-10 pt-4 md:pt-0">
         <div className="flex items-center gap-4">
           {activeModule && (
             <Button 
@@ -151,7 +151,7 @@ export default function DashboardPage() {
                 <Card 
                   key={item.label}
                   onClick={() => handleCardClick(item)}
-                  className="group relative overflow-hidden rounded-3xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-36"
+                  className="group relative overflow-hidden rounded-[2rem] border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-36"
                 >
                   <CardContent className="p-6 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start">
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                 <Card 
                   key={sub.id}
                   onClick={() => handleSubItemClick(sub)}
-                  className="group relative overflow-hidden rounded-3xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-36"
+                  className="group relative overflow-hidden rounded-[2rem] border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-36"
                 >
                   <CardContent className="p-6 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start">

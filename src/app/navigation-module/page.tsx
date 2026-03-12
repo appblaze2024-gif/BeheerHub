@@ -215,7 +215,7 @@ function IntegratedWerkbonOverlay({
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     
-    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [previewImage, setPreviewImage] = string | null>(null);
     const [zoomScale, setZoomScale] = useState(1);
     const [zoomOffset, setZoomOffset] = useState({ x: 0, y: 0 });
     const lastTouchRef = useRef<{ dist: number; center: { x: number; y: number } } | null>(null);
@@ -504,7 +504,7 @@ function IntegratedWerkbonOverlay({
                                         <h3 className="text-base font-black uppercase tracking-tight">Toevoegen Verbruik</h3>
                                     </div>
                                     <div className="grid gap-5">
-                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Product / Materiaal</Label><Input placeholder="Bv. Straatkolk..." value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} className="h-12 bg-white/10 border-none text-white font-black uppercase text-sm rounded-2xl focus:ring-primary/30" /></div>
+                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Product / Materiaal</Label><Input placeholder="Bv. Straatkolk..." value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} className="h-12 bg-white/10 border-none text-white font-black uppercase text-sm rounded-2xl focus:ring-primary/30" /></div>
                                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Aantal</Label><Input type="number" placeholder="0" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} className="h-12 bg-white/10 border-none text-white font-black uppercase text-sm rounded-2xl focus:ring-primary/30 text-center" /></div>
                                         <Button className="w-full h-14 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 rounded-2xl shadow-xl transition-all active:scale-95 mt-2" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>TOEVOEGEN</Button>
                                     </div>
@@ -1291,16 +1291,11 @@ export default function StartNavigationPage() {
 
                 <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
                     <div className="flex flex-col gap-3 pointer-events-auto">
-                        {navigationState === 'setup' && (
-                            <Button variant="ghost" size="icon" className="h-10 w-10 md:h-14 md:w-14 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-md border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => router.push('/')}>
-                                <ArrowLeft className="h-5 w-5 md:h-6 md:w-6 text-slate-600" />
-                            </Button>
-                        )}
                         {navigationState === 'navigating' && routeInfo && (
-                            <div className="bg-white/95 backdrop-blur-md px-5 h-10 md:h-14 rounded-[2rem] shadow-2xl border-2 border-slate-100 flex items-center gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
-                                <div className="flex items-center gap-3"><Clock className="h-4 w-4 md:h-5 md:w-5 text-primary" /><div className="flex flex-col"><span className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
-                                <Separator orientation="vertical" className="h-6 md:h-8" />
-                                <div className="flex items-center gap-3"><Navigation className="h-4 w-4 md:h-5 md:w-5 text-primary" /><div className="flex flex-col"><span className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-sm md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
+                            <div className="bg-white/95 backdrop-blur-md px-3 md:px-5 h-9 md:h-14 rounded-2xl md:rounded-[2rem] shadow-2xl border-2 border-slate-100 flex items-center gap-3 md:gap-5 min-w-fit animate-in slide-in-from-left-4 duration-500">
+                                <div className="flex items-center gap-2 md:gap-3"><Clock className="h-3.5 w-3.5 md:h-5 md:w-5 text-primary" /><div className="flex flex-col"><span className="text-[6px] md:text-[8px] font-black text-slate-400 uppercase tracking-tighter leading-none">Aankomst</span><span className="text-xs md:text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span></div></div>
+                                <Separator orientation="vertical" className="h-5 md:h-8" />
+                                <div className="flex items-center gap-2 md:gap-3"><Navigation className="h-3.5 w-3.5 md:h-5 md:w-5 text-primary" /><div className="flex flex-col"><span className="text-[6px] md:text-[8px] font-black text-slate-400 uppercase tracking-tighter leading-none">Afstand</span><span className="text-xs md:text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} <span className="text-[10px]">km</span></span></div></div>
                             </div>
                         )}
                     </div>
@@ -1313,12 +1308,12 @@ export default function StartNavigationPage() {
                                     <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div>
                                     <div className="space-y-8">
                                         <div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div>
-                                        <div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Kanteling</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div>
+                                        <div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Kanteling</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div>
                                         <Separator className="bg-slate-100" />
                                         <div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Dynamisch zoomen</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Op basis van snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} className="data-[state=checked]:bg-primary" /></div>
                                         {!dynamicZoomEnabled && (
                                             <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
-                                                <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Vaste zoomhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{navZoom.toFixed(1)}</span></div>
+                                                <div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Vaste zoomhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{navZoom.toFixed(1)}</span></div>
                                                 <div className="flex items-center gap-3"><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div>
                                             </div>
                                         )}

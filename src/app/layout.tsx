@@ -35,7 +35,7 @@ function ProcessingOverlay() {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-white shadow-2xl border border-slate-100 scale-110">
+      <div className="flex flex-col items-center gap-4 p-8 rounded-[2.5rem] bg-white shadow-2xl border border-slate-100 scale-110">
         <div className="h-10 w-10 animate-spin border-4 border-primary border-t-transparent rounded-full" />
         <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Verwerken...</p>
       </div>
