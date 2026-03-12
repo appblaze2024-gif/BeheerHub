@@ -115,13 +115,14 @@ export default function SpecReportsPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
-    if (!searchQuery) return meldingen;
-
-    return meldingen.filter(m => 
-        (m.omschrijving && m.omschrijving.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (m.werksoort && m.werksoort.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-
+    let result = meldingen;
+    if (searchQuery) {
+        result = result.filter(m => 
+            (m.omschrijving && m.omschrijving.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (m.werksoort && m.werksoort.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+    }
+    return result;
   }, [meldingen, searchQuery]);
 
   const mapRef = React.useRef<any>(null);
@@ -270,6 +271,7 @@ export default function SpecReportsPage() {
             cursor="default"
         >
             {filteredMeldingen?.map(m => {
+                if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number' || isNaN(m.latitude) || isNaN(m.longitude)) return null;
                 const isCompleted = m.status === 'Afgerond';
                 return (
                     <Marker

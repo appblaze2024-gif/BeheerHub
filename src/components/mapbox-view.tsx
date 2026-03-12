@@ -100,6 +100,8 @@ export function MapboxView({
     };
 
     objects.forEach(obj => {
+      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number' || isNaN(obj.latitude) || isNaN(obj.longitude)) return;
+
       const key = `${obj.latitude.toFixed(5)}_${obj.longitude.toFixed(5)}`;
       const existing = locationMap.get(key);
       if (!existing || getPriority(obj) > getPriority(existing)) {
@@ -124,23 +126,23 @@ export function MapboxView({
   }, []);
 
   const initialViewState = {
-    longitude: longitude || 5.2913,
-    latitude: latitude || 52.1326,
-    zoom: longitude && latitude ? 19 : 7,
+    longitude: (typeof longitude === 'number' && !isNaN(longitude)) ? longitude : 5.2913,
+    latitude: (typeof latitude === 'number' && !isNaN(latitude)) ? latitude : 52.1326,
+    zoom: (typeof longitude === 'number' && !isNaN(longitude)) && (typeof latitude === 'number' && !isNaN(latitude)) ? 19 : 7,
   };
   
   React.useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
     
-    if (highlightedObject) {
+    if (highlightedObject && !isNaN(highlightedObject.longitude) && !isNaN(highlightedObject.latitude)) {
       map.flyTo({ center: [highlightedObject.longitude, highlightedObject.latitude], zoom: 17, duration: 1000 });
       return;
     }
 
     if (wijkPolygons.length > 0) {
       try {
-        const featureCollection = { type: 'FeatureCollection', features: wijkPolygons };
+        const featureCollection = turf.featureCollection(wijkPolygons);
         if (featureCollection.features.length === 0) return;
         const bbox = turf.bbox(featureCollection);
         if (bbox[0] !== Infinity) {
@@ -148,7 +150,7 @@ export function MapboxView({
           return;
         }
       } catch (e) {}
-    } else if (longitude && latitude) {
+    } else if (typeof longitude === 'number' && typeof latitude === 'number' && !isNaN(longitude) && !isNaN(latitude)) {
       map.jumpTo({ center: [longitude, latitude], zoom: 19 });
     }
   }, [wijkPolygons, longitude, latitude, highlightedObject, uniqueObjects]);
@@ -264,7 +266,7 @@ export function MapboxView({
       }));
     }
 
-    if (longitude && latitude) {
+    if (typeof longitude === 'number' && typeof latitude === 'number' && !isNaN(longitude) && !isNaN(latitude)) {
         markerElements.push(
             <Marker key="main-location" longitude={longitude} latitude={latitude} anchor="center">
                 <div className="relative flex items-center justify-center pointer-events-none">

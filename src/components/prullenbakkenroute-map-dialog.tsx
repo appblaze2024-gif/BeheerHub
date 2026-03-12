@@ -117,6 +117,7 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
     
     if (allObjects && route) {
         const objectsInRoute = allObjects.filter(obj => 
+            typeof obj.latitude === 'number' && typeof obj.longitude === 'number' && !isNaN(obj.latitude) && !isNaN(obj.longitude) &&
             Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route.naam)
         );
         if (objectsInRoute.length > 0) {
@@ -133,15 +134,19 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
     }
     
     if (allObjects && allObjects.length > 0) {
-       const points = allObjects.map(obj => turf.point([obj.longitude, obj.latitude]));
-       const featureCollection = turf.featureCollection(points);
-       try {
-           const bbox = turf.bbox(featureCollection);
-            if (bbox[0] !== Infinity) {
-                map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
-                return;
-            }
-       } catch(e) { /* ignore */ }
+       const points = allObjects
+           .filter(obj => typeof obj.latitude === 'number' && typeof obj.longitude === 'number' && !isNaN(obj.latitude) && !isNaN(obj.longitude))
+           .map(obj => turf.point([obj.longitude, obj.latitude]));
+       if (points.length > 0) {
+           const featureCollection = turf.featureCollection(points);
+           try {
+               const bbox = turf.bbox(featureCollection);
+                if (bbox[0] !== Infinity) {
+                    map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
+                    return;
+                }
+           } catch(e) { /* ignore */ }
+       }
     }
     
     map.flyTo({ center: [5.2913, 52.1326], zoom: 7 });
@@ -179,7 +184,7 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
         
         const newlySelectedIds = allObjects
             .filter(obj => {
-                if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+                if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number' || isNaN(obj.latitude) || isNaN(obj.longitude)) return false;
                 const pt = turf.point([obj.longitude, obj.latitude]);
                 return turf.booleanPointInPolygon(pt, selectionPolygon as any);
             })
@@ -284,6 +289,7 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
           <MapGL
             ref={mapRef}
             initialViewState={initialViewState}
+            style={{ width: '100%', height: '100%' }}
             mapStyle={currentMapStyle}
             mapboxAccessToken={MAPBOX_TOKEN}
             onLoad={onMapLoad}
@@ -291,6 +297,8 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
             cursor={readOnly ? 'default' : 'grab'}
           >
             {allObjects?.map(obj => {
+              if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number' || isNaN(obj.latitude) || isNaN(obj.longitude)) return null;
+
               const isInCurrentRoute = Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route?.naam || '');
               const isSelected = selectedObjectIds.includes(obj.id);
               
