@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -9,12 +8,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function userExists() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     function isAdmin() {
@@ -30,11 +29,9 @@ service cloud.firestore {
     // Gebruikersprofielen
     match /users/{userId} {
       allow read, list: if isSignedIn();
-      // Gebruikers mogen hun eigen profiel aanmaken bij eerste login
       allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      // Voorkom dat gebruikers hun eigen rol of permissies aanpassen
       allow update: if (request.auth.uid == userId && 
-                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])) 
+                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'navSortConfig', 'navPitch', 'navOffset', 'navZoom', 'autoOpenEnabled', 'dynamicZoomEnabled', 'navColumns'])) 
                     || isAdmin();
       allow delete: if isAdmin();
 
@@ -69,6 +66,12 @@ service cloud.firestore {
       allow delete: if isPrivileged();
     }
 
+    // Route assignments - EXPLICIET OPEN VOOR LEZEN DOOR INGELOGDE GEBRUIKERS
+    match /route_assignments/{assignmentId} {
+      allow read, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
     // Wagenpark en Machines
     match /voertuigen/{id} {
       allow read: if isSignedIn();
@@ -88,6 +91,12 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if isPrivileged();
       }
+    }
+
+    // Objecten (GIS)
+    match /objects/{objectId} {
+      allow read, list: if isSignedIn();
+      allow write: if isPrivileged();
     }
 
     // Algemene instellingen
