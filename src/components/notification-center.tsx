@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import {
-  Bell,
+   Bell,
   Send,
   Check,
   User,
@@ -74,19 +74,19 @@ export function NotificationCenter() {
 
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
 
-  // OPTIMIZED: Added limit to messages query
+  // Fetch messages for the current user
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(
       collection(firestore, 'users', user.uid, 'messages'),
       orderBy('createdAt', 'desc'),
-      limit(20)
+      limit(50)
     );
   }, [firestore, user?.uid]);
 
   const { data: allMessages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
 
-  // OPTIMIZED: Added limit to portal alerts
+  // Fetch alerts for privileged users
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore || !user || !isPrivileged) return null;
     return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'), limit(10));
@@ -94,11 +94,11 @@ export function NotificationCenter() {
 
   const { data: activeMeldingen } = useCollection<Melding>(meldingenQuery);
 
-  // OPTIMIZED: Lazy load users ONLY when the 'new' tab is active
+  // Fetch all users to resolve names and facilitate new chats
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !user || activeTab !== 'new') return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'users');
-  }, [firestore, user, activeTab]);
+  }, [firestore, user]);
 
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
@@ -127,7 +127,7 @@ export function NotificationCenter() {
         (m.fromUserId === selectedChatUser.id && m.toUserId === user.uid) ||
         (m.fromUserId === user.uid && m.toUserId === selectedChatUser.id)
       )
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [allMessages, selectedChatUser, user]);
 
   const handleOpenChat = (contactId: string) => {
@@ -142,6 +142,8 @@ export function NotificationCenter() {
           updateDocumentNonBlocking(msgRef, { read: true });
         });
       }
+    } else {
+      console.warn("Collega niet gevonden in gebruikerslijst:", contactId);
     }
   };
 
@@ -360,7 +362,7 @@ export function NotificationCenter() {
 
             <TabsContent value="received" className="m-0">
               <ScrollArea className="h-[400px]">
-                {isLoadingMessages ? (
+                {isLoadingMessages || isLoadingUsers ? (
                   <div className="flex items-center justify-center h-40">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
@@ -447,7 +449,7 @@ export function NotificationCenter() {
                           <p className="text-xs font-black uppercase tracking-tight text-slate-900 truncate group-hover:text-primary transition-colors">
                             {u.displayName || u.email}
                           </p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">
                             {u.role}
                           </p>
                         </div>
