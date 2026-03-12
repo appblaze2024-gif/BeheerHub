@@ -24,6 +24,13 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue,
+} from '@/components/ui/select';
+import { 
   Table,
   TableBody,
   TableCell,
@@ -1179,7 +1186,7 @@ export default function StartNavigationPage() {
                 <div className="absolute top-4 left-4 right-4 z-20 flex justify-between pointer-events-none">
                     <div className="flex flex-col gap-3 pointer-events-auto">
                         {navigationState === 'setup' && (
-                            <Button variant="secondary" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => router.push('/')}>
+                            <Button variant="ghost" size="icon" className="h-12 md:h-14 w-12 md:w-14 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border-2 border-slate-100 transition-all active:scale-95 flex items-center justify-center" onClick={() => router.push('/')}>
                                 <ArrowLeft className="h-6 w-6 text-slate-600" />
                             </Button>
                         )}
