@@ -35,8 +35,8 @@ function ProcessingOverlay() {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="flex flex-col items-center gap-4 p-8 rounded-none bg-white shadow-2xl border border-slate-100 scale-110">
-        <div className="h-10 w-10 animate-spin border-4 border-primary border-t-transparent rounded-none" />
+      <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-white shadow-2xl border border-slate-100 scale-110">
+        <div className="h-10 w-10 animate-spin border-4 border-primary border-t-transparent rounded-full" />
         <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Verwerken...</p>
       </div>
     </div>
@@ -50,36 +50,28 @@ function Header() {
 
   const handleSignOut = async () => {
     try {
-      // Wis impersonatie en andere lokale sessie-data
       localStorage.removeItem('impersonatedUserProfileId');
       localStorage.removeItem('lastSelectedProjectId');
-      
-      // Meld af bij Firebase
       await signOut(auth);
-      
-      // Forceer redirect naar login
       router.replace('/login');
     } catch (error) {
       console.error("Logout error:", error);
-      // Zelfs bij fout, probeer te redirecten
       window.location.href = '/login';
     }
   };
 
   const goToHome = () => {
-    // Gebruik router.push naar root om alle query parameters te wissen.
-    // Dit triggert het reset-mechanisme in DashboardPage.
     router.push('/');
   };
 
   return (
     <header className="h-20 flex items-center justify-end px-4 lg:px-8 bg-transparent shrink-0 sticky top-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="flex items-center gap-1 sm:gap-2 bg-white px-2 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-100 pointer-events-auto max-w-[90vw] sm:max-w-none">
+      <div className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-lg px-2 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-100/50 pointer-events-auto max-w-[90vw] sm:max-w-none">
         <div className="flex items-center gap-0.5 sm:gap-1">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-blue-400 hover:bg-blue-50"
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10"
             onClick={goToHome}
             title="Home"
           >
@@ -87,21 +79,21 @@ function Header() {
           </Button>
           <NotificationCenter />
           <AppInfoDialog>
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-blue-400 hover:bg-blue-50">
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10">
               <Info className="h-4 w-4" />
             </Button>
           </AppInfoDialog>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-blue-400 hover:bg-blue-50"
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10"
             onClick={handleSignOut}
           >
             <LogOutIcon className="h-4 w-4" />
           </Button>
         </div>
         
-        <div className="h-6 sm:h-8 w-px bg-slate-100 mx-1 sm:mx-2" />
+        <div className="h-6 sm:h-8 w-px bg-slate-200 mx-1 sm:mx-2" />
         
         <div className="flex flex-col items-end mr-1 sm:mr-2 min-w-0">
           <p className="text-[7px] sm:text-[8px] font-bold text-slate-400 leading-none mb-0.5 uppercase tracking-widest truncate max-w-[80px] sm:max-w-[120px]">
@@ -112,8 +104,8 @@ function Header() {
           </p>
           {profile?.role && (
             <Badge className={cn(
-              "mt-0.5 sm:mt-1 h-3 sm:h-3.5 px-1 sm:px-1.5 text-[6px] sm:text-[7px] font-black uppercase border-none rounded-sm",
-              profile.role === 'Super admin' ? "bg-red-600 text-white" : "bg-blue-50 text-white"
+              "mt-0.5 sm:mt-1 h-3.5 px-1.5 text-[7px] font-black uppercase border-none rounded-full",
+              profile.role === 'Super admin' ? "bg-red-500 text-white" : "bg-primary text-white"
             )}>
               {profile.role}
             </Badge>
@@ -121,7 +113,7 @@ function Header() {
         </div>
         
         <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0">
-          <AvatarFallback className="text-[10px] bg-blue-100 text-blue-600 font-black uppercase">
+          <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-black uppercase">
             {profile?.firstName?.[0]}{profile?.lastName?.[0]}
           </AvatarFallback>
         </Avatar>
@@ -140,7 +132,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+    <div className="flex h-screen overflow-hidden bg-background">
       <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
         {isHeaderVisible && <Header />}
         <main className="flex-1 overflow-auto custom-scrollbar relative">
@@ -175,7 +167,6 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 
   if (!mounted) return null;
   
-  // Als we niet ingelogd zijn en niet op een publieke pagina, toon niks (router pushed naar login)
   if (!user && !isPublicPage) {
     return <LoadingScreen className="h-screen" />;
   }
