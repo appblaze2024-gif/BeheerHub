@@ -1266,9 +1266,11 @@ export default function StartNavigationPage() {
                 {/* Map Header Bar - Witte balk over de hele lengte */}
                 <div className="absolute top-0 left-0 right-0 z-20 h-14 sm:h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-none">
                     <div className="flex items-center gap-3 pointer-events-auto">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                            <ArrowLeft className="h-6 w-6 text-slate-600" />
-                        </Button>
+                        {navigationState !== 'navigating' && (
+                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
+                                <ArrowLeft className="h-6 w-6 text-slate-600" />
+                            </Button>
+                        )}
                         {navigationState === 'navigating' && routeInfo && (
                             <div className="flex items-center gap-2 sm:gap-4 bg-slate-900/5 px-3 py-1 rounded-full border border-slate-200/50">
                                 <div className="flex items-center gap-1.5">
