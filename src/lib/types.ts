@@ -349,6 +349,17 @@ export interface Route {
   totalObjects?: number;
 }
 
+export interface RouteAssignment {
+  id: string;
+  userId: string;
+  projectId: string;
+  routeId: string;
+  routeName: string;
+  routeType: 'veegroutes' | 'prullenbakken';
+  date: string;
+  status: 'Pending' | 'Started' | 'Completed';
+}
+
 export interface Contractor {
   id: string;
   projectId: string;

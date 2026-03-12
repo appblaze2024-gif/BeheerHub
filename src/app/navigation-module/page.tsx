@@ -11,7 +11,8 @@ import {
   updateDocumentNonBlocking, 
   useFirebaseApp, 
   useDoc, 
-  setDocumentNonBlocking 
+  setDocumentNonBlocking,
+  addDocumentNonBlocking 
 } from '@/firebase';
 import { collection, doc, query, where, limit, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,7 @@ import {
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile, Project as ProjectType } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile, Project as ProjectType, RouteAssignment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -575,12 +576,13 @@ export default function StartNavigationPage() {
   const { toast } = useToast();
   const { selectedProjectId, setSelectedProjectId } = useProject();
   
-  const type = searchParams.get('type'); // 'meldingen', 'veegroutes', 'prullenbakken'
+  const type = searchParams.get('type'); 
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
   
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = useState<'setup' | 'navigating'>('setup');
+  const [startTime, setStartTime] = useState<string | null>(null);
   const [isSimulationMode, setIsSimulationMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -654,6 +656,32 @@ export default function StartNavigationPage() {
   }, [firestore, user, type]);
   const { data: rawActiveMeldingen } = useCollection<Melding>(activeMeldingenQuery);
 
+  // Look for route assignments for today
+  const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
+  const assignmentsQuery = useMemoFirebase(() => {
+    if (!firestore || !user || !selectedProjectId) return null;
+    return query(
+        collection(firestore, 'route_assignments'), 
+        where('userId', '==', user.uid),
+        where('projectId', '==', selectedProjectId),
+        where('date', '==', todayStr),
+        where('status', '!=', 'Completed')
+    );
+  }, [firestore, user, selectedProjectId, todayStr]);
+
+  const { data: assignments } = useCollection<RouteAssignment>(assignmentsQuery);
+
+  useEffect(() => {
+    if (assignments && assignments.length > 0 && navigationState === 'setup') {
+        const assignment = assignments[0];
+        if (assignment.routeType === 'veegroutes' && type === 'veegroutes') {
+            setSelectedRouteId(assignment.routeId);
+        } else if (assignment.routeType === 'prullenbakken' && type === 'prullenbakken') {
+            setSelectedRouteId(assignment.routeId);
+        }
+    }
+  }, [assignments, navigationState, type]);
+
   const fetchSpeedLimit = useCallback(async (lat: number, lng: number) => {
     const now = Date.now();
     if (lastSpeedLimitFetchRef.current) {
@@ -715,7 +743,6 @@ export default function StartNavigationPage() {
     }
   }, [profile]);
 
-  const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
   const todayCompletedQuery = useMemoFirebase(() => {
     if (!firestore || !user || !showTodayCompleted || type !== 'meldingen') return null;
     return query(collection(firestore, 'meldingen'), where('status', '==', 'Afgerond'), where('afhandeling_datum', '==', todayStr), limit(50));
@@ -826,8 +853,6 @@ export default function StartNavigationPage() {
     const now = Date.now();
     if (!force && now - lastFetchTimeRef.current < 3000) return;
     
-    // In case of veegroute without missions, we don't calculate a route line to a mission,
-    // we just let the user follow the polygons visually. 
     if (type === 'veegroutes' && sortedMissions.length === 0) return;
 
     setIsCalculatingRoute(true);
@@ -979,9 +1004,17 @@ export default function StartNavigationPage() {
     if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next }, { merge: true }); 
   };
 
-  const handleStartRit = () => {
+  const handleStartRit = async () => {
     if (type !== 'veegroutes' && sortedMissions.length === 0) return;
+    
+    // Update assignment status if exists
+    if (assignments && assignments.length > 0 && firestore) {
+        const assignment = assignments[0];
+        updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignment.id), { status: 'Started' });
+    }
+
     setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); visualPosRef.current = null; targetPosRef.current = null;
+    setStartTime(new Date().toISOString());
     setIsLocating(true);
     const beginNav = (loc: { latitude: number, longitude: number }, heading: number) => {
         if (isNaN(loc.latitude) || isNaN(loc.longitude)) { setIsLocating(false); return; }
@@ -1000,15 +1033,43 @@ export default function StartNavigationPage() {
     else navigator.geolocation.getCurrentPosition((pos) => { const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude }; setUserLocation(loc); beginNav(loc, pos.coords.heading || 0); }, () => beginNav(SIMULATION_START_LOCATION, 0), { enableHighAccuracy: true, timeout: 10000 });
   };
 
-  const handleStopRit = () => {
-    setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
-    setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null);
-    if (user && firestore) {
+  const handleStopRit = async () => {
+    if (navigationState === 'navigating' && user && firestore && selectedRouteId && startTime) {
+        // Save route history
+        const routeData = type === 'veegroutes' ? currentProject?.veegroutes?.find(r => r.id === selectedRouteId) : currentProject?.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
+        
+        const allObjectsInRoute = filteredMeldingen.map(m => m.id);
+        const skipped = allObjectsInRoute.filter(id => !completedObjects.includes(id));
+
+        const historyRef = collection(firestore, 'users', user.uid, 'routes');
+        await addDocumentNonBlocking(historyRef, {
+            userId: user.uid,
+            projectId: selectedProjectId,
+            originalRouteId: selectedRouteId,
+            routeName: routeData?.naam || 'Onbekende Route',
+            date: todayStr,
+            startTime: startTime,
+            endTime: new Date().toISOString(),
+            completedObjects: completedObjects,
+            skippedObjects: skipped,
+            totalObjects: allObjectsInRoute.length
+        });
+
+        // Complete assignment if exists
+        if (assignments && assignments.length > 0) {
+            const assignment = assignments[0];
+            updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignment.id), { status: 'Completed' });
+        }
+
         updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
             navigatingToMissionId: null,
             navigatingToMissionStartedAt: null 
         });
     }
+
+    setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
+    setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null); setStartTime(null);
+    
     const map = mapRef.current?.getMap();
     if (map) {
       map.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 1000 });

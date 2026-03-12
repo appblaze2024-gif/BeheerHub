@@ -103,6 +103,8 @@ export const allMenuItems: MenuItem[] = [
       subItems: [
         { href: '/navigation-module?type=veegroutes', label: 'Veegroutes', id: 'veegroutes' },
         { href: '/navigation-module?type=prullenbakken', label: 'Prullenbakken', id: 'prullenbakken' },
+        { href: '/navigation-module/history', label: 'Historie', id: 'history' },
+        { href: '/navigation-module/assignment', label: 'Toewijzen', id: 'assignment' },
       ]
     },
     { href: '/iot', label: 'Internet of Things', icon: Cpu, module: 'iot' },

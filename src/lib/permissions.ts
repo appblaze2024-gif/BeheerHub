@@ -68,7 +68,17 @@ export const permissionConfig = [
         ]
     },
     { module: 'specReports', label: 'Besteksmeldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
-    { module: 'navigation', label: 'Navigatiemodule', actions: [{ id: 'use', label: 'Gebruiken' }] },
+    { 
+        module: 'navigation', 
+        label: 'Navigatiemodule', 
+        actions: [{ id: 'use', label: 'Gebruiken' }],
+        tabs: [
+            { id: 'veegroutes', label: 'Veegroutes' },
+            { id: 'prullenbakken', label: 'Prullenbakken' },
+            { id: 'history', label: 'Historie' },
+            { id: 'assignment', label: 'Toewijzen' },
+        ]
+    },
     { module: 'iot', label: 'Internet of Things Integratie', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'use', label: 'Gebruiken' }] },
     { module: 'mail', label: 'Mail', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { 
