@@ -635,7 +635,7 @@ export default function StartNavigationPage() {
   const visualPosRef = useRef<{lng: number, lat: number} | null>(null);
 
   const [sortConfig, setSortConfig] = useState<{ field: string; order: 'asc' | 'desc' }>({ 
-    field: 'intakenummer', 
+    field: 'afstand', 
     order: 'asc' 
   });
 
@@ -805,7 +805,7 @@ export default function StartNavigationPage() {
         let valA: any;
         let valB: any;
 
-        if (sortConfig.field === 'afstand') {
+        if (sortConfig.field === 'afstand' || (!sortConfig.field && navigationState === 'navigating')) {
             valA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]));
             valB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
         } else if (sortConfig.field === 'locatie') {
@@ -835,7 +835,7 @@ export default function StartNavigationPage() {
         }
     }
     return sorted;
-  }, [filteredMeldingen, userLocation, priorityMissionId, sortConfig]);
+  }, [filteredMeldingen, userLocation, priorityMissionId, sortConfig, navigationState]);
 
   const nextMission = sortedMissions[0];
 
@@ -861,6 +861,12 @@ export default function StartNavigationPage() {
     setIsCalculatingRoute(true);
     lastFetchTimeRef.current = now;
     const startPos = userLocation || SIMULATION_START_LOCATION;
+    
+    if (!sortedMissions[0]) {
+        setIsCalculatingRoute(false);
+        return;
+    }
+
     const waypoints = [[startPos.longitude, startPos.latitude], [sortedMissions[0].longitude, sortedMissions[0].latitude]];
     const waypointsStr = waypoints.map(w => w.join(',')).join(';');
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
@@ -1019,31 +1025,51 @@ export default function StartNavigationPage() {
   };
 
   const handleStartRit = async () => {
-    if (type !== 'veegroutes' && sortedMissions.length === 0) return;
+    if (type !== 'veegroutes' && filteredMeldingen.length === 0 && sortedMissions.length === 0) return;
     
+    setIsLocating(true);
+    setIsCalculatingRoute(true);
+
     if (assignments && assignments.length > 0 && firestore) {
         const assignment = assignments[0];
         updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignment.id), { status: 'Started' });
     }
 
-    setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); visualPosRef.current = null; targetPosRef.current = null;
-    setStartTime(new Date().toISOString());
-    setIsLocating(true);
     const beginNav = (loc: { latitude: number, longitude: number }, heading: number) => {
-        if (isNaN(loc.latitude) || isNaN(loc.longitude)) { setIsLocating(false); return; }
+        if (isNaN(loc.latitude) || isNaN(loc.longitude)) { 
+            setIsLocating(false); 
+            setIsCalculatingRoute(false);
+            return; 
+        }
+        
         targetPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         visualHeadingRef.current = heading;
-        setIsSimulationMode(false); setNavigationState('navigating'); setIsLocating(false); setIsManualMode(false);
-        if (nextMission?.id && user && firestore) {
-            updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
-                navigatingToMissionId: nextMission.id,
-                navigatingToMissionStartedAt: new Date().toISOString()
-            });
-        }
+        
+        // Ensure distance-based sorting is active at start to find NEAREST mission
+        setSortConfig({ field: 'afstand', order: 'asc' });
+        
+        setIsSimulationMode(false); 
+        setNavigationState('navigating'); 
+        setIsLocating(false); 
+        setIsManualMode(false);
+        
+        // FetchRoute will be triggered by the navigationState change effect
     };
-    if (userLocation) beginNav(userLocation, lastHeadingRef.current || 0);
-    else navigator.geolocation.getCurrentPosition((pos) => { const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude }; setUserLocation(loc); beginNav(loc, pos.coords.heading || 0); }, () => beginNav(SIMULATION_START_LOCATION, 0), { enableHighAccuracy: true, timeout: 10000 });
+
+    if (userLocation) {
+        beginNav(userLocation, lastHeadingRef.current || 0);
+    } else {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => { 
+                const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude }; 
+                setUserLocation(loc); 
+                beginNav(loc, pos.coords.heading || 0); 
+            }, 
+            () => beginNav(SIMULATION_START_LOCATION, 0), 
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    }
   };
 
   const handleStopRit = async () => {
@@ -1133,7 +1159,7 @@ export default function StartNavigationPage() {
                 </div>
                 <div className="space-y-4">
                     <div className="space-y-1.5 text-left">
-                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Kies Project</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kies Project</Label>
                         <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
                             <SelectTrigger className="h-14 font-black rounded-3xl border-none bg-white shadow-inner px-6 text-slate-900">
                                 <SelectValue placeholder="Project..." />
@@ -1144,7 +1170,7 @@ export default function StartNavigationPage() {
                         </Select>
                     </div>
                     <div className="space-y-1.5 text-left">
-                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Kies Route</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kies Route</Label>
                         <Select value={selectedRouteId || ''} onValueChange={setSelectedRouteId} disabled={!selectedProjectId}>
                             <SelectTrigger className="h-14 font-black rounded-3xl border-none bg-white shadow-inner px-6 text-slate-900">
                                 <SelectValue placeholder="Route..." />
@@ -1156,7 +1182,7 @@ export default function StartNavigationPage() {
                         </Select>
                     </div>
                 </div>
-                <Button className="w-full h-16 font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/20 text-lg transition-all active:scale-95 bg-primary hover:bg-primary/90" disabled={!selectedRouteId || isLocating} onClick={handleStartRit}>
+                <Button className="w-full h-16 font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/20 text-lg transition-all active:scale-95 bg-primary text-white hover:bg-primary/90" disabled={!selectedRouteId || isLocating} onClick={handleStartRit}>
                     {isLocating ? <Loader2 className="mr-3 animate-spin" /> : <Play className="mr-3 fill-current" />}
                     RIT STARTEN
                 </Button>
@@ -1173,6 +1199,7 @@ export default function StartNavigationPage() {
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
+        {isCalculatingRoute && <LoadingScreen message="Berekening route..." className="fixed inset-0 z-[1000]" />}
         
         {navigationState === 'setup' && type !== 'meldingen' ? (
             <div className="flex flex-col h-full">
@@ -1263,7 +1290,6 @@ export default function StartNavigationPage() {
                     </div>
                 )}
 
-                {/* Map Header Bar - Witte balk over de hele lengte */}
                 <div className="absolute top-0 left-0 right-0 z-20 h-14 sm:h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-none">
                     <div className="flex items-center gap-3 pointer-events-auto">
                         {navigationState !== 'navigating' && (

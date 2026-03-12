@@ -5,20 +5,17 @@ import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBl
 import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 import { 
   Loader2, 
-  Calendar, 
   User as UserIcon, 
   CheckCircle2, 
   Navigation, 
   ArrowLeft, 
   Plus, 
   Trash2, 
-  Sliders, 
-  LayoutGrid, 
   Check, 
-  MapPin, 
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LayoutGrid
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { format, addDays } from 'date-fns';
@@ -340,7 +337,7 @@ export default function RouteAssignmentPage() {
                         </div>
                     )}
                 </ScrollArea>
-            </Card>
+            </div>
         </div>
       </div>
     </div>
