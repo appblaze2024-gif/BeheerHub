@@ -27,43 +27,18 @@ service cloud.firestore {
 
     // --- RULES ---
 
-    match /annual_planning/{document=**} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /annual_planning_sections/{document=**} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /annual_planning_configs/{document=**} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /annual_milestones/{document=**} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /contractors/{contractorId} {
-      allow read: if isSignedIn();
-      allow write: if isPrivileged() || isAdmin();
-
-      match /{allSubcollections=**} {
-        allow read: if isSignedIn();
-        allow write: if isPrivileged() || isAdmin();
-      }
-    }
-
-    match /meldingen/{meldingId} {
-      allow read, write: if isSignedIn();
-    }
-
+    // Gebruikersprofielen
     match /users/{userId} {
       allow read, list: if isSignedIn();
-      allow write: if request.auth.uid == userId || isAdmin();
+      allow update: if (request.auth.uid == userId && 
+                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])) 
+                    || isAdmin();
+      allow create, delete: if isAdmin();
 
       match /messages/{messageId} {
-        allow read, list, update, delete: if request.auth.uid == userId || isAdmin();
-        allow create: if isSignedIn(); 
+        allow read, list: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == resource.data.fromUserId);
+        allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
+        allow update, delete: if isSignedIn() && request.auth.uid == userId;
       }
 
       match /routes/{routeId} {
@@ -74,52 +49,43 @@ service cloud.firestore {
 
     match /projects/{projectId} {
       allow read: if isSignedIn();
-      allow write: if isPrivileged() || isAdmin();
+      allow write: if isPrivileged();
 
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
-        allow write: if isPrivileged() || isAdmin();
+        allow write: if isPrivileged();
       }
     }
 
-    match /medewerkers/{medewerkerId} {
+    match /meldingen/{meldingId} {
       allow read: if isSignedIn();
-      allow write: if isPrivileged() || isAdmin();
-    }
-
-    match /sensors/{sensorId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isPrivileged();
     }
 
     match /voertuigen/{id} {
       allow read: if isSignedIn();
-      allow write: if isPrivileged() || isAdmin();
+      allow write: if isPrivileged();
       
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
-        allow write: if isPrivileged() || isAdmin();
+        allow write: if isPrivileged();
       }
     }
     
     match /machines/{id} {
       allow read: if isSignedIn();
-      allow write: if isPrivileged() || isAdmin();
+      allow write: if isPrivileged();
       
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
-        allow write: if isPrivileged() || isAdmin();
+        allow write: if isPrivileged();
       }
     }
 
-    match /objects/{objectId} {
-      allow read: if isSignedIn();
-      allow write: if isPrivileged();
-    }
-    
     match /settings/{settingId} {
       allow read: if isSignedIn();
-      allow write: if isPrivileged();
+      allow write: if isAdmin();
     }
 
     match /{document=**} {

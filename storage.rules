@@ -1,18 +1,51 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    /**
-     * BEHEERHUB STORAGE RULES
-     * Toegankelijk voor alle ingelogde gebruikers.
-     */
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+    
+    // Basis authenticatie check
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Meldingen bestanden en foto's
+    match /meldingen/{meldingId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.resource.size < 10 * 1024 * 1024 // Max 10MB
+                   && request.resource.contentType.matches('image/.*|application/pdf');
     }
     
-    // Specifieke toegang voor instellingen en iconen
+    // Project documenten
+    match /projects/{projectId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.resource.size < 50 * 1024 * 1024; // Max 50MB
+    }
+
+    // Voertuig en Machine afbeeldingen
+    match /voertuigen/{id}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.resource.contentType.matches('image/.*');
+    }
+    
+    match /machines/{id}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.resource.contentType.matches('image/.*');
+    }
+    
+    // Systeeminstellingen (Banners, Iconen)
     match /settings/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // In een productie-omgeving zou dit beperkt moeten worden tot admins
+    }
+
+    // Schade en Documenten van materieel
+    match /damages/{allPaths=**} {
+      allow read, write: if isSignedIn();
+    }
+    
+    match /documents/{allPaths=**} {
+      allow read, write: if isSignedIn();
     }
   }
 }
