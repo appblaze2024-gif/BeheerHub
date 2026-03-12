@@ -9,12 +9,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
     function userExists() {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function isAdmin() {
@@ -30,11 +30,15 @@ service cloud.firestore {
     // Gebruikersprofielen
     match /users/{userId} {
       allow read, list: if isSignedIn();
+      // Gebruikers mogen hun eigen profiel aanmaken bij eerste login
+      allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // Voorkom dat gebruikers hun eigen rol of permissies aanpassen
       allow update: if (request.auth.uid == userId && 
                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])) 
                     || isAdmin();
-      allow create, delete: if isAdmin();
+      allow delete: if isAdmin();
 
+      // Berichten tussen gebruikers
       match /messages/{messageId} {
         allow read, list: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == resource.data.fromUserId);
         allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
@@ -47,6 +51,7 @@ service cloud.firestore {
       }
     }
 
+    // Projecten en bijbehorende data
     match /projects/{projectId} {
       allow read: if isSignedIn();
       allow write: if isPrivileged();
@@ -57,12 +62,14 @@ service cloud.firestore {
       }
     }
 
+    // Meldingen
     match /meldingen/{meldingId} {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn();
       allow delete: if isPrivileged();
     }
 
+    // Wagenpark en Machines
     match /voertuigen/{id} {
       allow read: if isSignedIn();
       allow write: if isPrivileged();
@@ -83,11 +90,13 @@ service cloud.firestore {
       }
     }
 
+    // Algemene instellingen
     match /settings/{settingId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
+    // Fallback voor admins
     match /{document=**} {
       allow read, write: if isAdmin();
     }

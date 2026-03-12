@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -607,13 +608,14 @@ export default function StartNavigationPage() {
 
   const fetchSpeedLimit = useCallback(async (lat: number, lng: number) => {
     const now = Date.now();
+    // Strenge throttle: Alleen nieuwe data ophalen als we 100m bewogen zijn OF 30 seconden later
     if (lastSpeedLimitFetchRef.current) {
         const dist = turf.distance(
             turf.point([lng, lat]), 
             turf.point([lastSpeedLimitFetchRef.current.lng, lastSpeedLimitFetchRef.current.lat]),
             { units: 'meters' }
         );
-        if (dist < 50 && now - lastSpeedLimitFetchRef.current.time < 30000) return;
+        if (dist < 100 && now - lastSpeedLimitFetchRef.current.time < 30000) return;
     }
 
     try {
