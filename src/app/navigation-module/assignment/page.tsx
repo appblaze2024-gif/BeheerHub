@@ -35,7 +35,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { useProject } from '@/context/project-context';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { UserProfile, Project as ProjectType, RouteAssignment } from '@/lib/types';
+import type { UserProfile, Project as ProjectType, RouteAssignment, Wijk } from '@/lib/types';
 
 export default function RouteAssignmentPage() {
   const firestore = useFirestore();
@@ -207,17 +207,17 @@ export default function RouteAssignmentPage() {
 
         {/* Assignment Controls */}
         <div className="lg:col-span-8 flex flex-col gap-6 min-h-0 overflow-hidden">
-            <Card className="rounded-[2.5rem] border-none shadow-xl bg-slate-900 text-white overflow-hidden shrink-0">
+            <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden shrink-0">
                 <CardContent className="p-8">
                     <div className="flex flex-col md:flex-row items-end gap-6">
                         <div className="flex-1 space-y-3 w-full">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kies Route Type</Label>
-                            <div className="grid grid-cols-2 gap-2 bg-white/10 p-1.5 rounded-2xl">
+                            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl border-2 border-slate-50">
                                 <Button 
                                     variant="ghost" 
                                     className={cn(
                                         "h-11 font-black uppercase text-[10px] rounded-xl border-none transition-all",
-                                        selectedRouteType === 'prullenbakken' ? "bg-white text-slate-900 shadow-xl" : "text-white hover:bg-white/5"
+                                        selectedRouteType === 'prullenbakken' ? "bg-white text-primary shadow-md" : "text-slate-500 hover:bg-white/50"
                                     )}
                                     onClick={() => { setSelectedRouteType('prullenbakken'); setSelectedRouteId(null); }}
                                 >
@@ -227,7 +227,7 @@ export default function RouteAssignmentPage() {
                                     variant="ghost" 
                                     className={cn(
                                         "h-11 font-black uppercase text-[10px] rounded-xl border-none transition-all",
-                                        selectedRouteType === 'veegroutes' ? "bg-white text-slate-900 shadow-xl" : "text-white hover:bg-white/5"
+                                        selectedRouteType === 'veegroutes' ? "bg-white text-primary shadow-md" : "text-slate-500 hover:bg-white/50"
                                     )}
                                     onClick={() => { setSelectedRouteType('veegroutes'); setSelectedRouteId(null); }}
                                 >
@@ -239,7 +239,7 @@ export default function RouteAssignmentPage() {
                         <div className="flex-1 space-y-3 w-full">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Selecteer Route</Label>
                             <Select value={selectedRouteId || ''} onValueChange={setSelectedRouteId} disabled={!selectedProjectId}>
-                                <SelectTrigger className="h-14 font-black rounded-2xl border-none bg-white/10 text-white focus:ring-primary/30 px-6">
+                                <SelectTrigger className="h-14 font-black rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-900 focus:ring-primary/30 px-6">
                                     <SelectValue placeholder="Kies een route..." />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-2xl shadow-2xl p-2">
