@@ -68,7 +68,7 @@ service cloud.firestore {
 
     // Route assignments - OPEN VOOR ALLE INGELOGDE GEBRUIKERS
     match /route_assignments/{assignmentId} {
-      allow read, list: if request.auth != null;
+      allow read, list: if isSignedIn();
       allow write: if isPrivileged();
     }
 

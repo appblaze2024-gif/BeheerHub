@@ -14,7 +14,7 @@ import {
   setDocumentNonBlocking,
   addDocumentNonBlocking 
 } from '@/firebase';
-import { collection, doc, query, where, limit, getDocs } from 'firebase/firestore';
+import { collection, doc, query, where, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -130,25 +130,6 @@ const routeLayerCasing: any = {
   paint: { 'line-color': '#007AFF', 'line-width': 12, 'line-opacity': 0.2 },
 };
 
-const areaFillLayer: any = {
-  id: 'area-fill',
-  type: 'fill',
-  paint: {
-    'fill-color': '#9333ea',
-    'fill-opacity': 0.2
-  }
-};
-
-const areaOutlineLayer: any = {
-  id: 'area-outline',
-  type: 'line',
-  paint: {
-    'fill-color': '#9333ea',
-    'line-width': 3,
-    'line-dasharray': [2, 1]
-  }
-};
-
 function SectionRow({ 
     icon: Icon, 
     label, 
@@ -169,11 +150,11 @@ function SectionRow({
         >
             <div className="flex items-center gap-4">
                 <div className="relative">
-                    <div className="bg-[#FF5722] p-2 rounded-xl shadow-sm">
+                    <div className="bg-primary p-2 rounded-xl shadow-sm">
                         <Icon className="h-5 w-5 text-white" />
                     </div>
                     {badgeCount !== undefined && badgeCount > 0 && (
-                        <div className="absolute -top-2 -right-2 bg-primary text-white text-[10px] font-black h-5 w-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black h-5 w-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                             {badgeCount}
                         </div>
                     )}
@@ -1035,7 +1016,7 @@ export default function StartNavigationPage() {
         updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignment.id), { status: 'Started' });
     }
 
-    const beginNav = (loc: { latitude: number, longitude: number }, heading: number) => {
+    const beginNav = async (loc: { latitude: number, longitude: number }, heading: number) => {
         if (isNaN(loc.latitude) || isNaN(loc.longitude)) { 
             setIsLocating(false); 
             setIsCalculatingRoute(false);
@@ -1046,27 +1027,47 @@ export default function StartNavigationPage() {
         visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         visualHeadingRef.current = heading;
         
-        // Ensure distance-based sorting is active at start to find NEAREST mission
-        setSortConfig({ field: 'afstand', order: 'asc' });
+        // ROAD DISTANCE SORTING: If we have multiple candidates, find the one nearest via road
+        if (filteredMeldingen.length > 1) {
+            const topCandidates = sortedMissions.slice(0, 15);
+            const coordinates = [[loc.longitude, loc.latitude], ...topCandidates.map(m => [m.longitude, m.latitude])];
+            const coordStr = coordinates.map(c => c.join(',')).join(';');
+            const matrixUrl = `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordStr}?sources=0&annotations=distance&access_token=${MAPBOX_TOKEN}`;
+            
+            try {
+                const matrixRes = await fetch(matrixUrl);
+                const matrixData = await matrixRes.json();
+                if (matrixData.distances?.[0]) {
+                    const distancesFromStart = matrixData.distances[0];
+                    const candidatesWithRoadDist = topCandidates.map((m, i) => ({ 
+                        ...m, 
+                        roadDist: distancesFromStart[i + 1] || Infinity 
+                    }));
+                    candidatesWithRoadDist.sort((a, b) => a.roadDist - b.roadDist);
+                    setPriorityMissionId(candidatesWithRoadDist[0].id);
+                }
+            } catch (e) {
+                console.warn("Matrix API error, falling back to straight line:", e);
+            }
+        }
         
+        setStartTime(new Date().toISOString());
         setIsSimulationMode(false); 
         setNavigationState('navigating'); 
         setIsLocating(false); 
         setIsManualMode(false);
-        
-        // FetchRoute will be triggered by the navigationState change effect
     };
 
     if (userLocation) {
-        beginNav(userLocation, lastHeadingRef.current || 0);
+        await beginNav(userLocation, lastHeadingRef.current || 0);
     } else {
         navigator.geolocation.getCurrentPosition(
-            (pos) => { 
+            async (pos) => { 
                 const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude }; 
                 setUserLocation(loc); 
-                beginNav(loc, pos.coords.heading || 0); 
+                await beginNav(loc, pos.coords.heading || 0); 
             }, 
-            () => beginNav(SIMULATION_START_LOCATION, 0), 
+            async () => await beginNav(SIMULATION_START_LOCATION, 0), 
             { enableHighAccuracy: true, timeout: 10000 }
         );
     }
@@ -1076,8 +1077,8 @@ export default function StartNavigationPage() {
     if (navigationState === 'navigating' && user && firestore && selectedRouteId && startTime) {
         const routeData = type === 'veegroutes' ? currentProject?.veegroutes?.find(r => r.id === selectedRouteId) : currentProject?.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
         
-        const allObjectsInRoute = filteredMeldingen.map(m => m.id);
-        const skipped = allObjectsInRoute.filter(id => !completedObjects.includes(id));
+        const allObjectIds = filteredMeldingen.map(m => m.id);
+        const skipped = allObjectIds.filter(id => !completedObjects.includes(id));
 
         const historyRef = collection(firestore, 'users', user.uid, 'routes');
         await addDocumentNonBlocking(historyRef, {
@@ -1090,7 +1091,7 @@ export default function StartNavigationPage() {
             endTime: new Date().toISOString(),
             completedObjects: completedObjects,
             skippedObjects: skipped,
-            totalObjects: allObjectsInRoute.length
+            totalObjects: allObjectIds.length
         });
 
         if (assignments && assignments.length > 0) {
@@ -1264,8 +1265,8 @@ export default function StartNavigationPage() {
                         )}
                         {type === 'veegroutes' && selectedVeegroutePolygons && (
                             <Source id="veeg-polygons" type="geojson" data={selectedVeegroutePolygons}>
-                                <Layer {...areaFillLayer} />
-                                <Layer {...areaOutlineLayer} />
+                                <Layer id="veeg-fill" type="fill" paint={{ 'fill-color': '#9333ea', 'fill-opacity': 0.2 }} />
+                                <Layer id="veeg-outline" type="line" paint={{ 'fill-color': '#9333ea', 'line-width': 3, 'line-dasharray': [2, 1] }} />
                             </Source>
                         )}
                     </MapGL>
@@ -1390,7 +1391,7 @@ export default function StartNavigationPage() {
                                 const isCompleted = m.status === 'Afgerond';
                                 const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0;
                                 const distKm = (dist / 1000).toFixed(1);
-                                return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-[2rem] border-2 flex flex-col justify-between p-5 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/30")}><div className="flex justify-between items-start gap-4"><div className="min-w-0 flex-1"><div className="flex items-center gap-2.5 mb-1.5"><span className="text-xs font-black text-slate-300 w-5">{index + 1}</span><div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-sm uppercase text-slate-900 tracking-tight truncate leading-none">{m.intakenummer}</span></div><p className="text-xs font-bold text-slate-700 truncate leading-tight pl-8">{[m.streetName || m.straatnaam, m.houseNumber || m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[9px] font-black uppercase h-5 px-2 border-none bg-slate-50 text-slate-400 shrink-0 rounded-lg">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-3 border-t border-slate-50 pt-3 mt-auto pl-8"><span className="text-[10px] font-black uppercase text-primary truncate max-w-[160px] tracking-widest">{m.subcategorie}</span><span className="text-[10px] font-black text-slate-400 shrink-0 tabular-nums uppercase">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1.5 bg-green-500 rounded-bl-[1.5rem] shadow-lg"><Check className="h-3.5 w-3.5 text-white" /></div>)}</Card>);
+                                return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-[2rem] border-2 flex flex-col justify-between p-5 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/30")}><div className="flex justify-between items-start gap-4"><div className="min-w-0 flex-1"><div className="flex items-center gap-2.5 mb-1.5"><span className="text-xs font-black text-slate-300 w-5">{index + 1}</span><div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-sm uppercase text-slate-900 tracking-tight truncate leading-none">{m.intakenummer}</span></div><p className="text-xs font-bold text-slate-700 truncate leading-tight pl-8">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[9px] font-black uppercase h-5 px-2 border-none bg-slate-50 text-slate-400 shrink-0 rounded-lg">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-3 border-t border-slate-50 pt-3 mt-auto pl-8"><span className="text-[10px] font-black uppercase text-primary truncate max-w-[160px] tracking-widest">{m.subcategorie}</span><span className="text-[10px] font-black text-slate-400 shrink-0 tabular-nums uppercase">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1.5 bg-green-500 rounded-bl-[1.5rem] shadow-lg"><Check className="h-3.5 w-3.5 text-white" /></div>)}</Card>);
                             })}
                         </div>
                         <div className="hidden lg:block p-0">
@@ -1414,7 +1415,7 @@ export default function StartNavigationPage() {
                                             <TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-all border-b h-14", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-primary/5")}>
                                                 <TableCell className="pl-8 border-r font-black text-slate-300 text-[11px]">{index + 1}</TableCell>
                                                 <TableCell className="border-r"><div className="flex items-center gap-3"><div className={cn("h-2.5 w-2.5 rounded-full shadow-sm", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-sm uppercase text-slate-900 tracking-tight">{m.intakenummer}</span></div></TableCell>
-                                                <TableCell className="border-r"><div className="flex flex-col"><span className="text-xs font-black uppercase text-slate-700 tracking-tight">{m.streetName || m.straatnaam} {m.houseNumber || m.huisnummer}</span><span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">{m.plaats}</span></div></TableCell>
+                                                <TableCell className="border-r"><div className="flex flex-col"><span className="text-xs font-black uppercase text-slate-700 tracking-tight">{m.straatnaam} {m.huisnummer}</span><span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">{m.plaats}</span></div></TableCell>
                                                 <TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">"{m.extra_informatie || '-'}"</TableCell>
                                                 <TableCell className="border-r"><div className="flex flex-col"><span className="text-[10px] font-black uppercase text-primary tracking-[0.1em]">{m.hoofdcategorie}</span><span className="text-[9px] font-bold uppercase text-slate-400 tracking-widest">{m.subcategorie}</span></div></TableCell>
                                                 <TableCell className="text-right pr-8 font-black text-xs tabular-nums text-slate-400 uppercase tracking-tighter">{distKm} km</TableCell>
