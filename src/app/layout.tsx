@@ -19,7 +19,6 @@ import { Button } from '@/components/ui/button';
 import { 
   LogOut as LogOutIcon,
   Info,
-  Bell,
   Home,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -67,6 +66,12 @@ function Header() {
     }
   };
 
+  const goToHome = () => {
+    // Gebruik router.push naar root om alle query parameters te wissen.
+    // Dit triggert het reset-mechanisme in DashboardPage.
+    router.push('/');
+  };
+
   return (
     <header className="h-20 flex items-center justify-end px-4 lg:px-8 bg-transparent shrink-0 sticky top-0 left-0 right-0 z-50 pointer-events-none">
       <div className="flex items-center gap-1 sm:gap-2 bg-white px-2 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-100 pointer-events-auto max-w-[90vw] sm:max-w-none">
@@ -75,7 +80,8 @@ function Header() {
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-blue-400 hover:bg-blue-50"
-            onClick={() => router.push('/')}
+            onClick={goToHome}
+            title="Home"
           >
             <Home className="h-4 w-4" />
           </Button>

@@ -10,8 +10,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useFirestore, useDoc, useMemoFirebase, useCollection, useUser } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase, useCollection, useUser } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import { allMenuItems, MenuItem, SubMenuItem } from '@/lib/menu-config';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useProfile } from '@/firebase/profile-provider';
@@ -65,10 +65,15 @@ export default function DashboardPage() {
             ...item,
             subItems: visibleSubItems
           });
+        } else {
+          setActiveModule(null);
         }
+      } else {
+        setActiveModule(null);
       }
     } else {
       // Reset naar het hoofdmenu als er geen module in de URL staat
+      // Dit zorgt ervoor dat de Home-knop in de header (die naar / gaat) de sub-menu status altijd wist
       setActiveModule(null);
     }
   }, [searchParams, profile, canViewModule, canViewSubItem]);
@@ -100,10 +105,9 @@ export default function DashboardPage() {
     const visibleSubItems = item.subItems?.filter(sub => canViewSubItem(item.module, sub));
     
     if (visibleSubItems && visibleSubItems.length > 0) {
-      setActiveModule({
-        ...item,
-        subItems: visibleSubItems
-      });
+      // Gebruik router.push om de URL te updaten. 
+      // Hierdoor wordt het sub-menu gekoppeld aan de navigatie-historie en de home-knop.
+      router.push(`/?module=${item.module}`);
     } else {
       router.push(item.href);
     }
@@ -123,7 +127,6 @@ export default function DashboardPage() {
               size="icon" 
               className="h-10 w-10 rounded-full bg-white shadow-md border border-slate-100 text-primary"
               onClick={() => {
-                setActiveModule(null);
                 router.push('/');
               }}
             >
