@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -73,6 +74,8 @@ import {
   Inbox,
   Archive,
   User as UserIcon,
+  ChevronDown,
+  LayoutGrid,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -386,10 +389,10 @@ function IntegratedWerkbonOverlay({
                             {renderSubViewHeader("FOTO'S")}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
                                 <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.1em]">Melding Foto's</Label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Melding Foto's</Label>
+                                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                                         {melding.fotos?.map((p, i) => (
-                                            <div key={`bron-${i}`} className="relative aspect-square rounded-none overflow-hidden border-2 border-slate-100 shadow-lg cursor-pointer" onClick={() => setPreviewImage(p.url)}>
+                                            <div key={`bron-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-lg" onClick={() => setPreviewImage(p.url)}>
                                                 <Image src={p.url} alt="bron" fill className="object-cover" />
                                             </div>
                                         ))}
@@ -397,18 +400,18 @@ function IntegratedWerkbonOverlay({
                                 </div>
                                 <Separator className="bg-slate-100" />
                                 <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.1em]">Nieuwe Foto's</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Nieuwe Foto's</Label>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <Button variant="outline" className="h-36 flex-col gap-3 rounded-none border-dashed border-2 border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('cam-input')?.click()}><Camera className="h-10 w-10 text-primary" /><span className="text-[10px] font-black uppercase tracking-widest">Camera</span></Button>
-                                        <Button variant="outline" className="h-36 flex-col gap-3 rounded-none border-dashed border-2 border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('gal-input')?.click()}><ImageIcon className="h-10 w-10 text-primary" /><span className="text-[10px] font-black uppercase tracking-widest">Gallerij</span></Button>
+                                        <Button variant="outline" className="flex-col gap-3 rounded-none border-2 border-dashed border-slate-200 bg-slate-50/50 h-36 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('cam-input')?.click()}><Camera className="h-10 w-10 text-primary" /><span className="text-[10px] font-black uppercase tracking-widest">Camera</span></Button>
+                                        <Button variant="outline" className="flex-col gap-3 rounded-none border-2 border-dashed border-slate-200 bg-slate-50/50 h-36 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('gal-input')?.click()}><ImageIcon className="h-10 w-10 text-primary" /><span className="text-[10px] font-black uppercase tracking-widest">Gallerij</span></Button>
                                     </div>
                                     <input type="file" id="cam-input" className="hidden" accept="image/*" capture="environment" onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
                                     <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                                         {afhandelingFotos.map((p, i) => (
-                                            <div key={`new-${i}`} className="relative aspect-square rounded-none overflow-hidden border-2 border-slate-100 shadow-xl group cursor-pointer" onClick={() => setPreviewImage(p.url)}>
+                                            <div key={`new-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-xl group" onClick={() => setPreviewImage(p.url)}>
                                                 <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                                <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg border-2 border-white" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
+                                                <Button variant="destructive" size="icon" className="absolute right-2 top-2 h-8 w-8 rounded-full border-2 border-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
                                             </div>
                                         ))}
                                     </div>
@@ -543,7 +546,7 @@ export default function StartNavigationPage() {
     if (!firestore || !user) return null;
     return collection(firestore, 'users');
   }, [firestore, user]);
-  const { data: users } = useCollection<UserProfile>(usersQuery);
+  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !user || type === 'meldingen') return null;
@@ -885,56 +888,78 @@ export default function StartNavigationPage() {
                             )}
                         </div>
                         
-                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                            <Button 
-                                variant={selectedFolderId === null ? 'default' : 'outline'} 
-                                size="sm" 
-                                className="h-8 text-[9px] font-black uppercase rounded-none shrink-0" 
-                                onClick={() => setSelectedFolderId(null)}
-                            >
-                                <Inbox className="h-3 w-3 mr-1.5" /> Inbox
-                            </Button>
-                            <Button 
-                                variant={selectedFolderId === 'all' ? 'default' : 'outline'} 
-                                size="sm" 
-                                className="h-8 text-[9px] font-black uppercase rounded-none shrink-0" 
-                                onClick={() => setSelectedFolderId('all')}
-                            >
-                                Alle
-                            </Button>
-                            {userFolders?.map(folder => {
-                                const isSelected = selectedFolderId === folder.id;
-                                const button = (
-                                    <Button 
-                                        variant={isSelected ? 'default' : 'outline'} 
-                                        size="sm" 
-                                        className="h-8 text-[9px] font-black uppercase rounded-none shrink-0"
-                                        onClick={() => setSelectedFolderId(folder.id)}
-                                    >
-                                        <Folder className="h-3 w-3 mr-1.5" /> {folder.name}
-                                    </Button>
-                                );
-
-                                if (!isPrivileged) return <div key={folder.id}>{button}</div>;
-
-                                return (
-                                    <DropdownMenu key={folder.id}>
-                                        <DropdownMenuTrigger asChild>
-                                            {button}
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="start" className="rounded-none border-none shadow-2xl">
-                                            <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)} className="text-red-600 font-bold">
-                                                <Trash2 className="h-4 w-4 mr-2" /> Map verwijderen
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                );
-                            })}
+                        <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="w-full h-11 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-4">
+                                            <div className="flex items-center gap-2">
+                                                {selectedFolderId === null ? (
+                                                    <Inbox className="h-4 w-4 text-primary" />
+                                                ) : selectedFolderId === 'all' ? (
+                                                    <LayoutGrid className="h-4 w-4 text-primary" />
+                                                ) : (
+                                                    <Folder className="h-4 w-4 text-primary" />
+                                                )}
+                                                <span>
+                                                    {selectedFolderId === null 
+                                                        ? 'Inbox (Niet ingedeeld)' 
+                                                        : selectedFolderId === 'all' 
+                                                            ? 'Alle meldingen' 
+                                                            : userFolders?.find(f => f.id === selectedFolderId)?.name || 'Kies map...'}
+                                                </span>
+                                            </div>
+                                            <ChevronDown className="h-4 w-4 opacity-40" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] sm:w-72 rounded-none border-none shadow-2xl p-2">
+                                        <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">Weergave</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-bold rounded-none h-11 cursor-pointer">
+                                            <LayoutGrid className="h-4 w-4 mr-3 text-slate-400" /> Alle meldingen
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-bold rounded-none h-11 cursor-pointer">
+                                            <Inbox className="h-4 w-4 mr-3 text-slate-400" /> Inbox (Niet ingedeeld)
+                                        </DropdownMenuItem>
+                                        
+                                        {userFolders && userFolders.length > 0 && (
+                                            <>
+                                                <DropdownMenuSeparator className="bg-slate-100 my-2" />
+                                                <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">Werkmappen</DropdownMenuLabel>
+                                                {userFolders.map(folder => (
+                                                    <div key={folder.id} className="flex items-center group relative">
+                                                        <DropdownMenuItem 
+                                                            onClick={() => setSelectedFolderId(folder.id)} 
+                                                            className="flex-1 font-bold rounded-none h-11 cursor-pointer"
+                                                        >
+                                                            <Folder className="h-4 w-4 mr-3 text-primary" /> {folder.name}
+                                                        </DropdownMenuItem>
+                                                        {isPrivileged && (
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="absolute right-1 h-9 w-8 text-slate-300 hover:text-red-600 rounded-none opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                onClick={(e) => { 
+                                                                    e.preventDefault(); 
+                                                                    e.stopPropagation(); 
+                                                                    handleDeleteFolder(folder.id); 
+                                                                }}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                            
                             {isPrivileged && (
                                 <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
                                     <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-none border-dashed shrink-0">
-                                            <FolderPlus className="h-4 w-4" />
+                                        <Button variant="outline" className="h-11 w-11 p-0 rounded-none border-none bg-slate-50 shadow-inner text-primary hover:bg-slate-100">
+                                            <FolderPlus className="h-5 w-5" />
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent className="rounded-none border-none shadow-2xl p-8 max-w-sm">
@@ -946,7 +971,7 @@ export default function StartNavigationPage() {
                                             <Input placeholder="Bv. Planning Maandag..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-bold rounded-none text-center text-lg shadow-sm" />
                                         </div>
                                         <DialogFooter>
-                                            <Button variant="ghost" onClick={() => setIsCreateFolderOpen(false)} className="font-bold">Annuleren</Button>
+                                            <DialogClose asChild><Button variant="ghost" className="font-bold">Annuleren</Button></DialogClose>
                                             <Button onClick={handleCreateFolder} className="h-12 px-8 font-black uppercase rounded-none bg-primary text-white shadow-xl shadow-primary/20">Aanmaken</Button>
                                         </DialogFooter>
                                     </DialogContent>
