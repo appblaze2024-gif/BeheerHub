@@ -5,7 +5,6 @@ import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBl
 import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 import { 
   Loader2, 
-  User as UserIcon, 
   CheckCircle2, 
   Navigation, 
   ArrowLeft, 
@@ -23,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -161,7 +160,7 @@ export default function RouteAssignmentPage() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 p-6 overflow-hidden">
         <Card className="lg:col-span-4 flex flex-col rounded-[2.5rem] overflow-hidden border-none shadow-xl bg-white">
           <CardHeader className="p-6 border-b bg-slate-50/50">
-            <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Collega's</CardTitle>
+            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Collega's</h3>
             <div className="relative mt-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
@@ -265,7 +264,7 @@ export default function RouteAssignmentPage() {
                 <CardHeader className="p-6 border-b bg-slate-50/50 flex flex-row items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="bg-primary/10 p-2 rounded-xl"><LayoutGrid className="h-4 w-4 text-primary" /></div>
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-900">Actieve Toewijzingen</CardTitle>
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Actieve Toewijzingen</h3>
                     </div>
                     <Badge variant="outline" className="bg-white border-slate-200 font-black px-3 rounded-full">{assignments?.length || 0} Totaal</Badge>
                 </CardHeader>

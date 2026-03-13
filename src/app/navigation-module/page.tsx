@@ -17,7 +17,7 @@ import {
 import { collection, doc, query, where, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -88,7 +88,7 @@ import {
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -748,16 +748,6 @@ export default function StartNavigationPage() {
     return [];
   }, [type, rawActiveMeldingen, rawTodayCompleted, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
 
-  const selectedVeegroutePolygons = useMemo(() => {
-    if (type !== 'veegroutes' || !selectedRouteId || !currentProject) return null;
-    const route = currentProject.veegroutes?.find(r => r.id === selectedRouteId);
-    if (!route?.subGebieden) return null;
-    try {
-        const features = JSON.parse(route.subGebieden);
-        return turf.featureCollection(features);
-    } catch(e) { return null; }
-  }, [type, selectedRouteId, currentProject]);
-
   const sortedMissions = useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
     const base = userLocation || SIMULATION_START_LOCATION;
@@ -809,16 +799,14 @@ export default function StartNavigationPage() {
   }, [nextMission?.id, navigationState, user, firestore]);
 
   const fetchRoute = useCallback(async (force = false) => {
-    if (navigationState === 'setup' || (type !== 'veegroutes' && sortedMissions.length === 0)) {
+    if (navigationState === 'setup' || sortedMissions.length === 0) {
         setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
         return;
     }
     const now = Date.now();
     if (!force && now - lastFetchTimeRef.current < 3000) return;
     
-    if (type === 'veegroutes' && sortedMissions.length === 0) return;
-
-    // To prevent flicker, only show loader if we don't have a geometry yet
+    // Alleen een loader tonen als er echt nog geen route op het scherm staat
     if (!displayedRouteGeometry) setIsCalculatingRoute(true);
     
     lastFetchTimeRef.current = now;
@@ -842,7 +830,7 @@ export default function StartNavigationPage() {
             setRouteInfo({ duration: route.duration, distance: route.distance });
         }
     } catch (e) { console.error("Route error:", e); } finally { setIsCalculatingRoute(false); }
-  }, [sortedMissions, userLocation, navigationState, type, displayedRouteGeometry]);
+  }, [sortedMissions, userLocation, navigationState, displayedRouteGeometry]);
 
   useEffect(() => {
     if (navigationState === 'navigating' && (sortedMissions.length > 0)) fetchRoute(true);
@@ -981,7 +969,7 @@ export default function StartNavigationPage() {
   };
 
   const handleStartRit = async () => {
-    if (type !== 'veegroutes' && filteredMeldingen.length === 0 && sortedMissions.length === 0) return;
+    if (filteredMeldingen.length === 0 && sortedMissions.length === 0) return;
     
     setIsLocating(true);
     setIsCalculatingRoute(true);
@@ -1160,7 +1148,7 @@ export default function StartNavigationPage() {
                 </div>
                 <div className="space-y-3">
                     <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">Rit Voorbereiden</h2>
-                    <p className="text-sm font-medium text-slate-500">Kies een project en route om the rit te starten.</p>
+                    <p className="text-sm font-medium text-slate-500">Kies een project en route om de rit te starten.</p>
                 </div>
                 <div className="space-y-4">
                     <div className="space-y-1.5 text-left">
@@ -1204,7 +1192,7 @@ export default function StartNavigationPage() {
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
-        {isCalculatingRoute && <LoadingScreen message="Berekening route..." className="fixed inset-0 z-[1000]" />}
+        {isCalculatingRoute && !displayedRouteGeometry && <LoadingScreen message="Berekening route..." className="fixed inset-0 z-[1000]" />}
         
         {navigationState === 'setup' && type !== 'meldingen' ? (
             <div className="flex flex-col h-full">
@@ -1244,17 +1232,17 @@ export default function StartNavigationPage() {
                                                 <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-slate-900" />
                                             </div>
                                         )}
-                                        {isBeingNavigated && !isNext && (
+                                        {isBeingNavigated && !isNext && isPrivileged && (
                                             <div className="absolute bottom-full mb-2 bg-green-600 text-white px-3 py-1.5 rounded-full shadow-2xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap flex items-center gap-2 border-2 border-white">
                                                 <Navigation className="h-3.5 w-3.5 fill-current" />
                                                 <span className="text-[10px] font-black uppercase tracking-tight">{beingNavigatedBy![0]} is onderweg</span>
                                                 <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-green-600" />
                                             </div>
                                         )}
-                                        {(isNext || isClicked || isBeingNavigated) && (
-                                            <div className={cn("absolute inset-0 rounded-full border-[4px] opacity-80 transition-colors duration-500", isBeingNavigated ? "border-green-500" : "border-black", (isNext || isBeingNavigated) && "animate-pulse", isClicked && "border-primary")} />
+                                        {(isNext || isClicked || (isBeingNavigated && isPrivileged)) && (
+                                            <div className={cn("absolute inset-0 rounded-full border-[4px] opacity-80 transition-colors duration-500", (isBeingNavigated && isPrivileged) ? "border-green-500" : "border-black", (isNext || (isBeingNavigated && isPrivileged)) && "animate-pulse", isClicked && "border-primary")} />
                                         )}
-                                        <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked || isBeingNavigated) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
+                                        <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked || (isBeingNavigated && isPrivileged)) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
                                             {renderMarkerIcon(m.hoofdcategorie)}
                                             <div className={cn("absolute -top-1 -right-1 rounded-full w-4.5 h-4.5 flex items-center justify-center border border-black shadow-lg overflow-hidden", isCompleted ? "bg-green-500" : "bg-yellow-400")}>
                                                 {isCompleted ? <Check className="h-3 w-3 text-white" /> : <Wrench className="h-3 w-3 text-slate-900" />}
@@ -1266,12 +1254,6 @@ export default function StartNavigationPage() {
                         })}
                         {navigationState === 'navigating' && displayedRouteGeometry && (
                             <Source id="route-line" type="geojson" data={displayedRouteGeometry}><Layer {...routeLayerCasing} /><Layer {...routeLayer} /></Source>
-                        )}
-                        {type === 'veegroutes' && selectedVeegroutePolygons && (
-                            <Source id="veeg-polygons" type="geojson" data={selectedVeegroutePolygons}>
-                                <Layer id="veeg-fill" type="fill" paint={{ 'fill-color': '#9333ea', 'fill-opacity': 0.2 }} />
-                                <Layer id="veeg-outline" type="line" paint={{ 'fill-color': '#9333ea', 'line-width': 3, 'line-dasharray': [2, 1] }} />
-                            </Source>
                         )}
                     </MapGL>
                 </div>
