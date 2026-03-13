@@ -1002,9 +1002,6 @@ export default function StartNavigationPage() {
                                                 <p className={cn("text-base font-bold truncate leading-tight mt-1.5", isCompleted ? "text-green-700/60" : "text-slate-700")}>
                                                     {m.straatnaam} {m.huisnummer}
                                                 </p>
-                                                <p className={cn("text-xs font-black uppercase tracking-widest truncate leading-none mt-2 opacity-80", isCompleted ? "text-green-600/50" : "text-slate-400")}>
-                                                    {m.hoofdcategorie}
-                                                </p>
                                             </div>
                                             <div className="flex gap-1.5 shrink-0 items-center">
                                                 {!isCompleted && (
