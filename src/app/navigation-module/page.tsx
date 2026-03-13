@@ -1004,6 +1004,9 @@ export default function StartNavigationPage() {
                                                     )}
                                                 </div>
                                                 <p className="text-[11px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
+                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest truncate mt-0.5">
+                                                    {m.hoofdcategorie} • {m.subcategorie}
+                                                </p>
                                             </div>
                                             <div className="flex gap-2 shrink-0">
                                                 {!isCompleted && (
