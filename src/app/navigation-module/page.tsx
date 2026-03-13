@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -12,8 +13,10 @@ import {
   useFirebaseApp, 
   useDoc, 
   setDocumentNonBlocking,
+  addDocumentNonBlocking,
+  deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc, query, where, limit } from 'firebase/firestore';
+import { collection, doc, query, where, limit, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +29,14 @@ import {
   PopoverContent, 
   PopoverTrigger 
 } from '@/components/ui/popover';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, 
@@ -57,10 +68,15 @@ import {
   LocateFixed,
   Calendar,
   Package,
+  Folder,
+  FolderPlus,
+  MoreVertical,
+  Inbox,
+  Archive,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment, UserFolder } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
@@ -78,6 +94,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+  DialogTrigger,
+  DialogClose
+} from '@/components/ui/dialog';
 import Image from 'next/image';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -483,6 +509,11 @@ export default function StartNavigationPage() {
 
   const [autoOpenEnabled, setAutoOpenEnabledState] = useState(true);
 
+  // User Folders state
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+
   const mapRef = useRef<MapRef>(null);
 
   useEffect(() => {
@@ -505,6 +536,12 @@ export default function StartNavigationPage() {
     return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld']), limit(100));
   }, [firestore, user, type]);
   const { data: rawActiveMeldingen } = useCollection<Melding>(activeMeldingenQuery);
+
+  const foldersQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users', user.uid, 'folders');
+  }, [firestore, user]);
+  const { data: userFolders } = useCollection<UserFolder>(foldersQuery);
 
   const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
   const assignmentsQuery = useMemoFirebase(() => {
@@ -555,6 +592,11 @@ export default function StartNavigationPage() {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  const missionsInAnyFolder = useMemo(() => {
+    if (!userFolders) return new Set<string>();
+    return new Set(userFolders.flatMap(f => f.taskIds || []));
+  }, [userFolders]);
 
   const filteredMeldingen = useMemo(() => {
     const poolMap = new Map<string, any>();
@@ -622,7 +664,85 @@ export default function StartNavigationPage() {
     return [...result, ...completed];
   }, [userLocation, priorityMissionId]);
 
-  const sortedMissions = useMemo(() => sequenceMissions(filteredMeldingen), [filteredMeldingen, sequenceMissions]);
+  const displayedMissions = useMemo(() => {
+    let base = filteredMeldingen;
+    
+    if (selectedFolderId === null) {
+        // Inbox mode: only those NOT in any user folder
+        base = filteredMeldingen.filter(m => !missionsInAnyFolder.has(m.id));
+    } else if (selectedFolderId !== 'all') {
+        // Folder mode: only those in specific folder
+        const currentFolder = userFolders?.find(f => f.id === selectedFolderId);
+        if (currentFolder) {
+            base = filteredMeldingen.filter(m => (currentFolder.taskIds || []).includes(m.id));
+        } else {
+            base = [];
+        }
+    }
+    
+    return sequenceMissions(base);
+  }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders, sequenceMissions]);
+
+  const handleCreateFolder = async () => {
+    if (!firestore || !user || !newFolderName.trim()) return;
+    try {
+        await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'folders'), {
+            name: newFolderName.trim(),
+            taskIds: [],
+            createdAt: new Date().toISOString(),
+        });
+        setNewFolderName('');
+        setIsCreateFolderOpen(false);
+        toast({ title: "Map aangemaakt" });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij aanmaken map" });
+    }
+  };
+
+  const handleMoveToFolder = async (taskId: string, folderId: string | null) => {
+    if (!firestore || !user || !userFolders) return;
+    
+    const batch = writeBatch(firestore);
+    
+    // 1. Remove from all existing folders
+    userFolders.forEach(folder => {
+        if ((folder.taskIds || []).includes(taskId)) {
+            const folderRef = doc(firestore, 'users', user.uid, 'folders', folder.id);
+            batch.update(folderRef, {
+                taskIds: (folder.taskIds || []).filter(id => id !== taskId)
+            });
+        }
+    });
+    
+    // 2. Add to new folder if not null
+    if (folderId) {
+        const targetFolder = userFolders.find(f => f.id === folderId);
+        if (targetFolder) {
+            const folderRef = doc(firestore, 'users', user.uid, 'folders', folderId);
+            batch.update(folderRef, {
+                taskIds: [...(targetFolder.taskIds || []), taskId]
+            });
+        }
+    }
+    
+    try {
+        await batch.commit();
+        toast({ title: folderId ? "Verplaatst naar map" : "Verwijderd uit mappen" });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij verplaatsen" });
+    }
+  };
+
+  const handleDeleteFolder = async (id: string) => {
+    if (!firestore || !user) return;
+    try {
+        await deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'folders', id));
+        if (selectedFolderId === id) setSelectedFolderId(null);
+        toast({ title: "Map verwijderd" });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij verwijderen map" });
+    }
+  };
 
   const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
     const originStr = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : "My+Location";
@@ -632,16 +752,16 @@ export default function StartNavigationPage() {
       return;
     }
     
-    const pendingMissions = sortedMissions.filter(m => m.status !== 'Afgerond');
+    const pendingMissions = displayedMissions.filter(m => m.status !== 'Afgerond');
     if (pendingMissions.length === 0) return;
     
     const dest = pendingMissions[pendingMissions.length - 1];
     const waypoints = pendingMissions.slice(0, -1).filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
     window.open(`https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
-  }, [sortedMissions, userLocation]);
+  }, [displayedMissions, userLocation]);
 
   const handleStartRit = async (forcedPriorityId?: string) => {
-    if (filteredMeldingen.length === 0 && !forcedPriorityId) return;
+    if (displayedMissions.length === 0 && !forcedPriorityId) return;
     if (forcedPriorityId) setPriorityMissionId(forcedPriorityId);
     if (assignments?.[0] && firestore) updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignments[0].id), { status: 'Started' });
     setNavigationState('navigating');
@@ -703,7 +823,7 @@ export default function StartNavigationPage() {
                         <Button 
                             className="h-10 w-10 p-0 font-black uppercase bg-primary text-white shadow-xl rounded-none border-none hover:bg-primary/90 tracking-widest text-xs" 
                             onClick={handleRecalculateRoute} 
-                            disabled={filteredMeldingen.length === 0 || isRecalculating}
+                            disabled={displayedMissions.length === 0 || isRecalculating}
                         >
                             {isRecalculating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
                         </Button>
@@ -712,7 +832,7 @@ export default function StartNavigationPage() {
                     )
                 ) : (
                     navigationState === 'setup' ? (
-                        <Button className="h-10 px-6 font-black uppercase bg-primary text-white shadow-xl rounded-xl tracking-widest text-xs" onClick={() => handleStartRit()} disabled={filteredMeldingen.length === 0}>
+                        <Button className="h-10 px-6 font-black uppercase bg-primary text-white shadow-xl rounded-xl tracking-widest text-xs" onClick={() => handleStartRit()} disabled={displayedMissions.length === 0}>
                             <Play className="h-4 w-4 mr-2 fill-current" /> START
                         </Button>
                     ) : (
@@ -725,15 +845,74 @@ export default function StartNavigationPage() {
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative">
             {isMeldingenType ? (
                 <div className="flex-1 flex flex-col min-h-0">
-                    <div className="p-4 border-b bg-white shrink-0">
+                    <div className="p-4 border-b bg-white shrink-0 space-y-4">
                         <div className="relative max-w-md mx-auto">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input placeholder="Zoek opdracht..." className="pl-10 h-11 font-black uppercase text-xs rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                         </div>
+                        
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                            <Button 
+                                variant={selectedFolderId === null ? 'default' : 'outline'} 
+                                size="sm" 
+                                className="h-8 text-[9px] font-black uppercase rounded-none shrink-0" 
+                                onClick={() => setSelectedFolderId(null)}
+                            >
+                                <Inbox className="h-3 w-3 mr-1.5" /> Inbox
+                            </Button>
+                            <Button 
+                                variant={selectedFolderId === 'all' ? 'default' : 'outline'} 
+                                size="sm" 
+                                className="h-8 text-[9px] font-black uppercase rounded-none shrink-0" 
+                                onClick={() => setSelectedFolderId('all')}
+                            >
+                                Alle
+                            </Button>
+                            {userFolders?.map(folder => (
+                                <DropdownMenu key={folder.id}>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button 
+                                            variant={selectedFolderId === folder.id ? 'default' : 'outline'} 
+                                            size="sm" 
+                                            className="h-8 text-[9px] font-black uppercase rounded-none shrink-0"
+                                            onClick={() => setSelectedFolderId(folder.id)}
+                                        >
+                                            <Folder className="h-3 w-3 mr-1.5" /> {folder.name}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start">
+                                        <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)} className="text-red-600 font-bold">
+                                            <Trash2 className="h-4 w-4 mr-2" /> Map verwijderen
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            ))}
+                            <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-none border-dashed shrink-0">
+                                        <FolderPlus className="h-4 w-4" />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="rounded-none border-none shadow-2xl p-8 max-w-sm">
+                                    <DialogHeader>
+                                        <DialogTitle className="font-black uppercase tracking-tight">Nieuwe Map</DialogTitle>
+                                        <DialogDescription className="font-bold text-slate-500">Geef een naam op voor je persoonlijke takenmap.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-6">
+                                        <Input placeholder="Bv. Planning Morgen..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-bold rounded-none text-center text-lg shadow-sm" />
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="ghost" onClick={() => setIsCreateFolderOpen(false)} className="font-bold">Annuleren</Button>
+                                        <Button onClick={handleCreateFolder} className="h-12 px-8 font-black uppercase rounded-none bg-primary text-white shadow-xl shadow-primary/20">Aanmaken</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                     </div>
+                    
                     <ScrollArea className="flex-1">
                         <div className="max-w-2xl mx-auto flex flex-col gap-2 p-2 pb-24">
-                            {sortedMissions.map((m, index) => {
+                            {displayedMissions.map((m, index) => {
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
                                     <Card key={m.id} className={cn(
@@ -787,15 +966,35 @@ export default function StartNavigationPage() {
                                                 >
                                                     {isCompleted ? <Check className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                                                 </Button>
+                                                
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-12 w-8 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
+                                                            <MoreVertical className="h-4 w-4 text-slate-400" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-56 rounded-none shadow-2xl p-2 border-none">
+                                                        <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-2 py-1.5">Verplaatsen naar...</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => handleMoveToFolder(m.id, null)} className="font-bold rounded-none h-10 cursor-pointer">
+                                                            <Inbox className="h-4 w-4 mr-2" /> Inbox
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        {userFolders?.map(folder => (
+                                                            <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(m.id, folder.id)} className="font-bold rounded-none h-10 cursor-pointer">
+                                                                <Folder className="h-4 w-4 mr-2" /> {folder.name}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
                                         </div>
                                     </Card>
                                 );
                             })}
-                            {sortedMissions.length === 0 && (
+                            {displayedMissions.length === 0 && (
                                 <div className="col-span-full py-20 text-center opacity-20">
-                                    <CheckCircle2 className="h-16 w-16 mx-auto mb-4" />
-                                    <p className="font-black uppercase tracking-widest">Geen actieve opdrachten</p>
+                                    <Archive className="h-16 w-16 mx-auto mb-4" />
+                                    <p className="font-black uppercase tracking-widest">Geen opdrachten in deze lijst</p>
                                 </div>
                             )}
                         </div>

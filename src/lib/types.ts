@@ -1,3 +1,4 @@
+
 export type UserPermissions = {
   [module: string]: {
     view?: boolean;
@@ -41,6 +42,13 @@ export type UserProfile = {
   navigatingToMissionStartedAt?: string | null;
   archiveSortConfig?: { field: string; order: 'asc' | 'desc' };
 };
+
+export interface UserFolder {
+  id: string;
+  name: string;
+  taskIds: string[];
+  createdAt: string;
+}
 
 export interface Message {
   id: string;

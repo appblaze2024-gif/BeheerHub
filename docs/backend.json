@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -23,6 +24,18 @@
         "lastUsedDienstColor": { "type": "string" }
       },
       "required": ["id", "email", "role"]
+    },
+    "UserFolder": {
+      "title": "UserFolder",
+      "description": "Een map aangemaakt door een gebruiker om taken in te organiseren.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "taskIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "taskIds", "createdAt"]
     },
     "Message": {
       "title": "Message",
@@ -118,6 +131,10 @@
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/UserProfile" },
       "description": "Gebruikersprofielen."
+    },
+    "/users/{userId}/folders/{folderId}": {
+      "schema": { "$ref": "#/entities/UserFolder" },
+      "description": "Gebruikersspecifieke mappen voor taken."
     },
     "/users/{userId}/messages/{messageId}": {
       "schema": { "$ref": "#/entities/Message" },
