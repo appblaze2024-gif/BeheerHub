@@ -40,6 +40,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+import { 
   ArrowLeft, 
   Play, 
   CheckCircle2, 
@@ -77,7 +83,8 @@ import {
   Maximize,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  ExternalLink
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -104,7 +111,6 @@ import {
 import Image from 'next/image';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
-import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Textarea } from '@/components/ui/textarea';
 import { useProject } from '@/context/project-context';
@@ -1134,6 +1140,12 @@ export default function StartNavigationPage() {
     }
   };
 
+  const openInGoogleMaps = () => {
+    if (!nextMission) return;
+    const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${nextMission.latitude},${nextMission.longitude}`;
+    window.open(url, '_blank');
+  };
+
   const clickedMelding = useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
 
   const renderSetupUI = () => {
@@ -1284,11 +1296,9 @@ export default function StartNavigationPage() {
 
                 <div className="absolute top-0 left-0 right-0 z-20 h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-none gap-2">
                     <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-                        {navigationState !== 'navigating' && (
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                                <ArrowLeft className="h-6 w-6 text-slate-600" />
-                            </Button>
-                        )}
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
+                            <ArrowLeft className="h-6 w-6 text-slate-600" />
+                        </Button>
                         
                         {navigationState === 'navigating' && routeInfo && (
                             <div className="hidden sm:flex items-center gap-3 bg-slate-900/5 px-3 py-1.5 rounded-full border-2 border-slate-200 shadow-sm">
@@ -1341,11 +1351,16 @@ export default function StartNavigationPage() {
                                     <span className="text-[9px] sm:text-[11px] font-black uppercase text-primary tracking-tighter">km/h</span>
                                 </div>
                             </div>
-                            {isManualMode && (
-                                <Button size="icon" className="h-20 w-20 md:h-24 md:w-24 rounded-full shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center pointer-events-auto shadow-primary/40" onClick={handleHervatNavigatie}>
-                                    <Navigation className="h-12 w-12 md:h-14 md:w-14 fill-current" />
+                            <div className="flex flex-col gap-3 pointer-events-auto">
+                                {isManualMode && (
+                                    <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-primary/40" onClick={handleHervatNavigatie}>
+                                        <Navigation className="h-10 w-10 sm:h-12 sm:w-12 fill-current" />
+                                    </Button>
+                                )}
+                                <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-green-600 text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-green-600/40" onClick={openInGoogleMaps} title="Open in Google Maps / Android Auto">
+                                    <ExternalLink className="h-10 w-10 sm:h-12 sm:w-12" />
                                 </Button>
-                            )}
+                            </div>
                         </div>
                         <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-none rounded-[2.5rem] overflow-hidden pointer-events-auto transition-all duration-300">
                             <CardContent className="p-6 sm:p-8">
