@@ -54,7 +54,9 @@ import {
   Settings,
   Sliders,
   ExternalLink,
-  Tag
+  Tag,
+  Power,
+  PowerOff
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -616,7 +618,7 @@ export default function StartNavigationPage() {
         <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-3">
                  <Button variant="ghost" size="icon" className="rounded-full h-10 w-10" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6 text-slate-600" /></Button>
-                 <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 leading-none">Navigatie</h2>
+                 <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 leading-none">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
             </div>
             <div className="flex items-center gap-2">
                 <Popover>
