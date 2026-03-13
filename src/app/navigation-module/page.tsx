@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
+import MapGL, { Marker, type MapRef } from 'react-map-gl';
 import { 
   useCollection, 
   useFirestore, 
@@ -18,17 +18,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue,
-} from '@/components/ui/select';
 import { 
   Popover, 
   PopoverContent, 
@@ -55,7 +47,6 @@ import {
   ChevronRight,
   UploadCloud,
   Map as MapIcon,
-  Hash,
   Sparkles,
   Wrench,
   Paperclip,
@@ -72,7 +63,7 @@ import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
-import { addSeconds, format as formatDate } from 'date-fns';
+import { format as formatDate } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import {
   AlertDialog,
@@ -164,9 +155,6 @@ function IntegratedWerkbonOverlay({
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     
     const [previewImage, setPreviewImage] = useState<string | null>(null);
-    const [zoomScale, setZoomScale] = useState(1);
-    const [zoomOffset, setZoomOffset] = useState({ x: 0, y: 0 });
-    const lastTouchRef = useRef<{ dist: number; center: { x: number; y: number } } | null>(null);
     
     const recognitionRef = useRef<any>(null);
 
@@ -333,7 +321,7 @@ function IntegratedWerkbonOverlay({
     );
 
     return (
-        <div className="flex flex-col h-full bg-white relative animate-in slide-in-from-right duration-300">
+        <div className="fixed inset-0 z-[200] flex flex-col h-full bg-white relative animate-in slide-in-from-right duration-300">
             {subView === 'main' ? (
                 <>
                     <header className="h-16 bg-slate-900 text-white flex items-center justify-between px-4 shrink-0">
@@ -481,10 +469,6 @@ export default function StartNavigationPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   const [autoOpenEnabled, setAutoOpenEnabledState] = useState(true);
-  const [dynamicZoomEnabled, setDynamicZoomEnabledState] = useState(true);
-  const [navZoom, setNavZoomState] = useState(18);
-  const [navPitch, setNavPitchState] = useState(60);
-  const [navOffset, setNavOffsetState] = useState(450);
 
   const mapRef = useRef<MapRef>(null);
 
@@ -533,7 +517,6 @@ export default function StartNavigationPage() {
 
   useEffect(() => {
     if (profile) {
-        if (profile.navZoom !== undefined) setNavZoomState(Number(profile.navZoom));
         if (profile.autoOpenEnabled !== undefined) setAutoOpenEnabledState(!!profile.autoOpenEnabled);
     }
   }, [profile]);
@@ -670,34 +653,43 @@ export default function StartNavigationPage() {
                         </div>
                     </div>
                     <ScrollArea className="flex-1 p-4 md:p-6">
-                        <div className="max-w-3xl mx-auto space-y-4 pb-20">
+                        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-24">
                             {sortedMissions.map((m, index) => (
-                                <Card key={m.id} className="rounded-[2rem] border-none shadow-xl bg-white overflow-hidden active:scale-[0.98] transition-all cursor-pointer group" onClick={() => setActiveWerkbonId(m.id)}>
-                                    <div className="p-6 flex items-center gap-6">
-                                        <div className="h-12 w-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-lg font-black shadow-lg shrink-0">
+                                <Card key={m.id} className="rounded-3xl border-none shadow-xl bg-white overflow-hidden active:scale-[0.98] transition-all cursor-pointer group">
+                                    <div className="p-4 flex flex-col items-center text-center gap-3">
+                                        <div className="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm font-black shadow-lg">
                                             {index + 1}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <h3 className="font-black text-lg uppercase tracking-tight text-slate-900 truncate">{m.intakenummer}</h3>
-                                                <Badge variant="outline" className="text-[9px] font-black uppercase border-2">{m.werkgebied || m.wijk || '-'}</Badge>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                                                <MapPin className="h-3.5 w-3.5 text-primary" />
-                                                <span className="truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</span>
-                                            </div>
+                                        <div className="space-y-1 w-full px-2">
+                                            <h3 className="font-black text-xs uppercase tracking-tight text-slate-900 truncate">{m.intakenummer}</h3>
+                                            <p className="text-[10px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}</p>
+                                            <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-slate-100 text-slate-500 h-4 px-1.5">{m.werkgebied || m.wijk || '-'}</Badge>
                                         </div>
-                                        <div className="flex flex-col items-end gap-2 shrink-0">
-                                            <Button variant="outline" size="icon" className="h-10 w-10 rounded-full border-2 text-green-600 border-green-100 hover:bg-green-50" onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}>
-                                                <ExternalLink className="h-5 w-5" />
+                                        <div className="grid grid-cols-2 gap-2 w-full pt-2 border-t border-slate-50">
+                                            <Button 
+                                                variant="outline" 
+                                                size="icon" 
+                                                className="h-12 w-full rounded-2xl border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90" 
+                                                onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
+                                                title="Navigeer via Google Maps"
+                                            >
+                                                <Navigation className="h-5 w-5" />
                                             </Button>
-                                            <ChevronRight className="h-6 w-6 text-slate-200 group-hover:text-primary transition-all group-hover:translate-x-1" />
+                                            <Button 
+                                                variant="outline" 
+                                                size="icon" 
+                                                className="h-12 w-full rounded-2xl border-none bg-green-50 text-green-600 hover:bg-green-100 transition-all active:scale-90" 
+                                                onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
+                                                title="Open Werkbon"
+                                            >
+                                                <FileText className="h-5 w-5" />
+                                            </Button>
                                         </div>
                                     </div>
                                 </Card>
                             ))}
                             {sortedMissions.length === 0 && (
-                                <div className="py-20 text-center opacity-20">
+                                <div className="col-span-full py-20 text-center opacity-20">
                                     <CheckCircle2 className="h-16 w-16 mx-auto mb-4" />
                                     <p className="font-black uppercase tracking-widest">Geen actieve opdrachten</p>
                                 </div>
@@ -719,21 +711,19 @@ export default function StartNavigationPage() {
         </div>
 
         {activeWerkbonId && (
-            <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-300">
-                <IntegratedWerkbonOverlay 
-                    meldingId={activeWerkbonId} 
-                    onClose={() => setActiveWerkbonId(null)} 
-                    onCompleted={(id) => { 
-                        setCompletedObjects(prev => [...prev, id]); 
-                        setActiveWerkbonId(null);
-                    }}
-                    onNavigateNow={(id) => {
-                        setPriorityMissionId(id);
-                        openInGoogleMaps();
-                        setActiveWerkbonId(null);
-                    }}
-                />
-            </div>
+            <IntegratedWerkbonOverlay 
+                meldingId={activeWerkbonId} 
+                onClose={() => setActiveWerkbonId(null)} 
+                onCompleted={(id) => { 
+                    setCompletedObjects(prev => [...prev, id]); 
+                    setActiveWerkbonId(null);
+                }}
+                onNavigateNow={(id) => {
+                    setPriorityMissionId(id);
+                    openInGoogleMaps();
+                    setActiveWerkbonId(null);
+                }}
+            />
         )}
     </div>
   );
