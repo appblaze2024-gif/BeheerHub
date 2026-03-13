@@ -148,7 +148,7 @@ export default function RouteAssignmentPage() {
             </div>
             <Separator orientation="vertical" className="h-6" />
             <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
-                <SelectTrigger className="h-10 w-64 font-black border-none rounded-2xl bg-slate-100 shadow-inner">
+                <SelectTrigger className="h-10 w-64 font-black border-none rounded-2xl bg-slate-100 shadow-inner text-slate-900">
                     <SelectValue placeholder="Kies project..." />
                 </SelectTrigger>
                 <SelectContent className="rounded-3xl shadow-2xl border-none">
@@ -281,7 +281,7 @@ export default function RouteAssignmentPage() {
                                         <div className="flex items-center gap-6 flex-1 min-w-0">
                                             <div className="flex items-center gap-3 w-48 shrink-0">
                                                 <div className="h-10 w-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-[10px] font-black uppercase shadow-lg">
-                                                    {userAssigned?.firstName?.[0]}{userAssigned?.lastName?.[0]}
+                                                    {userAssigned?.firstName?.[0] || '?'}{userAssigned?.lastName?.[0] || '?'}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="font-black text-xs uppercase text-slate-900 truncate">{userAssigned?.displayName || userAssigned?.email}</p>

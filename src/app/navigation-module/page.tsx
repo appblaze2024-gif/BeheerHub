@@ -818,7 +818,9 @@ export default function StartNavigationPage() {
     
     if (type === 'veegroutes' && sortedMissions.length === 0) return;
 
-    setIsCalculatingRoute(true);
+    // To prevent flicker, only show loader if we don't have a geometry yet
+    if (!displayedRouteGeometry) setIsCalculatingRoute(true);
+    
     lastFetchTimeRef.current = now;
     const startPos = userLocation || SIMULATION_START_LOCATION;
     
@@ -840,12 +842,12 @@ export default function StartNavigationPage() {
             setRouteInfo({ duration: route.duration, distance: route.distance });
         }
     } catch (e) { console.error("Route error:", e); } finally { setIsCalculatingRoute(false); }
-  }, [sortedMissions, userLocation, navigationState, type]);
+  }, [sortedMissions, userLocation, navigationState, type, displayedRouteGeometry]);
 
   useEffect(() => {
     if (navigationState === 'navigating' && (sortedMissions.length > 0)) fetchRoute(true);
     else if (navigationState === 'setup') { setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); }
-  }, [navigationState, sortedMissions[0]?.id, fetchRoute]);
+  }, [navigationState, sortedMissions[0]?.id]);
 
   useEffect(() => {
     let animId: number;
