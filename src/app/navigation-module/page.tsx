@@ -804,10 +804,10 @@ export default function StartNavigationPage() {
         return;
     }
     const now = Date.now();
-    if (!force && now - lastFetchTimeRef.current < 3000) return;
+    if (!force && now - lastFetchTimeRef.current < 5000) return;
     
-    // Alleen een loader tonen als er echt nog geen route op het scherm staat
-    if (!displayedRouteGeometry) setIsCalculatingRoute(true);
+    // Only show loading screen if we have absolutely no route to show yet
+    if (!displayedRouteGeometry && force) setIsCalculatingRoute(true);
     
     lastFetchTimeRef.current = now;
     const startPos = userLocation || SIMULATION_START_LOCATION;
@@ -840,52 +840,63 @@ export default function StartNavigationPage() {
   useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
-        if (targetPosRef.current) {
+        // Reduced frequency logic to prevent heating - check if we even need to update
+        if (targetPosRef.current && navigationState === 'navigating') {
             if (!visualPosRef.current) {
                 visualPosRef.current = { ...targetPosRef.current };
                 visualHeadingRef.current = lastHeadingRef.current;
             } else {
                 const posFactor = 0.08; 
                 const headingFactor = 0.05;
-                visualPosRef.current.lng += (targetPosRef.current.lng - visualPosRef.current.lng) * posFactor;
-                visualPosRef.current.lat += (targetPosRef.current.lat - visualPosRef.current.lat) * posFactor;
-                let diff = lastHeadingRef.current - visualHeadingRef.current;
-                if (diff > 180) diff -= 360;
-                if (diff < -180) diff += 360;
-                visualHeadingRef.current += diff * headingFactor;
-            }
+                
+                // Only do math if distance is significant or heading changed
+                const dLng = targetPosRef.current.lng - visualPosRef.current.lng;
+                const dLat = targetPosRef.current.lat - visualPosRef.current.lat;
+                
+                if (Math.abs(dLng) > 0.000001 || Math.abs(dLat) > 0.000001) {
+                    visualPosRef.current.lng += dLng * posFactor;
+                    visualPosRef.current.lat += dLat * posFactor;
+                    
+                    let diff = lastHeadingRef.current - visualHeadingRef.current;
+                    if (diff > 180) diff -= 360;
+                    if (diff < -180) diff += 360;
+                    visualHeadingRef.current += diff * headingFactor;
 
-            if (!isNaN(visualPosRef.current.lng) && !isNaN(visualPosRef.current.lat)) {
-                setSmoothLocation({ longitude: visualPosRef.current.lng, latitude: visualPosRef.current.lat, heading: visualHeadingRef.current });
-                if (navigationState === 'navigating' && mapRef.current && !isManualMode) {
-                    const currentSpeed = speedKmh;
-                    const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
-                    mapRef.current.getMap().jumpTo({
-                        center: [visualPosRef.current.lng, visualPosRef.current.lat],
-                        bearing: visualHeadingRef.current,
-                        zoom: targetZoom,
-                        pitch: navPitch,
-                        padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
-                    });
-                }
-                if (currentRouteGeometry && navigationState === 'navigating') {
-                    try {
-                        const line = turf.lineString(currentRouteGeometry.coordinates);
-                        const currPt = turf.point([visualPosRef.current.lng, visualPosRef.current.lat]);
-                        const snapped = turf.nearestPointOnLine(line, currPt);
-                        if (!isNaN(snapped.geometry.coordinates[0])) {
-                            targetPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
-                            const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
-                            const distAlong = turf.length(alongRoute, { units: 'meters' });
-                            const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
-                            lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
-                            
-                            const endPt = turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]);
-                            const sliced = turf.lineSlice(snapped, endPt, line);
-                            setDisplayedRouteGeometry(sliced);
+                    if (!isNaN(visualPosRef.current.lng) && !isNaN(visualPosRef.current.lat)) {
+                        setSmoothLocation({ longitude: visualPosRef.current.lng, latitude: visualPosRef.current.lat, heading: visualHeadingRef.current });
+                        if (mapRef.current && !isManualMode) {
+                            const currentSpeed = speedKmh;
+                            const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
+                            mapRef.current.getMap().jumpTo({
+                                center: [visualPosRef.current.lng, visualPosRef.current.lat],
+                                bearing: visualHeadingRef.current,
+                                zoom: targetZoom,
+                                pitch: navPitch,
+                                padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
+                            });
                         }
-                    } catch (e) {}
+                    }
                 }
+            }
+            
+            // Snape behavior only if we have a route
+            if (currentRouteGeometry) {
+                try {
+                    const line = turf.lineString(currentRouteGeometry.coordinates);
+                    const currPt = turf.point([visualPosRef.current?.lng || targetPosRef.current.lng, visualPosRef.current?.lat || targetPosRef.current.lat]);
+                    const snapped = turf.nearestPointOnLine(line, currPt);
+                    if (!isNaN(snapped.geometry.coordinates[0])) {
+                        targetPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
+                        const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
+                        const distAlong = turf.length(alongRoute, { units: 'meters' });
+                        const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
+                        lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
+                        
+                        const endPt = turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]);
+                        const sliced = turf.lineSlice(snapped, endPt, line);
+                        setDisplayedRouteGeometry(sliced);
+                    }
+                } catch (e) {}
             }
         }
         animId = requestAnimationFrame(updateVisualPos);
@@ -901,6 +912,7 @@ export default function StartNavigationPage() {
         (pos) => {
             const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
             if (isNaN(loc.latitude) || isNaN(loc.longitude)) return;
+            
             setUserLocation(loc);
             const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
             setSpeedKmh(currentSpeed);
@@ -923,9 +935,9 @@ export default function StartNavigationPage() {
                     autoOpenTimerRef.current = null;
                 }
             }
-        }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
+        }, () => {}, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, isCalculatingRoute, fetchRoute, nextMission, autoOpenEnabled]);
+  }, [navigationState, isSimulationMode, currentRouteGeometry, nextMission, autoOpenEnabled]);
 
   const updateNavPitch = (newPitch: number) => { 
     const val = Number(newPitch);
@@ -1105,9 +1117,11 @@ export default function StartNavigationPage() {
     }
   };
 
-  const openInGoogleMaps = () => {
-    if (!nextMission) return;
-    const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${nextMission.latitude},${nextMission.longitude}`;
+  const openInGoogleMaps = (lat?: number, lng?: number) => {
+    const targetLat = lat || nextMission?.latitude;
+    const targetLng = lng || nextMission?.longitude;
+    if (!targetLat || !targetLng) return;
+    const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${targetLat},${targetLng}`;
     window.open(url, '_blank');
   };
 
@@ -1276,8 +1290,7 @@ export default function StartNavigationPage() {
                                     variant="outline"
                                     className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md border-2 border-green-600 text-green-600 hover:bg-green-50 gap-3 transition-all active:scale-95" 
                                     onClick={() => {
-                                        const url = `https://www.google.com/maps/dir/?api=1&destination=${clickedMelding.latitude},${clickedMelding.longitude}`;
-                                        window.open(url, '_blank');
+                                        openInGoogleMaps(clickedMelding.latitude, clickedMelding.longitude);
                                         setClickedMarkerId(null);
                                     }}
                                 >
@@ -1345,7 +1358,7 @@ export default function StartNavigationPage() {
                                         <Navigation className="h-10 w-10 sm:h-12 sm:w-12 fill-current" />
                                     </Button>
                                 )}
-                                <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-green-600 text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-green-600/40" onClick={openInGoogleMaps} title="Open in Google Maps / Android Auto">
+                                <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-green-600 text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-green-600/40" onClick={() => openInGoogleMaps()} title="Open in Google Maps / Android Auto">
                                     <ExternalLink className="h-10 w-10 sm:h-12 sm:w-12" />
                                 </Button>
                             </div>
