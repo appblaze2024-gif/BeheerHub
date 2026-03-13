@@ -55,6 +55,12 @@ service cloud.firestore {
         allow read: if request.auth.uid == userId || isPrivileged();
         allow write: if request.auth.uid == userId || isPrivileged();
       }
+
+      // Mappenbeheer per gebruiker
+      match /folders/{folderId} {
+        allow read, list: if request.auth.uid == userId || isPrivileged();
+        allow write: if request.auth.uid == userId || isPrivileged();
+      }
     }
 
     // Projecten en bijbehorende data

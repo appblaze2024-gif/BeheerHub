@@ -860,16 +860,16 @@ export default function StartNavigationPage() {
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative">
             {isMeldingenType ? (
                 <div className="flex-1 flex flex-col min-h-0">
-                    <div className="p-3 border-b bg-white shrink-0 space-y-2">
+                    <div className="p-2.5 border-b bg-white shrink-0 space-y-2">
                         <div className="flex items-center gap-2">
                             <div className="relative flex-1">
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                                <Input placeholder="Zoeken..." className="h-9 pl-8 text-[11px] font-black uppercase rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                <Input placeholder="Zoeken..." className="h-8 pl-8 text-[10px] font-black uppercase rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
                             {isPrivileged && (
-                                <div className="w-36 sm:w-48">
+                                <div className="w-32 sm:w-48">
                                     <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
-                                        <SelectTrigger className="h-9 font-bold border-2 rounded-none bg-white px-2">
+                                        <SelectTrigger className="h-8 font-bold border-2 rounded-none bg-white px-2 text-[10px]">
                                             <div className="flex items-center gap-1.5 truncate">
                                                 <UserIcon className="h-3 w-3 text-primary shrink-0" />
                                                 <SelectValue placeholder="Collega..." />
@@ -877,7 +877,7 @@ export default function StartNavigationPage() {
                                         </SelectTrigger>
                                         <SelectContent className="rounded-none shadow-2xl border-slate-100">
                                             {users?.map(u => (
-                                                <SelectItem key={u.id} value={u.id} className="text-xs">{u.displayName || u.email}</SelectItem>
+                                                <SelectItem key={u.id} value={u.id} className="text-[10px]">{u.displayName || u.email}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -889,7 +889,7 @@ export default function StartNavigationPage() {
                             <div className="flex-1">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" className="w-full h-9 font-black uppercase text-[9px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3">
+                                        <Button variant="outline" className="w-full h-8 font-black uppercase text-[9px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3">
                                             <div className="flex items-center gap-2 truncate">
                                                 {selectedFolderId === null ? (
                                                     <Inbox className="h-3.5 w-3.5 text-primary" />
@@ -955,7 +955,7 @@ export default function StartNavigationPage() {
                             {isPrivileged && (
                                 <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
                                     <DialogTrigger asChild>
-                                        <Button variant="outline" className="h-9 w-9 p-0 rounded-none border-none bg-slate-50 shadow-inner text-primary hover:bg-slate-100">
+                                        <Button variant="outline" className="h-8 w-8 p-0 rounded-none border-none bg-slate-50 shadow-inner text-primary hover:bg-slate-100">
                                             <FolderPlus className="h-4 w-4" />
                                         </Button>
                                     </DialogTrigger>
@@ -978,7 +978,7 @@ export default function StartNavigationPage() {
                     </div>
                     
                     <ScrollArea className="flex-1">
-                        <div className="max-w-2xl mx-auto flex flex-col gap-1.5 p-2 pb-24">
+                        <div className="max-w-2xl mx-auto flex flex-col gap-1 p-2 pb-24">
                             {displayedMissions.map((m, index) => {
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
@@ -986,7 +986,7 @@ export default function StartNavigationPage() {
                                         "rounded-none border-none shadow-sm overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
                                         isCompleted ? "bg-green-50" : "bg-white"
                                     )}>
-                                        <div className="flex items-center gap-2.5 p-2">
+                                        <div className="flex items-center gap-2 p-2">
                                             <div className={cn(
                                                 "h-7 w-7 flex items-center justify-center text-[10px] font-black shrink-0",
                                                 isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
@@ -996,11 +996,11 @@ export default function StartNavigationPage() {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between mb-0 gap-1.5">
                                                     <h3 className={cn(
-                                                        "font-black text-[11px] uppercase tracking-tight truncate",
+                                                        "font-black text-[10px] uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
                                                     {m.status === 'Nieuw' && (
-                                                        <Badge className="text-[7px] font-black uppercase bg-red-500 text-white h-3 px-1 rounded-none animate-pulse shrink-0">NEW</Badge>
+                                                        <Badge className="text-[7px] font-black uppercase bg-red-500 text-white h-3.5 px-1.5 rounded-none animate-pulse shrink-0">NEW</Badge>
                                                     )}
                                                 </div>
                                                 <p className="text-[9px] font-bold text-slate-500 truncate leading-tight">{m.straatnaam} {m.huisnummer}</p>
