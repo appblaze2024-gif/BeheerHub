@@ -980,6 +980,29 @@ export default function StartNavigationPage() {
     }
   };
 
+  const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
+    // If specific lat/lng provided (from marker click), just go there.
+    if (lat && lng) {
+      const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${lat},${lng}`;
+      window.open(url, '_blank');
+      return;
+    }
+
+    // Otherwise, open the whole route (from sorted missions)
+    if (sortedMissions.length > 0) {
+      // Limit to 10 points (origin + 8 waypoints + destination)
+      const routeMissions = sortedMissions.slice(0, 10);
+      const destination = routeMissions[routeMissions.length - 1];
+      const waypoints = routeMissions.slice(0, -1);
+      
+      const waypointStr = waypoints.filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
+      const destStr = `${destination.latitude},${destination.longitude}`;
+      
+      const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destStr}${waypointStr ? `&waypoints=${waypointStr}` : ''}`;
+      window.open(url, '_blank');
+    }
+  }, [sortedMissions]);
+
   const handleStartRit = async (forcedPriorityId?: string) => {
     if (filteredMeldingen.length === 0 && sortedMissions.length === 0 && !forcedPriorityId) return;
     
@@ -1036,6 +1059,11 @@ export default function StartNavigationPage() {
         setIsLocating(false); 
         setIsManualMode(false);
         
+        // Open Google Maps route automatically if starting work orders
+        if (type === 'meldingen' && !forcedPriorityId) {
+            openInGoogleMaps();
+        }
+
         // If already navigating, force a fresh route fetch immediately
         if (navigationState === 'navigating') {
             setTimeout(() => fetchRoute(true), 100);
@@ -1125,14 +1153,6 @@ export default function StartNavigationPage() {
         setIsManualMode(true);
       }
     }
-  };
-
-  const openInGoogleMaps = (lat?: number, lng?: number) => {
-    const targetLat = lat || nextMission?.latitude;
-    const targetLng = lng || nextMission?.longitude;
-    if (!targetLat || !targetLng) return;
-    const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${targetLat},${targetLng}`;
-    window.open(url, '_blank');
   };
 
   const isSvg = (str: string) => {
@@ -1247,6 +1267,9 @@ export default function StartNavigationPage() {
                             const isBeingNavigated = beingNavigatedBy && beingNavigatedBy.length > 0;
                             const isNext = nextMission?.id === m.id && navigationState === 'navigating';
                             const isClicked = clickedMarkerId === m.id;
+                            
+                            const missionIndex = sortedMissions.findIndex(sm => sm.id === m.id);
+
                             return (
                                 <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setClickedMarkerId(m.id); }}>
                                     <div className="relative flex items-center justify-center w-14 h-14">
@@ -1268,6 +1291,14 @@ export default function StartNavigationPage() {
                                         )}
                                         <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked || (isBeingNavigated && isPrivileged)) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
                                             {renderMarkerIcon(m.hoofdcategorie)}
+                                            
+                                            {/* Sequence Number Badge */}
+                                            {!isCompleted && missionIndex !== -1 && (
+                                                <div className="absolute -bottom-1 -left-1 bg-slate-900 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center border-2 border-white text-[8px] font-black shadow-lg">
+                                                    {missionIndex + 1}
+                                                </div>
+                                            )}
+
                                             <div className={cn("absolute -top-1 -right-1 rounded-full w-4.5 h-4.5 flex items-center justify-center border border-black shadow-lg overflow-hidden", isCompleted ? "bg-green-500" : "bg-yellow-400")}>
                                                 {isCompleted ? <Check className="h-3 w-3 text-white" /> : <Wrench className="h-3 w-3 text-slate-900" />}
                                             </div>
@@ -1368,7 +1399,7 @@ export default function StartNavigationPage() {
                                         <Navigation className="h-10 w-10 sm:h-12 sm:w-12 fill-current" />
                                     </Button>
                                 )}
-                                <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-green-600 text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-green-600/40" onClick={() => openInGoogleMaps()} title="Open in Google Maps / Android Auto">
+                                <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-green-600 text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-green-600/40" onClick={() => openInGoogleMaps()} title="Open volledige route in Google Maps / Android Auto">
                                     <ExternalLink className="h-10 w-10 sm:h-12 sm:w-12" />
                                 </Button>
                             </div>
