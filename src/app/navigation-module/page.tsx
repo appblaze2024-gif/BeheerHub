@@ -53,7 +53,6 @@ import {
   ImageIcon,
   Settings,
   Sliders,
-  ExternalLink,
   Tag,
   LocateFixed,
   Calendar,
@@ -61,7 +60,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
@@ -388,14 +387,31 @@ function IntegratedWerkbonOverlay({
                         <>
                             {renderSubViewHeader('MATERIALEN')}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
-                                <div className="bg-slate-900 text-white p-8 rounded-none space-y-6 shadow-2xl">
-                                    <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                                <div className="bg-white text-slate-900 p-8 rounded-none space-y-6 shadow-xl border-2 border-slate-100">
+                                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                                         <Briefcase className="h-6 w-6 text-primary" />
                                         <h3 className="text-base font-black uppercase tracking-tight">Toevoegen Verbruik</h3>
                                     </div>
                                     <div className="grid gap-5">
-                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Product / Materiaal</Label><Input placeholder="Bv. Straatkolk..." value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} className="h-12 bg-white/10 border-none text-white font-black uppercase text-sm rounded-none focus:ring-primary/30" /></div>
-                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest ml-1">Aantal</Label><Input type="number" placeholder="0" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} className="h-12 bg-white/10 border-none text-white font-black uppercase text-sm rounded-none focus:ring-primary/30 text-center" /></div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Product / Materiaal</Label>
+                                            <Input 
+                                                placeholder="Bv. Straatkolk..." 
+                                                value={newHoeveelheidType} 
+                                                onChange={e => setNewHoeveelheidType(e.target.value)} 
+                                                className="h-12 bg-slate-50 border-2 border-slate-100 text-slate-900 font-black uppercase text-sm rounded-none focus:ring-primary/30 shadow-inner" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Aantal</Label>
+                                            <Input 
+                                                type="number" 
+                                                placeholder="0" 
+                                                value={newHoeveelheidAantal} 
+                                                onChange={e => setNewHoeveelheidAantal(e.target.value)} 
+                                                className="h-12 bg-slate-50 border-2 border-slate-100 text-slate-900 font-black uppercase text-sm rounded-none focus:ring-primary/30 text-center shadow-inner" 
+                                            />
+                                        </div>
                                         <Button className="w-full h-14 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 rounded-none shadow-xl transition-all active:scale-95 mt-2" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>TOEVOEGEN</Button>
                                     </div>
                                 </div>
