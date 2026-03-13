@@ -73,10 +73,11 @@ import {
   MoreVertical,
   Inbox,
   Archive,
+  User as UserIcon,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment, UserFolder } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment, UserFolder, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
@@ -104,6 +105,13 @@ import {
   DialogTrigger,
   DialogClose
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Image from 'next/image';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -509,7 +517,8 @@ export default function StartNavigationPage() {
 
   const [autoOpenEnabled, setAutoOpenEnabledState] = useState(true);
 
-  // User Folders state
+  // User Folders & Impersonation state
+  const [managedUserId, setManagedUserId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -521,9 +530,21 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
+  useEffect(() => {
+    if (user && !managedUserId) {
+        setManagedUserId(user.uid);
+    }
+  }, [user, managedUserId]);
+
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projects } = useCollection<ProjectType>(projectsQuery);
   const currentProject = projects?.find(p => p.id === selectedProjectId);
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users');
+  }, [firestore, user]);
+  const { data: users } = useCollection<UserProfile>(usersQuery);
 
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !user || type === 'meldingen') return null;
@@ -538,9 +559,9 @@ export default function StartNavigationPage() {
   const { data: rawActiveMeldingen } = useCollection<Melding>(activeMeldingenQuery);
 
   const foldersQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, 'users', user.uid, 'folders');
-  }, [firestore, user]);
+    if (!firestore || !managedUserId) return null;
+    return collection(firestore, 'users', managedUserId, 'folders');
+  }, [firestore, managedUserId]);
   const { data: userFolders } = useCollection<UserFolder>(foldersQuery);
 
   const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
@@ -565,7 +586,6 @@ export default function StartNavigationPage() {
         setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
       },
       (err) => {
-        // Safe logging to avoid error overlays
         console.debug("Location watch limited or denied", err);
       },
       { enableHighAccuracy: true, maximumAge: 10000 }
@@ -668,10 +688,8 @@ export default function StartNavigationPage() {
     let base = filteredMeldingen;
     
     if (selectedFolderId === null) {
-        // Inbox mode: only those NOT in any user folder
         base = filteredMeldingen.filter(m => !missionsInAnyFolder.has(m.id));
     } else if (selectedFolderId !== 'all') {
-        // Folder mode: only those in specific folder
         const currentFolder = userFolders?.find(f => f.id === selectedFolderId);
         if (currentFolder) {
             base = filteredMeldingen.filter(m => (currentFolder.taskIds || []).includes(m.id));
@@ -684,9 +702,9 @@ export default function StartNavigationPage() {
   }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders, sequenceMissions]);
 
   const handleCreateFolder = async () => {
-    if (!firestore || !user || !newFolderName.trim()) return;
+    if (!firestore || !managedUserId || !newFolderName.trim()) return;
     try {
-        await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'folders'), {
+        await addDocumentNonBlocking(collection(firestore, 'users', managedUserId, 'folders'), {
             name: newFolderName.trim(),
             taskIds: [],
             createdAt: new Date().toISOString(),
@@ -700,25 +718,23 @@ export default function StartNavigationPage() {
   };
 
   const handleMoveToFolder = async (taskId: string, folderId: string | null) => {
-    if (!firestore || !user || !userFolders) return;
+    if (!firestore || !managedUserId || !userFolders) return;
     
     const batch = writeBatch(firestore);
     
-    // 1. Remove from all existing folders
     userFolders.forEach(folder => {
         if ((folder.taskIds || []).includes(taskId)) {
-            const folderRef = doc(firestore, 'users', user.uid, 'folders', folder.id);
+            const folderRef = doc(firestore, 'users', managedUserId, 'folders', folder.id);
             batch.update(folderRef, {
                 taskIds: (folder.taskIds || []).filter(id => id !== taskId)
             });
         }
     });
     
-    // 2. Add to new folder if not null
     if (folderId) {
         const targetFolder = userFolders.find(f => f.id === folderId);
         if (targetFolder) {
-            const folderRef = doc(firestore, 'users', user.uid, 'folders', folderId);
+            const folderRef = doc(firestore, 'users', managedUserId, 'folders', folderId);
             batch.update(folderRef, {
                 taskIds: [...(targetFolder.taskIds || []), taskId]
             });
@@ -734,9 +750,9 @@ export default function StartNavigationPage() {
   };
 
   const handleDeleteFolder = async (id: string) => {
-    if (!firestore || !user) return;
+    if (!firestore || !managedUserId) return;
     try {
-        await deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'folders', id));
+        await deleteDocumentNonBlocking(doc(firestore, 'users', managedUserId, 'folders', id));
         if (selectedFolderId === id) setSelectedFolderId(null);
         toast({ title: "Map verwijderd" });
     } catch (e) {
@@ -846,9 +862,28 @@ export default function StartNavigationPage() {
             {isMeldingenType ? (
                 <div className="flex-1 flex flex-col min-h-0">
                     <div className="p-4 border-b bg-white shrink-0 space-y-4">
-                        <div className="relative max-w-md mx-auto">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input placeholder="Zoek opdracht..." className="pl-10 h-11 font-black uppercase text-xs rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <div className="relative flex-1 w-full">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input placeholder="Zoek opdracht..." className="pl-10 h-11 font-black uppercase text-xs rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                            </div>
+                            {isPrivileged && (
+                                <div className="w-full sm:w-64">
+                                    <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
+                                        <SelectTrigger className="h-11 font-bold border-2 rounded-none bg-white">
+                                            <div className="flex items-center gap-2">
+                                                <UserIcon className="h-3.5 w-3.5 text-primary" />
+                                                <SelectValue placeholder="Kies collega..." />
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-none shadow-2xl border-slate-100">
+                                            {users?.map(u => (
+                                                <SelectItem key={u.id} value={u.id}>{u.displayName || u.email}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                         </div>
                         
                         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -880,33 +915,37 @@ export default function StartNavigationPage() {
                                             <Folder className="h-3 w-3 mr-1.5" /> {folder.name}
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start">
-                                        <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)} className="text-red-600 font-bold">
-                                            <Trash2 className="h-4 w-4 mr-2" /> Map verwijderen
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
+                                    {isPrivileged && (
+                                        <DropdownMenuContent align="start" className="rounded-none border-none shadow-2xl">
+                                            <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)} className="text-red-600 font-bold">
+                                                <Trash2 className="h-4 w-4 mr-2" /> Map verwijderen
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    )}
                                 </DropdownMenu>
                             ))}
-                            <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-none border-dashed shrink-0">
-                                        <FolderPlus className="h-4 w-4" />
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="rounded-none border-none shadow-2xl p-8 max-w-sm">
-                                    <DialogHeader>
-                                        <DialogTitle className="font-black uppercase tracking-tight">Nieuwe Map</DialogTitle>
-                                        <DialogDescription className="font-bold text-slate-500">Geef een naam op voor je persoonlijke takenmap.</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="py-6">
-                                        <Input placeholder="Bv. Planning Morgen..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-bold rounded-none text-center text-lg shadow-sm" />
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="ghost" onClick={() => setIsCreateFolderOpen(false)} className="font-bold">Annuleren</Button>
-                                        <Button onClick={handleCreateFolder} className="h-12 px-8 font-black uppercase rounded-none bg-primary text-white shadow-xl shadow-primary/20">Aanmaken</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            {isPrivileged && (
+                                <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-none border-dashed shrink-0">
+                                            <FolderPlus className="h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="rounded-none border-none shadow-2xl p-8 max-w-sm">
+                                        <DialogHeader>
+                                            <DialogTitle className="font-black uppercase tracking-tight">Nieuwe Map</DialogTitle>
+                                            <DialogDescription className="font-bold text-slate-500">Maak een map aan voor {users?.find(u => u.id === managedUserId)?.displayName || 'deze gebruiker'}.</DialogDescription>
+                                        </DialogHeader>
+                                        <div className="py-6">
+                                            <Input placeholder="Bv. Planning Maandag..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-bold rounded-none text-center text-lg shadow-sm" />
+                                        </div>
+                                        <DialogFooter>
+                                            <Button variant="ghost" onClick={() => setIsCreateFolderOpen(false)} className="font-bold">Annuleren</Button>
+                                            <Button onClick={handleCreateFolder} className="h-12 px-8 font-black uppercase rounded-none bg-primary text-white shadow-xl shadow-primary/20">Aanmaken</Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            )}
                         </div>
                     </div>
                     
