@@ -748,43 +748,57 @@ export default function StartNavigationPage() {
     return [];
   }, [type, rawActiveMeldingen, rawTodayCompleted, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
 
+  // TSP-style sequencing using Nearest Neighbor for logical route progression
   const sortedMissions = useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
-    const base = userLocation || SIMULATION_START_LOCATION;
-    const sorted = [...filteredMeldingen].filter(m => m.status !== 'Afgerond').sort((a, b) => {
-        let valA: any;
-        let valB: any;
+    
+    const startLoc = userLocation || SIMULATION_START_LOCATION;
+    const pool = [...filteredMeldingen].filter(m => m.status !== 'Afgerond');
+    
+    if (pool.length === 0) return [];
 
-        if (sortConfig.field === 'afstand' || (!sortConfig.field && navigationState === 'navigating')) {
-            valA = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([a.longitude, a.latitude]));
-            valB = turf.distance(turf.point([base.longitude, base.latitude]), turf.point([b.longitude, b.latitude]));
-        } else if (sortConfig.field === 'locatie') {
-            valA = `${a.straatnaam} ${a.huisnummer}`.toLowerCase();
-            valB = `${b.straatnaam} ${b.huisnummer}`.toLowerCase();
-        } else if (sortConfig.field === 'omschrijving') {
-            valA = (a.extra_informatie || '').toLowerCase();
-            valB = (b.extra_informatie || '').toLowerCase();
-        } else if (sortConfig.field === 'categorie') {
-            valA = (a.subcategorie || '').toLowerCase();
-            valB = (b.subcategorie || '').toLowerCase();
-        } else {
-            valA = (a as any)[sortConfig.field]?.toString().toLowerCase() || '';
-            valB = (b as any)[sortConfig.field]?.toString().toLowerCase() || '';
-        }
+    let sequence: any[] = [];
+    let remaining = [...pool];
+    let currentPos = turf.point([startLoc.longitude, startLoc.latitude]);
 
-        if (valA < valB) return sortConfig.order === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.order === 'asc' ? 1 : -1;
-        return 0;
-    });
-
+    // Handle priority override
     if (priorityMissionId) {
-        const priorityIndex = sorted.findIndex(m => m.id === priorityMissionId);
-        if (priorityIndex !== -1) {
-            const [priority] = sorted.splice(priorityIndex, 1);
-            sorted.unshift(priority);
+        const pIdx = remaining.findIndex(m => m.id === priorityMissionId);
+        if (pIdx !== -1) {
+            const [p] = remaining.splice(pIdx, 1);
+            sequence.push(p);
+            currentPos = turf.point([p.longitude, p.latitude]);
         }
     }
-    return sorted;
+
+    // Nearest Neighbor algorithm ensures nearby streets are clustered together in numbering
+    while (remaining.length > 0) {
+        let closestIdx = 0;
+        let minDist = Infinity;
+        for (let i = 0; i < remaining.length; i++) {
+            const dist = turf.distance(currentPos, turf.point([remaining[i].longitude, remaining[i].latitude]));
+            if (dist < minDist) {
+                minDist = dist;
+                closestIdx = i;
+            }
+        }
+        const [next] = remaining.splice(closestIdx, 1);
+        sequence.push(next);
+        currentPos = turf.point([next.longitude, next.latitude]);
+    }
+
+    // Manual sort override only in setup/manual list mode
+    if (navigationState === 'setup' && sortConfig.field !== 'afstand') {
+        return [...filteredMeldingen].filter(m => m.status !== 'Afgerond').sort((a, b) => {
+            let valA = (a as any)[sortConfig.field]?.toString().toLowerCase() || '';
+            let valB = (b as any)[sortConfig.field]?.toString().toLowerCase() || '';
+            if (valA < valB) return sortConfig.order === 'asc' ? -1 : 1;
+            if (valA > valB) return sortConfig.order === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    return sequence;
   }, [filteredMeldingen, userLocation, priorityMissionId, sortConfig, navigationState]);
 
   const nextMission = sortedMissions[0];
@@ -806,7 +820,6 @@ export default function StartNavigationPage() {
     const now = Date.now();
     if (!force && now - lastFetchTimeRef.current < 5000) return;
     
-    // Only show loading screen if we have absolutely no route to show yet
     if (!displayedRouteGeometry && force) setIsCalculatingRoute(true);
     
     lastFetchTimeRef.current = now;
@@ -840,7 +853,6 @@ export default function StartNavigationPage() {
   useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
-        // Battery optimization: only calculate if we are actually navigating and have targets
         if (targetPosRef.current && navigationState === 'navigating') {
             if (!visualPosRef.current) {
                 visualPosRef.current = { ...targetPosRef.current };
@@ -849,7 +861,6 @@ export default function StartNavigationPage() {
                 const posFactor = 0.08; 
                 const headingFactor = 0.05;
                 
-                // Only do math if distance is significant to reduce CPU heat
                 const dLng = targetPosRef.current.lng - visualPosRef.current.lng;
                 const dLat = targetPosRef.current.lat - visualPosRef.current.lat;
                 
@@ -879,7 +890,6 @@ export default function StartNavigationPage() {
                 }
             }
             
-            // Snap to route logic only if we have a route geometry
             if (currentRouteGeometry) {
                 try {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
@@ -981,25 +991,20 @@ export default function StartNavigationPage() {
   };
 
   const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
-    // If specific lat/lng provided (from marker click), just go there.
     if (lat && lng) {
       const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${lat},${lng}`;
       window.open(url, '_blank');
       return;
     }
 
-    // Otherwise, open the whole route (from sorted missions)
     if (sortedMissions.length > 0) {
-      // Include ALL mission locations instead of limiting to 10
       const destination = sortedMissions[sortedMissions.length - 1];
       const waypoints = sortedMissions.slice(0, -1);
-      
       const waypointStr = waypoints
         .filter(m => m.latitude && m.longitude)
         .map(m => `${m.latitude},${m.longitude}`)
         .join('|');
       const destStr = `${destination.latitude},${destination.longitude}`;
-      
       const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destStr}${waypointStr ? `&waypoints=${waypointStr}` : ''}`;
       window.open(url, '_blank');
     }
@@ -1031,42 +1036,16 @@ export default function StartNavigationPage() {
         visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         visualHeadingRef.current = heading;
         
-        // Use Matrix API to find true road distance for all candidates from ACTUAL location
-        if (filteredMeldingen.length > 1 && !forcedPriorityId) {
-            const topCandidates = sortedMissions.slice(0, 15);
-            const coordinates = [[loc.longitude, loc.latitude], ...topCandidates.map(m => [m.longitude, m.latitude])];
-            const coordStr = coordinates.map(c => c.join(',')).join(';');
-            const matrixUrl = `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordStr}?sources=0&annotations=distance&access_token=${MAPBOX_TOKEN}`;
-            
-            try {
-                const matrixRes = await fetch(matrixUrl);
-                const matrixData = await matrixRes.json();
-                if (matrixData.distances?.[0]) {
-                    const distancesFromStart = matrixData.distances[0];
-                    const candidatesWithRoadDist = topCandidates.map((m, i) => ({ 
-                        ...m, 
-                        roadDist: distancesFromStart[i + 1] || Infinity 
-                    }));
-                    candidatesWithRoadDist.sort((a, b) => a.roadDist - b.roadDist);
-                    setPriorityMissionId(candidatesWithRoadDist[0].id);
-                }
-            } catch (e) {
-                console.warn("Matrix API error, falling back to straight line:", e);
-            }
-        }
-        
         setStartTime(new Date().toISOString());
         setIsSimulationMode(false); 
         setNavigationState('navigating'); 
         setIsLocating(false); 
         setIsManualMode(false);
         
-        // Open Google Maps route automatically if starting work orders
         if (type === 'meldingen' && !forcedPriorityId) {
             openInGoogleMaps();
         }
 
-        // If already navigating, force a fresh route fetch immediately
         if (navigationState === 'navigating') {
             setTimeout(() => fetchRoute(true), 100);
         }
@@ -1090,10 +1069,8 @@ export default function StartNavigationPage() {
   const handleStopRit = async () => {
     if (navigationState === 'navigating' && user && firestore && selectedRouteId && startTime) {
         const routeData = type === 'veegroutes' ? currentProject?.veegroutes?.find(r => r.id === selectedRouteId) : currentProject?.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
-        
         const allObjectIds = filteredMeldingen.map(m => m.id);
         const skipped = allObjectIds.filter(id => !completedObjects.includes(id));
-
         const historyRef = collection(firestore, 'users', user.uid, 'routes');
         await addDocumentNonBlocking(historyRef, {
             userId: user.uid,
@@ -1107,21 +1084,17 @@ export default function StartNavigationPage() {
             skippedObjects: skipped,
             totalObjects: allObjectIds.length
         });
-
         if (assignments && assignments.length > 0) {
             const assignment = assignments[0];
             updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignment.id), { status: 'Completed' });
         }
-
         updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
             navigatingToMissionId: null,
             navigatingToMissionStartedAt: null 
         });
     }
-
     setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
     setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null); setStartTime(null);
-    
     const map = mapRef.current?.getMap();
     if (map) {
       map.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 1000 });
@@ -1135,18 +1108,14 @@ export default function StartNavigationPage() {
     }
   };
 
-  const handleHervatNavigatie = () => {
-    setIsManualMode(false);
-  };
+  const handleHervatNavigatie = () => { setIsManualMode(false); };
 
   const handleZoomToAll = () => {
     const map = mapRef.current?.getMap();
     if (!map) return;
-
     const points: [number, number][] = filteredMeldingen.map(m => [m.longitude, m.latitude]);
     if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
     else if (isSimulationMode) points.push([SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude]);
-
     if (points.length > 0) {
       const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
       const bbox = turf.bbox(pointsCollection);
@@ -1269,9 +1238,7 @@ export default function StartNavigationPage() {
                             const isBeingNavigated = beingNavigatedBy && beingNavigatedBy.length > 0;
                             const isNext = nextMission?.id === m.id && navigationState === 'navigating';
                             const isClicked = clickedMarkerId === m.id;
-                            
                             const missionIndex = sortedMissions.findIndex(sm => sm.id === m.id);
-
                             return (
                                 <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setClickedMarkerId(m.id); }}>
                                     <div className="relative flex items-center justify-center w-14 h-14">
@@ -1293,14 +1260,11 @@ export default function StartNavigationPage() {
                                         )}
                                         <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked || (isBeingNavigated && isPrivileged)) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
                                             {renderMarkerIcon(m.hoofdcategorie)}
-                                            
-                                            {/* Sequence Number Badge */}
                                             {!isCompleted && missionIndex !== -1 && (
                                                 <div className="absolute -bottom-1 -left-1 bg-slate-900 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center border-2 border-white text-[8px] font-black shadow-lg">
                                                     {missionIndex + 1}
                                                 </div>
                                             )}
-
                                             <div className={cn("absolute -top-1 -right-1 rounded-full w-4.5 h-4.5 flex items-center justify-center border border-black shadow-lg overflow-hidden", isCompleted ? "bg-green-500" : "bg-yellow-400")}>
                                                 {isCompleted ? <Check className="h-3 w-3 text-white" /> : <Wrench className="h-3 w-3 text-slate-900" />}
                                             </div>
@@ -1329,16 +1293,7 @@ export default function StartNavigationPage() {
                             <div className="p-8 grid grid-cols-1 gap-4">
                                 <Button className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md bg-slate-900 text-white hover:bg-slate-800 border-none gap-3 transition-all active:scale-95" onClick={() => { setActiveWerkbonId(clickedMarkerId); setClickedMarkerId(null); }}><FileText className="h-6 w-6 text-primary" /> OPEN WERKBON</Button>
                                 <Button className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-2xl bg-primary text-white hover:bg-primary/90 border-none gap-3 transition-all active:scale-95 shadow-primary/20" onClick={() => { handleStartRit(clickedMarkerId); setClickedMarkerId(null); }}><Navigation className="h-6 w-6 text-white fill-current" /> NAVIGEER NU</Button>
-                                <Button 
-                                    variant="outline"
-                                    className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md border-2 border-green-600 text-green-600 hover:bg-green-50 gap-3 transition-all active:scale-95" 
-                                    onClick={() => {
-                                        openInGoogleMaps(clickedMelding.latitude, clickedMelding.longitude);
-                                        setClickedMarkerId(null);
-                                    }}
-                                >
-                                    <ExternalLink className="h-6 w-6" /> GOOGLE MAPS
-                                </Button>
+                                <Button variant="outline" className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md border-2 border-green-600 text-green-600 hover:bg-green-50 gap-3 transition-all active:scale-95" onClick={() => { openInGoogleMaps(clickedMelding.latitude, clickedMelding.longitude); setClickedMarkerId(null); }}><ExternalLink className="h-6 w-6" /> GOOGLE MAPS</Button>
                             </div>
                         </div>
                     </div>
@@ -1351,7 +1306,6 @@ export default function StartNavigationPage() {
                                 <ArrowLeft className="h-6 w-6 text-slate-600" />
                             </Button>
                         )}
-                        
                         {navigationState === 'navigating' && routeInfo && (
                             <div className="flex items-center gap-4 bg-slate-900/5 px-4 py-2 rounded-full border-2 border-slate-200 shadow-sm">
                                 <div className="flex items-center gap-2">
@@ -1366,7 +1320,6 @@ export default function StartNavigationPage() {
                             </div>
                         )}
                     </div>
-
                     <div className="flex items-center gap-2 pointer-events-auto shrink-0">
                         <Popover>
                             <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
@@ -1379,9 +1332,7 @@ export default function StartNavigationPage() {
                             </Button>
                         )}
                         {navigationState === 'navigating' && (
-                            <Button variant="destructive" className="h-10 px-4 font-black uppercase rounded-xl shadow-xl transition-all active:scale-95 border-none tracking-widest text-[10px] sm:text-xs" onClick={handleStopRit}>
-                              STOP
-                            </Button>
+                            <Button variant="destructive" className="h-10 px-4 font-black uppercase rounded-xl shadow-xl transition-all active:scale-95 border-none tracking-widest text-[10px] sm:text-xs" onClick={handleStopRit}>STOP</Button>
                         )}
                     </div>
                 </div>
@@ -1397,13 +1348,9 @@ export default function StartNavigationPage() {
                             </div>
                             <div className="flex flex-row gap-3 pointer-events-auto">
                                 {isManualMode && (
-                                    <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-primary/40" onClick={handleHervatNavigatie}>
-                                        <Navigation className="h-10 w-10 sm:h-12 sm:w-12 fill-current" />
-                                    </Button>
+                                    <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-primary/40" onClick={handleHervatNavigatie}><Navigation className="h-10 w-10 sm:h-12 sm:w-12 fill-current" /></Button>
                                 )}
-                                <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-green-600 text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-green-600/40" onClick={() => openInGoogleMaps()} title="Open volledige route in Google Maps / Android Auto">
-                                    <ExternalLink className="h-10 w-10 sm:h-12 sm:w-12" />
-                                </Button>
+                                <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-green-600 text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-green-600/40" onClick={() => openInGoogleMaps()} title="Open volledige route in Google Maps / Android Auto"><ExternalLink className="h-10 w-10 sm:h-12 sm:w-12" /></Button>
                             </div>
                         </div>
                         <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-none rounded-[2.5rem] overflow-hidden pointer-events-auto transition-all duration-300">
@@ -1433,72 +1380,19 @@ export default function StartNavigationPage() {
                         <div className="flex flex-col sm:flex-row items-center justify-between w-full sm:flex-1 pointer-events-auto gap-3" onClick={e => e.stopPropagation()}>
                             <div className="relative w-full sm:max-w-xs shrink-0">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input 
-                                    placeholder="Zoek opdracht..." 
-                                    className="h-10 pl-10 text-xs font-black uppercase tracking-tight rounded-2xl border-none shadow-inner bg-white focus:ring-primary/20" 
-                                    value={searchQuery} 
-                                    onChange={e => setSearchQuery(e.target.value)} 
-                                />
+                                <Input placeholder="Zoek opdracht..." className="h-10 pl-10 text-xs font-black uppercase tracking-tight rounded-2xl border-none shadow-inner bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
                             <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0 overflow-x-auto no-scrollbar py-1 justify-start sm:justify-end">
-                                <Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" onClick={handleZoomToAll}>
-                                    <Maximize className="h-4 w-4 sm:mr-2" /> 
-                                    <span className="hidden sm:inline">Overzicht</span>
-                                    <span className="sm:hidden ml-1">ZICHT</span>
-                                </Button>
+                                <Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" onClick={handleZoomToAll}><Maximize className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Overzicht</span><span className="sm:hidden ml-1">ZICHT</span></Button>
                                 {type === 'meldingen' && (
                                     <>
-                                        <Button 
-                                            variant={showTodayCompleted ? "default" : "outline"} 
-                                            size="sm" 
-                                            className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" 
-                                            onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}
-                                        >
-                                            <CheckCircle2 className="h-4 w-4 sm:mr-2" /> 
-                                            <span className="hidden sm:inline">{showTodayCompleted ? "Verberg voltooid" : "Vandaag gereed"}</span>
-                                            <span className="sm:hidden ml-1">GEREED</span>
-                                        </Button>
+                                        <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">{showTodayCompleted ? "Verberg voltooid" : "Vandaag gereed"}</span><span className="sm:hidden ml-1">GEREED</span></Button>
                                         {isPrivileged && (
-                                            <Button 
-                                                variant={showAssignmentBubbles ? "default" : "outline"} 
-                                                size="sm" 
-                                                className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" 
-                                                onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}
-                                            >
-                                                <User className="h-4 w-4 sm:mr-2" /> 
-                                                <span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg labels" : "Behandelaars"}</span>
-                                                <span className="sm:hidden ml-1">TEAM</span>
-                                            </Button>
+                                            <Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}><User className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg labels" : "Behandelaars"}</span><span className="sm:hidden ml-1">TEAM</span></Button>
                                         )}
                                     </>
                                 )}
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 gap-2 shrink-0">
-                                            <LayoutGrid className="h-4 w-4" /> 
-                                            <span className="hidden sm:inline">Kolommen</span>
-                                            <span className="sm:hidden">TAB</span>
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent align="end" className="w-64 p-6 rounded-3xl shadow-2xl border-none bg-white/95 backdrop-blur-md text-sm">
-                                        <div className="space-y-6">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-3">Weergaveinstellingen</p>
-                                            <div className="space-y-3">
-                                                {Object.keys(visibleColumns).map(colId => (
-                                                    <div key={colId} className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
-                                                        <Checkbox 
-                                                            id={`col-${colId}`} 
-                                                            checked={visibleColumns[colId] ?? true} 
-                                                            onCheckedChange={() => toggleColumnVisibility(colId)} 
-                                                            className="rounded-md border-2" 
-                                                        />
-                                                        <Label htmlFor={`col-${colId}`} className="text-xs font-black uppercase tracking-tight text-slate-700 cursor-pointer">{colId}</Label>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
+                                <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 gap-2 shrink-0"><LayoutGrid className="h-4 w-4" /><span className="hidden sm:inline">Kolommen</span><span className="sm:hidden">TAB</span></Button></PopoverTrigger><PopoverContent align="end" className="w-64 p-6 rounded-3xl shadow-2xl border-none bg-white/95 backdrop-blur-md text-sm"><div className="space-y-6"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-3">Weergaveinstellingen</p><div className="space-y-3">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-slate-50 transition-colors"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md border-2" /><Label htmlFor={`col-${colId}`} className="text-xs font-black uppercase tracking-tight text-slate-700 cursor-pointer">{colId}</Label></div>))}</div></div></PopoverContent></Popover>
                             </div>
                         </div>
                     </div>
