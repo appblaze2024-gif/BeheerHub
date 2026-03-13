@@ -59,7 +59,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
@@ -491,7 +491,6 @@ export default function StartNavigationPage() {
 
   const activeMeldingenQuery = useMemoFirebase(() => {
     if (!firestore || !user || type !== 'meldingen') return null;
-    // Include NEW status in the list view so the NEW badge can be shown
     return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld']), limit(100));
   }, [firestore, user, type]);
   const { data: rawActiveMeldingen } = useCollection<Melding>(activeMeldingenQuery);
@@ -518,7 +517,6 @@ export default function StartNavigationPage() {
         setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
       },
       (err) => {
-        // Safe logging to avoid triggering NextJS error overlay
         console.warn("Location watch limited or denied");
       },
       { enableHighAccuracy: true, maximumAge: 10000 }
@@ -615,8 +613,11 @@ export default function StartNavigationPage() {
   const sortedMissions = useMemo(() => sequenceMissions(filteredMeldingen), [filteredMeldingen, sequenceMissions]);
 
   const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
+    // Explicitly use current device coordinates if available to ensure navigation starts from where the user is
+    const originStr = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : "My+Location";
+
     if (lat && lng) {
-      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${lat},${lng}`, '_blank');
+      window.open(`https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${lat},${lng}`, '_blank');
       return;
     }
     
@@ -625,8 +626,8 @@ export default function StartNavigationPage() {
     
     const dest = pendingMissions[pendingMissions.length - 1];
     const waypoints = pendingMissions.slice(0, -1).filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
-    window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
-  }, [sortedMissions]);
+    window.open(`https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
+  }, [sortedMissions, userLocation]);
 
   const handleStartRit = async (forcedPriorityId?: string) => {
     if (filteredMeldingen.length === 0 && !forcedPriorityId) return;
