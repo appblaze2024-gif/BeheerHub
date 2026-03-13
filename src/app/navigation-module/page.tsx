@@ -990,12 +990,14 @@ export default function StartNavigationPage() {
 
     // Otherwise, open the whole route (from sorted missions)
     if (sortedMissions.length > 0) {
-      // Limit to 10 points (origin + 8 waypoints + destination)
-      const routeMissions = sortedMissions.slice(0, 10);
-      const destination = routeMissions[routeMissions.length - 1];
-      const waypoints = routeMissions.slice(0, -1);
+      // Include ALL mission locations instead of limiting to 10
+      const destination = sortedMissions[sortedMissions.length - 1];
+      const waypoints = sortedMissions.slice(0, -1);
       
-      const waypointStr = waypoints.filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
+      const waypointStr = waypoints
+        .filter(m => m.latitude && m.longitude)
+        .map(m => `${m.latitude},${m.longitude}`)
+        .join('|');
       const destStr = `${destination.latitude},${destination.longitude}`;
       
       const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destStr}${waypointStr ? `&waypoints=${waypointStr}` : ''}`;
