@@ -531,7 +531,7 @@ export default function StartNavigationPage() {
   const filteredMeldingen = useMemo(() => {
     const poolMap = new Map<string, any>();
     if (type === 'meldingen') {
-        rawActiveMeldingen?.forEach(m => { if (!completedObjects.includes(m.id)) poolMap.set(m.id, m); });
+        rawActiveMeldingen?.forEach(m => { poolMap.set(m.id, m); });
         let result = Array.from(poolMap.values());
         if (!isPrivileged) {
             const userName = profile?.displayName || profile?.email || 'Onbekend';
@@ -560,9 +560,16 @@ export default function StartNavigationPage() {
 
   const sequenceMissions = useCallback((missions: any[]) => {
     if (missions.length === 0) return [];
+    
+    // Split into pending and completed
+    const pending = missions.filter(m => !completedObjects.includes(m.id));
+    const completed = missions.filter(m => completedObjects.includes(m.id));
+
+    if (pending.length === 0) return completed;
+
     const startLoc = userLocation || SIMULATION_START_LOCATION;
     let result: any[] = [];
-    let remaining = [...missions];
+    let remaining = [...pending];
     let currentPos = turf.point([startLoc.longitude, startLoc.latitude]);
 
     if (priorityMissionId) {
@@ -584,8 +591,10 @@ export default function StartNavigationPage() {
         result.push(next);
         currentPos = turf.point([next.longitude, next.latitude]);
     }
-    return result;
-  }, [userLocation, priorityMissionId]);
+    
+    // Concatenate sorted pending missions with completed missions at the bottom
+    return [...result, ...completed];
+  }, [userLocation, priorityMissionId, completedObjects]);
 
   const sortedMissions = useMemo(() => sequenceMissions(filteredMeldingen), [filteredMeldingen, sequenceMissions]);
 
@@ -656,40 +665,55 @@ export default function StartNavigationPage() {
                     </div>
                     <ScrollArea className="flex-1">
                         <div className="max-w-2xl mx-auto flex flex-col gap-2 p-2 pb-24">
-                            {sortedMissions.map((m, index) => (
-                                <Card key={m.id} className="rounded-none border-none shadow-md bg-white overflow-hidden active:scale-[0.99] transition-all cursor-pointer group">
-                                    <div className="flex items-center gap-4 p-4">
-                                        <div className="h-10 w-10 bg-slate-900 text-white flex items-center justify-center text-sm font-black shrink-0">
-                                            {index + 1}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-0.5">
-                                                <h3 className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{m.intakenummer}</h3>
-                                                <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-slate-100 text-slate-500 h-4 px-1.5 rounded-none">{m.werkgebied || m.wijk || '-'}</Badge>
+                            {sortedMissions.map((m, index) => {
+                                const isCompleted = completedObjects.includes(m.id);
+                                return (
+                                    <Card key={m.id} className={cn(
+                                        "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
+                                        isCompleted ? "bg-green-50" : "bg-white"
+                                    )}>
+                                        <div className="flex items-center gap-4 p-4">
+                                            <div className={cn(
+                                                "h-10 w-10 flex items-center justify-center text-sm font-black shrink-0",
+                                                isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
+                                            )}>
+                                                {index + 1}
                                             </div>
-                                            <p className="text-[11px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-0.5">
+                                                    <h3 className={cn(
+                                                        "font-black text-sm uppercase tracking-tight truncate",
+                                                        isCompleted ? "text-green-800" : "text-slate-900"
+                                                    )}>{m.intakenummer}</h3>
+                                                    <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-slate-100 text-slate-500 h-4 px-1.5 rounded-none">{m.werkgebied || m.wijk || '-'}</Badge>
+                                                </div>
+                                                <p className="text-[11px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
+                                            </div>
+                                            <div className="flex gap-2 shrink-0">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="icon" 
+                                                    className="h-12 w-12 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90" 
+                                                    onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
+                                                >
+                                                    <Navigation className="h-5 w-5" />
+                                                </Button>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="icon" 
+                                                    className={cn(
+                                                        "h-12 w-12 rounded-none border-none transition-all active:scale-90",
+                                                        isCompleted ? "bg-green-100 text-green-600" : "bg-green-50 text-green-600 hover:bg-green-100"
+                                                    )}
+                                                    onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
+                                                >
+                                                    {isCompleted ? <Check className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2 shrink-0">
-                                            <Button 
-                                                variant="outline" 
-                                                size="icon" 
-                                                className="h-12 w-12 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90" 
-                                                onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
-                                            >
-                                                <Navigation className="h-5 w-5" />
-                                            </Button>
-                                            <Button 
-                                                variant="outline" 
-                                                size="icon" 
-                                                className="h-12 w-12 rounded-none border-none bg-green-50 text-green-600 hover:bg-green-100 transition-all active:scale-90" 
-                                                onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
-                                            >
-                                                <FileText className="h-5 w-5" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
+                                    </Card>
+                                );
+                            })}
                             {sortedMissions.length === 0 && (
                                 <div className="col-span-full py-20 text-center opacity-20">
                                     <CheckCircle2 className="h-16 w-16 mx-auto mb-4" />
