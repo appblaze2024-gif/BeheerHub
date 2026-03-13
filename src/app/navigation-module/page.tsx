@@ -491,7 +491,8 @@ export default function StartNavigationPage() {
 
   const activeMeldingenQuery = useMemoFirebase(() => {
     if (!firestore || !user || type !== 'meldingen') return null;
-    return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld', 'Nieuw']), limit(100));
+    // Include NEW status in the list view so the NEW badge can be shown
+    return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld']), limit(100));
   }, [firestore, user, type]);
   const { data: rawActiveMeldingen } = useCollection<Melding>(activeMeldingenQuery);
 
@@ -517,7 +518,8 @@ export default function StartNavigationPage() {
         setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
       },
       (err) => {
-        // Silently handle location issues to avoid blocking the app
+        // Safe logging to avoid triggering NextJS error overlay
+        console.warn("Location watch limited or denied");
       },
       { enableHighAccuracy: true, maximumAge: 10000 }
     );
@@ -739,7 +741,15 @@ export default function StartNavigationPage() {
                                                         "font-black text-sm uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
-                                                    <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-slate-100 text-slate-500 h-4 px-1.5 rounded-none">{m.werkgebied || m.wijk || '-'}</Badge>
+                                                    <Badge 
+                                                        variant="outline" 
+                                                        className={cn(
+                                                            "text-[8px] font-black uppercase border-none h-4 px-1.5 rounded-none",
+                                                            m.status === 'Nieuw' ? "bg-red-500 text-white animate-pulse" : "bg-slate-100 text-slate-500"
+                                                        )}
+                                                    >
+                                                        {m.status === 'Nieuw' ? 'NEW' : (m.werkgebied || m.wijk || '-')}
+                                                    </Badge>
                                                 </div>
                                                 <p className="text-[11px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
                                             </div>
