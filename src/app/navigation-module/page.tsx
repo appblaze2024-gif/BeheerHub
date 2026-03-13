@@ -56,6 +56,8 @@ import {
   ExternalLink,
   Tag,
   LocateFixed,
+  Calendar,
+  Package,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -244,7 +246,7 @@ function IntegratedWerkbonOverlay({
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
                         <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Melding: {melding.intakenummer}</h2>
-                        <div className="space-y-1.5 pt-2">
+                        <div className="space-y-2 pt-2">
                             <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
                                 <MapPin className="h-3.5 w-3.5 text-primary" />
                                 <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
@@ -253,25 +255,20 @@ function IntegratedWerkbonOverlay({
                                 <Tag className="h-3.5 w-3.5 text-primary" />
                                 <span className="uppercase tracking-tight">{melding.hoofdcategorie} • {melding.subcategorie}</span>
                             </div>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                    <Calendar className="h-3.5 w-3.5 text-primary" />
+                                    <span>{melding.datum ? formatDate(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
+                                </div>
+                                {melding.containernummer && (
+                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                        <Package className="h-3.5 w-3.5 text-primary" />
+                                        <span className="uppercase tracking-tight">Container: {melding.containernummer}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                    <Button 
-                        variant="outline" 
-                        className="h-14 rounded-none font-black uppercase tracking-tight gap-2 border-2 border-primary text-primary hover:bg-primary/5"
-                        onClick={() => onNavigateNow(melding.id)}
-                    >
-                        <Navigation className="h-4 w-4" /> Navigeer Nu
-                    </Button>
-                    <Button 
-                        variant="outline" 
-                        className="h-14 rounded-none font-black uppercase tracking-tight gap-2 border-2 border-green-600 text-green-600 hover:bg-green-50"
-                        onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${melding.latitude},${melding.longitude}`, '_blank')}
-                    >
-                        <ExternalLink className="h-4 w-4" /> Google Maps
-                    </Button>
                 </div>
 
                 {melding.extra_informatie && (
@@ -517,7 +514,8 @@ export default function StartNavigationPage() {
         setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
       },
       (err) => {
-        console.warn("Location watch limited or denied");
+        // Safe logging to avoid error overlays
+        console.debug("Location watch limited or denied", err);
       },
       { enableHighAccuracy: true, maximumAge: 10000 }
     );
@@ -613,7 +611,6 @@ export default function StartNavigationPage() {
   const sortedMissions = useMemo(() => sequenceMissions(filteredMeldingen), [filteredMeldingen, sequenceMissions]);
 
   const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
-    // Explicitly use current device coordinates if available to ensure navigation starts from where the user is
     const originStr = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : "My+Location";
 
     if (lat && lng) {
