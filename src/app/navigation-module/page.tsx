@@ -518,7 +518,10 @@ export default function StartNavigationPage() {
         lastUpdate = now;
         setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
       },
-      (err) => console.error(err),
+      (err) => {
+        // Silently handle to avoid NextJS generic object error overlay
+        console.warn("Location check issue:", err.message || "denied");
+      },
       { enableHighAccuracy: true, maximumAge: 10000 }
     );
     
@@ -617,14 +620,13 @@ export default function StartNavigationPage() {
       window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${lat},${lng}`, '_blank');
       return;
     }
-    if (sortedMissions.length > 0) {
-      const activeMissions = sortedMissions.filter(m => !completedObjects.includes(m.id));
-      if (activeMissions.length === 0) return;
-      
-      const dest = activeMissions[activeMissions.length - 1];
-      const waypoints = activeMissions.slice(0, -1).filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
-      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
-    }
+    
+    const pendingMissions = sortedMissions.filter(m => !completedObjects.includes(m.id));
+    if (pendingMissions.length === 0) return;
+    
+    const dest = pendingMissions[pendingMissions.length - 1];
+    const waypoints = pendingMissions.slice(0, -1).filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
+    window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
   }, [sortedMissions, completedObjects]);
 
   const handleStartRit = async (forcedPriorityId?: string) => {
