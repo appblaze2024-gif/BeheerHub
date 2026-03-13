@@ -2,14 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- KRITIEKE PERMISSIES (BOVENAAN) ---
-
-    // Route assignments - OPEN VOOR LEZEN DOOR ALLE GEBRUIKERS
-    match /route_assignments/{assignmentId} {
-      allow read, list: if request.auth != null;
-      allow write: if request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Super admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'toezichthouder');
-    }
-
     // --- HELPER FUNCTIES ---
 
     function isSignedIn() {
@@ -34,12 +26,27 @@ service cloud.firestore {
 
     // --- RULES ---
 
+    // Route assignments
+    match /route_assignments/{assignmentId} {
+      allow read, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
     // Gebruikersprofielen
     match /users/{userId} {
       allow read, list: if isSignedIn();
       allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      
+      // Gebruikers mogen hun eigen profiel bijwerken (behalve rol/permissies)
+      allow update: if (isSignedIn() && request.auth.uid == userId && 
+                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])) 
+                    || isAdmin();
       allow delete: if isAdmin();
+
+      // Mappenbeheer per gebruiker (Subcollectie)
+      match /folders/{folderId} {
+        allow read, list, write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
+      }
 
       // Berichten tussen gebruikers
       match /messages/{messageId} {
@@ -48,47 +55,48 @@ service cloud.firestore {
         allow update, delete: if isSignedIn() && request.auth.uid == userId;
       }
 
+      // Routes per gebruiker
       match /routes/{routeId} {
-        allow read: if request.auth.uid == userId || isPrivileged();
-        allow write: if request.auth.uid == userId || isPrivileged();
+        allow read, list: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
+        allow write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
     }
 
     // Projecten en bijbehorende data
     match /projects/{projectId} {
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow write: if isPrivileged();
 
       match /{allSubcollections=**} {
-        allow read: if isSignedIn();
+        allow read, list: if isSignedIn();
         allow write: if isPrivileged();
       }
     }
 
     // Meldingen
     match /meldingen/{meldingId} {
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow create, update: if isSignedIn();
       allow delete: if isPrivileged();
     }
 
     // Wagenpark en Machines
     match /voertuigen/{id} {
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow write: if isPrivileged();
       
       match /{allSubcollections=**} {
-        allow read: if isSignedIn();
+        allow read, list: if isSignedIn();
         allow write: if isPrivileged();
       }
     }
     
     match /machines/{id} {
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow write: if isPrivileged();
       
       match /{allSubcollections=**} {
-        allow read: if isSignedIn();
+        allow read, list: if isSignedIn();
         allow write: if isPrivileged();
       }
     }
@@ -101,7 +109,7 @@ service cloud.firestore {
 
     // Algemene instellingen
     match /settings/{settingId} {
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow write: if isAdmin();
     }
 
