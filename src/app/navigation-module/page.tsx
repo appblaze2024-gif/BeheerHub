@@ -139,24 +139,24 @@ function SectionRow({
     return (
         <button 
             onClick={onClick}
-            className="w-full flex items-center justify-between p-5 bg-white border-b border-slate-100 active:bg-slate-50 transition-colors"
+            className="w-full flex items-center justify-between p-4 bg-white border-b border-slate-100 active:bg-slate-50 transition-colors"
         >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
                 <div className="relative">
                     <div className="p-1">
-                        <Icon className="h-6 w-6 text-slate-900" />
+                        <Icon className="h-5 w-5 text-slate-900" />
                     </div>
                     {badgeCount !== undefined && badgeCount > 0 && (
-                        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black h-5 w-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                        <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black h-4 w-4 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                             {badgeCount}
                         </div>
                     )}
                 </div>
-                <span className="text-base font-black uppercase tracking-tight text-slate-900">{label}</span>
+                <span className="text-sm font-black uppercase tracking-tight text-slate-900">{label}</span>
             </div>
             <div className="flex items-center gap-2">
-                {value !== undefined && <span className="text-xs font-bold text-slate-400">{value}</span>}
-                <ChevronRight className="h-5 w-5 text-slate-300" />
+                {value !== undefined && <span className="text-[10px] font-bold text-slate-400">{value}</span>}
+                <ChevronRight className="h-4 w-4 text-slate-300" />
             </div>
         </button>
     );
@@ -274,27 +274,27 @@ function IntegratedWerkbonOverlay({
 
     const renderMainList = () => (
         <div className="flex flex-col h-full bg-slate-50">
-            <div className="bg-white p-6 space-y-5 shadow-sm border-b">
+            <div className="bg-white p-5 space-y-4 shadow-sm border-b">
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none mb-3">Melding: {melding.intakenummer}</h2>
-                    <div className="space-y-4">
-                        <div className="flex items-start gap-3 text-base font-bold text-slate-700">
-                            <MapPin className="h-5 w-5 text-slate-900 shrink-0 mt-0.5" />
+                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none mb-2">Melding: {melding.intakenummer}</h2>
+                    <div className="space-y-2.5">
+                        <div className="flex items-start gap-2.5 text-sm font-bold text-slate-700">
+                            <MapPin className="h-4 w-4 text-slate-900 shrink-0 mt-0.5" />
                             <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
                         </div>
-                        <div className="flex items-start gap-3 text-sm font-bold text-slate-700">
-                            <Tag className="h-5 w-5 text-slate-900 shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-2.5 text-[11px] font-bold text-slate-700">
+                            <Tag className="h-4 w-4 text-slate-900 shrink-0 mt-0.5" />
                             <span className="uppercase tracking-tight">{melding.hoofdcategorie}</span>
                         </div>
-                        <div className="flex flex-col gap-y-2 pt-1">
-                            <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <Calendar className="h-5 w-5 text-slate-900" />
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1">
+                            <div className="flex items-center gap-2 text-[11px] font-bold text-slate-700">
+                                <Calendar className="h-4 w-4 text-slate-900" />
                                 <span>{melding.datum ? formatDate(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
                             </div>
                             {melding.containernummer && (
-                                <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                    <Package className="h-5 w-5 text-slate-900" />
-                                    <span className="uppercase tracking-tight font-black text-primary">Container: {melding.containernummer}</span>
+                                <div className="flex items-center gap-2 text-[11px] font-bold text-slate-700">
+                                    <Package className="h-4 w-4 text-slate-900" />
+                                    <span className="uppercase tracking-tight font-black text-primary">Nr: {melding.containernummer}</span>
                                 </div>
                             )}
                         </div>
@@ -302,37 +302,37 @@ function IntegratedWerkbonOverlay({
                 </div>
 
                 {melding.extra_informatie && (
-                    <div className="mt-4 p-5 bg-blue-50/50 rounded-none border-2 border-blue-100/50 flex items-start gap-4">
-                        <FileText className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                        <p className="text-base font-medium text-slate-700 leading-relaxed italic">
+                    <div className="mt-3 p-4 bg-blue-50/50 rounded-none border-2 border-blue-100/50 flex items-start gap-3">
+                        <FileText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <p className="text-xs font-medium text-slate-700 leading-relaxed italic">
                             "{melding.extra_informatie}"
                         </p>
                     </div>
                 )}
             </div>
 
-            <div className="mt-4 flex-1">
+            <div className="mt-3 flex-1">
                 <SectionRow icon={Wrench} label="Werkzaamheden" value={afhandelingBijzonderheden ? 'Ingevuld' : ''} onClick={() => setSubView('werkzaamheden')} />
                 <SectionRow icon={Paperclip} label="Documenten" badgeCount={uploadedFiles.length} onClick={() => setSubView('docs')} />
                 <SectionRow icon={Camera} label="Foto's" badgeCount={afhandelingFotos.length + (melding.fotos?.length || 0)} onClick={() => setSubView('photos')} />
                 <SectionRow icon={Briefcase} label="Materialen" badgeCount={hoeveelheden.length} onClick={() => setSubView('materials')} />
             </div>
 
-            <div className="p-6 bg-slate-50">
+            <div className="p-4 bg-slate-50">
                 <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
                     <AlertDialogTrigger asChild>
-                        <Button className="w-full h-16 text-white font-black uppercase tracking-widest rounded-none shadow-2xl bg-orange-600 hover:bg-orange-700 transition-all active:scale-95 text-lg" disabled={isSubmitting}>
-                            {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : "AFMELDEN"}
+                        <Button className="w-full h-14 text-white font-black uppercase tracking-widest rounded-none shadow-2xl bg-orange-600 hover:bg-orange-700 transition-all active:scale-95 text-base" disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "AFMELDEN"}
                         </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="w-[calc(100%-2rem)] sm:max-w-lg rounded-none border-none shadow-2xl">
                         <AlertDialogHeader>
-                            <AlertDialogTitle className="font-black uppercase tracking-tight text-xl">Melding afmelden?</AlertDialogTitle>
-                            <AlertDialogDescription className="font-bold text-slate-500 text-base">De werkbon wordt voltooid en de rit wordt hervat.</AlertDialogDescription>
+                            <AlertDialogTitle className="font-black uppercase tracking-tight text-lg">Melding afmelden?</AlertDialogTitle>
+                            <AlertDialogDescription className="font-bold text-slate-500 text-sm">De werkbon wordt voltooid en de rit wordt hervat.</AlertDialogDescription>
                         </AlertDialogHeader>
-                        <AlertDialogFooter className="gap-3 mt-4">
-                            <AlertDialogCancel className="rounded-none font-black uppercase h-14 border-2">Annuleren</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleAfronden} className="bg-orange-600 hover:bg-orange-700 rounded-none font-black uppercase tracking-tight h-14 px-8 text-base">Afmelden</AlertDialogAction>
+                        <AlertDialogFooter className="gap-2 mt-4">
+                            <AlertDialogCancel className="rounded-none font-black uppercase h-12 border-2 text-xs">Annuleren</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleAfronden} className="bg-orange-600 hover:bg-orange-700 rounded-none font-black uppercase tracking-tight h-12 px-8 text-xs">Afmelden</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
@@ -341,10 +341,10 @@ function IntegratedWerkbonOverlay({
     );
 
     const renderSubViewHeader = (title: string) => (
-        <header className="h-16 bg-slate-900 text-white flex items-center justify-between px-4 shrink-0">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-12 w-12" onClick={() => setSubView('main')}><ArrowLeft className="h-7 w-7" /></Button>
-            <h3 className="text-base font-black uppercase tracking-[0.2em]">{title}</h3>
-            <div className="w-12" />
+        <header className="h-14 bg-slate-900 text-white flex items-center justify-between px-3 shrink-0">
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-10 w-10" onClick={() => setSubView('main')}><ArrowLeft className="h-6 w-6" /></Button>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em]">{title}</h3>
+            <div className="w-10" />
         </header>
     );
 
@@ -352,10 +352,10 @@ function IntegratedWerkbonOverlay({
         <div className="fixed inset-0 z-[200] flex flex-col h-full bg-white relative animate-in slide-in-from-right duration-300">
             {subView === 'main' ? (
                 <>
-                    <header className="h-16 bg-slate-900 text-white flex items-center justify-between px-4 shrink-0">
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-12 w-12" onClick={onClose}><ChevronLeft className="h-7 w-7" /></Button>
-                        <h3 className="text-base font-black uppercase tracking-[0.2em]">WERKBON</h3>
-                        <div className="w-12" />
+                    <header className="h-14 bg-slate-900 text-white flex items-center justify-between px-3 shrink-0">
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-10 w-10" onClick={onClose}><ChevronLeft className="h-6 w-6" /></Button>
+                        <h3 className="text-xs font-black uppercase tracking-[0.2em]">WERKBON</h3>
+                        <div className="w-10" />
                     </header>
                     {renderMainList()}
                 </>
@@ -364,19 +364,19 @@ function IntegratedWerkbonOverlay({
                     {subView === 'werkzaamheden' && (
                         <>
                             {renderSubViewHeader('UITVOERING')}
-                            <div className="flex-1 p-6 space-y-8 overflow-y-auto">
-                                <div className="space-y-3">
-                                    <Label className="text-sm font-black uppercase text-slate-400 tracking-[0.1em]">Oorspronkelijke melding</Label>
-                                    <div className="bg-slate-50 p-6 rounded-none text-base italic text-slate-600 border-2 border-slate-100 shadow-inner leading-relaxed">"{melding.extra_informatie}"</div>
+                            <div className="flex-1 p-4 space-y-6 overflow-y-auto">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.1em]">Oorspronkelijke melding</Label>
+                                    <div className="bg-slate-50 p-4 rounded-none text-xs italic text-slate-600 border-2 border-slate-100 shadow-inner leading-relaxed">"{melding.extra_informatie}"</div>
                                 </div>
-                                <div className="space-y-5">
+                                <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <Label className="text-sm font-black uppercase text-slate-400 tracking-[0.1em]">Uw Notities</Label>
-                                        <Button variant={isListening ? "destructive" : "secondary"} size="icon" className={cn("h-20 w-20 rounded-full shadow-2xl transition-all active:scale-90 border-4 border-white", isListening && "animate-pulse ring-4 ring-red-500/20")} onClick={toggleListening}>
-                                            {isListening ? <Loader2 className="h-10 w-10 animate-spin" /> : <Mic className="h-10 w-10 text-primary" />}
+                                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.1em]">Uw Notities</Label>
+                                        <Button variant={isListening ? "destructive" : "secondary"} size="icon" className={cn("h-14 w-14 rounded-full shadow-xl transition-all active:scale-90 border-2 border-white", isListening && "animate-pulse ring-4 ring-red-500/20")} onClick={toggleListening}>
+                                            {isListening ? <Loader2 className="h-6 w-6 animate-spin" /> : <Mic className="h-6 w-6 text-primary" />}
                                         </Button>
                                     </div>
-                                    <Textarea className="min-h-[400px] rounded-none border-2 border-slate-100 p-6 text-lg font-medium shadow-inner focus:ring-primary/20" placeholder="Beschrijf de verrichte werkzaamheden..." value={afhandelingBijzonderheden} onChange={e => setAfhandelingBijzonderheden(e.target.value)} />
+                                    <Textarea className="min-h-[300px] rounded-none border-2 border-slate-100 p-4 text-sm font-medium shadow-inner focus:ring-primary/20" placeholder="Beschrijf de verrichte werkzaamheden..." value={afhandelingBijzonderheden} onChange={e => setAfhandelingBijzonderheden(e.target.value)} />
                                 </div>
                             </div>
                         </>
@@ -384,31 +384,31 @@ function IntegratedWerkbonOverlay({
                     {subView === 'photos' && (
                         <>
                             {renderSubViewHeader("FOTO'S")}
-                            <div className="flex-1 p-6 space-y-10 overflow-y-auto">
-                                <div className="space-y-5">
-                                    <Label className="text-sm font-black uppercase tracking-[0.1em] text-slate-400">Melding Foto's</Label>
-                                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                            <div className="flex-1 p-4 space-y-8 overflow-y-auto">
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Melding Foto's</Label>
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                         {melding.fotos?.map((p, i) => (
-                                            <div key={`bron-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-lg" onClick={() => setPreviewImage(p.url)}>
+                                            <div key={`bron-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-md" onClick={() => setPreviewImage(p.url)}>
                                                 <Image src={p.url} alt="bron" fill className="object-cover" />
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                                 <Separator className="bg-slate-100" />
-                                <div className="space-y-5">
-                                    <Label className="text-sm font-black uppercase tracking-[0.1em] text-slate-400">Nieuwe Foto's</Label>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <Button variant="outline" className="flex-col gap-4 rounded-none border-2 border-dashed border-slate-200 bg-slate-50/50 h-44 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('cam-input')?.click()}><Camera className="h-12 w-12 text-primary" /><span className="text-xs font-black uppercase tracking-widest">Camera</span></Button>
-                                        <Button variant="outline" className="flex-col gap-4 rounded-none border-2 border-dashed border-slate-200 bg-slate-50/50 h-44 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('gal-input')?.click()}><ImageIcon className="h-12 w-12 text-primary" /><span className="text-xs font-black uppercase tracking-widest">Gallerij</span></Button>
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Nieuwe Foto's</Label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Button variant="outline" className="flex-col gap-3 rounded-none border-2 border-dashed border-slate-200 bg-slate-50/50 h-32 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('cam-input')?.click()}><Camera className="h-8 w-8 text-primary" /><span className="text-[10px] font-black uppercase tracking-widest">Camera</span></Button>
+                                        <Button variant="outline" className="flex-col gap-3 rounded-none border-2 border-dashed border-slate-200 bg-slate-50/50 h-32 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('gal-input')?.click()}><ImageIcon className="h-8 w-8 text-primary" /><span className="text-[10px] font-black uppercase tracking-widest">Gallerij</span></Button>
                                     </div>
                                     <input type="file" id="cam-input" className="hidden" accept="image/*" capture="environment" onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
                                     <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
-                                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                         {afhandelingFotos.map((p, i) => (
-                                            <div key={`new-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-xl group" onClick={() => setPreviewImage(p.url)}>
+                                            <div key={`new-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-lg group" onClick={() => setPreviewImage(p.url)}>
                                                 <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                                <Button variant="destructive" size="icon" className="absolute right-2 top-2 h-10 w-10 rounded-full border-2 border-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-5 w-5" /></Button>
+                                                <Button variant="destructive" size="icon" className="absolute right-1 top-1 h-8 w-8 rounded-full border-2 border-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
                                             </div>
                                         ))}
                                     </div>
@@ -419,40 +419,40 @@ function IntegratedWerkbonOverlay({
                     {subView === 'materials' && (
                         <>
                             {renderSubViewHeader('MATERIALEN')}
-                            <div className="flex-1 p-6 space-y-10 overflow-y-auto">
-                                <div className="bg-white text-slate-900 p-6 rounded-none space-y-8 shadow-xl border-2 border-slate-100">
-                                    <div className="flex items-center gap-4 border-b border-slate-100 pb-5">
-                                        <Briefcase className="h-8 w-8 text-primary" />
-                                        <h3 className="text-lg font-black uppercase tracking-tight">Toevoegen Verbruik</h3>
+                            <div className="flex-1 p-4 space-y-8 overflow-y-auto">
+                                <div className="bg-white text-slate-900 p-5 rounded-none space-y-6 shadow-lg border-2 border-slate-100">
+                                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                                        <Briefcase className="h-6 w-6 text-primary" />
+                                        <h3 className="text-base font-black uppercase tracking-tight">Verbruik Toevoegen</h3>
                                     </div>
-                                    <div className="grid gap-6">
-                                        <div className="space-y-3">
-                                            <Label className="text-sm font-black uppercase tracking-widest text-slate-400 ml-1">Product / Materiaal</Label>
+                                    <div className="grid gap-5">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Product / Materiaal</Label>
                                             <Input 
                                                 placeholder="Bv. Straatkolk..." 
                                                 value={newHoeveelheidType} 
                                                 onChange={e => setNewHoeveelheidType(e.target.value)} 
-                                                className="h-14 bg-slate-50 border-2 border-slate-100 text-slate-900 font-black uppercase text-base rounded-none focus:ring-primary/30 shadow-inner" 
+                                                className="h-12 bg-slate-50 border-2 border-slate-100 text-slate-900 font-black uppercase text-sm rounded-none focus:ring-primary/30 shadow-inner" 
                                             />
                                         </div>
-                                        <div className="space-y-3">
-                                            <Label className="text-sm font-black uppercase tracking-widest text-slate-400 ml-1">Aantal</Label>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Aantal</Label>
                                             <Input 
                                                 type="number" 
                                                 placeholder="0" 
                                                 value={newHoeveelheidAantal} 
                                                 onChange={e => setNewHoeveelheidAantal(e.target.value)} 
-                                                className="h-14 bg-slate-50 border-2 border-slate-100 text-slate-900 font-black uppercase text-base rounded-none focus:ring-primary/30 text-center shadow-inner" 
+                                                className="h-12 bg-slate-50 border-2 border-slate-100 text-slate-900 font-black uppercase text-sm rounded-none focus:ring-primary/30 text-center shadow-inner" 
                                             />
                                         </div>
-                                        <Button className="w-full h-16 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 rounded-none shadow-xl transition-all active:scale-95 mt-4 text-base" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>TOEVOEGEN</Button>
+                                        <Button className="w-full h-14 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 rounded-none shadow-xl transition-all active:scale-95 mt-2 text-sm" onClick={() => { if(newHoeveelheidType && newHoeveelheidAantal) { setHoeveelheden(prev => [...prev, {id: Date.now().toString(), type: newHoeveelheidType, aantal: parseFloat(newHoeveelheidAantal), eenheid: 'stuks'}]); setNewHoeveelheidType(''); setNewHoeveelheidAantal(''); } }}>TOEVOEGEN</Button>
                                     </div>
                                 </div>
-                                <div className="space-y-4">
+                                <div className="space-y-3">
                                     {hoeveelheden.map(h => (
-                                        <div key={h.id} className="flex justify-between items-center p-6 bg-white border-2 border-slate-100 rounded-none shadow-sm transition-all hover:shadow-md">
-                                            <div className="flex flex-col"><span className="text-base font-black uppercase tracking-tight text-slate-900">{h.type}</span><span className="text-[11px] text-slate-400 uppercase font-black tracking-widest">{h.eenheid}</span></div>
-                                            <div className="flex items-center gap-8"><span className="text-4xl font-black text-primary leading-none tabular-nums">{h.aantal}</span><Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-full h-12 w-12 hover:bg-red-50" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-6 w-6" /></Button></div>
+                                        <div key={h.id} className="flex justify-between items-center p-4 bg-white border-2 border-slate-100 rounded-none shadow-sm">
+                                            <div className="flex flex-col"><span className="text-sm font-black uppercase tracking-tight text-slate-900">{h.type}</span><span className="text-[9px] text-slate-400 uppercase font-black tracking-widest">{h.eenheid}</span></div>
+                                            <div className="flex items-center gap-6"><span className="text-2xl font-black text-primary leading-none tabular-nums">{h.aantal}</span><Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-full h-10 w-10" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-5 w-5" /></Button></div>
                                         </div>
                                     ))}
                                 </div>
@@ -462,14 +462,14 @@ function IntegratedWerkbonOverlay({
                     {subView === 'docs' && (
                         <>
                             {renderSubViewHeader('DOCUMENTEN')}
-                            <div className="flex-1 p-6 space-y-8 overflow-y-auto">
-                                <Button variant="outline" className="w-full h-32 border-dashed border-2 border-slate-200 rounded-none bg-slate-50/50 hover:bg-slate-50 hover:border-primary/30 transition-all gap-5 shadow-sm" onClick={() => document.getElementById('sub-doc-input')?.click()}><UploadCloud className="h-10 w-10 text-primary" /> <span className="text-sm font-black uppercase tracking-widest">Document Uploaden</span></Button>
+                            <div className="flex-1 p-4 space-y-6 overflow-y-auto">
+                                <Button variant="outline" className="w-full h-24 border-dashed border-2 border-slate-200 rounded-none bg-slate-50/50 hover:bg-slate-50 hover:border-primary/30 transition-all gap-4 shadow-sm" onClick={() => document.getElementById('sub-doc-input')?.click()}><UploadCloud className="h-8 w-8 text-primary" /> <span className="text-xs font-black uppercase tracking-widest">Uploaden</span></Button>
                                 <input type="file" id="sub-doc-input" className="hidden" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'documents')} />
-                                <div className="grid gap-4">
+                                <div className="grid gap-3">
                                     {uploadedFiles.map(f => (
-                                        <div key={f.storagePath} className="flex items-center justify-between p-6 bg-white rounded-none border-2 border-slate-100 shadow-sm transition-all hover:border-primary/20">
-                                            <div className="flex items-center gap-5 truncate"><div className="bg-blue-100 p-4 rounded-2xl"><FileText className="h-8 w-8 text-blue-600" /></div><span className="text-sm font-black truncate uppercase tracking-tight text-slate-900">{f.name}</span></div>
-                                            <Button variant="ghost" size="icon" className="h-12 w-12 text-slate-300 hover:text-red-600 rounded-full hover:bg-red-50" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-6 w-6" /></Button>
+                                        <div key={f.storagePath} className="flex items-center justify-between p-4 bg-white rounded-none border-2 border-slate-100 shadow-sm transition-all hover:border-primary/20">
+                                            <div className="flex items-center gap-4 truncate"><div className="bg-blue-100 p-3 rounded-xl"><FileText className="h-6 w-6 text-blue-600" /></div><span className="text-xs font-black truncate uppercase tracking-tight text-slate-900">{f.name}</span></div>
+                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 rounded-full hover:bg-red-50" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-5 w-5" /></Button>
                                         </div>
                                     ))}
                                 </div>
@@ -481,7 +481,7 @@ function IntegratedWerkbonOverlay({
 
             {previewImage && (
                 <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
-                    <div className="flex justify-end p-8 shrink-0"><Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-14 w-14 border-2 border-white/20"><X className="h-10 w-10" /></Button></div>
+                    <div className="flex justify-end p-6 shrink-0"><Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-12 w-12 border-2 border-white/20"><X className="h-8 w-8" /></Button></div>
                     <div className="flex-1 relative flex items-center justify-center overflow-hidden"><img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} /></div>
                 </div>
             )}
@@ -818,7 +818,7 @@ export default function StartNavigationPage() {
             <div className="flex items-center gap-2">
                 <Popover>
                     <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
-                    <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-[2.5rem] shadow-2xl bg-white border-none">
+                    <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-none shadow-2xl bg-white border-none">
                         <div className="space-y-6">
                             <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-6 w-6 text-primary" /><h4 className="text-sm font-black uppercase tracking-tight">Instellingen</h4></div>
                             <div className="space-y-4">
@@ -858,123 +858,121 @@ export default function StartNavigationPage() {
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative">
             {isMeldingenType ? (
                 <div className="flex-1 flex flex-col min-h-0">
-                    <div className="p-3 border-b bg-white shrink-0 space-y-3">
+                    <div className="p-3 border-b bg-white shrink-0 space-y-2">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input placeholder="ZOEKEN OP NUMMER..." className="h-11 pl-10 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                            <Input placeholder="ZOEKEN..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                         </div>
                         
                         <div className="flex items-center gap-2">
-                            <div className="flex-1 min-w-0">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" className="w-full h-11 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3">
-                                            <div className="flex items-center gap-2 truncate">
-                                                {selectedFolderId === null ? (
-                                                    <Inbox className="h-4 w-4 text-primary" />
-                                                ) : selectedFolderId === 'all' ? (
-                                                    <LayoutGrid className="h-4 w-4 text-primary" />
-                                                ) : (
-                                                    <Folder className="h-4 w-4 text-primary" />
-                                                )}
-                                                <span className="truncate text-sm font-black">
-                                                    {selectedFolderId === null 
-                                                        ? 'INBOX (VRIJ)' 
-                                                        : selectedFolderId === 'all' 
-                                                            ? 'ALLE MELDINGEN' 
-                                                            : (userFolders?.find(f => f.id === selectedFolderId)?.name.toUpperCase() || 'KIES MAP...')}
-                                                </span>
-                                            </div>
-                                            <ChevronDown className="h-4 w-4 opacity-40" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-[calc(100vw-1.5rem)] sm:w-80 rounded-none border-none shadow-2xl p-2">
-                                        <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">WEERGAVE</DropdownMenuLabel>
-                                        <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-black rounded-none h-12 cursor-pointer text-sm">
-                                            <LayoutGrid className="h-5 w-5 mr-3 text-slate-400" /> ALLE MELDINGEN
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-black rounded-none h-12 cursor-pointer text-sm">
-                                            <Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (NIET INGEDEELD)
-                                        </DropdownMenuItem>
-                                        
-                                        {userFolders && userFolders.length > 0 && (
-                                            <>
-                                                <DropdownMenuSeparator className="bg-slate-100 my-2" />
-                                                <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">WERK-MAPPEN</DropdownMenuLabel>
-                                                {userFolders.map(folder => (
-                                                    <div key={folder.id} className="flex items-center group relative">
-                                                        <DropdownMenuItem 
-                                                            onClick={() => setSelectedFolderId(folder.id)} 
-                                                            className="flex-1 font-black rounded-none h-12 cursor-pointer text-sm"
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="flex-1 h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3 min-w-0">
+                                        <div className="flex items-center gap-2 truncate">
+                                            {selectedFolderId === null ? (
+                                                <Inbox className="h-4 w-4 text-primary shrink-0" />
+                                            ) : selectedFolderId === 'all' ? (
+                                                <LayoutGrid className="h-4 w-4 text-primary shrink-0" />
+                                            ) : (
+                                                <Folder className="h-4 w-4 text-primary shrink-0" />
+                                            )}
+                                            <span className="truncate text-xs font-black">
+                                                {selectedFolderId === null 
+                                                    ? 'INBOX (VRIJ)' 
+                                                    : selectedFolderId === 'all' 
+                                                        ? 'ALLE MELDINGEN' 
+                                                        : (userFolders?.find(f => f.id === selectedFolderId)?.name.toUpperCase() || 'KIES MAP...')}
+                                            </span>
+                                        </div>
+                                        <ChevronDown className="h-3.5 w-3.5 opacity-40 shrink-0" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-[calc(100vw-1.5rem)] sm:w-80 rounded-none border-none shadow-2xl p-2">
+                                    <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">WEERGAVE</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-black rounded-none h-12 cursor-pointer text-sm">
+                                        <LayoutGrid className="h-5 w-5 mr-3 text-slate-400" /> ALLE MELDINGEN
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-black rounded-none h-12 cursor-pointer text-sm">
+                                        <Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (VRIJ)
+                                    </DropdownMenuItem>
+                                    
+                                    {userFolders && userFolders.length > 0 && (
+                                        <>
+                                            <DropdownMenuSeparator className="bg-slate-100 my-2" />
+                                            <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">WERK-MAPPEN</DropdownMenuLabel>
+                                            {userFolders.map(folder => (
+                                                <div key={folder.id} className="flex items-center group relative">
+                                                    <DropdownMenuItem 
+                                                        onClick={() => setSelectedFolderId(folder.id)} 
+                                                        className="flex-1 font-black rounded-none h-12 cursor-pointer text-sm"
+                                                    >
+                                                        <Folder className="h-5 w-5 mr-3 text-primary" /> {folder.name.toUpperCase()}
+                                                    </DropdownMenuItem>
+                                                    {isPrivileged && (
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="absolute right-2 h-9 w-9 text-slate-300 hover:text-red-600 rounded-none opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            onClick={(e) => { 
+                                                                e.preventDefault(); 
+                                                                e.stopPropagation(); 
+                                                                handleDeleteFolder(folder.id); 
+                                                            }}
                                                         >
-                                                            <Folder className="h-5 w-5 mr-3 text-primary" /> {folder.name.toUpperCase()}
-                                                        </DropdownMenuItem>
-                                                        {isPrivileged && (
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="absolute right-2 h-9 w-9 text-slate-300 hover:text-red-600 rounded-none opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                onClick={(e) => { 
-                                                                    e.preventDefault(); 
-                                                                    e.stopPropagation(); 
-                                                                    handleDeleteFolder(folder.id); 
-                                                                }}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                            
-                            {isPrivileged && (
-                                <>
-                                    <div className="w-32 sm:w-40 shrink-0">
-                                        <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
-                                            <SelectTrigger className="h-11 font-black border-none rounded-none bg-white px-3 text-[10px] shadow-sm uppercase">
-                                                <div className="flex items-center gap-2 truncate">
-                                                    <UserIcon className="h-4 w-4 text-primary shrink-0" />
-                                                    <SelectValue placeholder="COLLEGA..." />
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                 </div>
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-none shadow-2xl border-slate-100">
-                                                {users?.map(u => (
-                                                    <SelectItem key={u.id} value={u.id} className="text-xs font-bold uppercase">{u.displayName || u.email}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button variant="outline" className="h-11 w-11 p-0 rounded-none border-none bg-slate-50 shadow-inner text-primary hover:bg-slate-100">
-                                                <FolderPlus className="h-5 w-5" />
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="rounded-none border-none shadow-2xl p-8 max-w-sm">
-                                            <DialogHeader>
-                                                <DialogTitle className="font-black uppercase tracking-tight text-lg">Nieuwe Map</DialogTitle>
-                                                <DialogDescription className="font-bold text-slate-500 text-sm">Maak een map aan voor {users?.find(u => u.id === managedUserId)?.displayName || 'deze gebruiker'}.</DialogDescription>
-                                            </DialogHeader>
-                                            <div className="py-6">
-                                                <Input placeholder="Bv. PLANNING MAANDAG..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-14 font-black uppercase rounded-none text-center text-base shadow-sm border-2" />
-                                            </div>
-                                            <DialogFooter className="gap-3">
-                                                <DialogClose asChild><Button variant="ghost" className="font-black uppercase h-12">Annuleren</Button></DialogClose>
-                                                <Button onClick={handleCreateFolder} className="h-12 px-8 font-black uppercase rounded-none bg-primary text-white shadow-xl shadow-primary/20">Aanmaken</Button>
-                                            </DialogFooter>
-                                        </DialogContent>
-                                    </Dialog>
-                                </>
-                            )}
+                                            ))}
+                                        </>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
+
+                        {isPrivileged && (
+                            <div className="flex items-center gap-2 pt-1 border-t border-slate-50">
+                                <div className="flex-1 min-w-0">
+                                    <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
+                                        <SelectTrigger className="h-9 font-black border-none rounded-none bg-white px-3 text-[9px] shadow-sm uppercase">
+                                            <div className="flex items-center gap-2 truncate">
+                                                <UserIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+                                                <SelectValue placeholder="COLLEGA..." />
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-none shadow-2xl border-slate-100">
+                                            {users?.map(u => (
+                                                <SelectItem key={u.id} value={u.id} className="text-xs font-bold uppercase">{u.displayName || u.email}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" className="h-9 w-9 p-0 rounded-none border-none bg-slate-100 shadow-inner text-primary hover:bg-slate-200">
+                                            <FolderPlus className="h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="rounded-none border-none shadow-2xl p-6 max-w-xs">
+                                        <DialogHeader>
+                                            <DialogTitle className="font-black uppercase tracking-tight text-base">Nieuwe Map</DialogTitle>
+                                            <DialogDescription className="font-bold text-slate-500 text-xs">Voor {users?.find(u => u.id === managedUserId)?.displayName || 'collega'}.</DialogDescription>
+                                        </DialogHeader>
+                                        <div className="py-4">
+                                            <Input placeholder="NAAM..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-black uppercase rounded-none text-center text-sm shadow-sm border-2" />
+                                        </div>
+                                        <DialogFooter className="gap-2">
+                                            <DialogClose asChild><Button variant="ghost" className="font-black uppercase h-10 text-xs flex-1">Stop</Button></DialogClose>
+                                            <Button onClick={handleCreateFolder} className="h-10 px-6 font-black uppercase rounded-none bg-primary text-white shadow-xl flex-1 text-xs">Maken</Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        )}
                     </div>
                     
                     <ScrollArea className="flex-1">
-                        <div className="max-w-3xl mx-auto flex flex-col gap-1.5 p-2 pb-24">
+                        <div className="max-w-3xl mx-auto flex flex-col gap-1 p-2 pb-24">
                             {displayedMissions.map((m, index) => {
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
@@ -982,57 +980,57 @@ export default function StartNavigationPage() {
                                         "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
                                         isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                     )}>
-                                        <div className="flex items-center gap-3 p-3 lg:p-4">
+                                        <div className="flex items-center gap-2 p-2 sm:p-3">
                                             <div className={cn(
-                                                "h-10 w-10 flex items-center justify-center text-sm font-black shrink-0",
+                                                "h-8 w-8 flex items-center justify-center text-xs font-black shrink-0",
                                                 isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
                                             )}>
                                                 {index + 1}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1 gap-2 leading-none">
+                                                <div className="flex items-center justify-between mb-0.5 gap-1 leading-none">
                                                     <h3 className={cn(
-                                                        "font-black text-sm lg:text-base uppercase tracking-tight truncate",
+                                                        "font-black text-xs sm:text-sm uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
                                                     {m.status === 'Nieuw' && (
-                                                        <Badge className="text-[10px] font-black uppercase bg-red-600 text-white h-5 px-2 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
+                                                        <Badge className="text-[8px] font-black uppercase bg-red-600 text-white h-4 px-1.5 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
                                                     )}
                                                 </div>
-                                                <p className={cn("text-sm lg:text-base font-black truncate leading-tight", isCompleted ? "text-green-700/60" : "text-slate-900")}>
+                                                <p className={cn("text-xs sm:text-sm font-black truncate leading-tight", isCompleted ? "text-green-700/60" : "text-slate-900")}>
                                                     {m.straatnaam} {m.huisnummer}
                                                 </p>
-                                                <p className={cn("text-[11px] lg:text-xs font-bold uppercase tracking-widest mt-1", isCompleted ? "text-green-600/40" : "text-slate-400")}>
+                                                <p className={cn("text-[10px] font-bold uppercase tracking-widest mt-0.5", isCompleted ? "text-green-600/40" : "text-slate-400")}>
                                                     {m.plaats}
                                                 </p>
                                             </div>
-                                            <div className="flex gap-1.5 shrink-0 items-center">
+                                            <div className="flex gap-1 shrink-0 items-center">
                                                 {!isCompleted && (
                                                     <Button 
                                                         variant="outline" 
                                                         size="icon" 
-                                                        className="h-12 w-12 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
+                                                        className="h-9 w-9 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
                                                         onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
                                                     >
-                                                        <Navigation className="h-6 w-6" />
+                                                        <Navigation className="h-4 w-4" />
                                                     </Button>
                                                 )}
                                                 <Button 
                                                     variant="outline" 
                                                     size="icon" 
                                                     className={cn(
-                                                        "h-12 w-12 rounded-none border-none transition-all active:scale-90 shadow-sm",
+                                                        "h-9 w-9 rounded-none border-none transition-all active:scale-90 shadow-sm",
                                                         isCompleted ? "bg-green-100 text-green-600" : "bg-green-50 text-green-600 hover:bg-green-100"
                                                     )}
                                                     onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
                                                 >
-                                                    {isCompleted ? <Check className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+                                                    {isCompleted ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                                                 </Button>
                                                 
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-12 w-8 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
-                                                            <MoreVertical className="h-6 w-6 text-slate-400" />
+                                                        <Button variant="ghost" size="icon" className="h-9 w-7 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
+                                                            <MoreVertical className="h-4 w-4 text-slate-400" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-64 rounded-none shadow-2xl p-2 border-none">
@@ -1055,8 +1053,8 @@ export default function StartNavigationPage() {
                             })}
                             {displayedMissions.length === 0 && (
                                 <div className="col-span-full py-24 text-center opacity-20">
-                                    <Archive className="h-16 w-16 mx-auto mb-4" />
-                                    <p className="font-black uppercase tracking-[0.2em] text-xs">Geen opdrachten</p>
+                                    <Archive className="h-12 w-12 mx-auto mb-4" />
+                                    <p className="font-black uppercase tracking-[0.2em] text-[10px]">Geen opdrachten</p>
                                 </div>
                             )}
                         </div>
