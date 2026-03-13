@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -586,7 +585,7 @@ export default function StartNavigationPage() {
         setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
       },
       (err) => {
-        console.debug("Location watch limited or denied", err);
+        console.debug("Location watch error silenced");
       },
       { enableHighAccuracy: true, maximumAge: 10000 }
     );
@@ -848,11 +847,11 @@ export default function StartNavigationPage() {
                     )
                 ) : (
                     navigationState === 'setup' ? (
-                        <Button className="h-10 px-6 font-black uppercase bg-primary text-white shadow-xl rounded-xl tracking-widest text-xs" onClick={() => handleStartRit()} disabled={displayedMissions.length === 0}>
+                        <Button className="h-10 px-6 font-black uppercase bg-primary text-white shadow-xl rounded-none tracking-widest text-xs" onClick={() => handleStartRit()} disabled={displayedMissions.length === 0}>
                             <Play className="h-4 w-4 mr-2 fill-current" /> START
                         </Button>
                     ) : (
-                        <Button variant="destructive" className="h-10 px-6 font-black uppercase rounded-xl shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
+                        <Button variant="destructive" className="h-10 px-6 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
                     )
                 )}
             </div>
@@ -903,27 +902,34 @@ export default function StartNavigationPage() {
                             >
                                 Alle
                             </Button>
-                            {userFolders?.map(folder => (
-                                <DropdownMenu key={folder.id}>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button 
-                                            variant={selectedFolderId === folder.id ? 'default' : 'outline'} 
-                                            size="sm" 
-                                            className="h-8 text-[9px] font-black uppercase rounded-none shrink-0"
-                                            onClick={() => setSelectedFolderId(folder.id)}
-                                        >
-                                            <Folder className="h-3 w-3 mr-1.5" /> {folder.name}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    {isPrivileged && (
+                            {userFolders?.map(folder => {
+                                const isSelected = selectedFolderId === folder.id;
+                                const button = (
+                                    <Button 
+                                        variant={isSelected ? 'default' : 'outline'} 
+                                        size="sm" 
+                                        className="h-8 text-[9px] font-black uppercase rounded-none shrink-0"
+                                        onClick={() => setSelectedFolderId(folder.id)}
+                                    >
+                                        <Folder className="h-3 w-3 mr-1.5" /> {folder.name}
+                                    </Button>
+                                );
+
+                                if (!isPrivileged) return <div key={folder.id}>{button}</div>;
+
+                                return (
+                                    <DropdownMenu key={folder.id}>
+                                        <DropdownMenuTrigger asChild>
+                                            {button}
+                                        </DropdownMenuTrigger>
                                         <DropdownMenuContent align="start" className="rounded-none border-none shadow-2xl">
                                             <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)} className="text-red-600 font-bold">
                                                 <Trash2 className="h-4 w-4 mr-2" /> Map verwijderen
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
-                                    )}
-                                </DropdownMenu>
-                            ))}
+                                    </DropdownMenu>
+                                );
+                            })}
                             {isPrivileged && (
                                 <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
                                     <DialogTrigger asChild>
@@ -971,15 +977,11 @@ export default function StartNavigationPage() {
                                                         "font-black text-sm uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
-                                                    <Badge 
-                                                        variant="outline" 
-                                                        className={cn(
-                                                            "text-[8px] font-black uppercase border-none h-4 px-1.5 rounded-none",
-                                                            m.status === 'Nieuw' ? "bg-red-500 text-white animate-pulse" : "bg-slate-100 text-slate-500"
-                                                        )}
-                                                    >
-                                                        {m.status === 'Nieuw' ? 'NEW' : (m.werkgebied || m.wijk || '-')}
-                                                    </Badge>
+                                                    {m.status === 'Nieuw' ? (
+                                                        <Badge className="text-[8px] font-black uppercase bg-red-500 text-white h-4 px-1.5 rounded-none animate-pulse">NEW</Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-slate-100 text-slate-500 h-4 px-1.5 rounded-none">{m.werkgebied || m.wijk || '-'}</Badge>
+                                                    )}
                                                 </div>
                                                 <p className="text-[11px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
                                             </div>
