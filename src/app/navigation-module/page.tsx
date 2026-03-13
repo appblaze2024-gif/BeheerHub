@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
+import MapGL, { Marker, Source, Layer, type MapRef, Popup } from 'react-map-gl';
 import { 
   useCollection, 
   useFirestore, 
@@ -1290,6 +1290,17 @@ export default function StartNavigationPage() {
                             <div className="p-8 grid grid-cols-1 gap-4">
                                 <Button className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md bg-slate-900 text-white hover:bg-slate-800 border-none gap-3 transition-all active:scale-95" onClick={() => { setActiveWerkbonId(clickedMarkerId); setClickedMarkerId(null); }}><FileText className="h-6 w-6 text-primary" /> OPEN WERKBON</Button>
                                 <Button className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-2xl bg-primary text-white hover:bg-primary/90 border-none gap-3 transition-all active:scale-95 shadow-primary/20" onClick={() => { setPriorityMissionId(clickedMarkerId); handleStartRit(); setClickedMarkerId(null); }}><Navigation className="h-6 w-6 text-white fill-current" /> NAVIGEER NU</Button>
+                                <Button 
+                                    variant="outline"
+                                    className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md border-2 border-green-600 text-green-600 hover:bg-green-50 gap-3 transition-all active:scale-95" 
+                                    onClick={() => {
+                                        const url = `https://www.google.com/maps/dir/?api=1&destination=${clickedMelding.latitude},${clickedMelding.longitude}`;
+                                        window.open(url, '_blank');
+                                        setClickedMarkerId(null);
+                                    }}
+                                >
+                                    <ExternalLink className="h-6 w-6" /> GOOGLE MAPS
+                                </Button>
                             </div>
                         </div>
                     </div>
