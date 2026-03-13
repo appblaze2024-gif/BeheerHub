@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -797,7 +798,7 @@ export default function StartNavigationPage() {
             setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
             setTimeout(() => {
                 setIsRecalculating(false);
-                handleStartRit();
+                toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie." });
             }, 1200);
         },
         () => {
@@ -982,55 +983,52 @@ export default function StartNavigationPage() {
                                     )}>
                                         <div className="flex items-center gap-2 p-2 sm:p-3">
                                             <div className={cn(
-                                                "h-8 w-8 flex items-center justify-center text-xs font-black shrink-0",
+                                                "h-10 w-10 flex items-center justify-center text-sm font-black shrink-0",
                                                 isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
                                             )}>
                                                 {index + 1}
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-0.5 gap-1 leading-none">
+                                            <div className="flex-1 min-w-0 ml-1">
+                                                <div className="flex items-center justify-between mb-1 gap-1 leading-none">
                                                     <h3 className={cn(
-                                                        "font-black text-xs sm:text-sm uppercase tracking-tight truncate",
+                                                        "font-black text-sm sm:text-base uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
                                                     {m.status === 'Nieuw' && (
-                                                        <Badge className="text-[8px] font-black uppercase bg-red-600 text-white h-4 px-1.5 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
+                                                        <Badge className="text-[10px] font-black uppercase bg-red-600 text-white h-5 px-2 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
                                                     )}
                                                 </div>
                                                 <p className={cn("text-xs sm:text-sm font-black truncate leading-tight", isCompleted ? "text-green-700/60" : "text-slate-900")}>
-                                                    {m.straatnaam} {m.huisnummer}
-                                                </p>
-                                                <p className={cn("text-[10px] font-bold uppercase tracking-widest mt-0.5", isCompleted ? "text-green-600/40" : "text-slate-400")}>
-                                                    {m.plaats}
+                                                    {m.straatnaam} {m.huisnummer}, {m.plaats}
                                                 </p>
                                             </div>
-                                            <div className="flex gap-1 shrink-0 items-center">
+                                            <div className="flex gap-1.5 shrink-0 items-center">
                                                 {!isCompleted && (
                                                     <Button 
                                                         variant="outline" 
                                                         size="icon" 
-                                                        className="h-9 w-9 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
+                                                        className="h-10 w-10 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
                                                         onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
                                                     >
-                                                        <Navigation className="h-4 w-4" />
+                                                        <Navigation className="h-5 w-5" />
                                                     </Button>
                                                 )}
                                                 <Button 
                                                     variant="outline" 
                                                     size="icon" 
                                                     className={cn(
-                                                        "h-9 w-9 rounded-none border-none transition-all active:scale-90 shadow-sm",
+                                                        "h-10 w-10 rounded-none border-none transition-all active:scale-90 shadow-sm",
                                                         isCompleted ? "bg-green-100 text-green-600" : "bg-green-50 text-green-600 hover:bg-green-100"
                                                     )}
                                                     onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
                                                 >
-                                                    {isCompleted ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                                    {isCompleted ? <Check className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                                                 </Button>
                                                 
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-9 w-7 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
-                                                            <MoreVertical className="h-4 w-4 text-slate-400" />
+                                                        <Button variant="ghost" size="icon" className="h-10 w-8 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
+                                                            <MoreVertical className="h-5 w-5 text-slate-400" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-64 rounded-none shadow-2xl p-2 border-none">

@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -21,7 +22,11 @@ service cloud.firestore {
     }
 
     function isPrivileged() {
-      return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
+      return isSignedIn() && (isAdmin() || (userExists() && getUserData().role == 'toezichthouder'));
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     // --- RULES ---
@@ -45,9 +50,9 @@ service cloud.firestore {
 
       // Mappenbeheer per gebruiker (Subcollectie)
       match /folders/{folderId} {
-        allow read, list, get: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
+        allow read, list, get: if isOwner(userId) || isPrivileged();
         allow create, delete: if isPrivileged();
-        allow update: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
+        allow update: if isOwner(userId) || isPrivileged();
       }
 
       // Berichten tussen gebruikers
