@@ -107,8 +107,8 @@ function SectionRow({
         >
             <div className="flex items-center gap-4">
                 <div className="relative">
-                    <div className="bg-primary p-2 rounded-xl shadow-sm">
-                        <Icon className="h-5 w-5 text-white" />
+                    <div className="p-2">
+                        <Icon className="h-5 w-5 text-black" />
                     </div>
                     {badgeCount !== undefined && badgeCount > 0 && (
                         <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black h-5 w-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
