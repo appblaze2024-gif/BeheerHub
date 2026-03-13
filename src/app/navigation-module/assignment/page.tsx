@@ -143,7 +143,7 @@ export default function RouteAssignmentPage() {
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => setSelectedDay(prev => addDays(prev, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
             <Separator orientation="vertical" className="h-6" />
-            <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
+            <Select value={selectedProjectId || ''} onValueChange={(val) => setSelectedProjectId(val || null)}>
                 <SelectTrigger className="h-10 w-64 font-black border-none rounded-2xl bg-slate-100 shadow-inner text-slate-900">
                     <SelectValue placeholder="Kies project..." />
                 </SelectTrigger>

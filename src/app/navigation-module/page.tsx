@@ -55,6 +55,7 @@ import {
   Sliders,
   ExternalLink,
   Tag,
+  LocateFixed,
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -467,6 +468,7 @@ export default function StartNavigationPage() {
   const [priorityMissionId, setPriorityMissionId] = useState<string | null>(null);
   const [completedObjects, setCompletedObjects] = useState<string[]>([]);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   const [autoOpenEnabled, setAutoOpenEnabledState] = useState(true);
 
@@ -510,17 +512,12 @@ export default function StartNavigationPage() {
   useEffect(() => {
     if (!navigator.geolocation) return;
     
-    let lastUpdate = 0;
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        const now = Date.now();
-        if (now - lastUpdate < 5000) return; 
-        lastUpdate = now;
         setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
       },
       (err) => {
-        // Silently handle to avoid NextJS generic object error overlay
-        console.warn("Location check issue:", err.message || "denied");
+        // Silently handle location issues to avoid blocking the app
       },
       { enableHighAccuracy: true, maximumAge: 10000 }
     );
@@ -580,8 +577,8 @@ export default function StartNavigationPage() {
   const sequenceMissions = useCallback((missions: any[]) => {
     if (missions.length === 0) return [];
     
-    const pending = missions.filter(m => !completedObjects.includes(m.id));
-    const completed = missions.filter(m => completedObjects.includes(m.id));
+    const pending = missions.filter(m => m.status !== 'Afgerond');
+    const completed = missions.filter(m => m.status === 'Afgerond');
 
     if (pending.length === 0) return completed;
 
@@ -611,7 +608,7 @@ export default function StartNavigationPage() {
     }
     
     return [...result, ...completed];
-  }, [userLocation, priorityMissionId, completedObjects]);
+  }, [userLocation, priorityMissionId]);
 
   const sortedMissions = useMemo(() => sequenceMissions(filteredMeldingen), [filteredMeldingen, sequenceMissions]);
 
@@ -621,13 +618,13 @@ export default function StartNavigationPage() {
       return;
     }
     
-    const pendingMissions = sortedMissions.filter(m => !completedObjects.includes(m.id));
+    const pendingMissions = sortedMissions.filter(m => m.status !== 'Afgerond');
     if (pendingMissions.length === 0) return;
     
     const dest = pendingMissions[pendingMissions.length - 1];
     const waypoints = pendingMissions.slice(0, -1).filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
     window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
-  }, [sortedMissions, completedObjects]);
+  }, [sortedMissions]);
 
   const handleStartRit = async (forcedPriorityId?: string) => {
     if (filteredMeldingen.length === 0 && !forcedPriorityId) return;
@@ -639,6 +636,29 @@ export default function StartNavigationPage() {
 
   const handleStopRit = async () => {
     setNavigationState('setup'); setPriorityMissionId(null);
+  };
+
+  const handleRecalculateRoute = () => {
+    if (!navigator.geolocation) {
+        toast({ variant: 'destructive', title: 'Fout', description: 'GPS niet beschikbaar op dit apparaat.' });
+        return;
+    }
+
+    setIsRecalculating(true);
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+            setTimeout(() => {
+                setIsRecalculating(false);
+                handleStartRit();
+            }, 1200);
+        },
+        (err) => {
+            setIsRecalculating(false);
+            toast({ variant: 'destructive', title: 'Locatiefout', description: 'Kon huidige locatie niet bepalen.' });
+        },
+        { enableHighAccuracy: true }
+    );
   };
 
   return (
@@ -663,17 +683,32 @@ export default function StartNavigationPage() {
                         </div>
                     </PopoverContent>
                 </Popover>
-                {navigationState === 'setup' ? (
-                    <Button className="h-10 px-6 font-black uppercase bg-primary text-white shadow-xl rounded-xl tracking-widest text-xs" onClick={() => handleStartRit()} disabled={isMeldingenType && filteredMeldingen.length === 0}>
-                        <Play className="h-4 w-4 mr-2 fill-current" /> START
-                    </Button>
+                
+                {isMeldingenType ? (
+                    navigationState === 'setup' ? (
+                        <Button 
+                            className="h-10 w-10 p-0 font-black uppercase bg-primary text-white shadow-xl rounded-none border-none hover:bg-primary/90 tracking-widest text-xs" 
+                            onClick={handleRecalculateRoute} 
+                            disabled={filteredMeldingen.length === 0 || isRecalculating}
+                        >
+                            {isRecalculating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
+                        </Button>
+                    ) : (
+                        <Button variant="destructive" className="h-10 px-6 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
+                    )
                 ) : (
-                    <Button variant="destructive" className="h-10 px-6 font-black uppercase rounded-xl shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
+                    navigationState === 'setup' ? (
+                        <Button className="h-10 px-6 font-black uppercase bg-primary text-white shadow-xl rounded-xl tracking-widest text-xs" onClick={() => handleStartRit()} disabled={filteredMeldingen.length === 0}>
+                            <Play className="h-4 w-4 mr-2 fill-current" /> START
+                        </Button>
+                    ) : (
+                        <Button variant="destructive" className="h-10 px-6 font-black uppercase rounded-xl shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
+                    )
                 )}
             </div>
         </header>
 
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative">
             {isMeldingenType ? (
                 <div className="flex-1 flex flex-col min-h-0">
                     <div className="p-4 border-b bg-white shrink-0">
@@ -685,7 +720,7 @@ export default function StartNavigationPage() {
                     <ScrollArea className="flex-1">
                         <div className="max-w-2xl mx-auto flex flex-col gap-2 p-2 pb-24">
                             {sortedMissions.map((m, index) => {
-                                const isCompleted = completedObjects.includes(m.id);
+                                const isCompleted = m.status === 'Afgerond';
                                 return (
                                     <Card key={m.id} className={cn(
                                         "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
@@ -753,6 +788,15 @@ export default function StartNavigationPage() {
                             </Marker>
                         ))}
                     </MapGL>
+                </div>
+            )}
+
+            {isRecalculating && (
+                <div className="fixed inset-0 z-[300] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
+                    <div className="bg-slate-900 p-8 rounded-none shadow-2xl flex flex-col items-center gap-4 text-white">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                        <p className="text-xs font-black uppercase tracking-[0.2em]">Route herberekenen...</p>
+                    </div>
                 </div>
             )}
         </div>
