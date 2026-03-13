@@ -986,55 +986,55 @@ export default function StartNavigationPage() {
                                         "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
                                         isCompleted ? "bg-green-50" : "bg-white"
                                     )}>
-                                        <div className="flex items-center gap-4 p-4">
+                                        <div className="flex items-center gap-3 p-2.5">
                                             <div className={cn(
-                                                "h-10 w-10 flex items-center justify-center text-sm font-black shrink-0",
+                                                "h-8 w-8 flex items-center justify-center text-xs font-black shrink-0",
                                                 isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
                                             )}>
                                                 {index + 1}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-0.5">
+                                                <div className="flex items-center justify-between mb-0">
                                                     <h3 className={cn(
-                                                        "font-black text-sm uppercase tracking-tight truncate",
+                                                        "font-black text-xs uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
                                                     {m.status === 'Nieuw' && (
-                                                        <Badge className="text-[8px] font-black uppercase bg-red-500 text-white h-4 px-1.5 rounded-none animate-pulse">NEW</Badge>
+                                                        <Badge className="text-[7px] font-black uppercase bg-red-500 text-white h-3.5 px-1 rounded-none animate-pulse">NEW</Badge>
                                                     )}
                                                 </div>
-                                                <p className="text-[11px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
-                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest truncate mt-0.5">
+                                                <p className="text-[10px] font-bold text-slate-500 truncate leading-tight">{m.straatnaam} {m.huisnummer}</p>
+                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-wider truncate leading-none mt-0.5">
                                                     {m.hoofdcategorie} • {m.subcategorie}
                                                 </p>
                                             </div>
-                                            <div className="flex gap-2 shrink-0">
+                                            <div className="flex gap-1.5 shrink-0 items-center">
                                                 {!isCompleted && (
                                                     <Button 
                                                         variant="outline" 
                                                         size="icon" 
-                                                        className="h-12 w-12 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90" 
+                                                        className="h-9 w-9 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90" 
                                                         onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
                                                     >
-                                                        <Navigation className="h-5 w-5" />
+                                                        <Navigation className="h-4 w-4" />
                                                     </Button>
                                                 )}
                                                 <Button 
                                                     variant="outline" 
                                                     size="icon" 
                                                     className={cn(
-                                                        "h-12 w-12 rounded-none border-none transition-all active:scale-90",
+                                                        "h-9 w-9 rounded-none border-none transition-all active:scale-90",
                                                         isCompleted ? "bg-green-100 text-green-600" : "bg-green-50 text-green-600 hover:bg-green-100"
                                                     )}
                                                     onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
                                                 >
-                                                    {isCompleted ? <Check className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                                                    {isCompleted ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                                                 </Button>
                                                 
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-12 w-8 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
-                                                            <MoreVertical className="h-4 w-4 text-slate-400" />
+                                                        <Button variant="ghost" size="icon" className="h-9 w-6 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
+                                                            <MoreVertical className="h-3.5 w-3.5 text-slate-400" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-56 rounded-none shadow-2xl p-2 border-none">
