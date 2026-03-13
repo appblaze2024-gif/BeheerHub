@@ -272,7 +272,7 @@ export default function RouteAssignmentPage() {
                 <ScrollArea className="flex-1">
                     {isLoadingAssignments ? (
                         <div className="flex justify-center py-20 opacity-20"><Loader2 className="h-10 w-10 animate-spin" /></div>
-                    ) : assignments && assignments.length > 0 ? (
+                    ) : (assignments && assignments.length > 0) ? (
                         <div className="divide-y divide-slate-50">
                             {assignments.map(a => {
                                 const assignedUser = users?.find(u => u.id === a.userId);

@@ -4,7 +4,7 @@ service cloud.firestore {
 
     // --- KRITIEKE PERMISSIES (BOVENAAN) ---
 
-    // Route assignments - EXPLICIET OPEN VOOR ALLE INGELOGDE GEBRUIKERS
+    // Route assignments - OPEN VOOR LEZEN DOOR ALLE GEBRUIKERS
     match /route_assignments/{assignmentId} {
       allow read, list: if request.auth != null;
       allow write: if request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Super admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'toezichthouder');
@@ -39,7 +39,7 @@ service cloud.firestore {
       allow read, list: if isSignedIn();
       allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow update: if (request.auth.uid == userId && 
-                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'navSortConfig', 'navPitch', 'navOffset', 'navZoom', 'autoOpenEnabled', 'dynamicZoomEnabled', 'navColumns'])) 
+                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])) 
                     || isAdmin();
       allow delete: if isAdmin();
 

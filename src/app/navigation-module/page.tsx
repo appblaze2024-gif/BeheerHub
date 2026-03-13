@@ -70,7 +70,6 @@ import {
   Hash,
   Minus,
   Plus,
-  Tag,
   Sparkles,
   ChevronDown,
   ChevronUp,
@@ -79,7 +78,6 @@ import {
   ImageIcon,
   Settings,
   Sliders,
-  Trash,
   Maximize,
   ArrowUpDown,
   ArrowUp,
@@ -89,7 +87,7 @@ import {
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, UserProfile, Project as ProjectType, RouteAssignment } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -674,30 +672,6 @@ export default function StartNavigationPage() {
     }
   }, [assignments, navigationState, type]);
 
-  const isSvg = (str: string) => {
-    if (!str) return false;
-    const trimmed = str.trim().toLowerCase();
-    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
-  };
-
-  const renderMarkerIcon = (category: string) => {
-    const iconVal = categoryIcons[category];
-    if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-slate-400" />;
-    let iconColor = '#007AFF';
-    let iconName = 'AlertCircle';
-    if (iconVal.startsWith('lucide:')) {
-      const parts = iconVal.split(':');
-      iconName = parts[1] || 'AlertCircle';
-      iconColor = parts[2] || '#007AFF';
-      const IconComp = (Icons as any)[iconName] || Icons.AlertCircle;
-      return <IconComp className="h-5 w-5" style={{ color: iconColor }} />;
-    }
-    if (isSvg(iconVal)) return <div className="h-5 w-5 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: iconVal }} />;
-    if (iconVal.startsWith('http')) return <div className="h-5 w-5 relative flex items-center justify-center overflow-hidden rounded-full"><img src={iconVal} alt="icon" className="h-full w-full object-cover" /></div>;
-    const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
-    return <IconComp className="h-5 w-5" style={{ color: '#007AFF' }} />;
-  };
-
   useEffect(() => {
     if (profile) {
         if (profile.navZoom !== undefined) setNavZoomState(Number(profile.navZoom));
@@ -1146,6 +1120,30 @@ export default function StartNavigationPage() {
     window.open(url, '_blank');
   };
 
+  const isSvg = (str: string) => {
+    if (!str) return false;
+    const trimmed = str.trim().toLowerCase();
+    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
+  };
+
+  const renderMarkerIcon = (category: string) => {
+    const iconVal = categoryIcons[category];
+    if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-slate-400" />;
+    let iconColor = '#007AFF';
+    let iconName = 'AlertCircle';
+    if (iconVal.startsWith('lucide:')) {
+      const parts = iconVal.split(':');
+      iconName = parts[1] || 'AlertCircle';
+      iconColor = parts[2] || '#007AFF';
+      const IconComp = (Icons as any)[iconName] || Icons.AlertCircle;
+      return <IconComp className="h-5 w-5" style={{ color: iconColor }} />;
+    }
+    if (isSvg(iconVal)) return <div className="h-5 w-5 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: iconVal }} />;
+    if (iconVal.startsWith('http')) return <div className="h-5 w-5 relative flex items-center justify-center overflow-hidden rounded-full"><img src={iconVal} alt="icon" className="h-full w-full object-cover" /></div>;
+    const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
+    return <IconComp className="h-5 w-5" style={{ color: '#007AFF' }} />;
+  };
+
   const clickedMelding = useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
 
   const renderSetupUI = () => {
@@ -1296,32 +1294,26 @@ export default function StartNavigationPage() {
 
                 <div className="absolute top-0 left-0 right-0 z-20 h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-none gap-2">
                     <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                            <ArrowLeft className="h-6 w-6 text-slate-600" />
-                        </Button>
+                        {navigationState !== 'navigating' && (
+                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
+                                <ArrowLeft className="h-6 w-6 text-slate-600" />
+                            </Button>
+                        )}
                         
                         {navigationState === 'navigating' && routeInfo && (
-                            <div className="hidden sm:flex items-center gap-3 bg-slate-900/5 px-3 py-1.5 rounded-full border-2 border-slate-200 shadow-sm">
-                                <div className="flex items-center gap-1.5">
-                                    <Clock className="h-4 w-4 text-primary" />
-                                    <span className="text-sm font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
+                            <div className="flex items-center gap-4 bg-slate-900/5 px-4 py-2 rounded-full border-2 border-slate-200 shadow-sm">
+                                <div className="flex items-center gap-2">
+                                    <Clock className="h-5 w-5 text-primary" />
+                                    <span className="text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
                                 </div>
-                                <div className="h-4 w-0.5 bg-slate-300" />
-                                <div className="flex items-center gap-1.5">
-                                    <Navigation className="h-4 w-4 text-primary" />
-                                    <span className="text-sm font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} km</span>
+                                <div className="h-5 w-0.5 bg-slate-300" />
+                                <div className="flex items-center gap-2">
+                                    <Navigation className="h-5 w-5 text-primary" />
+                                    <span className="text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} km</span>
                                 </div>
                             </div>
                         )}
                     </div>
-
-                    {navigationState === 'navigating' && routeInfo && (
-                        <div className="sm:hidden flex items-center gap-3 bg-slate-900/5 px-3 py-1.5 rounded-full border-2 border-slate-200 shadow-sm pointer-events-auto">
-                            <span className="text-xs font-black text-slate-900">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
-                            <div className="h-3 w-px bg-slate-300" />
-                            <span className="text-xs font-black text-slate-900">{(routeInfo.distance / 1000).toFixed(1)}km</span>
-                        </div>
-                    )}
 
                     <div className="flex items-center gap-2 pointer-events-auto shrink-0">
                         <Popover>

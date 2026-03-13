@@ -703,6 +703,9 @@ export default function NewIssuePage() {
       voorvaltijd: format(new Date(), 'HH:mm'), 
       hoofdcategorie: '', 
       subcategorie: '',
+      straatnaam: '',
+      huisnummer: '',
+      postcode: '',
       plaats: '', 
     },
   });
@@ -937,7 +940,7 @@ export default function NewIssuePage() {
         toast({ title: "Melding opgeslagen", description: `Melding ${data.intakenummer} is aangemaakt.` });
         startProcessing(1000);
         
-        // Reset form for NEW entry instead of redirecting
+        // RESET FORM FOR CONTINUOUS ENTRY
         form.reset({
             intakenummer: format(new Date(), 'yyyyMMdd') + Math.floor(Math.random() * 100).toString().padStart(2, '0'),
             status: 'Nieuw',
