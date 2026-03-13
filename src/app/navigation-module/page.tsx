@@ -652,35 +652,35 @@ export default function StartNavigationPage() {
                             <Input placeholder="Zoek opdracht..." className="pl-10 h-11 font-black uppercase text-xs rounded-2xl bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                         </div>
                     </div>
-                    <ScrollArea className="flex-1 p-4 md:p-6">
-                        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-24">
+                    <ScrollArea className="flex-1">
+                        <div className="max-w-2xl mx-auto flex flex-col gap-2 p-2 pb-24">
                             {sortedMissions.map((m, index) => (
-                                <Card key={m.id} className="rounded-3xl border-none shadow-xl bg-white overflow-hidden active:scale-[0.98] transition-all cursor-pointer group">
-                                    <div className="p-4 flex flex-col items-center text-center gap-3">
-                                        <div className="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm font-black shadow-lg">
+                                <Card key={m.id} className="rounded-none border-none shadow-md bg-white overflow-hidden active:scale-[0.99] transition-all cursor-pointer group">
+                                    <div className="flex items-center gap-4 p-4">
+                                        <div className="h-10 w-10 bg-slate-900 text-white flex items-center justify-center text-sm font-black shrink-0">
                                             {index + 1}
                                         </div>
-                                        <div className="space-y-1 w-full px-2">
-                                            <h3 className="font-black text-xs uppercase tracking-tight text-slate-900 truncate">{m.intakenummer}</h3>
-                                            <p className="text-[10px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}</p>
-                                            <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-slate-100 text-slate-500 h-4 px-1.5">{m.werkgebied || m.wijk || '-'}</Badge>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-0.5">
+                                                <h3 className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{m.intakenummer}</h3>
+                                                <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-slate-100 text-slate-500 h-4 px-1.5 rounded-none">{m.werkgebied || m.wijk || '-'}</Badge>
+                                            </div>
+                                            <p className="text-[11px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2 w-full pt-2 border-t border-slate-50">
+                                        <div className="flex gap-2 shrink-0">
                                             <Button 
                                                 variant="outline" 
                                                 size="icon" 
-                                                className="h-12 w-full rounded-2xl border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90" 
+                                                className="h-12 w-12 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90" 
                                                 onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
-                                                title="Navigeer via Google Maps"
                                             >
                                                 <Navigation className="h-5 w-5" />
                                             </Button>
                                             <Button 
                                                 variant="outline" 
                                                 size="icon" 
-                                                className="h-12 w-full rounded-2xl border-none bg-green-50 text-green-600 hover:bg-green-100 transition-all active:scale-90" 
+                                                className="h-12 w-12 rounded-none border-none bg-green-50 text-green-600 hover:bg-green-100 transition-all active:scale-90" 
                                                 onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
-                                                title="Open Werkbon"
                                             >
                                                 <FileText className="h-5 w-5" />
                                             </Button>
