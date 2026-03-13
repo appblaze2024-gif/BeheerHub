@@ -5,10 +5,7 @@ import { useCollection, useFirestore, useMemoFirebase, useUser, addDocumentNonBl
 import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 import { 
   Loader2, 
-  CheckCircle2, 
-  Navigation, 
   ArrowLeft, 
-  Plus, 
   Trash2, 
   Check, 
   Search,

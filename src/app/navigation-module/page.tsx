@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import MapGL, { Marker, Source, Layer, type MapRef, Popup } from 'react-map-gl';
+import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { 
   useCollection, 
   useFirestore, 
@@ -32,14 +32,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { 
   Popover, 
   PopoverContent, 
   PopoverTrigger 
@@ -68,8 +60,6 @@ import {
   UploadCloud,
   Map as MapIcon,
   Hash,
-  Minus,
-  Plus,
   Sparkles,
   ChevronDown,
   ChevronUp,
@@ -79,16 +69,13 @@ import {
   Settings,
   Sliders,
   Maximize,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   ExternalLink,
   Tag
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment, UserProfile, Route } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -566,6 +553,7 @@ export default function StartNavigationPage() {
   const { selectedProjectId, setSelectedProjectId } = useProject();
   
   const type = searchParams.get('type'); 
+  const isMeldingenType = type === 'meldingen';
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
   
@@ -582,11 +570,9 @@ export default function StartNavigationPage() {
   const [completedObjects, setCompletedObjects] = useState<string[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
-  const [isCockpitExpanded, setIsCockpitExpanded] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   const [showTodayCompleted, setShowTodayCompleted] = useState(false);
-  const [showAssignmentBubbles, setShowAssignmentBubbles] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     intakenummer: true,
     locatie: true,
@@ -665,11 +651,8 @@ export default function StartNavigationPage() {
   useEffect(() => {
     if (assignments && assignments.length > 0 && navigationState === 'setup') {
         const assignment = assignments[0];
-        if (assignment.routeType === 'veegroutes' && type === 'veegroutes') {
-            setSelectedRouteId(assignment.routeId);
-        } else if (assignment.routeType === 'prullenbakken' && type === 'prullenbakken') {
-            setSelectedRouteId(assignment.routeId);
-        }
+        if (assignment.routeType === 'veegroutes' && type === 'veegroutes') setSelectedRouteId(assignment.routeId);
+        else if (assignment.routeType === 'prullenbakken' && type === 'prullenbakken') setSelectedRouteId(assignment.routeId);
     }
   }, [assignments, navigationState, type]);
 
@@ -685,42 +668,10 @@ export default function StartNavigationPage() {
     }
   }, [profile]);
 
-  const todayCompletedQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !showTodayCompleted || type !== 'meldingen') return null;
-    return query(collection(firestore, 'meldingen'), where('status', '==', 'Afgerond'), where('afhandeling_datum', '==', todayStr), limit(50));
-  }, [firestore, user, showTodayCompleted, todayStr, type]);
-
-  const { data: rawTodayCompleted } = useCollection<Melding>(todayCompletedQuery);
-
-  const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, 'users');
-  }, [firestore, user]);
-  const { data: allUsers } = useCollection<UserProfile>(usersQuery);
-
-  const navigatingUsersMap = useMemo(() => {
-    const map = new Map<string, string[]>();
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    
-    allUsers?.forEach(u => {
-      if (u.navigatingToMissionId && u.navigatingToMissionStartedAt) {
-        const startedAt = new Date(u.navigatingToMissionStartedAt);
-        if (startedAt > oneHourAgo) {
-          const list = map.get(u.navigatingToMissionId) || [];
-          list.push(u.displayName || u.email || 'Onbekend');
-          map.set(u.navigatingToMissionId, list);
-        }
-      }
-    });
-    return map;
-  }, [allUsers]);
-
   const filteredMeldingen = useMemo(() => {
     const poolMap = new Map<string, any>();
-    
     if (type === 'meldingen') {
         rawActiveMeldingen?.forEach(m => { if (!completedObjects.includes(m.id)) poolMap.set(m.id, m); });
-        rawTodayCompleted?.forEach(m => poolMap.set(m.id, m));
         let result = Array.from(poolMap.values());
         if (!isPrivileged) {
             const userName = profile?.displayName || profile?.email || 'Onbekend';
@@ -734,7 +685,7 @@ export default function StartNavigationPage() {
     } else if (type === 'prullenbakken' && selectedRouteId && currentProject && allObjects) {
         const route = currentProject.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
         if (!route) return [];
-        const objectsInRoute = allObjects.filter(obj => 
+        return allObjects.filter(obj => 
             Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route.naam)
         ).map(obj => ({
             ...obj,
@@ -743,25 +694,18 @@ export default function StartNavigationPage() {
             subcategorie: obj.locatieSubType || 'Prullenbak',
             status: completedObjects.includes(obj.id) ? 'Afgerond' : 'Open'
         }));
-        return objectsInRoute;
     }
     return [];
-  }, [type, rawActiveMeldingen, rawTodayCompleted, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
+  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
 
-  // TSP-style sequencing using Nearest Neighbor for logical route progression
   const sortedMissions = useMemo(() => {
     if (filteredMeldingen.length === 0) return [];
-    
     const startLoc = userLocation || SIMULATION_START_LOCATION;
     const pool = [...filteredMeldingen].filter(m => m.status !== 'Afgerond');
-    
     if (pool.length === 0) return [];
-
     let sequence: any[] = [];
     let remaining = [...pool];
     let currentPos = turf.point([startLoc.longitude, startLoc.latitude]);
-
-    // Handle priority override
     if (priorityMissionId) {
         const pIdx = remaining.findIndex(m => m.id === priorityMissionId);
         if (pIdx !== -1) {
@@ -770,676 +714,157 @@ export default function StartNavigationPage() {
             currentPos = turf.point([p.longitude, p.latitude]);
         }
     }
-
-    // Nearest Neighbor algorithm ensures nearby streets are clustered together in numbering
     while (remaining.length > 0) {
-        let closestIdx = 0;
-        let minDist = Infinity;
+        let closestIdx = 0; let minDist = Infinity;
         for (let i = 0; i < remaining.length; i++) {
             const dist = turf.distance(currentPos, turf.point([remaining[i].longitude, remaining[i].latitude]));
-            if (dist < minDist) {
-                minDist = dist;
-                closestIdx = i;
-            }
+            if (dist < minDist) { minDist = dist; closestIdx = i; }
         }
         const [next] = remaining.splice(closestIdx, 1);
         sequence.push(next);
         currentPos = turf.point([next.longitude, next.latitude]);
     }
-
-    // Manual sort override only in setup/manual list mode
-    if (navigationState === 'setup' && sortConfig.field !== 'afstand') {
-        return [...filteredMeldingen].filter(m => m.status !== 'Afgerond').sort((a, b) => {
-            let valA = (a as any)[sortConfig.field]?.toString().toLowerCase() || '';
-            let valB = (b as any)[sortConfig.field]?.toString().toLowerCase() || '';
-            if (valA < valB) return sortConfig.order === 'asc' ? -1 : 1;
-            if (valA > valB) return sortConfig.order === 'asc' ? 1 : -1;
-            return 0;
-        });
-    }
-
     return sequence;
-  }, [filteredMeldingen, userLocation, priorityMissionId, sortConfig, navigationState]);
+  }, [filteredMeldingen, userLocation, priorityMissionId]);
 
   const nextMission = sortedMissions[0];
 
-  useEffect(() => {
-    if (nextMission?.id && navigationState === 'navigating' && user && firestore) {
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
-            navigatingToMissionId: nextMission.id,
-            navigatingToMissionStartedAt: new Date().toISOString()
-        });
-    }
-  }, [nextMission?.id, navigationState, user, firestore]);
-
   const fetchRoute = useCallback(async (force = false) => {
-    if (navigationState === 'setup' || sortedMissions.length === 0) {
-        setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
-        return;
-    }
+    if (navigationState === 'setup' || sortedMissions.length === 0 || isMeldingenType) return;
     const now = Date.now();
     if (!force && now - lastFetchTimeRef.current < 5000) return;
-    
-    if (!displayedRouteGeometry && force) setIsCalculatingRoute(true);
-    
     lastFetchTimeRef.current = now;
     const startPos = userLocation || SIMULATION_START_LOCATION;
-    
-    if (!sortedMissions[0]) {
-        setIsCalculatingRoute(false);
-        return;
-    }
-
     const waypoints = [[startPos.longitude, startPos.latitude], [sortedMissions[0].longitude, sortedMissions[0].latitude]];
-    const waypointsStr = waypoints.map(w => w.join(',')).join(';');
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypoints.map(w => w.join(',')).join(';')}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
     try {
-        const res = await fetch(url);
-        const data = await res.json();
+        const res = await fetch(url); const data = await res.json();
         if (data.routes?.[0]) {
             const route = data.routes[0];
             setCurrentRouteGeometry(route.geometry);
             setDisplayedRouteGeometry(turf.feature(route.geometry));
             setRouteInfo({ duration: route.duration, distance: route.distance });
         }
-    } catch (e) { console.error("Route error:", e); } finally { setIsCalculatingRoute(false); }
-  }, [sortedMissions, userLocation, navigationState, displayedRouteGeometry]);
+    } catch (e) {}
+  }, [sortedMissions, userLocation, navigationState, isMeldingenType]);
 
   useEffect(() => {
-    if (navigationState === 'navigating' && (sortedMissions.length > 0)) fetchRoute(true);
-    else if (navigationState === 'setup') { setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null); }
-  }, [navigationState, sortedMissions[0]?.id]);
-
-  useEffect(() => {
-    let animId: number;
-    const updateVisualPos = () => {
-        if (targetPosRef.current && navigationState === 'navigating') {
-            if (!visualPosRef.current) {
-                visualPosRef.current = { ...targetPosRef.current };
-                visualHeadingRef.current = lastHeadingRef.current;
-            } else {
-                const posFactor = 0.08; 
-                const headingFactor = 0.05;
-                
-                const dLng = targetPosRef.current.lng - visualPosRef.current.lng;
-                const dLat = targetPosRef.current.lat - visualPosRef.current.lat;
-                
-                if (Math.abs(dLng) > 0.000001 || Math.abs(dLat) > 0.000001) {
-                    visualPosRef.current.lng += dLng * posFactor;
-                    visualPosRef.current.lat += dLat * posFactor;
-                    
-                    let diff = lastHeadingRef.current - visualHeadingRef.current;
-                    if (diff > 180) diff -= 360;
-                    if (diff < -180) diff += 360;
-                    visualHeadingRef.current += diff * headingFactor;
-
-                    if (!isNaN(visualPosRef.current.lng) && !isNaN(visualPosRef.current.lat)) {
-                        setSmoothLocation({ longitude: visualPosRef.current.lng, latitude: visualPosRef.current.lat, heading: visualHeadingRef.current });
-                        if (mapRef.current && !isManualMode) {
-                            const currentSpeed = speedKmh;
-                            const targetZoom = dynamicZoomEnabled ? Math.max(15, Math.min(19, 19 - (currentSpeed / 25))) : navZoom;
-                            mapRef.current.getMap().jumpTo({
-                                center: [visualPosRef.current.lng, visualPosRef.current.lat],
-                                bearing: visualHeadingRef.current,
-                                zoom: targetZoom,
-                                pitch: navPitch,
-                                padding: { top: 0, bottom: Math.max(0, navOffset), left: 0, right: 0 }
-                            });
-                        }
-                    }
-                }
-            }
-            
-            if (currentRouteGeometry) {
-                try {
-                    const line = turf.lineString(currentRouteGeometry.coordinates);
-                    const currPt = turf.point([visualPosRef.current?.lng || targetPosRef.current.lng, visualPosRef.current?.lat || targetPosRef.current.lat]);
-                    const snapped = turf.nearestPointOnLine(line, currPt);
-                    if (!isNaN(snapped.geometry.coordinates[0])) {
-                        targetPosRef.current = { lng: snapped.geometry.coordinates[0], lat: snapped.geometry.coordinates[1] };
-                        const alongRoute = turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line);
-                        const distAlong = turf.length(alongRoute, { units: 'meters' });
-                        const ahead = turf.along(line, distAlong + 15, { units: 'meters' });
-                        lastHeadingRef.current = (turf.bearing(snapped, ahead) + 360) % 360;
-                        
-                        const endPt = turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]);
-                        const sliced = turf.lineSlice(snapped, endPt, line);
-                        setDisplayedRouteGeometry(sliced);
-                    }
-                } catch (e) {}
-            }
-        }
-        animId = requestAnimationFrame(updateVisualPos);
-    };
-    animId = requestAnimationFrame(updateVisualPos);
-    return () => cancelAnimationFrame(animId);
-  }, [currentRouteGeometry, navigationState, isManualMode, dynamicZoomEnabled, navZoom, navPitch, navOffset, speedKmh]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!navigator.geolocation || isSimulationMode) return;
-    const watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-            if (isNaN(loc.latitude) || isNaN(loc.longitude)) return;
-            
-            setUserLocation(loc);
-            const currentSpeed = pos.coords.speed !== null ? Math.round(pos.coords.speed * 3.6) : 0;
-            setSpeedKmh(currentSpeed);
-
-            if (navigationState !== 'navigating' || !currentRouteGeometry) {
-                targetPosRef.current = { lng: loc.longitude, lat: loc.latitude };
-            }
-
-            if (navigationState === 'navigating' && nextMission && autoOpenEnabled) {
-                const dist = turf.distance(turf.point([loc.longitude, loc.latitude]), turf.point([nextMission.longitude, nextMission.latitude]), { units: 'meters' });
-                if (dist < 50 && currentSpeed < 3) {
-                    if (!autoOpenTimerRef.current) {
-                        autoOpenTimerRef.current = setTimeout(() => {
-                            setActiveWerkbonId(nextMission.id);
-                            autoOpenTimerRef.current = null;
-                        }, 10000);
-                    }
-                } else if (autoOpenTimerRef.current) {
-                    clearTimeout(autoOpenTimerRef.current);
-                    autoOpenTimerRef.current = null;
-                }
-            }
-        }, () => {}, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [navigationState, isSimulationMode, currentRouteGeometry, nextMission, autoOpenEnabled]);
-
-  const updateNavPitch = (newPitch: number) => { 
-    const val = Number(newPitch);
-    setNavPitchState(val); 
-    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navPitch: val }, { merge: true }); 
-  };
-  const updateNavOffset = (newOffset: number) => { 
-    const val = Number(newOffset);
-    setNavOffsetState(val); 
-    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navOffset: val }, { merge: true }); 
-  };
-  const updateNavZoom = (newZoom: number) => { 
-    const val = Number(Math.max(10, Math.min(22, newZoom))); 
-    setNavZoomState(val); 
-    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navZoom: val }, { merge: true }); 
-  };
-  const setAutoOpenEnabled = (val: boolean) => { 
-    setAutoOpenEnabledState(val); 
-    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { autoOpenEnabled: val }, { merge: true }); 
-  };
-  const setDynamicZoomEnabled = (val: boolean) => { 
-    setDynamicZoomEnabledState(val); 
-    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { dynamicZoomEnabled: val }, { merge: true }); 
-  };
-  const toggleColumnVisibility = (colId: string) => { 
-    const next = { ...visibleColumns, [colId]: !visibleColumns[colId] }; 
-    setVisibleColumns(next); 
-    if (user && firestore) setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navColumns: next }, { merge: true }); 
-  };
-
-  const handleSort = (field: string) => {
-    let newOrder: 'asc' | 'desc' = 'asc';
-    if (sortConfig.field === field && sortConfig.order === 'asc') {
-      newOrder = 'desc';
-    }
-    const newConfig = { field, order: newOrder };
-    setSortConfig(newConfig);
-    if (user && firestore) {
-      setDocumentNonBlocking(doc(firestore, 'users', user.uid), { navSortConfig: newConfig }, { merge: true });
-    }
-  };
+    if (navigationState === 'navigating' && !isMeldingenType) fetchRoute(true);
+  }, [navigationState, sortedMissions[0]?.id, isMeldingenType]);
 
   const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
     if (lat && lng) {
-      const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${lat},${lng}`;
-      window.open(url, '_blank');
+      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${lat},${lng}`, '_blank');
       return;
     }
-
     if (sortedMissions.length > 0) {
-      const destination = sortedMissions[sortedMissions.length - 1];
-      const waypoints = sortedMissions.slice(0, -1);
-      const waypointStr = waypoints
-        .filter(m => m.latitude && m.longitude)
-        .map(m => `${m.latitude},${m.longitude}`)
-        .join('|');
-      const destStr = `${destination.latitude},${destination.longitude}`;
-      const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destStr}${waypointStr ? `&waypoints=${waypointStr}` : ''}`;
-      window.open(url, '_blank');
+      const dest = sortedMissions[sortedMissions.length - 1];
+      const waypoints = sortedMissions.slice(0, -1).filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
+      window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
     }
   }, [sortedMissions]);
 
   const handleStartRit = async (forcedPriorityId?: string) => {
-    if (filteredMeldingen.length === 0 && sortedMissions.length === 0 && !forcedPriorityId) return;
-    
-    setIsLocating(true);
-    setIsCalculatingRoute(true);
-
-    if (forcedPriorityId) {
-        setPriorityMissionId(forcedPriorityId);
-    }
-
-    if (assignments && assignments.length > 0 && firestore) {
-        const assignment = assignments[0];
-        updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignment.id), { status: 'Started' });
-    }
-
-    const beginNav = async (loc: { latitude: number, longitude: number }, heading: number) => {
-        if (isNaN(loc.latitude) || isNaN(loc.longitude)) { 
-            setIsLocating(false); 
-            setIsCalculatingRoute(false);
-            return; 
-        }
-        
-        targetPosRef.current = { lng: loc.longitude, lat: loc.latitude };
-        visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
-        visualHeadingRef.current = heading;
-        
-        setStartTime(new Date().toISOString());
-        setIsSimulationMode(false); 
-        setNavigationState('navigating'); 
-        setIsLocating(false); 
-        setIsManualMode(false);
-        
-        if (type === 'meldingen' && !forcedPriorityId) {
-            openInGoogleMaps();
-        }
-
-        if (navigationState === 'navigating') {
-            setTimeout(() => fetchRoute(true), 100);
-        }
-    };
-
-    if (userLocation) {
-        await beginNav(userLocation, lastHeadingRef.current || 0);
-    } else {
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => { 
-                const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude }; 
-                setUserLocation(loc); 
-                await beginNav(loc, pos.coords.heading || 0); 
-            }, 
-            async () => await beginNav(SIMULATION_START_LOCATION, 0), 
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
-    }
+    if (filteredMeldingen.length === 0 && !forcedPriorityId) return;
+    if (forcedPriorityId) setPriorityMissionId(forcedPriorityId);
+    if (assignments?.[0] && firestore) updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignments[0].id), { status: 'Started' });
+    setStartTime(new Date().toISOString());
+    setNavigationState('navigating');
+    if (isMeldingenType && !forcedPriorityId) openInGoogleMaps();
   };
 
   const handleStopRit = async () => {
-    if (navigationState === 'navigating' && user && firestore && selectedRouteId && startTime) {
-        const routeData = type === 'veegroutes' ? currentProject?.veegroutes?.find(r => r.id === selectedRouteId) : currentProject?.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
-        const allObjectIds = filteredMeldingen.map(m => m.id);
-        const skipped = allObjectIds.filter(id => !completedObjects.includes(id));
-        const historyRef = collection(firestore, 'users', user.uid, 'routes');
-        await addDocumentNonBlocking(historyRef, {
-            userId: user.uid,
-            projectId: selectedProjectId,
-            originalRouteId: selectedRouteId,
-            routeName: routeData?.naam || 'Onbekende Route',
-            date: todayStr,
-            startTime: startTime,
-            endTime: new Date().toISOString(),
-            completedObjects: completedObjects,
-            skippedObjects: skipped,
-            totalObjects: allObjectIds.length
-        });
-        if (assignments && assignments.length > 0) {
-            const assignment = assignments[0];
-            updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignment.id), { status: 'Completed' });
-        }
-        updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
-            navigatingToMissionId: null,
-            navigatingToMissionStartedAt: null 
-        });
-    }
-    setNavigationState('setup'); setCurrentRouteGeometry(null); setDisplayedRouteGeometry(null); setRouteInfo(null);
-    setIsManualMode(false); visualPosRef.current = null; targetPosRef.current = null; setPriorityMissionId(null); setStartTime(null);
-    const map = mapRef.current?.getMap();
-    if (map) {
-      map.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 1000 });
-      if (filteredMeldingen.length > 0) {
-        const points = filteredMeldingen.map(m => [m.longitude, m.latitude]);
-        if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
-        const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
-        const bbox = turf.bbox(pointsCollection);
-        if (bbox[0] !== Infinity) map.fitBounds(bbox as [number, number, number, number], { padding: 80, duration: 1500 });
-      }
-    }
-  };
-
-  const handleHervatNavigatie = () => { setIsManualMode(false); };
-
-  const handleZoomToAll = () => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const points: [number, number][] = filteredMeldingen.map(m => [m.longitude, m.latitude]);
-    if (userLocation) points.push([userLocation.longitude, userLocation.latitude]);
-    else if (isSimulationMode) points.push([SIMULATION_START_LOCATION.longitude, SIMULATION_START_LOCATION.latitude]);
-    if (points.length > 0) {
-      const pointsCollection = turf.featureCollection(points.map(p => turf.point(p)));
-      const bbox = turf.bbox(pointsCollection);
-      if (bbox[0] !== Infinity) {
-        map.fitBounds(bbox as [number, number, number, number], { padding: 80, duration: 1500, pitch: 0, bearing: 0 });
-        setIsManualMode(true);
-      }
-    }
-  };
-
-  const isSvg = (str: string) => {
-    if (!str) return false;
-    const trimmed = str.trim().toLowerCase();
-    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
-  };
-
-  const renderMarkerIcon = (category: string) => {
-    const iconVal = categoryIcons[category];
-    if (!iconVal) return <Icons.AlertCircle className="h-5 w-5 text-slate-400" />;
-    let iconColor = '#007AFF';
-    let iconName = 'AlertCircle';
-    if (iconVal.startsWith('lucide:')) {
-      const parts = iconVal.split(':');
-      iconName = parts[1] || 'AlertCircle';
-      iconColor = parts[2] || '#007AFF';
-      const IconComp = (Icons as any)[iconName] || Icons.AlertCircle;
-      return <IconComp className="h-5 w-5" style={{ color: iconColor }} />;
-    }
-    if (isSvg(iconVal)) return <div className="h-5 w-5 flex items-center justify-center [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: iconVal }} />;
-    if (iconVal.startsWith('http')) return <div className="h-5 w-5 relative flex items-center justify-center overflow-hidden rounded-full"><img src={iconVal} alt="icon" className="h-full w-full object-cover" /></div>;
-    const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
-    return <IconComp className="h-5 w-5" style={{ color: '#007AFF' }} />;
-  };
-
-  const clickedMelding = useMemo(() => filteredMeldingen.find(m => m.id === clickedMarkerId), [filteredMeldingen, clickedMarkerId]);
-
-  const renderSetupUI = () => {
-    if (type === 'meldingen') return null;
-    const availableRoutes = type === 'veegroutes' ? currentProject?.veegroutes : currentProject?.prullenbakkenroutes;
-    return (
-        <div className="flex-1 overflow-y-auto bg-slate-50 p-6 flex flex-col items-center justify-center text-center">
-            <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in-95 duration-500">
-                <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border-4 border-slate-100 mx-auto w-32 h-32 flex items-center justify-center">
-                    <Navigation className="h-16 w-16 text-primary animate-pulse" />
-                </div>
-                <div className="space-y-3">
-                    <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">Rit Voorbereiden</h2>
-                    <p className="text-sm font-medium text-slate-500">Kies een project en route om de rit te starten.</p>
-                </div>
-                <div className="space-y-4">
-                    <div className="space-y-1.5 text-left">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kies Project</Label>
-                        <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
-                            <SelectTrigger className="h-14 font-black rounded-3xl border-none bg-white shadow-inner px-6 text-slate-900">
-                                <SelectValue placeholder="Project..." />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-3xl shadow-2xl p-2 border-none">
-                                {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-1.5 text-left">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kies Route</Label>
-                        <Select value={selectedRouteId || ''} onValueChange={setSelectedRouteId} disabled={!selectedProjectId}>
-                            <SelectTrigger className="h-14 font-black rounded-3xl border-none bg-white shadow-inner px-6 text-slate-900">
-                                <SelectValue placeholder="Route..." />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-3xl shadow-2xl p-2 border-none">
-                                {availableRoutes?.map(r => <SelectItem key={r.id} value={r.id} className="rounded-xl h-10">{r.naam}</SelectItem>)}
-                                {(!availableRoutes || availableRoutes.length === 0) && <p className="p-4 text-xs font-bold text-slate-400 italic">Geen routes gevonden</p>}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                <Button className="w-full h-16 font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/20 text-lg transition-all active:scale-95 bg-primary text-white hover:bg-primary/90" disabled={!selectedRouteId || isLocating} onClick={() => handleStartRit()}>
-                    {isLocating ? <Loader2 className="mr-3 animate-spin" /> : <Play className="mr-3 fill-current" />}
-                    RIT STARTEN
-                </Button>
-            </div>
-        </div>
-    );
-  };
-
-  const SortIndicator = ({ field }: { field: string }) => {
-    if (sortConfig.field !== field) return <Icons.ArrowUpDown className="h-3 w-3 opacity-20 ml-1" />;
-    return sortConfig.order === 'asc' ? <Icons.ArrowUp className="h-3 w-3 text-primary ml-1" /> : <Icons.ArrowDown className="h-3 w-3 text-primary ml-1" />;
+    setNavigationState('setup'); setStartTime(null); setPriorityMissionId(null);
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
-        {isLocating && <LoadingScreen message="GPS koppelen..." className="fixed inset-0 z-[1000]" />}
-        {isCalculatingRoute && !displayedRouteGeometry && <LoadingScreen message="Berekening route..." className="fixed inset-0 z-[1000]" />}
-        
-        {navigationState === 'setup' && type !== 'meldingen' ? (
-            <div className="flex flex-col h-full">
-                <header className="h-16 bg-white/80 backdrop-blur-lg border-b flex items-center px-6 shrink-0 sticky top-0 z-50">
-                    <Button variant="ghost" size="icon" className="mr-4 h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                        <ArrowLeft className="h-6 w-6 text-slate-600" />
-                    </Button>
-                    <h1 className="text-xl font-black uppercase tracking-tighter text-slate-900 leading-none">Navigatie Setup</h1>
-                </header>
-                {renderSetupUI()}
+        <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
+            <div className="flex items-center gap-3">
+                 <Button variant="ghost" size="icon" className="rounded-full h-10 w-10" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6 text-slate-600" /></Button>
+                 {navigationState === 'navigating' && routeInfo && !isMeldingenType ? (
+                    <div className="flex items-center gap-4 bg-slate-900/5 px-4 py-2 rounded-full border-2 border-slate-200">
+                        <div className="flex items-center gap-2 text-base font-black text-slate-900"><Clock className="h-5 w-5 text-primary" />{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</div>
+                        <div className="h-5 w-0.5 bg-slate-300" />
+                        <div className="flex items-center gap-2 text-base font-black text-slate-900"><Navigation className="h-5 w-5 text-primary" />{(routeInfo.distance / 1000).toFixed(1)} km</div>
+                    </div>
+                 ) : (
+                    <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 leading-none">Navigatie</h2>
+                 )}
             </div>
-        ) : (
-            <>
-                <div className="absolute inset-0 z-0" style={{ touchAction: 'none' }}>
-                    <MapGL ref={mapRef} initialViewState={{ longitude: SIMULATION_START_LOCATION.longitude, latitude: SIMULATION_START_LOCATION.latitude, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onMove={(evt) => { if (evt.originalEvent) setIsManualMode(true); }}>
-                        {smoothLocation && !isNaN(smoothLocation.longitude) && !isNaN(smoothLocation.latitude) && (
-                            <Marker longitude={smoothLocation.longitude} latitude={smoothLocation.latitude} anchor="center">
-                                <div className="relative flex items-center justify-center w-16 h-16">
-                                    <div className="absolute h-10 w-10 bg-primary/20 rounded-full animate-ping" />
-                                    <div className="h-6 w-6 rounded-full bg-primary border-4 border-white shadow-2xl relative z-10" />
-                                </div>
-                            </Marker>
-                        )}
-                        {filteredMeldingen.map((m) => {
-                            if (isNaN(m.longitude) || isNaN(m.latitude)) return null;
-                            const isCompleted = m.status === 'Afgerond';
-                            const beingNavigatedBy = navigatingUsersMap.get(m.id);
-                            const isBeingNavigated = beingNavigatedBy && beingNavigatedBy.length > 0;
-                            const isNext = nextMission?.id === m.id && navigationState === 'navigating';
-                            const isClicked = clickedMarkerId === m.id;
-                            const missionIndex = sortedMissions.findIndex(sm => sm.id === m.id);
-                            return (
-                                <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={e => { e.originalEvent.stopPropagation(); setClickedMarkerId(m.id); }}>
-                                    <div className="relative flex items-center justify-center w-14 h-14">
-                                        {showAssignmentBubbles && m.behandelaar && (
-                                            <div className="absolute bottom-full mb-2 bg-white/95 backdrop-blur-md border-2 border-slate-900 px-2.5 py-1 rounded-full shadow-xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap">
-                                                <span className="text-[9px] font-black uppercase text-slate-900 leading-none">{m.behandelaar}</span>
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-slate-900" />
+            <div className="flex items-center gap-2">
+                <Popover>
+                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
+                    <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-[2.5rem] shadow-2xl bg-white border-none"><div className="space-y-6"><div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div><div className="space-y-4"><div className="flex items-center justify-between"><div><Label className="text-xs font-black uppercase">Auto-open</Label><p className="text-[9px] font-bold text-slate-400">Open bij 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} /></div></div></div></PopoverContent>
+                </Popover>
+                {navigationState === 'setup' ? (
+                    <Button className="h-10 px-6 font-black uppercase bg-primary text-white shadow-xl rounded-xl tracking-widest text-xs" onClick={() => handleStartRit()} disabled={isMeldingenType && filteredMeldingen.length === 0}>
+                        <Play className="h-4 w-4 mr-2 fill-current" /> START
+                    </Button>
+                ) : (
+                    <Button variant="destructive" className="h-10 px-6 font-black uppercase rounded-xl shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
+                )}
+            </div>
+        </header>
+
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
+            {isMeldingenType ? (
+                <div className="flex-1 flex flex-col min-h-0">
+                    <div className="p-4 border-b bg-white shrink-0">
+                        <div className="relative max-w-md mx-auto">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input placeholder="Zoek opdracht..." className="pl-10 h-11 font-black uppercase text-xs rounded-2xl bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                        </div>
+                    </div>
+                    <ScrollArea className="flex-1 p-4 md:p-6">
+                        <div className="max-w-3xl mx-auto space-y-4 pb-20">
+                            {sortedMissions.map((m, index) => (
+                                <Card key={m.id} className="rounded-[2rem] border-none shadow-xl bg-white overflow-hidden active:scale-[0.98] transition-all cursor-pointer group" onClick={() => setActiveWerkbonId(m.id)}>
+                                    <div className="p-6 flex items-center gap-6">
+                                        <div className="h-12 w-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-lg font-black shadow-lg shrink-0">
+                                            {index + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-black text-lg uppercase tracking-tight text-slate-900 truncate">{m.intakenummer}</h3>
+                                                <Badge variant="outline" className="text-[9px] font-black uppercase border-2">{m.werkgebied || m.wijk || '-'}</Badge>
                                             </div>
-                                        )}
-                                        {isBeingNavigated && !isNext && isPrivileged && (
-                                            <div className="absolute bottom-full mb-2 bg-green-600 text-white px-3 py-1.5 rounded-full shadow-2xl animate-in zoom-in duration-200 z-[60] whitespace-nowrap flex items-center gap-2 border-2 border-white">
-                                                <Navigation className="h-3.5 w-3.5 fill-current" />
-                                                <span className="text-[10px] font-black uppercase tracking-tight">{beingNavigatedBy![0]} is onderweg</span>
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-green-600" />
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                                                <MapPin className="h-3.5 w-3.5 text-primary" />
+                                                <span className="truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</span>
                                             </div>
-                                        )}
-                                        {(isNext || isClicked || (isBeingNavigated && isPrivileged)) && (
-                                            <div className={cn("absolute inset-0 rounded-full border-[4px] opacity-80 transition-colors duration-500", (isBeingNavigated && isPrivileged) ? "border-green-500" : "border-black", (isNext || (isBeingNavigated && isPrivileged)) && "animate-pulse", isClicked && "border-primary")} />
-                                        )}
-                                        <div className={cn("relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all z-10", isCompleted ? "bg-green-50" : "bg-white/20 backdrop-blur-md", (isNext || isClicked || (isBeingNavigated && isPrivileged)) && "ring-4 ring-black/20 scale-125", "cursor-pointer hover:scale-110")}>
-                                            {renderMarkerIcon(m.hoofdcategorie)}
-                                            {!isCompleted && missionIndex !== -1 && (
-                                                <div className="absolute -bottom-1 -left-1 bg-slate-900 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center border-2 border-white text-[8px] font-black shadow-lg">
-                                                    {missionIndex + 1}
-                                                </div>
-                                            )}
-                                            <div className={cn("absolute -top-1 -right-1 rounded-full w-4.5 h-4.5 flex items-center justify-center border border-black shadow-lg overflow-hidden", isCompleted ? "bg-green-500" : "bg-yellow-400")}>
-                                                {isCompleted ? <Check className="h-3 w-3 text-white" /> : <Wrench className="h-3 w-3 text-slate-900" />}
-                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2 shrink-0">
+                                            <Button variant="outline" size="icon" className="h-10 w-10 rounded-full border-2 text-green-600 border-green-100 hover:bg-green-50" onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}>
+                                                <ExternalLink className="h-5 w-5" />
+                                            </Button>
+                                            <ChevronRight className="h-6 w-6 text-slate-200 group-hover:text-primary transition-all group-hover:translate-x-1" />
                                         </div>
                                     </div>
-                                </Marker>
-                            );
-                        })}
-                        {navigationState === 'navigating' && displayedRouteGeometry && (
-                            <Source id="route-line" type="geojson" data={displayedRouteGeometry}><Layer {...routeLayerCasing} /><Layer {...routeLayer} /></Source>
-                        )}
-                    </MapGL>
-                </div>
-
-                {clickedMarkerId && clickedMelding && (
-                    <div className="absolute inset-0 z-[80] bg-black/20 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
-                        <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border-none">
-                            <div className="p-8 bg-slate-50 text-slate-900 flex justify-between items-start border-b">
-                                <div className="space-y-1.5">
-                                    <Badge className="bg-primary border-none text-[9px] font-black uppercase tracking-widest px-3 h-6 text-white rounded-full shadow-md">Bestemming</Badge>
-                                    <h3 className="text-2xl font-black uppercase tracking-tight leading-none pt-1">{clickedMelding.intakenummer}</h3>
-                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[220px]">{clickedMelding.straatnaam} {clickedMelding.huisnummer}</p>
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-400 hover:bg-slate-200" onClick={() => setClickedMarkerId(null)}><X className="h-6 w-6" /></Button>
-                            </div>
-                            <div className="p-8 grid grid-cols-1 gap-4">
-                                <Button className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md bg-slate-900 text-white hover:bg-slate-800 border-none gap-3 transition-all active:scale-95" onClick={() => { setActiveWerkbonId(clickedMarkerId); setClickedMarkerId(null); }}><FileText className="h-6 w-6 text-primary" /> OPEN WERKBON</Button>
-                                <Button className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-2xl bg-primary text-white hover:bg-primary/90 border-none gap-3 transition-all active:scale-95 shadow-primary/20" onClick={() => { handleStartRit(clickedMarkerId); setClickedMarkerId(null); }}><Navigation className="h-6 w-6 text-white fill-current" /> NAVIGEER NU</Button>
-                                <Button variant="outline" className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md border-2 border-green-600 text-green-600 hover:bg-green-50 gap-3 transition-all active:scale-95" onClick={() => { openInGoogleMaps(clickedMelding.latitude, clickedMelding.longitude); setClickedMarkerId(null); }}><ExternalLink className="h-6 w-6" /> GOOGLE MAPS</Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <div className="absolute top-0 left-0 right-0 z-20 h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-auto gap-2">
-                    <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-                        {navigationState !== 'navigating' && (
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                                <ArrowLeft className="h-6 w-6 text-slate-600" />
-                            </Button>
-                        )}
-                        {navigationState === 'navigating' && routeInfo && (
-                            <div className="flex items-center gap-4 bg-slate-900/5 px-4 py-2 rounded-full border-2 border-slate-200 shadow-sm">
-                                <div className="flex items-center gap-2">
-                                    <Clock className="h-5 w-5 text-primary" />
-                                    <span className="text-base font-black text-slate-900 leading-none">{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</span>
-                                </div>
-                                <div className="h-5 w-0.5 bg-slate-300" />
-                                <div className="flex items-center gap-2">
-                                    <Navigation className="h-5 w-5 text-primary" />
-                                    <span className="text-base font-black text-slate-900 leading-none">{(routeInfo.distance / 1000).toFixed(1)} km</span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-                        <Popover>
-                            <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
-                            <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-[2.5rem] shadow-2xl bg-white/95 backdrop-blur-md border-none text-sm"><div className="space-y-8"><div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div><div className="space-y-8"><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Kanteling</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div><Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Dynamisch zoomen</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Op basis van snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} className="data-[state=checked]:bg-primary" /></div>{!dynamicZoomEnabled && (<div className="space-y-3 animate-in slide-in-from-top-2 duration-300"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Vaste zoomhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{navZoom.toFixed(1)}</span></div><div className="flex items-center gap-3"><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div></div>)}<Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Auto-open</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Open bij 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} className="data-[state=checked]:bg-primary" /></div></div></div></PopoverContent>
-                        </Popover>
-                        {navigationState === 'setup' && type === 'meldingen' && (
-                            <Button className="h-10 px-4 font-black uppercase bg-[#007AFF] text-white hover:bg-blue-700 shadow-xl rounded-xl transition-all active:scale-95 border-none tracking-widest text-[10px] sm:text-xs" onClick={() => handleStartRit()}>
-                                {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 mr-1 fill-current" />} 
-                                START
-                            </Button>
-                        )}
-                        {navigationState === 'navigating' && (
-                            <Button variant="destructive" className="h-10 px-4 font-black uppercase rounded-xl shadow-xl transition-all active:scale-95 border-none tracking-widest text-[10px] sm:text-xs" onClick={handleStopRit}>STOP</Button>
-                        )}
-                    </div>
-                </div>
-
-                {navigationState === 'navigating' && !activeWerkbonId && (
-                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl animate-in slide-in-from-bottom-10 duration-700 pointer-events-none">
-                        <div className="mb-6 flex items-center justify-between gap-4 w-full">
-                            <div className="relative pointer-events-auto">
-                                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full border-[6px] border-primary flex flex-col items-center justify-center bg-white/95 backdrop-blur-md shadow-2xl shrink-0">
-                                    <span className="text-2xl sm:text-4xl font-black text-slate-900 leading-none tabular-nums">{speedKmh}</span>
-                                    <span className="text-[9px] sm:text-[11px] font-black uppercase text-primary tracking-tighter">km/h</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-row gap-3 pointer-events-auto">
-                                {isManualMode && (
-                                    <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-primary/40" onClick={handleHervatNavigatie}><Navigation className="h-10 w-10 sm:h-12 sm:w-12 fill-current" /></Button>
-                                )}
-                                <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-green-600 text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-green-600/40" onClick={() => openInGoogleMaps()} title="Open volledige route in Google Maps / Android Auto"><ExternalLink className="h-10 w-10 sm:h-12 sm:w-12" /></Button>
-                            </div>
-                        </div>
-                        <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-none rounded-[2.5rem] overflow-hidden pointer-events-auto transition-all duration-300">
-                            <CardContent className="p-6 sm:p-8">
-                                <div className="flex flex-col gap-4 min-w-0 flex-1">
-                                    <div className="flex items-center justify-between gap-6">
-                                        <div className="space-y-1 min-w-0 flex-1">
-                                            <div className="flex items-center gap-2.5"><p className="text-[9px] font-black uppercase text-slate-500 tracking-[0.1em]">Bestemming bereiken</p>{priorityMissionId === nextMission?.id && <Badge className="bg-primary text-white border-none h-5 text-[8px] font-black uppercase px-2 rounded-full shadow-md">Priority</Badge>}</div>
-                                            <p className="text-lg sm:text-2xl font-black text-slate-900 uppercase truncate tracking-tight">{nextMission?.intakenummer || 'Rit voltooid'}</p>
+                                    {m.extra_informatie && (
+                                        <div className="px-6 pb-6 pt-0">
+                                            <p className="text-[11px] font-medium text-slate-400 italic line-clamp-1">"{m.extra_informatie}"</p>
                                         </div>
-                                        <div className="flex items-center gap-3 shrink-0">
-                                            {nextMission?.containernummer && (<div className="flex flex-col items-end"><p className="text-[8px] font-black uppercase text-slate-400 mb-1 tracking-widest">UNIT ID</p><Badge variant="secondary" className="text-xs h-8 font-black uppercase bg-yellow-400 text-slate-900 border-2 border-white shadow-xl px-3 rounded-xl">{nextMission.containernummer}</Badge></div>)}
-                                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100 transition-colors pointer-events-auto" onClick={() => setIsCockpitExpanded(!isCockpitExpanded)}>{isCockpitExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}</Button>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1 min-w-0"><p className="text-xs font-black text-slate-800 truncate uppercase tracking-tight flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-primary" /> {nextMission?.straatnaam} {nextMission?.huisnummer}, {nextMission?.plaats}</p></div>
-                                    {isCockpitExpanded && (<div className="pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300"><p className="text-[9px] font-black uppercase text-slate-400 mb-2 tracking-[0.1em]">Instructies</p><p className="text-xs font-medium text-slate-600 leading-relaxed italic bg-slate-50 p-4 rounded-2xl shadow-inner">"{nextMission?.extra_informatie || nextMission?.subcategorie || 'Volg de route naar de volgende bestemming.'}"</p></div>)}
-                                    <Progress value={100} className="h-1.5 bg-slate-100 mt-2" />
+                                    )}
+                                </Card>
+                            ))}
+                            {sortedMissions.length === 0 && (
+                                <div className="py-20 text-center opacity-20">
+                                    <CheckCircle2 className="h-16 w-16 mx-auto mb-4" />
+                                    <p className="font-black uppercase tracking-widest">Geen actieve opdrachten</p>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                )}
-
-                <div className={cn("absolute bottom-0 left-0 right-0 z-40 bg-white border-t-4 border-slate-900 flex flex-col overflow-hidden shadow-2xl h-[280px] transition-all duration-500", navigationState === 'navigating' ? "translate-y-full opacity-0" : "translate-y-0 opacity-100")}>
-                    <div className="h-auto min-h-[3.5rem] flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-2 sm:py-0 cursor-default shrink-0 border-b bg-slate-50 gap-3">
-                        <div className="flex flex-col sm:flex-row items-center justify-between w-full sm:flex-1 pointer-events-auto gap-3" onClick={e => e.stopPropagation()}>
-                            <div className="relative w-full sm:max-w-xs shrink-0">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input placeholder="Zoek opdracht..." className="h-10 pl-10 text-xs font-black uppercase tracking-tight rounded-2xl border-none shadow-inner bg-white focus:ring-primary/20" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                            </div>
-                            <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0 overflow-x-auto no-scrollbar py-1 justify-start sm:justify-end">
-                                <Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" onClick={handleZoomToAll}><Maximize className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Overzicht</span><span className="sm:hidden ml-1">ZICHT</span></Button>
-                                {type === 'meldingen' && (
-                                    <>
-                                        <Button variant={showTodayCompleted ? "default" : "outline"} size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" onClick={() => { setShowTodayCompleted(!showTodayCompleted); setIsManualMode(false); }}><CheckCircle2 className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">{showTodayCompleted ? "Verberg voltooid" : "Vandaag gereed"}</span><span className="sm:hidden ml-1">GEREED</span></Button>
-                                        {isPrivileged && (
-                                            <Button variant={showAssignmentBubbles ? "default" : "outline"} size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 shrink-0" onClick={() => setShowAssignmentBubbles(!showAssignmentBubbles)}><User className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">{showAssignmentBubbles ? "Verberg labels" : "Behandelaars"}</span><span className="sm:hidden ml-1">TEAM</span></Button>
-                                        )}
-                                    </>
-                                )}
-                                <Popover><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200 gap-2 shrink-0"><LayoutGrid className="h-4 w-4" /><span className="hidden sm:inline">Kolommen</span><span className="sm:hidden">TAB</span></Button></PopoverTrigger><PopoverContent align="end" className="w-64 p-6 rounded-3xl shadow-2xl border-none bg-white/95 backdrop-blur-md text-sm"><div className="space-y-6"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b pb-3">Weergaveinstellingen</p><div className="space-y-3">{Object.keys(visibleColumns).map(colId => (<div key={colId} className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-slate-50 transition-colors"><Checkbox id={`col-${colId}`} checked={visibleColumns[colId] ?? true} onCheckedChange={() => toggleColumnVisibility(colId)} className="rounded-md border-2" /><Label htmlFor={`col-${colId}`} className="text-xs font-black uppercase tracking-tight text-slate-700 cursor-pointer">{colId}</Label></div>))}</div></div></PopoverContent></Popover>
-                            </div>
-                        </div>
-                    </div>
-                    <ScrollArea className="flex-1 bg-white">
-                        <div className="p-4 flex flex-col gap-4 lg:hidden">
-                            {sortedMissions.map((m, index) => {
-                                const isCompleted = m.status === 'Afgerond';
-                                const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0;
-                                const distKm = (dist / 1000).toFixed(1);
-                                return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-[2rem] border-2 flex flex-col justify-between p-5 active:scale-[0.98] transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/30")}><div className="flex justify-between items-start gap-4"><div className="min-w-0 flex-1"><div className="flex items-center gap-2.5 mb-1.5"><span className="text-xs font-black text-slate-300 w-5">{index + 1}</span><div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-sm uppercase text-slate-900 tracking-tight truncate leading-none">{m.intakenummer}</span></div><p className="text-xs font-bold text-slate-700 truncate leading-tight pl-8">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[9px] font-black uppercase h-5 px-2 border-none bg-slate-50 text-slate-400 shrink-0 rounded-lg">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-3 border-t border-slate-50 pt-3 mt-auto pl-8"><span className="text-[10px] font-black uppercase text-primary truncate max-w-[160px] tracking-widest">{m.subcategorie}</span><span className="text-[10px] font-black text-slate-400 shrink-0 tabular-nums uppercase">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1.5 bg-green-500 rounded-bl-[1.5rem] shadow-lg"><Check className="h-3.5 w-3.5 text-white" /></div>)}</Card>);
-                            })}
-                        </div>
-                        <div className="hidden lg:block p-0">
-                            <Table className="min-w-[1200px] border-collapse">
-                                <TableHeader className="bg-slate-50/80 backdrop-blur-md sticky top-0 z-10 border-b-2">
-                                    <TableRow className="h-12 hover:bg-transparent">
-                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-400 pl-8 border-r w-[70px]">#</TableHead>
-                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('intakenummer')}><div className="flex items-center">Bestemming <SortIndicator field="intakenummer" /></div></TableHead>
-                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('locatie')}><div className="flex items-center">Locatie <SortIndicator field="locatie" /></div></TableHead>
-                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('omschrijving')}><div className="flex items-center">Omschrijving <SortIndicator field="omschrijving" /></div></TableHead>
-                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('categorie')}><div className="flex items-center">Categorie <SortIndicator field="categorie" /></div></TableHead>
-                                        <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 text-right pr-8 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('afstand')}><div className="flex items-center justify-end">Afstand <SortIndicator field="afstand" /></div></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {sortedMissions.map((m, index) => { 
-                                        const isCompleted = m.status === 'Afgerond'; 
-                                        const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0; 
-                                        const distKm = (dist / 1000).toFixed(1);
-                                        return (
-                                            <TableRow key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("cursor-pointer transition-all border-b h-14", isCompleted ? "bg-green-50/20 opacity-60" : "hover:bg-primary/5")}>
-                                                <TableCell className="pl-8 border-r font-black text-slate-300 text-[11px]">{index + 1}</TableCell>
-                                                <TableCell className="border-r"><div className="flex items-center gap-3"><div className={cn("h-2.5 w-2.5 rounded-full shadow-sm", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-sm uppercase text-slate-900 tracking-tight">{m.intakenummer}</span></div></TableCell>
-                                                <TableCell className="border-r"><div className="flex flex-col"><span className="text-xs font-black uppercase text-slate-700 tracking-tight">{m.straatnaam} {m.huisnummer}</span><span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">{m.plaats}</span></div></TableCell>
-                                                <TableCell className="border-r max-w-md truncate text-xs font-medium text-slate-500 italic">"{m.extra_informatie || '-'}"</TableCell>
-                                                <TableCell className="border-r"><div className="flex flex-col"><span className="text-[10px] font-black uppercase text-primary tracking-[0.1em]">{m.hoofdcategorie}</span><span className="text-[9px] font-bold uppercase text-slate-400 tracking-widest">{m.subcategorie}</span></div></TableCell>
-                                                <TableCell className="text-right pr-8 font-black text-xs tabular-nums text-slate-400 uppercase tracking-tighter">{distKm} km</TableCell>
-                                            </TableRow>
-                                        ); 
-                                    })}
-                                </TableBody>
-                            </Table>
+                            )}
                         </div>
                     </ScrollArea>
                 </div>
-            </>
-        )}
+            ) : (
+                <div className="flex-1 relative">
+                    <MapGL ref={mapRef} initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN}>
+                        {/* Map content... */}
+                    </MapGL>
+                </div>
+            )}
+        </div>
 
         {activeWerkbonId && (
             <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-300">
@@ -1448,16 +873,7 @@ export default function StartNavigationPage() {
                     onClose={() => setActiveWerkbonId(null)} 
                     onCompleted={(id) => { 
                         setCompletedObjects(prev => [...prev, id]); 
-                        setActiveWerkbonId(null); 
-                        setIsManualMode(false); 
-                        setPriorityMissionId(null); 
-                        if (user && firestore) {
-                            updateDocumentNonBlocking(doc(firestore, 'users', user.uid), { 
-                                navigatingToMissionId: null,
-                                navigatingToMissionStartedAt: null 
-                            });
-                        }
-                        setTimeout(() => fetchRoute(true), 150); 
+                        setActiveWerkbonId(null);
                     }} 
                 />
             </div>
