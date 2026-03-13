@@ -44,10 +44,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
 
       // Mappenbeheer per gebruiker (Subcollectie)
-      // Gebruikers mogen eigen mappen inzien en beheerders ook van anderen
       match /folders/{folderId} {
-        allow read, list: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
-        allow write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
+        allow read, list, get: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
+        allow create, delete: if isPrivileged();
+        allow update: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
 
       // Berichten tussen gebruikers

@@ -990,17 +990,20 @@ export default function StartNavigationPage() {
                                                 {index + 1}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-0.5 gap-2 leading-none">
+                                                <div className="flex items-center justify-between mb-1 gap-2 leading-none">
                                                     <h3 className={cn(
-                                                        "font-black text-sm uppercase tracking-tight truncate",
+                                                        "font-black text-sm lg:text-base uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
                                                     {m.status === 'Nieuw' && (
-                                                        <Badge className="text-[10px] font-black uppercase bg-red-500 text-white h-5 px-2 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
+                                                        <Badge className="text-[10px] font-black uppercase bg-red-600 text-white h-5 px-2 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
                                                     )}
                                                 </div>
-                                                <p className={cn("text-base font-bold truncate leading-tight mt-1.5", isCompleted ? "text-green-700/60" : "text-slate-700")}>
+                                                <p className={cn("text-sm lg:text-base font-black truncate leading-tight", isCompleted ? "text-green-700/60" : "text-slate-900")}>
                                                     {m.straatnaam} {m.huisnummer}
+                                                </p>
+                                                <p className={cn("text-[11px] lg:text-xs font-bold uppercase tracking-widest mt-1", isCompleted ? "text-green-600/40" : "text-slate-400")}>
+                                                    {m.plaats}
                                                 </p>
                                             </div>
                                             <div className="flex gap-1.5 shrink-0 items-center">
