@@ -840,7 +840,7 @@ export default function StartNavigationPage() {
   useEffect(() => {
     let animId: number;
     const updateVisualPos = () => {
-        // Reduced frequency logic to prevent heating - check if we even need to update
+        // Battery optimization: only calculate if we are actually navigating and have targets
         if (targetPosRef.current && navigationState === 'navigating') {
             if (!visualPosRef.current) {
                 visualPosRef.current = { ...targetPosRef.current };
@@ -849,7 +849,7 @@ export default function StartNavigationPage() {
                 const posFactor = 0.08; 
                 const headingFactor = 0.05;
                 
-                // Only do math if distance is significant or heading changed
+                // Only do math if distance is significant to reduce CPU heat
                 const dLng = targetPosRef.current.lng - visualPosRef.current.lng;
                 const dLat = targetPosRef.current.lat - visualPosRef.current.lat;
                 
@@ -879,7 +879,7 @@ export default function StartNavigationPage() {
                 }
             }
             
-            // Snape behavior only if we have a route
+            // Snap to route logic only if we have a route geometry
             if (currentRouteGeometry) {
                 try {
                     const line = turf.lineString(currentRouteGeometry.coordinates);
@@ -980,11 +980,15 @@ export default function StartNavigationPage() {
     }
   };
 
-  const handleStartRit = async () => {
-    if (filteredMeldingen.length === 0 && sortedMissions.length === 0) return;
+  const handleStartRit = async (forcedPriorityId?: string) => {
+    if (filteredMeldingen.length === 0 && sortedMissions.length === 0 && !forcedPriorityId) return;
     
     setIsLocating(true);
     setIsCalculatingRoute(true);
+
+    if (forcedPriorityId) {
+        setPriorityMissionId(forcedPriorityId);
+    }
 
     if (assignments && assignments.length > 0 && firestore) {
         const assignment = assignments[0];
@@ -1002,7 +1006,8 @@ export default function StartNavigationPage() {
         visualPosRef.current = { lng: loc.longitude, lat: loc.latitude };
         visualHeadingRef.current = heading;
         
-        if (filteredMeldingen.length > 1) {
+        // Use Matrix API to find true road distance for all candidates from ACTUAL location
+        if (filteredMeldingen.length > 1 && !forcedPriorityId) {
             const topCandidates = sortedMissions.slice(0, 15);
             const coordinates = [[loc.longitude, loc.latitude], ...topCandidates.map(m => [m.longitude, m.latitude])];
             const coordStr = coordinates.map(c => c.join(',')).join(';');
@@ -1030,6 +1035,11 @@ export default function StartNavigationPage() {
         setNavigationState('navigating'); 
         setIsLocating(false); 
         setIsManualMode(false);
+        
+        // If already navigating, force a fresh route fetch immediately
+        if (navigationState === 'navigating') {
+            setTimeout(() => fetchRoute(true), 100);
+        }
     };
 
     if (userLocation) {
@@ -1189,7 +1199,7 @@ export default function StartNavigationPage() {
                         </Select>
                     </div>
                 </div>
-                <Button className="w-full h-16 font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/20 text-lg transition-all active:scale-95 bg-primary text-white hover:bg-primary/90" disabled={!selectedRouteId || isLocating} onClick={handleStartRit}>
+                <Button className="w-full h-16 font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/20 text-lg transition-all active:scale-95 bg-primary text-white hover:bg-primary/90" disabled={!selectedRouteId || isLocating} onClick={() => handleStartRit()}>
                     {isLocating ? <Loader2 className="mr-3 animate-spin" /> : <Play className="mr-3 fill-current" />}
                     RIT STARTEN
                 </Button>
@@ -1285,7 +1295,7 @@ export default function StartNavigationPage() {
                             </div>
                             <div className="p-8 grid grid-cols-1 gap-4">
                                 <Button className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md bg-slate-900 text-white hover:bg-slate-800 border-none gap-3 transition-all active:scale-95" onClick={() => { setActiveWerkbonId(clickedMarkerId); setClickedMarkerId(null); }}><FileText className="h-6 w-6 text-primary" /> OPEN WERKBON</Button>
-                                <Button className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-2xl bg-primary text-white hover:bg-primary/90 border-none gap-3 transition-all active:scale-95 shadow-primary/20" onClick={() => { setPriorityMissionId(clickedMarkerId); handleStartRit(); setClickedMarkerId(null); }}><Navigation className="h-6 w-6 text-white fill-current" /> NAVIGEER NU</Button>
+                                <Button className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-2xl bg-primary text-white hover:bg-primary/90 border-none gap-3 transition-all active:scale-95 shadow-primary/20" onClick={() => { handleStartRit(clickedMarkerId); setClickedMarkerId(null); }}><Navigation className="h-6 w-6 text-white fill-current" /> NAVIGEER NU</Button>
                                 <Button 
                                     variant="outline"
                                     className="h-16 rounded-3xl font-black uppercase tracking-widest shadow-md border-2 border-green-600 text-green-600 hover:bg-green-50 gap-3 transition-all active:scale-95" 
@@ -1330,7 +1340,7 @@ export default function StartNavigationPage() {
                             <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-[2.5rem] shadow-2xl bg-white/95 backdrop-blur-md border-none text-sm"><div className="space-y-8"><div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div><div className="space-y-8"><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kijkhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navOffset)}px</span></div><Slider value={[navOffset]} min={0} max={600} step={10} onValueChange={([val]) => updateNavOffset(val)} /></div><div className="space-y-3"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Kanteling</Label><span className="text-[10px] font-black text-primary uppercase">{Math.round(navPitch)}°</span></div><Slider value={[navPitch]} min={0} max={85} step={1} onValueChange={([val]) => updateNavPitch(val)} /></div><Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Dynamisch zoomen</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Op basis van snelheid</p></div><Switch checked={dynamicZoomEnabled} onCheckedChange={setDynamicZoomEnabled} className="data-[state=checked]:bg-primary" /></div>{!dynamicZoomEnabled && (<div className="space-y-3 animate-in slide-in-from-top-2 duration-300"><div className="flex justify-between items-center"><Label className="text-[10px] font-black uppercase tracking-widest">Vaste zoomhoogte</Label><span className="text-[10px] font-black text-primary uppercase">{navZoom.toFixed(1)}</span></div><div className="flex items-center gap-3"><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom - 0.5)}><Minus className="h-4 w-4" /></Button><div className="flex-1"><Slider value={[navZoom]} min={10} max={22} step={0.5} onValueChange={([val]) => updateNavZoom(val)} /></div><Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2" onClick={() => updateNavZoom(navZoom + 0.5)}><Plus className="h-4 w-4" /></Button></div></div>)}<Separator className="bg-slate-100" /><div className="flex items-center justify-between"><div className="space-y-1"><Label className="text-xs font-black uppercase text-slate-900 tracking-tight">Auto-open</Label><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Open bij 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} className="data-[state=checked]:bg-primary" /></div></div></div></PopoverContent>
                         </Popover>
                         {navigationState === 'setup' && type === 'meldingen' && (
-                            <Button className="h-10 px-4 font-black uppercase bg-[#007AFF] text-white hover:bg-blue-700 shadow-xl rounded-xl transition-all active:scale-95 border-none tracking-widest text-[10px] sm:text-xs" onClick={handleStartRit}>
+                            <Button className="h-10 px-4 font-black uppercase bg-[#007AFF] text-white hover:bg-blue-700 shadow-xl rounded-xl transition-all active:scale-95 border-none tracking-widest text-[10px] sm:text-xs" onClick={() => handleStartRit()}>
                                 {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 mr-1 fill-current" />} 
                                 START
                             </Button>
