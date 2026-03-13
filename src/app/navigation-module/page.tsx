@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -79,7 +78,7 @@ import {
 } from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment, UserFolder, UserProfile } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, RouteAssignment, UserFolder, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
@@ -276,30 +275,28 @@ function IntegratedWerkbonOverlay({
     const renderMainList = () => (
         <div className="flex flex-col h-full bg-slate-50">
             <div className="bg-white p-6 space-y-4 shadow-sm border-b">
-                <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                        <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Melding: {melding.intakenummer}</h2>
-                        <div className="space-y-2 pt-2">
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none mb-2">Melding: {melding.intakenummer}</h2>
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                            <MapPin className="h-3.5 w-3.5 text-slate-900" />
+                            <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                            <Tag className="h-3.5 w-3.5 text-slate-900" />
+                            <span className="uppercase tracking-tight">{melding.hoofdcategorie} • {melding.subcategorie}</span>
+                        </div>
+                        <div className="flex flex-col gap-y-1.5 pt-1">
                             <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                <MapPin className="h-3.5 w-3.5 text-slate-900" />
-                                <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
+                                <Calendar className="h-3.5 w-3.5 text-slate-900" />
+                                <span>{melding.datum ? formatDate(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                <Tag className="h-3.5 w-3.5 text-slate-900" />
-                                <span className="uppercase tracking-tight">{melding.hoofdcategorie} • {melding.subcategorie}</span>
-                            </div>
-                            <div className="flex flex-col gap-y-2 pt-1">
+                            {melding.containernummer && (
                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                    <Calendar className="h-3.5 w-3.5 text-slate-900" />
-                                    <span>{melding.datum ? formatDate(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
+                                    <Package className="h-3.5 w-3.5 text-slate-900" />
+                                    <span className="uppercase tracking-tight font-black">Container: {melding.containernummer}</span>
                                 </div>
-                                {melding.containernummer && (
-                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                        <Package className="h-3.5 w-3.5 text-slate-900" />
-                                        <span className="uppercase tracking-tight">Container: {melding.containernummer}</span>
-                                    </div>
-                                )}
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1002,10 +999,8 @@ export default function StartNavigationPage() {
                                                         "font-black text-sm uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
-                                                    {m.status === 'Nieuw' ? (
+                                                    {m.status === 'Nieuw' && (
                                                         <Badge className="text-[8px] font-black uppercase bg-red-500 text-white h-4 px-1.5 rounded-none animate-pulse">NEW</Badge>
-                                                    ) : (
-                                                        <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-slate-100 text-slate-500 h-4 px-1.5 rounded-none">{m.werkgebied || m.wijk || '-'}</Badge>
                                                     )}
                                                 </div>
                                                 <p className="text-[11px] font-bold text-slate-500 truncate">{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
