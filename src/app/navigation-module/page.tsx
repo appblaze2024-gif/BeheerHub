@@ -87,7 +87,7 @@ import {
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
@@ -1207,7 +1207,7 @@ export default function StartNavigationPage() {
             <div className="flex flex-col h-full">
                 <header className="h-16 bg-white/80 backdrop-blur-lg border-b flex items-center px-6 shrink-0 sticky top-0 z-50">
                     <Button variant="ghost" size="icon" className="mr-4 h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                        <ArrowLeft className="h-6 w-6" />
+                        <ArrowLeft className="h-6 w-6 text-slate-600" />
                     </Button>
                     <h1 className="text-xl font-black uppercase tracking-tighter text-slate-900 leading-none">Navigatie Setup</h1>
                 </header>
@@ -1292,13 +1292,11 @@ export default function StartNavigationPage() {
                     </div>
                 )}
 
-                <div className="absolute top-0 left-0 right-0 z-20 h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-none gap-2">
+                <div className="absolute top-0 left-0 right-0 z-20 h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-auto gap-2">
                     <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-                        {navigationState !== 'navigating' && (
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                                <ArrowLeft className="h-6 w-6 text-slate-600" />
-                            </Button>
-                        )}
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
+                            <ArrowLeft className="h-6 w-6 text-slate-600" />
+                        </Button>
                         
                         {navigationState === 'navigating' && routeInfo && (
                             <div className="flex items-center gap-4 bg-slate-900/5 px-4 py-2 rounded-full border-2 border-slate-200 shadow-sm">
@@ -1343,7 +1341,7 @@ export default function StartNavigationPage() {
                                     <span className="text-[9px] sm:text-[11px] font-black uppercase text-primary tracking-tighter">km/h</span>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-3 pointer-events-auto">
+                            <div className="flex flex-row gap-3 pointer-events-auto">
                                 {isManualMode && (
                                     <Button size="icon" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full shadow-2xl bg-primary text-white border-none transition-all active:scale-95 flex items-center justify-center shadow-primary/40" onClick={handleHervatNavigatie}>
                                         <Navigation className="h-10 w-10 sm:h-12 sm:w-12 fill-current" />

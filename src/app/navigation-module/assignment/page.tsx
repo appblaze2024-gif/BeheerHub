@@ -275,17 +275,17 @@ export default function RouteAssignmentPage() {
                     ) : (assignments && assignments.length > 0) ? (
                         <div className="divide-y divide-slate-50">
                             {assignments.map(a => {
-                                const assignedUser = users?.find(u => u.id === a.userId);
+                                const userA = users?.find(u => u.id === a.userId);
                                 return (
                                     <div key={a.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
                                         <div className="flex items-center gap-6 flex-1 min-w-0">
                                             <div className="flex items-center gap-3 w-48 shrink-0">
                                                 <div className="h-10 w-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-[10px] font-black uppercase shadow-lg">
-                                                    {assignedUser?.firstName?.[0]}{assignedUser?.lastName?.[0]}
+                                                    {userA?.firstName?.[0]}{userA?.lastName?.[0]}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="font-black text-xs uppercase text-slate-900 truncate">{assignedUser?.displayName || assignedUser?.email}</p>
-                                                    <Badge variant="outline" className="h-4 text-[7px] font-black uppercase tracking-tighter opacity-50 border-none">{assignedUser?.role}</Badge>
+                                                    <p className="font-black text-xs uppercase text-slate-900 truncate">{userA?.displayName || userA?.email}</p>
+                                                    <Badge variant="outline" className="h-4 text-[7px] font-black uppercase tracking-tighter opacity-50 border-none">{userA?.role}</Badge>
                                                 </div>
                                             </div>
                                             
