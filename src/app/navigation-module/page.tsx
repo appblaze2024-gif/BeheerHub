@@ -58,6 +58,7 @@ import {
   User,
   Briefcase,
   ChevronLeft,
+  ChevronRight,
   UploadCloud,
   Map as MapIcon,
   Hash,
@@ -437,7 +438,7 @@ function IntegratedWerkbonOverlay({
                     )}
                     {subView === 'photos' && (
                         <>
-                            {renderSubViewHeader("FOTO'S")}
+                            {renderSubViewHeaderHeader("FOTO'S")}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.1em]">Melding Foto's</Label>
@@ -1288,9 +1289,11 @@ export default function StartNavigationPage() {
 
                 <div className="absolute top-0 left-0 right-0 z-20 h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-none gap-2">
                     <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                            <ArrowLeft className="h-6 w-6 text-slate-600" />
-                        </Button>
+                        {navigationState !== 'navigating' && (
+                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
+                                <ArrowLeft className="h-6 w-6 text-slate-600" />
+                            </Button>
+                        )}
                         
                         {navigationState === 'navigating' && routeInfo && (
                             <div className="hidden sm:flex items-center gap-3 bg-slate-900/5 px-3 py-1.5 rounded-full border-2 border-slate-200 shadow-sm">
@@ -1451,7 +1454,7 @@ export default function StartNavigationPage() {
                                 const isCompleted = m.status === 'Afgerond';
                                 const dist = userLocation ? turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([m.longitude, m.latitude]), { units: 'meters' }) : 0;
                                 const distKm = (dist / 1000).toFixed(1);
-                                return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-[2rem] border-2 flex flex-col justify-between p-5 active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/30")}><div className="flex justify-between items-start gap-4"><div className="min-w-0 flex-1"><div className="flex items-center gap-2.5 mb-1.5"><span className="text-xs font-black text-slate-300 w-5">{index + 1}</span><div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-sm uppercase text-slate-900 tracking-tight truncate leading-none">{m.intakenummer}</span></div><p className="text-xs font-bold text-slate-700 truncate leading-tight pl-8">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[9px] font-black uppercase h-5 px-2 border-none bg-slate-50 text-slate-400 shrink-0 rounded-lg">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-3 border-t border-slate-50 pt-3 mt-auto pl-8"><span className="text-[10px] font-black uppercase text-primary truncate max-w-[160px] tracking-widest">{m.subcategorie}</span><span className="text-[10px] font-black text-slate-400 shrink-0 tabular-nums uppercase">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1.5 bg-green-500 rounded-bl-[1.5rem] shadow-lg"><Check className="h-3.5 w-3.5 text-white" /></div>)}</Card>);
+                                return (<Card key={m.id} onClick={() => setClickedMarkerId(m.id)} className={cn("w-full rounded-[2rem] border-2 flex flex-col justify-between p-5 active:scale-[0.98] transition-all cursor-pointer shadow-sm relative overflow-hidden", isCompleted ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-slate-100 hover:border-primary/30")}><div className="flex justify-between items-start gap-4"><div className="min-w-0 flex-1"><div className="flex items-center gap-2.5 mb-1.5"><span className="text-xs font-black text-slate-300 w-5">{index + 1}</span><div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", isCompleted ? "bg-green-500" : "bg-slate-400")} /><span className="font-black text-sm uppercase text-slate-900 tracking-tight truncate leading-none">{m.intakenummer}</span></div><p className="text-xs font-bold text-slate-700 truncate leading-tight pl-8">{[m.straatnaam, m.huisnummer].filter(Boolean).join(' ')}</p></div><Badge variant="outline" className="text-[9px] font-black uppercase h-5 px-2 border-none bg-slate-50 text-slate-400 shrink-0 rounded-lg">{m.werkgebied || m.wijk || '-'}</Badge></div><div className="flex items-center justify-between gap-3 border-t border-slate-50 pt-3 mt-auto pl-8"><span className="text-[10px] font-black uppercase text-primary truncate max-w-[160px] tracking-widest">{m.subcategorie}</span><span className="text-[10px] font-black text-slate-400 shrink-0 tabular-nums uppercase">{distKm} km</span></div>{isCompleted && (<div className="absolute top-0 right-0 p-1.5 bg-green-500 rounded-bl-[1.5rem] shadow-lg"><Check className="h-3.5 w-3.5 text-white" /></div>)}</Card>);
                             })}
                         </div>
                         <div className="hidden lg:block p-0">

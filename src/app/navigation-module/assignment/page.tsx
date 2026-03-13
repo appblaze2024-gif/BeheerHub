@@ -124,6 +124,11 @@ export default function RouteAssignmentPage() {
     }
   };
 
+  const getInitials = (name?: string) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] bg-slate-50 overflow-hidden">
       <header className="h-16 border-b bg-white/80 backdrop-blur-lg flex items-center justify-between px-6 shrink-0 shadow-sm z-10 sticky top-0">
@@ -184,7 +189,7 @@ export default function RouteAssignmentPage() {
                     >
                         <Avatar className="h-10 w-10 border-2 border-white shadow-sm shrink-0">
                             <AvatarFallback className="bg-slate-100 text-primary font-black text-xs uppercase">
-                                {u.firstName?.[0]}{u.lastName?.[0]}
+                                {getInitials(u.displayName || u.email)}
                             </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
@@ -270,17 +275,17 @@ export default function RouteAssignmentPage() {
                     ) : assignments && assignments.length > 0 ? (
                         <div className="divide-y divide-slate-50">
                             {assignments.map(a => {
-                                const user = users?.find(u => u.id === a.userId);
+                                const assignedUser = users?.find(u => u.id === a.userId);
                                 return (
                                     <div key={a.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
                                         <div className="flex items-center gap-6 flex-1 min-w-0">
                                             <div className="flex items-center gap-3 w-48 shrink-0">
                                                 <div className="h-10 w-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-[10px] font-black uppercase shadow-lg">
-                                                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                                                    {assignedUser?.firstName?.[0]}{assignedUser?.lastName?.[0]}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="font-black text-xs uppercase text-slate-900 truncate">{user?.displayName || user?.email}</p>
-                                                    <Badge variant="outline" className="h-4 text-[7px] font-black uppercase tracking-tighter opacity-50 border-none">{user?.role}</Badge>
+                                                    <p className="font-black text-xs uppercase text-slate-900 truncate">{assignedUser?.displayName || assignedUser?.email}</p>
+                                                    <Badge variant="outline" className="h-4 text-[7px] font-black uppercase tracking-tighter opacity-50 border-none">{assignedUser?.role}</Badge>
                                                 </div>
                                             </div>
                                             
