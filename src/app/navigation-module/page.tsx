@@ -131,13 +131,11 @@ function SectionRow({
 function IntegratedWerkbonOverlay({ 
     meldingId, 
     onClose, 
-    onCompleted,
-    onNavigateNow
+    onCompleted
 }: { 
     meldingId: string, 
     onClose: () => void, 
-    onCompleted: (id: string) => void,
-    onNavigateNow: (id: string) => void
+    onCompleted: (id: string) => void
 }) {
     const firestore = useFirestore();
     const app = useFirebaseApp();
@@ -248,21 +246,21 @@ function IntegratedWerkbonOverlay({
                         <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Melding: {melding.intakenummer}</h2>
                         <div className="space-y-2 pt-2">
                             <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                <MapPin className="h-3.5 w-3.5 text-primary" />
+                                <MapPin className="h-3.5 w-3.5 text-slate-900" />
                                 <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                <Tag className="h-3.5 w-3.5 text-primary" />
+                                <Tag className="h-3.5 w-3.5 text-slate-900" />
                                 <span className="uppercase tracking-tight">{melding.hoofdcategorie} • {melding.subcategorie}</span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <div className="flex flex-col gap-y-2 pt-1">
                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                    <Calendar className="h-3.5 w-3.5 text-primary" />
+                                    <Calendar className="h-3.5 w-3.5 text-slate-900" />
                                     <span>{melding.datum ? formatDate(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
                                 </div>
                                 {melding.containernummer && (
                                     <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                        <Package className="h-3.5 w-3.5 text-primary" />
+                                        <Package className="h-3.5 w-3.5 text-slate-900" />
                                         <span className="uppercase tracking-tight">Container: {melding.containernummer}</span>
                                     </div>
                                 )}
@@ -815,14 +813,6 @@ export default function StartNavigationPage() {
                 onClose={() => setActiveWerkbonId(null)} 
                 onCompleted={(id) => { 
                     setCompletedObjects(prev => [...prev, id]); 
-                    setActiveWerkbonId(null);
-                }}
-                onNavigateNow={(id) => {
-                    const mission = sortedMissions.find(m => m.id === id);
-                    if (mission) {
-                        setPriorityMissionId(id);
-                        openInGoogleMaps(mission.latitude, mission.longitude);
-                    }
                     setActiveWerkbonId(null);
                 }}
             />
