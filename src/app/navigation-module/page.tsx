@@ -812,14 +812,14 @@ export default function StartNavigationPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
-        <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
+        <header className="h-14 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-3">
-                 <Button variant="ghost" size="icon" className="rounded-full h-10 w-10" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6 text-slate-600" /></Button>
-                 <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 leading-none">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
+                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={() => router.push('/')}><ArrowLeft className="h-5 w-5 text-slate-600" /></Button>
+                 <h2 className="text-base font-black uppercase tracking-tight text-slate-900 leading-none">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
             </div>
             <div className="flex items-center gap-2">
                 <Popover>
-                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
+                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-slate-100"><Settings className="h-4 w-4 text-slate-600" /></Button></PopoverTrigger>
                     <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-[2.5rem] shadow-2xl bg-white border-none">
                         <div className="space-y-6">
                             <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div>
@@ -836,22 +836,22 @@ export default function StartNavigationPage() {
                 {isMeldingenType ? (
                     navigationState === 'setup' ? (
                         <Button 
-                            className="h-10 w-10 p-0 font-black uppercase bg-primary text-white shadow-xl rounded-none border-none hover:bg-primary/90 tracking-widest text-xs" 
+                            className="h-9 w-9 p-0 font-black uppercase bg-primary text-white shadow-xl rounded-none border-none hover:bg-primary/90 tracking-widest text-xs" 
                             onClick={handleRecalculateRoute} 
                             disabled={displayedMissions.length === 0 || isRecalculating}
                         >
-                            {isRecalculating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
+                            {isRecalculating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
                         </Button>
                     ) : (
-                        <Button variant="destructive" className="h-10 px-6 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
+                        <Button variant="destructive" className="h-9 px-4 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
                     )
                 ) : (
                     navigationState === 'setup' ? (
-                        <Button className="h-10 px-6 font-black uppercase bg-primary text-white shadow-xl rounded-none tracking-widest text-xs" onClick={() => handleStartRit()} disabled={displayedMissions.length === 0}>
-                            <Play className="h-4 w-4 mr-2 fill-current" /> START
+                        <Button className="h-9 px-4 font-black uppercase bg-primary text-white shadow-xl rounded-none tracking-widest text-xs" onClick={() => handleStartRit()} disabled={displayedMissions.length === 0}>
+                            <Play className="h-3.5 w-3.5 mr-1.5 fill-current" /> START
                         </Button>
                     ) : (
-                        <Button variant="destructive" className="h-10 px-6 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
+                        <Button variant="destructive" className="h-9 px-4 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
                     )
                 )}
             </div>
@@ -860,24 +860,24 @@ export default function StartNavigationPage() {
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative">
             {isMeldingenType ? (
                 <div className="flex-1 flex flex-col min-h-0">
-                    <div className="p-4 border-b bg-white shrink-0 space-y-4">
-                        <div className="flex flex-col sm:flex-row items-center gap-3">
-                            <div className="relative flex-1 w-full">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input placeholder="Zoek opdracht..." className="pl-10 h-11 font-black uppercase text-xs rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                    <div className="p-3 border-b bg-white shrink-0 space-y-2">
+                        <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                <Input placeholder="Zoeken..." className="h-9 pl-8 text-[11px] font-black uppercase rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
                             {isPrivileged && (
-                                <div className="w-full sm:w-64">
+                                <div className="w-36 sm:w-48">
                                     <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
-                                        <SelectTrigger className="h-11 font-bold border-2 rounded-none bg-white">
-                                            <div className="flex items-center gap-2">
-                                                <UserIcon className="h-3.5 w-3.5 text-primary" />
-                                                <SelectValue placeholder="Kies collega..." />
+                                        <SelectTrigger className="h-9 font-bold border-2 rounded-none bg-white px-2">
+                                            <div className="flex items-center gap-1.5 truncate">
+                                                <UserIcon className="h-3 w-3 text-primary shrink-0" />
+                                                <SelectValue placeholder="Collega..." />
                                             </div>
                                         </SelectTrigger>
                                         <SelectContent className="rounded-none shadow-2xl border-slate-100">
                                             {users?.map(u => (
-                                                <SelectItem key={u.id} value={u.id}>{u.displayName || u.email}</SelectItem>
+                                                <SelectItem key={u.id} value={u.id} className="text-xs">{u.displayName || u.email}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -889,16 +889,16 @@ export default function StartNavigationPage() {
                             <div className="flex-1">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" className="w-full h-11 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-4">
-                                            <div className="flex items-center gap-2">
+                                        <Button variant="outline" className="w-full h-9 font-black uppercase text-[9px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3">
+                                            <div className="flex items-center gap-2 truncate">
                                                 {selectedFolderId === null ? (
-                                                    <Inbox className="h-4 w-4 text-primary" />
+                                                    <Inbox className="h-3.5 w-3.5 text-primary" />
                                                 ) : selectedFolderId === 'all' ? (
-                                                    <LayoutGrid className="h-4 w-4 text-primary" />
+                                                    <LayoutGrid className="h-3.5 w-3.5 text-primary" />
                                                 ) : (
-                                                    <Folder className="h-4 w-4 text-primary" />
+                                                    <Folder className="h-3.5 w-3.5 text-primary" />
                                                 )}
-                                                <span>
+                                                <span className="truncate">
                                                     {selectedFolderId === null 
                                                         ? 'Inbox (Niet ingedeeld)' 
                                                         : selectedFolderId === 'all' 
@@ -906,42 +906,42 @@ export default function StartNavigationPage() {
                                                             : userFolders?.find(f => f.id === selectedFolderId)?.name || 'Kies map...'}
                                                 </span>
                                             </div>
-                                            <ChevronDown className="h-4 w-4 opacity-40" />
+                                            <ChevronDown className="h-3.5 w-3.5 opacity-40" />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] sm:w-72 rounded-none border-none shadow-2xl p-2">
-                                        <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">Weergave</DropdownMenuLabel>
-                                        <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-bold rounded-none h-11 cursor-pointer">
-                                            <LayoutGrid className="h-4 w-4 mr-3 text-slate-400" /> Alle meldingen
+                                    <DropdownMenuContent align="start" className="w-[calc(100vw-1.5rem)] sm:w-72 rounded-none border-none shadow-2xl p-1.5">
+                                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-2.5 py-1.5">Weergave</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-bold rounded-none h-10 cursor-pointer text-xs">
+                                            <LayoutGrid className="h-3.5 w-3.5 mr-2.5 text-slate-400" /> Alle meldingen
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-bold rounded-none h-11 cursor-pointer">
-                                            <Inbox className="h-4 w-4 mr-3 text-slate-400" /> Inbox (Niet ingedeeld)
+                                        <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-bold rounded-none h-10 cursor-pointer text-xs">
+                                            <Inbox className="h-3.5 w-3.5 mr-2.5 text-slate-400" /> Inbox (Niet ingedeeld)
                                         </DropdownMenuItem>
                                         
                                         {userFolders && userFolders.length > 0 && (
                                             <>
-                                                <DropdownMenuSeparator className="bg-slate-100 my-2" />
-                                                <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">Werkmappen</DropdownMenuLabel>
+                                                <DropdownMenuSeparator className="bg-slate-100 my-1.5" />
+                                                <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-2.5 py-1.5">Werkmappen</DropdownMenuLabel>
                                                 {userFolders.map(folder => (
                                                     <div key={folder.id} className="flex items-center group relative">
                                                         <DropdownMenuItem 
                                                             onClick={() => setSelectedFolderId(folder.id)} 
-                                                            className="flex-1 font-bold rounded-none h-11 cursor-pointer"
+                                                            className="flex-1 font-bold rounded-none h-10 cursor-pointer text-xs"
                                                         >
-                                                            <Folder className="h-4 w-4 mr-3 text-primary" /> {folder.name}
+                                                            <Folder className="h-3.5 w-3.5 mr-2.5 text-primary" /> {folder.name}
                                                         </DropdownMenuItem>
                                                         {isPrivileged && (
                                                             <Button 
                                                                 variant="ghost" 
                                                                 size="icon" 
-                                                                className="absolute right-1 h-9 w-8 text-slate-300 hover:text-red-600 rounded-none opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                className="absolute right-1 h-8 w-8 text-slate-300 hover:text-red-600 rounded-none opacity-0 group-hover:opacity-100 transition-opacity"
                                                                 onClick={(e) => { 
                                                                     e.preventDefault(); 
                                                                     e.stopPropagation(); 
                                                                     handleDeleteFolder(folder.id); 
                                                                 }}
                                                             >
-                                                                <Trash2 className="h-4 w-4" />
+                                                                <Trash2 className="h-3.5 w-3.5" />
                                                             </Button>
                                                         )}
                                                     </div>
@@ -955,21 +955,21 @@ export default function StartNavigationPage() {
                             {isPrivileged && (
                                 <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
                                     <DialogTrigger asChild>
-                                        <Button variant="outline" className="h-11 w-11 p-0 rounded-none border-none bg-slate-50 shadow-inner text-primary hover:bg-slate-100">
-                                            <FolderPlus className="h-5 w-5" />
+                                        <Button variant="outline" className="h-9 w-9 p-0 rounded-none border-none bg-slate-50 shadow-inner text-primary hover:bg-slate-100">
+                                            <FolderPlus className="h-4 w-4" />
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="rounded-none border-none shadow-2xl p-8 max-w-sm">
+                                    <DialogContent className="rounded-none border-none shadow-2xl p-6 max-w-xs">
                                         <DialogHeader>
-                                            <DialogTitle className="font-black uppercase tracking-tight">Nieuwe Map</DialogTitle>
-                                            <DialogDescription className="font-bold text-slate-500">Maak een map aan voor {users?.find(u => u.id === managedUserId)?.displayName || 'deze gebruiker'}.</DialogDescription>
+                                            <DialogTitle className="font-black uppercase tracking-tight text-sm">Nieuwe Map</DialogTitle>
+                                            <DialogDescription className="font-bold text-slate-500 text-[10px]">Maak een map aan voor {users?.find(u => u.id === managedUserId)?.displayName || 'deze gebruiker'}.</DialogDescription>
                                         </DialogHeader>
-                                        <div className="py-6">
-                                            <Input placeholder="Bv. Planning Maandag..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-bold rounded-none text-center text-lg shadow-sm" />
+                                        <div className="py-4">
+                                            <Input placeholder="Bv. Planning Maandag..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-10 font-bold rounded-none text-center text-sm shadow-sm" />
                                         </div>
                                         <DialogFooter>
-                                            <DialogClose asChild><Button variant="ghost" className="font-bold">Annuleren</Button></DialogClose>
-                                            <Button onClick={handleCreateFolder} className="h-12 px-8 font-black uppercase rounded-none bg-primary text-white shadow-xl shadow-primary/20">Aanmaken</Button>
+                                            <DialogClose asChild><Button variant="ghost" size="sm" className="font-bold">Annuleren</Button></DialogClose>
+                                            <Button size="sm" onClick={handleCreateFolder} className="h-10 px-6 font-black uppercase rounded-none bg-primary text-white shadow-xl shadow-primary/20">Aanmaken</Button>
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
@@ -978,74 +978,74 @@ export default function StartNavigationPage() {
                     </div>
                     
                     <ScrollArea className="flex-1">
-                        <div className="max-w-2xl mx-auto flex flex-col gap-2 p-2 pb-24">
+                        <div className="max-w-2xl mx-auto flex flex-col gap-1.5 p-2 pb-24">
                             {displayedMissions.map((m, index) => {
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
                                     <Card key={m.id} className={cn(
-                                        "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
+                                        "rounded-none border-none shadow-sm overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
                                         isCompleted ? "bg-green-50" : "bg-white"
                                     )}>
-                                        <div className="flex items-center gap-3 p-2.5">
+                                        <div className="flex items-center gap-2.5 p-2">
                                             <div className={cn(
-                                                "h-8 w-8 flex items-center justify-center text-xs font-black shrink-0",
+                                                "h-7 w-7 flex items-center justify-center text-[10px] font-black shrink-0",
                                                 isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
                                             )}>
                                                 {index + 1}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-0">
+                                                <div className="flex items-center justify-between mb-0 gap-1.5">
                                                     <h3 className={cn(
-                                                        "font-black text-xs uppercase tracking-tight truncate",
+                                                        "font-black text-[11px] uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
                                                     {m.status === 'Nieuw' && (
-                                                        <Badge className="text-[7px] font-black uppercase bg-red-500 text-white h-3.5 px-1 rounded-none animate-pulse">NEW</Badge>
+                                                        <Badge className="text-[7px] font-black uppercase bg-red-500 text-white h-3 px-1 rounded-none animate-pulse shrink-0">NEW</Badge>
                                                     )}
                                                 </div>
-                                                <p className="text-[10px] font-bold text-slate-500 truncate leading-tight">{m.straatnaam} {m.huisnummer}</p>
-                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-wider truncate leading-none mt-0.5">
+                                                <p className="text-[9px] font-bold text-slate-500 truncate leading-tight">{m.straatnaam} {m.huisnummer}</p>
+                                                <p className="text-[7px] font-black uppercase text-slate-400 tracking-wider truncate leading-none mt-0.5">
                                                     {m.hoofdcategorie} • {m.subcategorie}
                                                 </p>
                                             </div>
-                                            <div className="flex gap-1.5 shrink-0 items-center">
+                                            <div className="flex gap-1 shrink-0 items-center">
                                                 {!isCompleted && (
                                                     <Button 
                                                         variant="outline" 
                                                         size="icon" 
-                                                        className="h-9 w-9 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90" 
+                                                        className="h-8 w-8 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90" 
                                                         onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
                                                     >
-                                                        <Navigation className="h-4 w-4" />
+                                                        <Navigation className="h-3.5 w-3.5" />
                                                     </Button>
                                                 )}
                                                 <Button 
                                                     variant="outline" 
                                                     size="icon" 
                                                     className={cn(
-                                                        "h-9 w-9 rounded-none border-none transition-all active:scale-90",
+                                                        "h-8 w-8 rounded-none border-none transition-all active:scale-90",
                                                         isCompleted ? "bg-green-100 text-green-600" : "bg-green-50 text-green-600 hover:bg-green-100"
                                                     )}
                                                     onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
                                                 >
-                                                    {isCompleted ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                                    {isCompleted ? <Check className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
                                                 </Button>
                                                 
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-9 w-6 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
-                                                            <MoreVertical className="h-3.5 w-3.5 text-slate-400" />
+                                                        <Button variant="ghost" size="icon" className="h-8 w-5 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
+                                                            <MoreVertical className="h-3 w-3 text-slate-400" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-56 rounded-none shadow-2xl p-2 border-none">
-                                                        <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-2 py-1.5">Verplaatsen naar...</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => handleMoveToFolder(m.id, null)} className="font-bold rounded-none h-10 cursor-pointer">
-                                                            <Inbox className="h-4 w-4 mr-2" /> Inbox
+                                                    <DropdownMenuContent align="end" className="w-52 rounded-none shadow-2xl p-1.5 border-none">
+                                                        <DropdownMenuLabel className="text-[8px] font-black uppercase text-slate-400 px-2 py-1">Verplaatsen naar...</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => handleMoveToFolder(m.id, null)} className="font-bold rounded-none h-9 cursor-pointer text-xs">
+                                                            <Inbox className="h-3.5 w-3.5 mr-2" /> Inbox
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuSeparator className="bg-slate-100" />
                                                         {userFolders?.map(folder => (
-                                                            <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(m.id, folder.id)} className="font-bold rounded-none h-10 cursor-pointer">
-                                                                <Folder className="h-4 w-4 mr-2" /> {folder.name}
+                                                            <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(m.id, folder.id)} className="font-bold rounded-none h-9 cursor-pointer text-xs">
+                                                                <Folder className="h-3.5 w-3.5 mr-2" /> {folder.name}
                                                             </DropdownMenuItem>
                                                         ))}
                                                     </DropdownMenuContent>
@@ -1056,9 +1056,9 @@ export default function StartNavigationPage() {
                                 );
                             })}
                             {displayedMissions.length === 0 && (
-                                <div className="col-span-full py-20 text-center opacity-20">
-                                    <Archive className="h-16 w-16 mx-auto mb-4" />
-                                    <p className="font-black uppercase tracking-widest">Geen opdrachten in deze lijst</p>
+                                <div className="col-span-full py-16 text-center opacity-20">
+                                    <Archive className="h-12 w-12 mx-auto mb-3" />
+                                    <p className="font-black uppercase tracking-widest text-[10px]">Geen opdrachten</p>
                                 </div>
                             )}
                         </div>
@@ -1078,9 +1078,9 @@ export default function StartNavigationPage() {
 
             {isRecalculating && (
                 <div className="fixed inset-0 z-[300] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
-                    <div className="bg-slate-900 p-8 rounded-none shadow-2xl flex flex-col items-center gap-4 text-white">
-                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                        <p className="text-xs font-black uppercase tracking-[0.2em]">Route herberekenen...</p>
+                    <div className="bg-slate-900 p-6 rounded-none shadow-2xl flex flex-col items-center gap-3 text-white">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em]">Herberekenen...</p>
                     </div>
                 </div>
             )}
