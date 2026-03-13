@@ -151,7 +151,7 @@ export default function RouteAssignmentPage() {
                 <SelectTrigger className="h-10 w-64 font-black border-none rounded-2xl bg-slate-100 shadow-inner">
                     <SelectValue placeholder="Kies project..." />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl shadow-2xl border-none">
+                <SelectContent className="rounded-3xl shadow-2xl border-none">
                     {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
                 </SelectContent>
             </Select>
@@ -275,17 +275,17 @@ export default function RouteAssignmentPage() {
                     ) : (assignments && assignments.length > 0) ? (
                         <div className="divide-y divide-slate-50">
                             {assignments.map(a => {
-                                const userA = users?.find(u => u.id === a.userId);
+                                const userAssigned = users?.find(u => u.id === a.userId);
                                 return (
                                     <div key={a.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
                                         <div className="flex items-center gap-6 flex-1 min-w-0">
                                             <div className="flex items-center gap-3 w-48 shrink-0">
                                                 <div className="h-10 w-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-[10px] font-black uppercase shadow-lg">
-                                                    {userA?.firstName?.[0]}{userA?.lastName?.[0]}
+                                                    {userAssigned?.firstName?.[0]}{userAssigned?.lastName?.[0]}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="font-black text-xs uppercase text-slate-900 truncate">{userA?.displayName || userA?.email}</p>
-                                                    <Badge variant="outline" className="h-4 text-[7px] font-black uppercase tracking-tighter opacity-50 border-none">{userA?.role}</Badge>
+                                                    <p className="font-black text-xs uppercase text-slate-900 truncate">{userAssigned?.displayName || userAssigned?.email}</p>
+                                                    <Badge variant="outline" className="h-4 text-[7px] font-black uppercase tracking-tighter opacity-50 border-none">{userAssigned?.role}</Badge>
                                                 </div>
                                             </div>
                                             

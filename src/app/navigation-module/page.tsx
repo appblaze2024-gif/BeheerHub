@@ -82,7 +82,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  ExternalLink
+  ExternalLink,
+  Tag
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -1157,7 +1158,7 @@ export default function StartNavigationPage() {
                 </div>
                 <div className="space-y-3">
                     <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">Rit Voorbereiden</h2>
-                    <p className="text-sm font-medium text-slate-500">Kies een project en route om de rit te starten.</p>
+                    <p className="text-sm font-medium text-slate-500">Kies een project en route om the rit te starten.</p>
                 </div>
                 <div className="space-y-4">
                     <div className="space-y-1.5 text-left">
@@ -1294,9 +1295,11 @@ export default function StartNavigationPage() {
 
                 <div className="absolute top-0 left-0 right-0 z-20 h-16 flex items-center justify-between px-4 bg-white/80 backdrop-blur-lg border-b pointer-events-auto gap-2">
                     <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
-                            <ArrowLeft className="h-6 w-6 text-slate-600" />
-                        </Button>
+                        {navigationState !== 'navigating' && (
+                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100" onClick={() => router.push('/')}>
+                                <ArrowLeft className="h-6 w-6 text-slate-600" />
+                            </Button>
+                        )}
                         
                         {navigationState === 'navigating' && routeInfo && (
                             <div className="flex items-center gap-4 bg-slate-900/5 px-4 py-2 rounded-full border-2 border-slate-200 shadow-sm">
