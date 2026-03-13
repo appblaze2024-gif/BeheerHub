@@ -278,13 +278,13 @@ function IntegratedWerkbonOverlay({
                 <div className="flex flex-col gap-1">
                     <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none mb-3">Melding: {melding.intakenummer}</h2>
                     <div className="space-y-4">
-                        <div className="flex items-start gap-3 text-sm font-bold text-slate-700">
+                        <div className="flex items-start gap-3 text-base font-bold text-slate-700">
                             <MapPin className="h-5 w-5 text-slate-900 shrink-0 mt-0.5" />
                             <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
                         </div>
                         <div className="flex items-start gap-3 text-sm font-bold text-slate-700">
                             <Tag className="h-5 w-5 text-slate-900 shrink-0 mt-0.5" />
-                            <span className="uppercase tracking-tight">{melding.hoofdcategorie} • {melding.subcategorie}</span>
+                            <span className="uppercase tracking-tight">{melding.hoofdcategorie}</span>
                         </div>
                         <div className="flex flex-col gap-y-2 pt-1">
                             <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
@@ -294,7 +294,7 @@ function IntegratedWerkbonOverlay({
                             {melding.containernummer && (
                                 <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
                                     <Package className="h-5 w-5 text-slate-900" />
-                                    <span className="uppercase tracking-tight font-black">Container: {melding.containernummer}</span>
+                                    <span className="uppercase tracking-tight font-black text-primary">Container: {melding.containernummer}</span>
                                 </div>
                             )}
                         </div>
@@ -304,7 +304,7 @@ function IntegratedWerkbonOverlay({
                 {melding.extra_informatie && (
                     <div className="mt-4 p-5 bg-blue-50/50 rounded-none border-2 border-blue-100/50 flex items-start gap-4">
                         <FileText className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                        <p className="text-sm font-medium text-slate-700 leading-relaxed italic">
+                        <p className="text-base font-medium text-slate-700 leading-relaxed italic">
                             "{melding.extra_informatie}"
                         </p>
                     </div>
@@ -366,12 +366,12 @@ function IntegratedWerkbonOverlay({
                             {renderSubViewHeader('UITVOERING')}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
                                 <div className="space-y-3">
-                                    <Label className="text-xs font-black uppercase text-slate-400 tracking-[0.1em]">Oorspronkelijke melding</Label>
+                                    <Label className="text-sm font-black uppercase text-slate-400 tracking-[0.1em]">Oorspronkelijke melding</Label>
                                     <div className="bg-slate-50 p-6 rounded-none text-base italic text-slate-600 border-2 border-slate-100 shadow-inner leading-relaxed">"{melding.extra_informatie}"</div>
                                 </div>
                                 <div className="space-y-5">
                                     <div className="flex items-center justify-between">
-                                        <Label className="text-xs font-black uppercase text-slate-400 tracking-[0.1em]">Uw Notities</Label>
+                                        <Label className="text-sm font-black uppercase text-slate-400 tracking-[0.1em]">Uw Notities</Label>
                                         <Button variant={isListening ? "destructive" : "secondary"} size="icon" className={cn("h-20 w-20 rounded-full shadow-2xl transition-all active:scale-90 border-4 border-white", isListening && "animate-pulse ring-4 ring-red-500/20")} onClick={toggleListening}>
                                             {isListening ? <Loader2 className="h-10 w-10 animate-spin" /> : <Mic className="h-10 w-10 text-primary" />}
                                         </Button>
@@ -386,7 +386,7 @@ function IntegratedWerkbonOverlay({
                             {renderSubViewHeader("FOTO'S")}
                             <div className="flex-1 p-6 space-y-10 overflow-y-auto">
                                 <div className="space-y-5">
-                                    <Label className="text-xs font-black uppercase tracking-[0.1em] text-slate-400">Melding Foto's</Label>
+                                    <Label className="text-sm font-black uppercase tracking-[0.1em] text-slate-400">Melding Foto's</Label>
                                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                                         {melding.fotos?.map((p, i) => (
                                             <div key={`bron-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-lg" onClick={() => setPreviewImage(p.url)}>
@@ -397,7 +397,7 @@ function IntegratedWerkbonOverlay({
                                 </div>
                                 <Separator className="bg-slate-100" />
                                 <div className="space-y-5">
-                                    <Label className="text-xs font-black uppercase tracking-[0.1em] text-slate-400">Nieuwe Foto's</Label>
+                                    <Label className="text-sm font-black uppercase tracking-[0.1em] text-slate-400">Nieuwe Foto's</Label>
                                     <div className="grid grid-cols-2 gap-4">
                                         <Button variant="outline" className="flex-col gap-4 rounded-none border-2 border-dashed border-slate-200 bg-slate-50/50 h-44 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('cam-input')?.click()}><Camera className="h-12 w-12 text-primary" /><span className="text-xs font-black uppercase tracking-widest">Camera</span></Button>
                                         <Button variant="outline" className="flex-col gap-4 rounded-none border-2 border-dashed border-slate-200 bg-slate-50/50 h-44 hover:bg-slate-50 hover:border-primary/30 transition-all" onClick={() => document.getElementById('gal-input')?.click()}><ImageIcon className="h-12 w-12 text-primary" /><span className="text-xs font-black uppercase tracking-widest">Gallerij</span></Button>
@@ -420,14 +420,14 @@ function IntegratedWerkbonOverlay({
                         <>
                             {renderSubViewHeader('MATERIALEN')}
                             <div className="flex-1 p-6 space-y-10 overflow-y-auto">
-                                <div className="bg-white text-slate-900 p-10 rounded-none space-y-8 shadow-xl border-2 border-slate-100">
+                                <div className="bg-white text-slate-900 p-6 rounded-none space-y-8 shadow-xl border-2 border-slate-100">
                                     <div className="flex items-center gap-4 border-b border-slate-100 pb-5">
                                         <Briefcase className="h-8 w-8 text-primary" />
                                         <h3 className="text-lg font-black uppercase tracking-tight">Toevoegen Verbruik</h3>
                                     </div>
                                     <div className="grid gap-6">
                                         <div className="space-y-3">
-                                            <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Product / Materiaal</Label>
+                                            <Label className="text-sm font-black uppercase tracking-widest text-slate-400 ml-1">Product / Materiaal</Label>
                                             <Input 
                                                 placeholder="Bv. Straatkolk..." 
                                                 value={newHoeveelheidType} 
@@ -436,7 +436,7 @@ function IntegratedWerkbonOverlay({
                                             />
                                         </div>
                                         <div className="space-y-3">
-                                            <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Aantal</Label>
+                                            <Label className="text-sm font-black uppercase tracking-widest text-slate-400 ml-1">Aantal</Label>
                                             <Input 
                                                 type="number" 
                                                 placeholder="0" 
@@ -463,7 +463,7 @@ function IntegratedWerkbonOverlay({
                         <>
                             {renderSubViewHeader('DOCUMENTEN')}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
-                                <Button variant="outline" className="w-full h-32 border-dashed border-2 border-slate-200 rounded-none bg-slate-50/50 hover:bg-slate-50 hover:border-primary/30 transition-all gap-5 shadow-sm" onClick={() => document.getElementById('sub-doc-input')?.click()}><UploadCloud className="h-10 w-10 text-primary" /> <span className="text-xs font-black uppercase tracking-widest">Document Uploaden</span></Button>
+                                <Button variant="outline" className="w-full h-32 border-dashed border-2 border-slate-200 rounded-none bg-slate-50/50 hover:bg-slate-50 hover:border-primary/30 transition-all gap-5 shadow-sm" onClick={() => document.getElementById('sub-doc-input')?.click()}><UploadCloud className="h-10 w-10 text-primary" /> <span className="text-sm font-black uppercase tracking-widest">Document Uploaden</span></Button>
                                 <input type="file" id="sub-doc-input" className="hidden" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'documents')} />
                                 <div className="grid gap-4">
                                     {uploadedFiles.map(f => (
@@ -584,9 +584,7 @@ export default function StartNavigationPage() {
       (pos) => {
         setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
       },
-      (err) => {
-        console.debug("Location watch error silenced");
-      },
+      () => {},
       { enableHighAccuracy: true, maximumAge: 10000 }
     );
     
@@ -802,7 +800,7 @@ export default function StartNavigationPage() {
                 handleStartRit();
             }, 1200);
         },
-        (err) => {
+        () => {
             setIsRecalculating(false);
             toast({ variant: 'destructive', title: 'Locatiefout', description: 'Kon huidige locatie niet bepalen.' });
         },
@@ -879,7 +877,7 @@ export default function StartNavigationPage() {
                                                 ) : (
                                                     <Folder className="h-4 w-4 text-primary" />
                                                 )}
-                                                <span className="truncate text-xs">
+                                                <span className="truncate text-sm font-black">
                                                     {selectedFolderId === null 
                                                         ? 'INBOX (VRIJ)' 
                                                         : selectedFolderId === 'all' 
@@ -994,18 +992,18 @@ export default function StartNavigationPage() {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between mb-0.5 gap-2 leading-none">
                                                     <h3 className={cn(
-                                                        "font-black text-xs uppercase tracking-tight truncate",
+                                                        "font-black text-sm uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
                                                     {m.status === 'Nieuw' && (
-                                                        <Badge className="text-[8px] font-black uppercase bg-red-500 text-white h-4 px-1.5 rounded-none animate-pulse shrink-0 shadow-sm">NIEUW</Badge>
+                                                        <Badge className="text-[10px] font-black uppercase bg-red-500 text-white h-5 px-2 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
                                                     )}
                                                 </div>
-                                                <p className={cn("text-sm font-bold truncate leading-tight mt-1", isCompleted ? "text-green-700/60" : "text-slate-700")}>
+                                                <p className={cn("text-base font-bold truncate leading-tight mt-1.5", isCompleted ? "text-green-700/60" : "text-slate-700")}>
                                                     {m.straatnaam} {m.huisnummer}
                                                 </p>
-                                                <p className={cn("text-[10px] font-black uppercase tracking-widest truncate leading-none mt-1.5 opacity-80", isCompleted ? "text-green-600/50" : "text-slate-400")}>
-                                                    {m.hoofdcategorie} • {m.subcategorie}
+                                                <p className={cn("text-xs font-black uppercase tracking-widest truncate leading-none mt-2 opacity-80", isCompleted ? "text-green-600/50" : "text-slate-400")}>
+                                                    {m.hoofdcategorie}
                                                 </p>
                                             </div>
                                             <div className="flex gap-1.5 shrink-0 items-center">
@@ -1013,28 +1011,28 @@ export default function StartNavigationPage() {
                                                     <Button 
                                                         variant="outline" 
                                                         size="icon" 
-                                                        className="h-11 w-11 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
+                                                        className="h-12 w-12 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
                                                         onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
                                                     >
-                                                        <Navigation className="h-5 w-5" />
+                                                        <Navigation className="h-6 w-6" />
                                                     </Button>
                                                 )}
                                                 <Button 
                                                     variant="outline" 
                                                     size="icon" 
                                                     className={cn(
-                                                        "h-11 w-11 rounded-none border-none transition-all active:scale-90 shadow-sm",
+                                                        "h-12 w-12 rounded-none border-none transition-all active:scale-90 shadow-sm",
                                                         isCompleted ? "bg-green-100 text-green-600" : "bg-green-50 text-green-600 hover:bg-green-100"
                                                     )}
                                                     onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
                                                 >
-                                                    {isCompleted ? <Check className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                                                    {isCompleted ? <Check className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
                                                 </Button>
                                                 
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-11 w-6 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
-                                                            <MoreVertical className="h-5 w-5 text-slate-400" />
+                                                        <Button variant="ghost" size="icon" className="h-12 w-8 rounded-none border-none hover:bg-slate-100" onClick={e => e.stopPropagation()}>
+                                                            <MoreVertical className="h-6 w-6 text-slate-400" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-64 rounded-none shadow-2xl p-2 border-none">
