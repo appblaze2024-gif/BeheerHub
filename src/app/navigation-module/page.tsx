@@ -101,11 +101,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import Image from 'next/image';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -438,7 +433,7 @@ function IntegratedWerkbonOverlay({
                     )}
                     {subView === 'photos' && (
                         <>
-                            {renderSubViewHeaderHeader("FOTO'S")}
+                            {renderSubViewHeader("FOTO'S")}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.1em]">Melding Foto's</Label>

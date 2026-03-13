@@ -17,7 +17,6 @@ import {
   ChevronRight,
   LayoutGrid
 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 import { format, addDays } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -32,6 +31,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { useProject } from '@/context/project-context';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 import type { UserProfile, Project as ProjectType, RouteAssignment, Wijk } from '@/lib/types';
 
 export default function RouteAssignmentPage() {
@@ -74,7 +74,7 @@ export default function RouteAssignmentPage() {
   }, [firestore, selectedProjectId, dateStr]);
   const { data: assignments, isLoading: isLoadingAssignments } = useCollection<RouteAssignment>(assignmentsQuery);
 
-  const filteredUsers = React.useMemo(() => {
+  const filteredUsersList = React.useMemo(() => {
     if (!users) return [];
     if (!searchTerm.trim()) return users;
     const q = searchTerm.toLowerCase();
@@ -176,7 +176,7 @@ export default function RouteAssignmentPage() {
             <div className="space-y-1">
                 {isLoadingUsers ? (
                     <div className="flex justify-center py-12 opacity-20"><Loader2 className="h-8 w-8 animate-spin" /></div>
-                ) : filteredUsers.map(u => (
+                ) : filteredUsersList.map(u => (
                     <button
                         key={u.id}
                         onClick={() => setSelectedUserId(u.id)}
