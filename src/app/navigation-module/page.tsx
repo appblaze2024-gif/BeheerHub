@@ -12,7 +12,6 @@ import {
   useFirebaseApp, 
   useDoc, 
   setDocumentNonBlocking,
-  addDocumentNonBlocking 
 } from '@/firebase';
 import { collection, doc, query, where, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -49,11 +47,9 @@ import {
   Camera,
   Mic,
   Check,
-  LayoutGrid,
   X,
   FileText,
   Trash2,
-  User,
   Briefcase,
   ChevronLeft,
   ChevronRight,
@@ -61,24 +57,19 @@ import {
   Map as MapIcon,
   Hash,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
   Wrench,
   Paperclip,
   ImageIcon,
   Settings,
   Sliders,
-  Maximize,
   ExternalLink,
   Tag
 } from 'lucide-react';
-import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment, UserProfile, Route } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, Hoeveelheid, Project as ProjectType, RouteAssignment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
-import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
 import { addSeconds, format as formatDate } from 'date-fns';
@@ -103,22 +94,6 @@ import { useProject } from '@/context/project-context';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
-
-const routeLayer: any = {
-  id: 'route',
-  type: 'line',
-  source: 'route-line',
-  layout: { 'line-join': 'round', 'line-cap': 'round' },
-  paint: { 'line-color': '#007AFF', 'line-width': 8, 'line-opacity': 0.8 },
-};
-
-const routeLayerCasing: any = {
-  id: 'route-casing',
-  type: 'line',
-  source: 'route-line',
-  layout: { 'line-join': 'round', 'line-cap': 'round' },
-  paint: { 'line-color': '#007AFF', 'line-width': 12, 'line-opacity': 0.2 },
-};
 
 function SectionRow({ 
     icon: Icon, 
@@ -162,11 +137,13 @@ function SectionRow({
 function IntegratedWerkbonOverlay({ 
     meldingId, 
     onClose, 
-    onCompleted 
+    onCompleted,
+    onNavigateNow
 }: { 
     meldingId: string, 
     onClose: () => void, 
-    onCompleted: (id: string) => void 
+    onCompleted: (id: string) => void,
+    onNavigateNow: (id: string) => void
 }) {
     const firestore = useFirestore();
     const app = useFirebaseApp();
@@ -195,23 +172,6 @@ function IntegratedWerkbonOverlay({
 
     const meldingRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'meldingen', meldingId) : null, [firestore, user, meldingId]);
     const { data: melding, isLoading } = useDoc<Melding>(meldingRef);
-
-    const objectsQuery = useMemoFirebase(() => {
-        if (!firestore || !user || !melding) return null;
-        return query(collection(firestore, 'objects'), limit(200));
-    }, [firestore, user, melding]);
-    
-    const { data: allObjects } = useCollection<MapObject>(objectsQuery);
-
-    const nearbyObjects = useMemo(() => {
-        if (!allObjects || !melding) return [];
-        const issuePt = turf.point([melding.longitude, melding.latitude]);
-        return allObjects.filter(obj => {
-            if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-            const objPt = turf.point([obj.longitude, obj.latitude]);
-            return turf.distance(issuePt, objPt, { units: 'meters' }) <= 100;
-        });
-    }, [allObjects, melding]);
 
     useEffect(() => {
         if (melding) {
@@ -287,29 +247,6 @@ function IntegratedWerkbonOverlay({
         recognition.start();
     };
 
-    const handleTouchStart = (e: React.TouchEvent) => {
-        if (e.touches.length === 2) {
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
-            const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
-            const center = { x: (touch1.clientX + touch2.clientX) / 2, y: (touch1.clientY + touch2.clientY) / 2 };
-            lastTouchRef.current = { dist, center };
-        }
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (e.touches.length === 2 && lastTouchRef.current) {
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
-            const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
-            const deltaScale = dist / lastTouchRef.current.dist;
-            setZoomScale(prev => Math.max(1, Math.min(5, prev * deltaScale)));
-            lastTouchRef.current.dist = dist;
-        }
-    };
-
-    const handleTouchEnd = () => { lastTouchRef.current = null; };
-
     if (isLoading || !melding) return <LoadingScreen message="Data laden..." />;
 
     const renderMainList = () => (
@@ -327,13 +264,27 @@ function IntegratedWerkbonOverlay({
                                 <Tag className="h-3.5 w-3.5 text-primary" />
                                 <span className="uppercase tracking-tight">{melding.hoofdcategorie} • {melding.subcategorie}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                <Hash className="h-3.5 w-3.5 text-primary" />
-                                <span className="font-mono">{melding.containernummer || 'Geen unit'}</span>
-                            </div>
                         </div>
                     </div>
                 </div>
+                
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                    <Button 
+                        variant="outline" 
+                        className="h-14 rounded-2xl font-black uppercase tracking-tight gap-2 border-2 border-primary text-primary hover:bg-primary/5"
+                        onClick={() => onNavigateNow(melding.id)}
+                    >
+                        <Navigation className="h-4 w-4" /> Navigeer Nu
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        className="h-14 rounded-2xl font-black uppercase tracking-tight gap-2 border-2 border-green-600 text-green-600 hover:bg-green-50"
+                        onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${melding.latitude},${melding.longitude}`, '_blank')}
+                    >
+                        <ExternalLink className="h-4 w-4" /> Google Maps
+                    </Button>
+                </div>
+
                 {melding.extra_informatie && (
                     <div className="mt-4 p-4 bg-blue-50/50 rounded-2xl border-2 border-blue-100/50 flex items-start gap-3">
                         <FileText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
@@ -346,7 +297,6 @@ function IntegratedWerkbonOverlay({
 
             <div className="mt-4 flex-1">
                 <SectionRow icon={Wrench} label="Werkzaamheden" value={afhandelingBijzonderheden ? 'Ingevuld' : ''} onClick={() => setSubView('werkzaamheden')} />
-                <SectionRow icon={MapIcon} label="Locatiegegevens" onClick={() => setSubView('map')} />
                 <SectionRow icon={Paperclip} label="Documenten" badgeCount={uploadedFiles.length} onClick={() => setSubView('docs')} />
                 <SectionRow icon={Camera} label="Foto's" badgeCount={afhandelingFotos.length + (melding.fotos?.length || 0)} onClick={() => setSubView('photos')} />
                 <SectionRow icon={Briefcase} label="Materialen" badgeCount={hoeveelheden.length} onClick={() => setSubView('materials')} />
@@ -415,14 +365,6 @@ function IntegratedWerkbonOverlay({
                             </div>
                         </>
                     )}
-                    {subView === 'map' && (
-                        <>
-                            {renderSubViewHeader('KAART')}
-                            <div className="flex-1 relative">
-                                <MapboxView latitude={melding.latitude} longitude={melding.longitude} mainLocationLabel={melding.containernummer} interactive={true} objects={nearbyObjects} />
-                            </div>
-                        </>
-                    )}
                     {subView === 'photos' && (
                         <>
                             {renderSubViewHeader("FOTO'S")}
@@ -430,18 +372,11 @@ function IntegratedWerkbonOverlay({
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.1em]">Melding Foto's</Label>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                        {melding.fotos && melding.fotos.length > 0 ? (
-                                            melding.fotos.map((p, i) => (
-                                                <div key={`bron-${i}`} className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-lg cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => { setZoomScale(1); setZoomOffset({x:0, y:0}); setPreviewImage(p.url); }}>
-                                                    <Image src={p.url} alt="bron" fill className="object-cover" />
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="col-span-full py-12 text-center bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200">
-                                                <ImageIcon className="h-10 w-10 text-slate-300 mx-auto mb-2 opacity-20" />
-                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Geen foto's beschikbaar</p>
+                                        {melding.fotos?.map((p, i) => (
+                                            <div key={`bron-${i}`} className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-lg cursor-pointer" onClick={() => setPreviewImage(p.url)}>
+                                                <Image src={p.url} alt="bron" fill className="object-cover" />
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
                                 </div>
                                 <Separator className="bg-slate-100" />
@@ -455,7 +390,7 @@ function IntegratedWerkbonOverlay({
                                     <input type="file" id="gal-input" className="hidden" accept="image/*" multiple onChange={e => e.target.files && handleFileUpload(e.target.files, 'afhandeling_fotos')} />
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         {afhandelingFotos.map((p, i) => (
-                                            <div key={`new-${i}`} className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-xl group cursor-pointer" onClick={() => { setZoomScale(1); setZoomOffset({x:0, y:0}); setPreviewImage(p.url); }}>
+                                            <div key={`new-${i}`} className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-xl group cursor-pointer" onClick={() => setPreviewImage(p.url)}>
                                                 <Image src={p.url} alt="afhandeling" fill className="object-cover" />
                                                 <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg border-2 border-white" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
                                             </div>
@@ -512,30 +447,9 @@ function IntegratedWerkbonOverlay({
             )}
 
             {previewImage && (
-                <div 
-                    className="fixed inset-0 z-[200] bg-black/95 flex flex-col animate-in fade-in duration-200"
-                    onClick={() => setPreviewImage(null)}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    <div className="flex justify-end p-6 shrink-0">
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-12 w-12 border-2 border-white/20">
-                            <X className="h-8 w-8" />
-                        </Button>
-                    </div>
-                    <div className="flex-1 relative flex items-center justify-center overflow-hidden touch-none">
-                        <img 
-                            src={previewImage} 
-                            alt="Preview" 
-                            className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-75"
-                            style={{ transform: `scale(${zoomScale}) translate(${zoomOffset.x}px, ${zoomOffset.y}px)`, transformOrigin: 'center center' }}
-                            onClick={(e) => e.stopPropagation()} 
-                        />
-                    </div>
-                    <div className="p-8 flex justify-center shrink-0">
-                        <Badge variant="outline" className="bg-white/10 text-white border-white/20 text-[10px] uppercase font-black tracking-widest px-4 h-8 backdrop-blur-md rounded-full">{zoomScale > 1 ? `Zoom: ${zoomScale.toFixed(1)}x` : 'Knijp om te zoomen'}</Badge>
-                    </div>
+                <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
+                    <div className="flex justify-end p-6 shrink-0"><Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-12 w-12 border-2 border-white/20"><X className="h-8 w-8" /></Button></div>
+                    <div className="flex-1 relative flex items-center justify-center overflow-hidden"><img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} /></div>
                 </div>
             )}
         </div>
@@ -550,7 +464,7 @@ export default function StartNavigationPage() {
   const { profile } = useProfile();
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
-  const { selectedProjectId, setSelectedProjectId } = useProject();
+  const { selectedProjectId } = useProject();
   
   const type = searchParams.get('type'); 
   const isMeldingenType = type === 'meldingen';
@@ -559,64 +473,25 @@ export default function StartNavigationPage() {
   
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = useState<'setup' | 'navigating'>('setup');
-  const [startTime, setStartTime] = useState<string | null>(null);
-  const [isSimulationMode, setIsSimulationMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [isLocating, setIsLocating] = useState(false);
   const [activeWerkbonId, setActiveWerkbonId] = useState<string | null>(null);
-  const [clickedMarkerId, setClickedMarkerId] = useState<string | null>(null);
   const [priorityMissionId, setPriorityMissionId] = useState<string | null>(null);
   const [completedObjects, setCompletedObjects] = useState<string[]>([]);
-  const [isManualMode, setIsManualMode] = useState(false);
-  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
-  const [showTodayCompleted, setShowTodayCompleted] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
-    intakenummer: true,
-    locatie: true,
-    memo: true,
-    hoofdcategorie: true,
-    subcategorie: true,
-    werkgebied: true,
-    afstand: true
-  });
-
+  const [autoOpenEnabled, setAutoOpenEnabledState] = useState(true);
+  const [dynamicZoomEnabled, setDynamicZoomEnabledState] = useState(true);
   const [navZoom, setNavZoomState] = useState(18);
   const [navPitch, setNavPitchState] = useState(60);
   const [navOffset, setNavOffsetState] = useState(450);
-  const [autoOpenEnabled, setAutoOpenEnabledState] = useState(true);
-  const [dynamicZoomEnabled, setDynamicZoomEnabledState] = useState(true);
-
-  const [smoothLocation, setSmoothLocation] = useState<any>(null);
-  const lastHeadingRef = useRef(0);
-  const visualHeadingRef = useRef(0);
-  const [currentRouteGeometry, setCurrentRouteGeometry] = useState<any>(null);
-  const [displayedRouteGeometry, setDisplayedRouteGeometry] = useState<any>(null);
-  const [routeInfo, setRouteInfo] = useState<{ duration: number; distance: number } | null>(null);
-  const [speedKmh, setSpeedKmh] = useState(0);
 
   const mapRef = useRef<MapRef>(null);
-  const lastFetchTimeRef = useRef<number>(0);
-  const autoOpenTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const targetPosRef = useRef<{lng: number, lat: number} | null>(null);
-  const visualPosRef = useRef<{lng: number, lat: number} | null>(null);
-
-  const [sortConfig, setSortConfig] = useState<{ field: string; order: 'asc' | 'desc' }>({ 
-    field: 'afstand', 
-    order: 'asc' 
-  });
 
   useEffect(() => {
     setIsHeaderVisible(false);
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
-
-  const optionsRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'settings', 'issue_options') : null, [firestore, user]);
-  const { data: dbOptions } = useDoc<any>(optionsRef);
-  const categoryIcons = dbOptions?.categoryIcons || {};
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projects } = useCollection<ProjectType>(projectsQuery);
@@ -649,7 +524,7 @@ export default function StartNavigationPage() {
   const { data: assignments } = useCollection<RouteAssignment>(assignmentsQuery);
 
   useEffect(() => {
-    if (assignments && assignments.length > 0 && navigationState === 'setup') {
+    if (assignments?.[0] && navigationState === 'setup') {
         const assignment = assignments[0];
         if (assignment.routeType === 'veegroutes' && type === 'veegroutes') setSelectedRouteId(assignment.routeId);
         else if (assignment.routeType === 'prullenbakken' && type === 'prullenbakken') setSelectedRouteId(assignment.routeId);
@@ -659,14 +534,14 @@ export default function StartNavigationPage() {
   useEffect(() => {
     if (profile) {
         if (profile.navZoom !== undefined) setNavZoomState(Number(profile.navZoom));
-        if (profile.navPitch !== undefined) setNavPitchState(Number(profile.navPitch));
-        if (profile.navOffset !== undefined) setNavOffsetState(Number(profile.navOffset));
-        if (profile.navColumns) setVisibleColumns(profile.navColumns);
         if (profile.autoOpenEnabled !== undefined) setAutoOpenEnabledState(!!profile.autoOpenEnabled);
-        if (profile.dynamicZoomEnabled !== undefined) setDynamicZoomEnabledState(!!profile.dynamicZoomEnabled);
-        if (profile.navSortConfig) setSortConfig(profile.navSortConfig);
     }
   }, [profile]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const filteredMeldingen = useMemo(() => {
     const poolMap = new Map<string, any>();
@@ -698,22 +573,22 @@ export default function StartNavigationPage() {
     return [];
   }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
 
-  const sortedMissions = useMemo(() => {
-    if (filteredMeldingen.length === 0) return [];
+  const sequenceMissions = useCallback((missions: any[]) => {
+    if (missions.length === 0) return [];
     const startLoc = userLocation || SIMULATION_START_LOCATION;
-    const pool = [...filteredMeldingen].filter(m => m.status !== 'Afgerond');
-    if (pool.length === 0) return [];
-    let sequence: any[] = [];
-    let remaining = [...pool];
+    let result: any[] = [];
+    let remaining = [...missions];
     let currentPos = turf.point([startLoc.longitude, startLoc.latitude]);
+
     if (priorityMissionId) {
         const pIdx = remaining.findIndex(m => m.id === priorityMissionId);
         if (pIdx !== -1) {
             const [p] = remaining.splice(pIdx, 1);
-            sequence.push(p);
+            result.push(p);
             currentPos = turf.point([p.longitude, p.latitude]);
         }
     }
+
     while (remaining.length > 0) {
         let closestIdx = 0; let minDist = Infinity;
         for (let i = 0; i < remaining.length; i++) {
@@ -721,36 +596,13 @@ export default function StartNavigationPage() {
             if (dist < minDist) { minDist = dist; closestIdx = i; }
         }
         const [next] = remaining.splice(closestIdx, 1);
-        sequence.push(next);
+        result.push(next);
         currentPos = turf.point([next.longitude, next.latitude]);
     }
-    return sequence;
-  }, [filteredMeldingen, userLocation, priorityMissionId]);
+    return result;
+  }, [userLocation, priorityMissionId]);
 
-  const nextMission = sortedMissions[0];
-
-  const fetchRoute = useCallback(async (force = false) => {
-    if (navigationState === 'setup' || sortedMissions.length === 0 || isMeldingenType) return;
-    const now = Date.now();
-    if (!force && now - lastFetchTimeRef.current < 5000) return;
-    lastFetchTimeRef.current = now;
-    const startPos = userLocation || SIMULATION_START_LOCATION;
-    const waypoints = [[startPos.longitude, startPos.latitude], [sortedMissions[0].longitude, sortedMissions[0].latitude]];
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypoints.map(w => w.join(',')).join(';')}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
-    try {
-        const res = await fetch(url); const data = await res.json();
-        if (data.routes?.[0]) {
-            const route = data.routes[0];
-            setCurrentRouteGeometry(route.geometry);
-            setDisplayedRouteGeometry(turf.feature(route.geometry));
-            setRouteInfo({ duration: route.duration, distance: route.distance });
-        }
-    } catch (e) {}
-  }, [sortedMissions, userLocation, navigationState, isMeldingenType]);
-
-  useEffect(() => {
-    if (navigationState === 'navigating' && !isMeldingenType) fetchRoute(true);
-  }, [navigationState, sortedMissions[0]?.id, isMeldingenType]);
+  const sortedMissions = useMemo(() => sequenceMissions(filteredMeldingen), [filteredMeldingen, sequenceMissions]);
 
   const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
     if (lat && lng) {
@@ -768,13 +620,12 @@ export default function StartNavigationPage() {
     if (filteredMeldingen.length === 0 && !forcedPriorityId) return;
     if (forcedPriorityId) setPriorityMissionId(forcedPriorityId);
     if (assignments?.[0] && firestore) updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignments[0].id), { status: 'Started' });
-    setStartTime(new Date().toISOString());
     setNavigationState('navigating');
-    if (isMeldingenType && !forcedPriorityId) openInGoogleMaps();
+    if (isMeldingenType) openInGoogleMaps();
   };
 
   const handleStopRit = async () => {
-    setNavigationState('setup'); setStartTime(null); setPriorityMissionId(null);
+    setNavigationState('setup'); setPriorityMissionId(null);
   };
 
   return (
@@ -782,20 +633,22 @@ export default function StartNavigationPage() {
         <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-3">
                  <Button variant="ghost" size="icon" className="rounded-full h-10 w-10" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6 text-slate-600" /></Button>
-                 {navigationState === 'navigating' && routeInfo && !isMeldingenType ? (
-                    <div className="flex items-center gap-4 bg-slate-900/5 px-4 py-2 rounded-full border-2 border-slate-200">
-                        <div className="flex items-center gap-2 text-base font-black text-slate-900"><Clock className="h-5 w-5 text-primary" />{formatDate(addSeconds(new Date(), routeInfo.duration), 'HH:mm')}</div>
-                        <div className="h-5 w-0.5 bg-slate-300" />
-                        <div className="flex items-center gap-2 text-base font-black text-slate-900"><Navigation className="h-5 w-5 text-primary" />{(routeInfo.distance / 1000).toFixed(1)} km</div>
-                    </div>
-                 ) : (
-                    <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 leading-none">Navigatie</h2>
-                 )}
+                 <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 leading-none">Navigatie</h2>
             </div>
             <div className="flex items-center gap-2">
                 <Popover>
                     <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
-                    <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-[2.5rem] shadow-2xl bg-white border-none"><div className="space-y-6"><div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div><div className="space-y-4"><div className="flex items-center justify-between"><div><Label className="text-xs font-black uppercase">Auto-open</Label><p className="text-[9px] font-bold text-slate-400">Open bij 10s stilstand</p></div><Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabled} /></div></div></div></PopoverContent>
+                    <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-[2.5rem] shadow-2xl bg-white border-none">
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-5 w-5 text-primary" /><h4 className="font-black uppercase tracking-tight">Instellingen</h4></div>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div><Label className="text-xs font-black uppercase">Auto-open</Label><p className="text-[9px] font-bold text-slate-400">Open bij 10s stilstand</p></div>
+                                    <Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabledState} />
+                                </div>
+                            </div>
+                        </div>
+                    </PopoverContent>
                 </Popover>
                 {navigationState === 'setup' ? (
                     <Button className="h-10 px-6 font-black uppercase bg-primary text-white shadow-xl rounded-xl tracking-widest text-xs" onClick={() => handleStartRit()} disabled={isMeldingenType && filteredMeldingen.length === 0}>
@@ -841,11 +694,6 @@ export default function StartNavigationPage() {
                                             <ChevronRight className="h-6 w-6 text-slate-200 group-hover:text-primary transition-all group-hover:translate-x-1" />
                                         </div>
                                     </div>
-                                    {m.extra_informatie && (
-                                        <div className="px-6 pb-6 pt-0">
-                                            <p className="text-[11px] font-medium text-slate-400 italic line-clamp-1">"{m.extra_informatie}"</p>
-                                        </div>
-                                    )}
                                 </Card>
                             ))}
                             {sortedMissions.length === 0 && (
@@ -860,7 +708,11 @@ export default function StartNavigationPage() {
             ) : (
                 <div className="flex-1 relative">
                     <MapGL ref={mapRef} initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN}>
-                        {/* Map content... */}
+                        {allObjects?.map(obj => (
+                            <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
+                                <div className="h-3 w-3 rounded-full bg-primary border-2 border-white shadow-md" />
+                            </Marker>
+                        ))}
                     </MapGL>
                 </div>
             )}
@@ -874,7 +726,12 @@ export default function StartNavigationPage() {
                     onCompleted={(id) => { 
                         setCompletedObjects(prev => [...prev, id]); 
                         setActiveWerkbonId(null);
-                    }} 
+                    }}
+                    onNavigateNow={(id) => {
+                        setPriorityMissionId(id);
+                        openInGoogleMaps();
+                        setActiveWerkbonId(null);
+                    }}
                 />
             </div>
         )}
