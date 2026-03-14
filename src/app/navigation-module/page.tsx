@@ -107,6 +107,8 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
+  DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -625,7 +627,7 @@ export default function StartNavigationPage() {
   }, [userFolders]);
 
   const isSvg = (str: string) => {
-    if (!str) return false;
+    if (!str) false;
     const trimmed = str.trim().toLowerCase();
     return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
   };
