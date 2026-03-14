@@ -1073,8 +1073,8 @@ export default function StartNavigationPage() {
                                                 {stableIndex}
                                             </div>
                                             
-                                            {/* Category Icon */}
-                                            <div className="flex items-center justify-center shrink-0 w-8">
+                                            {/* Category Icon Square */}
+                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-slate-100 bg-transparent ml-1">
                                                 {renderCategoryIcon(m.hoofdcategorie)}
                                             </div>
 
