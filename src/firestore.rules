@@ -48,7 +48,8 @@ service cloud.firestore {
       allow delete: if isAdmin();
 
       // Mappenbeheer per gebruiker (Subcollectie)
-      // Expliciete regels voor de collectie zelf en documenten
+      // Gebruikers mogen hun eigen mappen inzien en beheren.
+      // Beheerders mogen alle mappen beheren.
       match /folders/{folderId} {
         allow read, list, get, write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }

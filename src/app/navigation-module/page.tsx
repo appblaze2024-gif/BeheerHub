@@ -76,7 +76,10 @@ import {
   User as UserIcon,
   ChevronDown,
   LayoutGrid,
+  CircleHelp,
+  AlertCircle
 } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, RouteAssignment, UserFolder, UserProfile } from '@/lib/types';
@@ -581,6 +584,10 @@ export default function StartNavigationPage() {
 
   const { data: assignments } = useCollection<RouteAssignment>(assignmentsQuery);
 
+  const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
+  const { data: dbOptions } = useDoc<any>(optionsRef);
+  const categoryIcons = dbOptions?.categoryIcons || {};
+
   useEffect(() => {
     if (!navigator.geolocation) return;
     
@@ -618,6 +625,45 @@ export default function StartNavigationPage() {
     if (!userFolders) return new Set<string>();
     return new Set(userFolders.flatMap(f => f.taskIds || []));
   }, [userFolders]);
+
+  const isSvg = (str: string) => {
+    if (!str) return false;
+    const trimmed = str.trim().toLowerCase();
+    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
+  };
+
+  const renderCategoryIcon = (category: string) => {
+    const iconVal = categoryIcons[category];
+    if (!iconVal) return null;
+    
+    if (isSvg(iconVal)) {
+        return (
+            <div 
+                className="h-5 w-5 flex items-center justify-center text-primary [&>svg]:h-full [&>svg]:w-full" 
+                dangerouslySetInnerHTML={{ __html: iconVal }} 
+            />
+        );
+    }
+    
+    if (iconVal.startsWith('http')) {
+        return (
+            <div className="h-5 w-5 relative flex items-center justify-center rounded-none overflow-hidden">
+                <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
+            </div>
+        );
+    }
+
+    if (iconVal.startsWith('lucide:')) {
+        const parts = iconVal.split(':');
+        const name = parts[1];
+        const color = parts[2];
+        const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
+        return <IconComp className="h-5 w-5" style={{ color: color || '#007AFF' }} />;
+    }
+
+    const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
+    return <IconComp className="h-5 w-5 text-slate-400" />;
+  };
 
   const sequenceMissions = useCallback((missions: any[]) => {
     if (missions.length === 0) return [];
@@ -734,6 +780,57 @@ export default function StartNavigationPage() {
     return sequenceMissions(base);
   }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders, sequenceMissions]);
 
+  const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
+    const originStr = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : "My+Location";
+
+    if (lat && lng) {
+      window.open(`https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${lat},${lng}`, '_blank');
+      return;
+    }
+    
+    const pendingMissions = displayedMissions.filter(m => m.status !== 'Afgerond');
+    if (pendingMissions.length === 0) return;
+    
+    const dest = pendingMissions[pendingMissions.length - 1];
+    const waypoints = pendingMissions.slice(0, -1).filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
+    window.open(`https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
+  }, [displayedMissions, userLocation]);
+
+  const handleStartRit = async (forcedPriorityId?: string) => {
+    if (displayedMissions.length === 0 && !forcedPriorityId) return;
+    if (forcedPriorityId) setPriorityMissionId(forcedPriorityId);
+    if (assignments?.[0] && firestore) updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignments[0].id), { status: 'Started' });
+    setNavigationState('navigating');
+    if (isMeldingenType) openInGoogleMaps();
+  };
+
+  const handleStopRit = async () => {
+    setNavigationState('setup'); setPriorityMissionId(null);
+  };
+
+  const handleRecalculateRoute = () => {
+    if (!navigator.geolocation) {
+        toast({ variant: 'destructive', title: 'Fout', description: 'GPS niet beschikbaar op dit apparaat.' });
+        return;
+    }
+
+    setIsRecalculating(true);
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+            setTimeout(() => {
+                setIsRecalculating(false);
+                toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie. Nummers blijven ongewijzigd." });
+            }, 1200);
+        },
+        () => {
+            setIsRecalculating(false);
+            toast({ variant: 'destructive', title: 'Locatiefout', description: 'Kon huidige locatie niet bepalen.' });
+        },
+        { enableHighAccuracy: true }
+    );
+  };
+
   const handleCreateFolder = async () => {
     if (!firestore || !managedUserId || !newFolderName.trim()) return;
     try {
@@ -791,57 +888,6 @@ export default function StartNavigationPage() {
     } catch (e) {
         toast({ variant: 'destructive', title: "Fout bij verwijderen map" });
     }
-  };
-
-  const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
-    const originStr = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : "My+Location";
-
-    if (lat && lng) {
-      window.open(`https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${lat},${lng}`, '_blank');
-      return;
-    }
-    
-    const pendingMissions = displayedMissions.filter(m => m.status !== 'Afgerond');
-    if (pendingMissions.length === 0) return;
-    
-    const dest = pendingMissions[pendingMissions.length - 1];
-    const waypoints = pendingMissions.slice(0, -1).filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
-    window.open(`https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
-  }, [displayedMissions, userLocation]);
-
-  const handleStartRit = async (forcedPriorityId?: string) => {
-    if (displayedMissions.length === 0 && !forcedPriorityId) return;
-    if (forcedPriorityId) setPriorityMissionId(forcedPriorityId);
-    if (assignments?.[0] && firestore) updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignments[0].id), { status: 'Started' });
-    setNavigationState('navigating');
-    if (isMeldingenType) openInGoogleMaps();
-  };
-
-  const handleStopRit = async () => {
-    setNavigationState('setup'); setPriorityMissionId(null);
-  };
-
-  const handleRecalculateRoute = () => {
-    if (!navigator.geolocation) {
-        toast({ variant: 'destructive', title: 'Fout', description: 'GPS niet beschikbaar op dit apparaat.' });
-        return;
-    }
-
-    setIsRecalculating(true);
-    navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-            setTimeout(() => {
-                setIsRecalculating(false);
-                toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie. Nummers blijven ongewijzigd." });
-            }, 1200);
-        },
-        () => {
-            setIsRecalculating(false);
-            toast({ variant: 'destructive', title: 'Locatiefout', description: 'Kon huidige locatie niet bepalen.' });
-        },
-        { enableHighAccuracy: true }
-    );
   };
 
   return (
@@ -1026,6 +1072,12 @@ export default function StartNavigationPage() {
                                             )}>
                                                 {stableIndex}
                                             </div>
+                                            
+                                            {/* Category Icon */}
+                                            <div className="flex items-center justify-center shrink-0 w-8">
+                                                {renderCategoryIcon(m.hoofdcategorie)}
+                                            </div>
+
                                             <div className="flex-1 min-w-0 ml-1">
                                                 <div className="flex items-center justify-between mb-1 gap-1 leading-none">
                                                     <h3 className={cn(
