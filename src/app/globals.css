@@ -23,7 +23,7 @@
     --border: 240 6% 90%;
     --input: 240 6% 90%;
     --ring: 211 100% 50%;
-    --radius: 1.25rem; /* 20px iOS radius */
+    --radius: 0rem; /* Strak vierkant design */
     --sidebar-blue: 211 100% 50%;
   }
 
@@ -87,7 +87,7 @@ body[style*="pointer-events: none"] {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+  @apply bg-slate-300 rounded-none hover:bg-slate-400 transition-colors;
 }
 
 /* iOS typical animations */

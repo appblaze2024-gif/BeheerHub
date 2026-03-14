@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -148,7 +147,7 @@ function SectionRow({
                         <Icon className="h-5 w-5 text-slate-900" />
                     </div>
                     {badgeCount !== undefined && badgeCount > 0 && (
-                        <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black h-4 w-4 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                        <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black h-4 w-4 rounded-none flex items-center justify-center border-2 border-white shadow-sm">
                             {badgeCount}
                         </div>
                     )}
@@ -343,7 +342,7 @@ function IntegratedWerkbonOverlay({
 
     const renderSubViewHeader = (title: string) => (
         <header className="h-14 bg-slate-900 text-white flex items-center justify-between px-3 shrink-0">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-10 w-10" onClick={() => setSubView('main')}><ArrowLeft className="h-6 w-6" /></Button>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-none h-10 w-10" onClick={() => setSubView('main')}><ArrowLeft className="h-6 w-6" /></Button>
             <h3 className="text-xs font-black uppercase tracking-[0.2em]">{title}</h3>
             <div className="w-10" />
         </header>
@@ -354,7 +353,7 @@ function IntegratedWerkbonOverlay({
             {subView === 'main' ? (
                 <>
                     <header className="h-14 bg-slate-900 text-white flex items-center justify-between px-3 shrink-0">
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-10 w-10" onClick={onClose}><ChevronLeft className="h-6 w-6" /></Button>
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-none h-10 w-10" onClick={onClose}><ChevronLeft className="h-6 w-6" /></Button>
                         <h3 className="text-xs font-black uppercase tracking-[0.2em]">WERKBON</h3>
                         <div className="w-10" />
                     </header>
@@ -373,7 +372,7 @@ function IntegratedWerkbonOverlay({
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.1em]">Uw Notities</Label>
-                                        <Button variant={isListening ? "destructive" : "secondary"} size="icon" className={cn("h-14 w-14 rounded-full shadow-xl transition-all active:scale-90 border-2 border-white", isListening && "animate-pulse ring-4 ring-red-500/20")} onClick={toggleListening}>
+                                        <Button variant={isListening ? "destructive" : "secondary"} size="icon" className={cn("h-14 w-14 rounded-none shadow-xl transition-all active:scale-90 border-2 border-white", isListening && "animate-pulse ring-4 ring-red-500/20")} onClick={toggleListening}>
                                             {isListening ? <Loader2 className="h-6 w-6 animate-spin" /> : <Mic className="h-6 w-6 text-primary" />}
                                         </Button>
                                     </div>
@@ -409,7 +408,7 @@ function IntegratedWerkbonOverlay({
                                         {afhandelingFotos.map((p, i) => (
                                             <div key={`new-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-lg group" onClick={() => setPreviewImage(p.url)}>
                                                 <Image src={p.url} alt="afhandeling" fill className="object-cover" />
-                                                <Button variant="destructive" size="icon" className="absolute right-1 top-1 h-8 w-8 rounded-full border-2 border-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
+                                                <Button variant="destructive" size="icon" className="absolute right-1 top-1 h-8 w-8 rounded-none border-2 border-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
                                             </div>
                                         ))}
                                     </div>
@@ -453,7 +452,7 @@ function IntegratedWerkbonOverlay({
                                     {hoeveelheden.map(h => (
                                         <div key={h.id} className="flex justify-between items-center p-4 bg-white border-2 border-slate-100 rounded-none shadow-sm">
                                             <div className="flex flex-col"><span className="text-sm font-black uppercase tracking-tight text-slate-900">{h.type}</span><span className="text-[9px] text-slate-400 uppercase font-black tracking-widest">{h.eenheid}</span></div>
-                                            <div className="flex items-center gap-6"><span className="text-2xl font-black text-primary leading-none tabular-nums">{h.aantal}</span><Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-full h-10 w-10" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-5 w-5" /></Button></div>
+                                            <div className="flex items-center gap-6"><span className="text-2xl font-black text-primary leading-none tabular-nums">{h.aantal}</span><Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-none h-10 w-10" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-5 w-5" /></Button></div>
                                         </div>
                                     ))}
                                 </div>
@@ -469,8 +468,8 @@ function IntegratedWerkbonOverlay({
                                 <div className="grid gap-3">
                                     {uploadedFiles.map(f => (
                                         <div key={f.storagePath} className="flex items-center justify-between p-4 bg-white rounded-none border-2 border-slate-100 shadow-sm transition-all hover:border-primary/20">
-                                            <div className="flex items-center gap-4 truncate"><div className="bg-blue-100 p-3 rounded-xl"><FileText className="h-6 w-6 text-blue-600" /></div><span className="text-xs font-black truncate uppercase tracking-tight text-slate-900">{f.name}</span></div>
-                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 rounded-full hover:bg-red-50" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-5 w-5" /></Button>
+                                            <div className="flex items-center gap-4 truncate"><div className="bg-blue-100 p-3 rounded-none"><FileIcon className="h-6 w-6 text-blue-600" /></div><span className="text-xs font-black truncate uppercase tracking-tight text-slate-900">{f.name}</span></div>
+                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 rounded-none hover:bg-red-50" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-5 w-5" /></Button>
                                         </div>
                                     ))}
                                 </div>
@@ -482,7 +481,7 @@ function IntegratedWerkbonOverlay({
 
             {previewImage && (
                 <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
-                    <div className="flex justify-end p-6 shrink-0"><Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-12 w-12 border-2 border-white/20"><X className="h-8 w-8" /></Button></div>
+                    <div className="flex justify-end p-6 shrink-0"><Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-none h-12 w-12 border-2 border-white/20"><X className="h-8 w-8" /></Button></div>
                     <div className="flex-1 relative flex items-center justify-center overflow-hidden"><img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} /></div>
                 </div>
             )}
@@ -813,12 +812,12 @@ export default function StartNavigationPage() {
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-3 min-w-0">
-                 <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 shrink-0" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6 text-slate-600" /></Button>
+                 <Button variant="ghost" size="icon" className="rounded-none h-10 w-10 shrink-0" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6 text-slate-600" /></Button>
                  <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none truncate">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
             </div>
             <div className="flex items-center gap-2 shrink-0">
                 <Popover>
-                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
+                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-none hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
                     <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-none shadow-2xl bg-white border-none">
                         <div className="space-y-6">
                             <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-6 w-6 text-primary" /><h4 className="text-sm font-black uppercase tracking-tight">Instellingen</h4></div>
@@ -1063,7 +1062,7 @@ export default function StartNavigationPage() {
                     <MapGL ref={mapRef} initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN}>
                         {allObjects?.map(obj => (
                             <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
-                                <div className="h-4 w-4 rounded-full bg-primary border-2 border-white shadow-md" />
+                                <div className="h-4 w-4 rounded-none bg-primary border-2 border-white shadow-md" />
                             </Marker>
                         ))}
                     </MapGL>

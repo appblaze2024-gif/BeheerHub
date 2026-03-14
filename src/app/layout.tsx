@@ -35,8 +35,8 @@ function ProcessingOverlay() {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="flex flex-col items-center gap-4 p-8 rounded-[2.5rem] bg-white shadow-2xl border border-slate-100 scale-110">
-        <div className="h-10 w-10 animate-spin border-4 border-primary border-t-transparent rounded-full" />
+      <div className="flex flex-col items-center gap-4 p-8 rounded-none bg-white shadow-2xl border border-slate-100 scale-110">
+        <div className="h-10 w-10 animate-spin border-4 border-primary border-t-transparent rounded-none" />
         <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Verwerken...</p>
       </div>
     </div>
@@ -66,12 +66,12 @@ function Header() {
 
   return (
     <header className="h-20 flex items-center justify-end px-4 lg:px-8 bg-transparent shrink-0 sticky top-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-lg px-2 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-100/50 pointer-events-auto max-w-[90vw] sm:max-w-none">
+      <div className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-lg px-2 sm:px-4 py-1 sm:py-1.5 rounded-none shadow-lg border border-slate-100/50 pointer-events-auto max-w-[90vw] sm:max-w-none">
         <div className="flex items-center gap-0.5 sm:gap-1">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10"
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-none text-primary hover:bg-primary/10"
             onClick={goToHome}
             title="Home"
           >
@@ -79,14 +79,14 @@ function Header() {
           </Button>
           <NotificationCenter />
           <AppInfoDialog>
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10">
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-none text-primary hover:bg-primary/10">
               <Info className="h-4 w-4" />
             </Button>
           </AppInfoDialog>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10"
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-none text-primary hover:bg-primary/10"
             onClick={handleSignOut}
           >
             <LogOutIcon className="h-4 w-4" />
@@ -104,7 +104,7 @@ function Header() {
           </p>
           {profile?.role && (
             <Badge className={cn(
-              "mt-0.5 sm:mt-1 h-3.5 px-1.5 text-[7px] font-black uppercase border-none rounded-full",
+              "mt-0.5 sm:mt-1 h-3.5 px-1.5 text-[7px] font-black uppercase border-none rounded-none",
               profile.role === 'Super admin' ? "bg-red-500 text-white" : "bg-primary text-white"
             )}>
               {profile.role}
@@ -112,8 +112,8 @@ function Header() {
           )}
         </div>
         
-        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0">
-          <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-black uppercase">
+        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0 rounded-none">
+          <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-black uppercase rounded-none">
             {profile?.firstName?.[0]}{profile?.lastName?.[0]}
           </AvatarFallback>
         </Avatar>

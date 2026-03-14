@@ -283,13 +283,13 @@ void loop() {
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
       <PageHeader title="Internet of Things" description="Hardware beheer en KPN integratie.">
-        <Button onClick={() => setIsAddDialogOpen(true)} className="font-black h-10 uppercase">
+        <Button onClick={() => setIsAddDialogOpen(true)} className="font-black h-10 uppercase rounded-none">
           <Plus className="mr-2 h-4 w-4" /> Nieuwe Sensor
         </Button>
       </PageHeader>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 p-4 md:p-6 overflow-hidden">
-        <Card className={cn("lg:col-span-3 flex flex-col rounded-2xl overflow-hidden", isTablet && selectedSensorId ? "hidden" : "flex")}>
+        <Card className={cn("lg:col-span-3 flex flex-col rounded-none overflow-hidden", isTablet && selectedSensorId ? "hidden" : "flex")}>
           <CardHeader className="p-4 border-b bg-slate-50/50">
             <CardTitle className="text-[10px] font-black uppercase text-slate-400">Sensoren</CardTitle>
           </CardHeader>
@@ -298,44 +298,44 @@ void loop() {
               <div key={s.id} onClick={() => setSelectedSensorId(s.id)} className={cn("p-4 border-b cursor-pointer transition-all hover:bg-slate-50", selectedSensorId === s.id && "bg-blue-50 border-l-4 border-l-primary")}>
                 <div className="flex justify-between items-start mb-2">
                   <p className="font-black text-xs uppercase truncate">{s.name}</p>
-                  <Badge variant="outline" className="text-[8px] h-4">{s.status}</Badge>
+                  <Badge variant="outline" className="text-[8px] h-4 rounded-none">{s.status}</Badge>
                 </div>
                 <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-2">
                   <code className="uppercase">{s.id}</code>
                   <span>{s.vulgraad}%</span>
                 </div>
-                <Progress value={s.vulgraad} variant="gauge" className="h-1" />
+                <Progress value={s.vulgraad} variant="gauge" className="h-1 rounded-none" />
               </div>
             ))}
           </ScrollArea>
         </Card>
 
-        <Card className={cn("lg:col-span-9 flex flex-col rounded-2xl overflow-hidden shadow-xl bg-white", !selectedSensor && "hidden lg:flex")}>
+        <Card className={cn("lg:col-span-9 flex flex-col rounded-none overflow-hidden shadow-xl bg-white", !selectedSensor && "hidden lg:flex")}>
           {selectedSensor ? (
             <Tabs defaultValue="map" className="flex-1 flex flex-col h-full overflow-hidden">
               <div className="px-4 py-2 border-b bg-slate-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  {isTablet && <Button variant="ghost" size="icon" onClick={() => setSelectedSensorId(null)} className="h-8 w-8 bg-white border"><ArrowLeft className="h-4 w-4" /></Button>}
+                  {isTablet && <Button variant="ghost" size="icon" onClick={() => setSelectedSensorId(null)} className="h-8 w-8 bg-white border rounded-none"><ArrowLeft className="h-4 w-4" /></Button>}
                   <TabsList className="bg-transparent h-9 p-0 gap-2 border-none">
-                    <TabsTrigger value="map" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg border-none data-[state=active]:bg-white shadow-none">Live Status</TabsTrigger>
-                    <TabsTrigger value="code" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg border-none data-[state=active]:bg-white shadow-none">Hardware Code</TabsTrigger>
-                    <TabsTrigger value="kpn" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg border-none data-[state=active]:bg-white shadow-none">KPN Setup</TabsTrigger>
+                    <TabsTrigger value="map" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-none border-none data-[state=active]:bg-white shadow-none">Live Status</TabsTrigger>
+                    <TabsTrigger value="code" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-none border-none data-[state=active]:bg-white shadow-none">Hardware Code</TabsTrigger>
+                    <TabsTrigger value="kpn" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-none border-none data-[state=active]:bg-white shadow-none">KPN Setup</TabsTrigger>
                   </TabsList>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="font-mono text-[10px] bg-white border uppercase">{selectedSensor.id}</Badge>
+                  <Badge variant="secondary" className="font-mono text-[10px] bg-white border uppercase rounded-none">{selectedSensor.id}</Badge>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600"><Trash2 className="h-4 w-4" /></Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="rounded-none">
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Sensor verwijderen?</AlertDialogTitle>
+                        <AlertDialogTitle className="font-black uppercase">Sensor verwijderen?</AlertDialogTitle>
                         <AlertDialogDescription>De sensor {selectedSensor.name} wordt permanent gewist.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(selectedSensor.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
+                        <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(selectedSensor.id)} className="bg-red-600 rounded-none font-black uppercase">Verwijderen</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -350,17 +350,17 @@ void loop() {
                   />
                 </div>
                 <div className="absolute top-4 right-4 w-56 space-y-2 pointer-events-none">
-                  <Card className="bg-white/95 backdrop-blur shadow-2xl border-none rounded-2xl overflow-hidden pointer-events-auto">
+                  <Card className="bg-white/95 backdrop-blur shadow-2xl border-none rounded-none overflow-hidden pointer-events-auto">
                     <div className="bg-slate-900 px-4 py-2 flex items-center justify-between text-white text-[9px] font-black uppercase">
                       <span>Live Status</span>
-                      <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                      <div className="h-2 w-2 bg-green-500 rounded-none animate-pulse" />
                     </div>
                     <CardContent className="p-4 space-y-4">
                       <div className="flex justify-between items-end">
                         <p className="text-3xl font-black text-slate-900 leading-none">{selectedSensor.vulgraad}%</p>
                         <p className="text-[10px] font-bold text-slate-400 uppercase">{selectedSensor.currentDistanceCm}cm</p>
                       </div>
-                      <Progress value={selectedSensor.vulgraad} variant="gauge" className="h-1.5 bg-slate-100" />
+                      <Progress value={selectedSensor.vulgraad} variant="gauge" className="h-1.5 bg-slate-100 rounded-none" />
                       <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400 pt-2 border-t">
                         <div className="flex items-center gap-1"><Battery className="h-3 w-3" /> {selectedSensor.batteryLevel}%</div>
                         <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {selectedSensor.lastSeen ? format(new Date(selectedSensor.lastSeen), 'HH:mm') : '--'}</div>
@@ -378,18 +378,18 @@ void loop() {
                       <Button 
                         variant="outline"
                         onClick={handleResetCode}
-                        className="h-8 px-3 text-[10px] font-black uppercase border-slate-200 hover:bg-slate-100 bg-white"
+                        className="h-8 px-3 text-[10px] font-black uppercase border-slate-200 hover:bg-slate-100 bg-white rounded-none"
                       >
                         <RotateCcw className="h-3.5 w-3.5 mr-2" />
                         Herstellen
                       </Button>
-                      <Button onClick={() => copyToClipboard(selectedSensor.iotCode || defaultCode, setCopiedCode)} className="h-8 px-4 text-[10px] font-black uppercase shadow-lg bg-primary hover:bg-primary/90">
+                      <Button onClick={() => copyToClipboard(selectedSensor.iotCode || defaultCode, setCopiedCode)} className="h-8 px-4 text-[10px] font-black uppercase shadow-lg bg-primary hover:bg-primary/90 rounded-none">
                         {copiedCode ? <Check className="h-3.5 w-3.5 mr-2" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
                         Kopieer Code
                       </Button>
                     </div>
                   </div>
-                  <div className="flex-1 bg-slate-900 rounded-2xl shadow-2xl overflow-hidden relative border-[6px] border-slate-800">
+                  <div className="flex-1 bg-slate-900 rounded-none shadow-2xl overflow-hidden relative border-[6px] border-slate-800">
                     <div className="h-full overflow-auto p-6 custom-scrollbar">
                       <pre className="text-blue-400 font-mono text-[11px] leading-relaxed whitespace-pre font-bold overflow-x-auto">
                         {selectedSensor.iotCode || defaultCode}
@@ -406,11 +406,11 @@ void loop() {
                       <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Arduino Foutcode of Vraag</Label>
                       <Textarea 
                         placeholder="Plak hier uw foutmelding..." 
-                        className="min-h-[150px] text-xs font-medium rounded-xl bg-slate-50 border-slate-200 focus:ring-primary/20 resize-none" 
+                        className="min-h-[150px] text-xs font-medium rounded-none bg-slate-50 border-slate-200 focus:ring-primary/20 resize-none" 
                         value={aiPrompt} 
                         onChange={e => setAiPrompt(e.target.value)} 
                       />
-                      <Button className="w-full h-11 font-black uppercase shadow-xl shadow-primary/20 text-xs" disabled={!aiPrompt.trim() || isFixing} onClick={handleFixWithAI}>
+                      <Button className="w-full h-11 font-black uppercase shadow-xl shadow-primary/20 text-xs rounded-none" disabled={!aiPrompt.trim() || isFixing} onClick={handleFixWithAI}>
                         {isFixing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCcw className="h-4 w-4 mr-2" />}
                         Code Herstellen met AI
                       </Button>
@@ -420,7 +420,7 @@ void loop() {
                       <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 flex items-center gap-2"><History className="h-3.5 w-3.5" /> Fix Historie</h4>
                       <ScrollArea className="flex-1 pr-2">
                         {selectedSensor.iotHistory?.map((m, i) => (
-                          <div key={i} className={cn("p-3 rounded-2xl text-[11px] mb-3 shadow-sm border", m.role === 'user' ? "bg-slate-50 border-slate-100 text-slate-600 ml-4" : "bg-blue-50 border-blue-100 text-blue-700 mr-4")}>
+                          <div key={i} className={cn("p-3 rounded-none text-[11px] mb-3 shadow-sm border", m.role === 'user' ? "bg-slate-50 border-slate-100 text-slate-600 ml-4" : "bg-blue-50 border-blue-100 text-blue-700 mr-4")}>
                             <p className="font-bold leading-relaxed">{m.content}</p>
                           </div>
                         ))}
@@ -437,18 +437,18 @@ void loop() {
                 <div className="max-w-3xl mx-auto space-y-8">
                   <div className="flex justify-between items-center">
                     <h3 className="text-xl font-black uppercase tracking-tight">KPN Things Integratie</h3>
-                    <Button variant="outline" onClick={() => setIsStepsDialogOpen(true)} className="h-9 font-black uppercase text-[10px] gap-2"><ClipboardList className="h-4 w-4" /> Stappenplan</Button>
+                    <Button variant="outline" onClick={() => setIsStepsDialogOpen(true)} className="h-9 font-black uppercase text-[10px] gap-2 rounded-none"><ClipboardList className="h-4 w-4" /> Stappenplan</Button>
                   </div>
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center"><h4 className="text-sm font-black uppercase">1. Payload Decoder (JavaScript)</h4><Button variant="outline" size="sm" onClick={() => copyToClipboard(decoderCode, setCopiedDecoder)} className="h-7 text-[9px] font-black uppercase">Kopieer</Button></div>
-                    <Card className="bg-slate-900 text-blue-400 p-6 rounded-2xl font-mono text-[11px] shadow-xl"><pre className="whitespace-pre-wrap font-bold">{decoderCode}</pre></Card>
+                    <div className="flex justify-between items-center"><h4 className="text-sm font-black uppercase">1. Payload Decoder (JavaScript)</h4><Button variant="outline" size="sm" onClick={() => copyToClipboard(decoderCode, setCopiedDecoder)} className="h-7 text-[9px] font-black uppercase rounded-none">Kopieer</Button></div>
+                    <Card className="bg-slate-900 text-blue-400 p-6 rounded-none font-mono text-[11px] shadow-xl"><pre className="whitespace-pre-wrap font-bold">{decoderCode}</pre></Card>
                   </div>
                   <div className="space-y-4">
                     <h4 className="text-sm font-black uppercase">2. Webhook / HTTP Destination</h4>
-                    <Card className="bg-slate-900 text-white p-6 rounded-2xl overflow-hidden relative shadow-xl">
-                      <div className="flex justify-between items-center mb-4"><span className="text-[10px] font-black uppercase tracking-widest opacity-50">KPN Webhook URL</span><Button size="sm" variant="ghost" onClick={() => copyToClipboard(apiEndpoint, setCopiedUrl)} className="h-7 text-[9px] bg-white/10 hover:bg-white/20 text-white uppercase font-black">Kopieer URL</Button></div>
-                      <div className="bg-black/40 p-4 rounded-xl font-mono text-[10px] break-all text-blue-400 border border-white/5 font-bold">{apiEndpoint}</div>
-                      <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/5"><p className="text-[10px] text-slate-400 italic"><strong>Belangrijk:</strong> Voeg in KPN Things de header <strong>X-HTTP-Method-Override: PATCH</strong> toe.</p></div>
+                    <Card className="bg-slate-900 text-white p-6 rounded-none overflow-hidden relative shadow-xl">
+                      <div className="flex justify-between items-center mb-4"><span className="text-[10px] font-black uppercase tracking-widest opacity-50">KPN Webhook URL</span><Button size="sm" variant="ghost" onClick={() => copyToClipboard(apiEndpoint, setCopiedUrl)} className="h-7 text-[9px] bg-white/10 hover:bg-white/20 text-white uppercase font-black rounded-none">Kopieer URL</Button></div>
+                      <div className="bg-black/40 p-4 rounded-none font-mono text-[10px] break-all text-blue-400 border border-white/5 font-bold">{apiEndpoint}</div>
+                      <div className="mt-4 p-4 bg-white/5 rounded-none border border-white/5"><p className="text-[10px] text-slate-400 italic"><strong>Belangrijk:</strong> Voeg in KPN Things de header <strong>X-HTTP-Method-Override: PATCH</strong> toe.</p></div>
                     </Card>
                   </div>
                 </div>
@@ -456,7 +456,7 @@ void loop() {
             </Tabs>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-slate-50/30">
-              <div className="bg-white p-8 rounded-full shadow-xl mb-6">
+              <div className="bg-white p-8 rounded-none shadow-xl mb-6">
                 <Radio className="h-16 w-16 text-primary animate-pulse" />
               </div>
               <h3 className="text-xl font-black uppercase tracking-tight mb-2 text-slate-900">Geen apparaat geselecteerd</h3>
@@ -469,7 +469,7 @@ void loop() {
       <AddSensorDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
 
       <Dialog open={isStepsDialogOpen} onOpenChange={setIsStepsDialogOpen}>
-        <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+        <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-none">
           <DialogHeader className="p-8 border-b bg-slate-900 shrink-0">
             <DialogTitle className="text-xl font-black uppercase tracking-tight text-white">Technisch Stappenplan: CubeCell + TOF10120</DialogTitle>
             <DialogDescription className="font-bold text-slate-400">Volg deze stappen voor een correcte installatie en verbinding met KPN.</DialogDescription>
@@ -477,15 +477,15 @@ void loop() {
           <ScrollArea className="flex-1 bg-white">
             <div className="p-8 space-y-10 pb-12">
               <div className="space-y-4">
-                <div className="flex items-center gap-3"><Badge className="h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black bg-primary">1</Badge><h4 className="font-black uppercase tracking-tight text-slate-900 text-lg">Hardware Aansluiten</h4></div>
-                <Card className="bg-slate-50 border-2 p-6 rounded-3xl grid sm:grid-cols-2 gap-8">
+                <div className="flex items-center gap-3"><Badge className="h-8 w-8 rounded-none flex items-center justify-center p-0 text-lg font-black bg-primary">1</Badge><h4 className="font-black uppercase tracking-tight text-slate-900 text-lg">Hardware Aansluiten</h4></div>
+                <Card className="bg-slate-50 border-2 p-6 rounded-none grid sm:grid-cols-2 gap-8">
                   <div className="space-y-3">
                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Bedrading Laser Sensor</p>
                     <ul className="text-sm space-y-3 font-bold text-slate-700">
-                      <li className="flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-red-500" /> Rood &rarr; 3V3 (VExt)</li>
-                      <li className="flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-black" /> Zwart &rarr; GND</li>
-                      <li className="flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-blue-500" /> Blauw (SDA) &rarr; SDA Pin</li>
-                      <li className="flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-green-500" /> Groen (SCL) &rarr; SCL Pin</li>
+                      <li className="flex items-center gap-3"><div className="h-3 w-3 rounded-none bg-red-500" /> Rood &rarr; 3V3 (VExt)</li>
+                      <li className="flex items-center gap-3"><div className="h-3 w-3 rounded-none bg-black" /> Zwart &rarr; GND</li>
+                      <li className="flex items-center gap-3"><div className="h-3 w-3 rounded-none bg-blue-500" /> Blauw (SDA) &rarr; SDA Pin</li>
+                      <li className="flex items-center gap-3"><div className="h-3 w-3 rounded-none bg-green-500" /> Groen (SCL) &rarr; SCL Pin</li>
                     </ul>
                   </div>
                   <div className="space-y-3">
@@ -496,15 +496,15 @@ void loop() {
               </div>
               
               <div className="space-y-4">
-                <div className="flex items-center gap-3"><Badge className="h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black bg-primary">2</Badge><h4 className="font-black uppercase tracking-tight text-slate-900 text-lg">Arduino IDE Instellingen</h4></div>
-                <Card className="bg-slate-50 border-2 p-6 rounded-3xl space-y-4">
+                <div className="flex items-center gap-3"><Badge className="h-8 w-8 rounded-none flex items-center justify-center p-0 text-lg font-black bg-primary">2</Badge><h4 className="font-black uppercase tracking-tight text-slate-900 text-lg">Arduino IDE Instellingen</h4></div>
+                <Card className="bg-slate-50 border-2 p-6 rounded-none space-y-4">
                   <div className="grid grid-cols-2 gap-4 text-[11px] font-black text-slate-700 uppercase tracking-tighter">
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">Board: <span className="text-primary">HTCC-AB01</span></div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">Region: <span className="text-primary">EU868</span></div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">Class: <span className="text-primary">Class A</span></div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">Baudrate: <span className="text-primary">115200</span></div>
+                    <div className="bg-white p-3 rounded-none border border-slate-200 shadow-sm">Board: <span className="text-primary">HTCC-AB01</span></div>
+                    <div className="bg-white p-3 rounded-none border border-slate-200 shadow-sm">Region: <span className="text-primary">EU868</span></div>
+                    <div className="bg-white p-3 rounded-none border border-slate-200 shadow-sm">Class: <span className="text-primary">Class A</span></div>
+                    <div className="bg-white p-3 rounded-none border border-slate-200 shadow-sm">Baudrate: <span className="text-primary">115200</span></div>
                   </div>
-                  <div className="bg-blue-50 p-4 border border-blue-100 rounded-2xl flex gap-3">
+                  <div className="bg-blue-50 p-4 border border-blue-100 rounded-none flex gap-3">
                     <Info className="h-4 w-4 text-blue-600 shrink-0" />
                     <div>
                       <p className="text-[10px] font-black uppercase text-blue-700">De Join-Cyclus</p>
@@ -517,17 +517,17 @@ void loop() {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center gap-3"><Badge className="h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black bg-primary">3</Badge><h4 className="font-black uppercase tracking-tight text-slate-900 text-lg">KPN Things Koppeling</h4></div>
-                <Card className="bg-slate-50 border-2 p-6 rounded-3xl space-y-6">
+                <div className="flex items-center gap-3"><Badge className="h-8 w-8 rounded-none flex items-center justify-center p-0 text-lg font-black bg-primary">3</Badge><h4 className="font-black uppercase tracking-tight text-slate-900 text-lg">KPN Things Koppeling</h4></div>
+                <Card className="bg-slate-50 border-2 p-6 rounded-none space-y-6">
                   <div className="flex items-start gap-4">
-                    <div className="bg-blue-100 p-3 rounded-2xl shrink-0 shadow-sm"><Globe className="h-5 w-5 text-blue-600" /></div>
+                    <div className="bg-blue-100 p-3 rounded-none shrink-0 shadow-sm"><Globe className="h-5 w-5 text-blue-600" /></div>
                     <div className="space-y-1">
                       <p className="text-xs font-black uppercase text-slate-900">1. Destination aanmaken</p>
                       <p className="text-[11px] text-slate-500 font-bold leading-relaxed">Ga naar 'Destinations' in KPN. Maak een HTTP Destination met de unieke URL van de geselecteerde sensor (zie tab KPN Setup).</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
-                    <div className="bg-purple-100 p-3 rounded-2xl shrink-0 shadow-sm"><FileCode className="h-5 w-5 text-purple-600" /></div>
+                    <div className="bg-purple-100 p-3 rounded-none shrink-0 shadow-sm"><FileCode className="h-5 w-5 text-purple-600" /></div>
                     <div className="space-y-1">
                       <p className="text-xs font-black uppercase text-slate-900">2. Payload Decoder instellen</p>
                       <p className="text-[11px] text-slate-500 font-bold leading-relaxed">Kopieer de JavaScript code uit BeheerHub en plak deze bij de Payload settings van uw Device in KPN.</p>
@@ -538,7 +538,7 @@ void loop() {
             </div>
           </ScrollArea>
           <DialogFooter className="p-8 border-t bg-slate-50 shrink-0">
-            <Button onClick={() => setIsStepsDialogOpen(false)} className="w-full sm:w-auto font-black uppercase tracking-tight px-12 h-14 shadow-2xl shadow-primary/20 rounded-2xl text-base">
+            <Button onClick={() => setIsStepsDialogOpen(false)} className="w-full sm:w-auto font-black uppercase tracking-tight px-12 h-14 shadow-2xl shadow-primary/20 rounded-none text-base">
               Ik heb alles gelezen
             </Button>
           </DialogFooter>

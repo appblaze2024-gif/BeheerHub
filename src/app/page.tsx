@@ -120,7 +120,7 @@ export default function DashboardPage() {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-10 w-10 rounded-full bg-white shadow-md border border-slate-100 text-primary"
+              className="h-10 w-10 rounded-none bg-white shadow-md border border-slate-100 text-primary"
               onClick={() => {
                 router.push('/');
               }}
@@ -151,14 +151,14 @@ export default function DashboardPage() {
                 <Card 
                   key={item.label}
                   onClick={() => handleCardClick(item)}
-                  className="group relative overflow-hidden rounded-[2rem] border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-36"
+                  className="group relative overflow-hidden rounded-none border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-36"
                 >
                   <CardContent className="p-6 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start">
-                      <div className="bg-slate-50 p-2.5 rounded-2xl group-hover:bg-primary group-hover:text-white transition-all duration-500">
+                      <div className="bg-slate-50 p-2.5 rounded-none group-hover:bg-primary group-hover:text-white transition-all duration-500">
                         <Icon className="h-6 w-6" />
                       </div>
-                      <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:translate-x-0 translate-x-4">
+                      <div className="h-8 w-8 rounded-none bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:translate-x-0 translate-x-4">
                         <ChevronRight className="h-4 w-4 text-primary" />
                       </div>
                     </div>
@@ -177,7 +177,7 @@ export default function DashboardPage() {
                     {item.label === 'Meldingen' && newCount > 0 && (
                       <Badge 
                         variant="destructive" 
-                        className="absolute top-4 right-4 h-6 min-w-6 flex items-center justify-center font-black rounded-full border-2 border-white shadow-lg animate-in zoom-in"
+                        className="absolute top-4 right-4 h-6 min-w-6 flex items-center justify-center font-black rounded-none border-2 border-white shadow-lg animate-in zoom-in"
                       >
                         {newCount}
                       </Badge>
@@ -201,14 +201,14 @@ export default function DashboardPage() {
                 <Card 
                   key={sub.id}
                   onClick={() => handleSubItemClick(sub)}
-                  className="group relative overflow-hidden rounded-[2rem] border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-36"
+                  className="group relative overflow-hidden rounded-none border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-36"
                 >
                   <CardContent className="p-6 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start">
-                      <div className="bg-slate-50 p-2.5 rounded-2xl group-hover:bg-primary group-hover:text-white transition-all duration-500">
+                      <div className="bg-slate-50 p-2.5 rounded-none group-hover:bg-primary group-hover:text-white transition-all duration-500">
                         <Icon className="h-6 w-6" />
                       </div>
-                      <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:translate-x-0 translate-x-4">
+                      <div className="h-8 w-8 rounded-none bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:translate-x-0 translate-x-4">
                         <ChevronRight className="h-4 w-4 text-primary" />
                       </div>
                     </div>
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                     {isPortalSubItem && newCount > 0 && (
                       <Badge 
                         variant="destructive" 
-                        className="absolute top-4 right-4 h-6 min-w-6 flex items-center justify-center font-black rounded-full border-2 border-white shadow-lg animate-in zoom-in"
+                        className="absolute top-4 right-4 h-6 min-w-6 flex items-center justify-center font-black rounded-none border-2 border-white shadow-lg animate-in zoom-in"
                       >
                         {newCount}
                       </Badge>

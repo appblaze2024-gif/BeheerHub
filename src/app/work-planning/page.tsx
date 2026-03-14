@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -165,7 +164,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                 onDragStart={canEdit ? handleDragStart : undefined}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                    "rounded-md p-2 text-xs relative group/dienst focus:outline-none focus:ring-2 focus:ring-primary",
+                    "rounded-none p-2 text-xs relative group/dienst focus:outline-none focus:ring-2 focus:ring-primary",
                     !hasCustomColor && (isZiek 
                         ? "bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-white"
                         : isVerlof
@@ -198,7 +197,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                 {canEdit && <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="delete-button absolute top-0 right-0 h-6 w-6 opacity-0 group-hover/dienst:opacity-100 focus:opacity-100"
+                    className="delete-button absolute top-0 right-0 h-6 w-6 opacity-0 group-hover/dienst:opacity-100 focus:opacity-100 rounded-none"
                     onClick={(e) => {
                         e.stopPropagation();
                         setShowDeleteConfirm(true);
@@ -208,16 +207,16 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                 </Button>}
             </div>
              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                <AlertDialogContent>
+                <AlertDialogContent className="rounded-none">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogTitle className="font-black uppercase">Weet u het zeker?</AlertDialogTitle>
+                    <AlertDialogDescription className="font-medium">
                       Deze actie kan niet ongedaan worden gemaakt. Dit zal de dienst permanent verwijderen.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDelete(dienst)}>
+                    <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDelete(dienst)} className="rounded-none font-black uppercase bg-red-600">
                         Doorgaan
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -832,6 +831,7 @@ export default function WorkPlanningPage() {
         key="toggle-visibility" 
         variant={isVisibilityMode ? "default" : "outline"} 
         size="sm"
+        className="rounded-none"
         onClick={() => {
             if (isVisibilityMode) {
                 setPendingStatusChanges({});
@@ -843,28 +843,28 @@ export default function WorkPlanningPage() {
         {isVisibilityMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </Button>,
       ...(isVisibilityMode ? [
-          <Button key="save-visibility" size="sm" onClick={handleSaveVisibility} disabled={Object.keys(pendingStatusChanges).length === 0}>
+          <Button key="save-visibility" size="sm" className="rounded-none" onClick={handleSaveVisibility} disabled={Object.keys(pendingStatusChanges).length === 0}>
             Zichtbaarheid Opslaan
           </Button>
       ] : []),
-      <Button key="vehicle-deployment" variant="outline" size="sm" onClick={() => setIsVehicleDeploymentOpen(true)}><Truck className="mr-2 h-4 w-4" /> Voertuigeninzet</Button>,
-      <Button key="subcontractors" variant="outline" size="sm" onClick={() => setIsSubcontractorDialogOpen(true)} disabled={!selectedProjectId}><Users className="mr-2 h-4 w-4" /> Onderaannemers</Button>,
-      <Button key="print-day" variant="outline" size="sm" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
-      <Button key="print-week" variant="outline" size="sm" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
-      <Button key="save-pdf" variant="outline" size="sm" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
-      <Button key="edit-volgorde" variant="outline" size="sm" onClick={() => setIsVolgordeDialogOpen(true)} disabled={!canEdit}><ListOrdered className="mr-2 h-4 w-4" /> Volgorde bewerken</Button>,
+      <Button key="vehicle-deployment" variant="outline" size="sm" className="rounded-none" onClick={() => setIsVehicleDeploymentOpen(true)}><Truck className="mr-2 h-4 w-4" /> Voertuigeninzet</Button>,
+      <Button key="subcontractors" variant="outline" size="sm" className="rounded-none" onClick={() => setIsSubcontractorDialogOpen(true)} disabled={!selectedProjectId}><Users className="mr-2 h-4 w-4" /> Onderaannemers</Button>,
+      <Button key="print-day" variant="outline" size="sm" className="rounded-none" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
+      <Button key="print-week" variant="outline" size="sm" className="rounded-none" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
+      <Button key="save-pdf" variant="outline" size="sm" className="rounded-none" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
+      <Button key="edit-volgorde" variant="outline" size="sm" className="rounded-none" onClick={() => setIsVolgordeDialogOpen(true)} disabled={!canEdit}><ListOrdered className="mr-2 h-4 w-4" /> Volgorde bewerken</Button>,
     ];
 
     if (isMobile) {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="h-9 w-9"><Filter className="h-4 w-4"/></Button>
+            <Button variant="outline" size="icon" className="h-9 w-9 rounded-none"><Filter className="h-4 w-4"/></Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>Planning Acties</DropdownMenuLabel>
+          <DropdownMenuContent align="start" className="w-56 rounded-none">
+            <DropdownMenuLabel className="font-black uppercase text-[10px]">Planning Acties</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {buttons.map((btn, i) => <DropdownMenuItem key={i} asChild>{React.cloneElement(btn, { variant: 'ghost', className: 'w-full justify-start h-9 px-2' })}</DropdownMenuItem>)}
+            {buttons.map((btn, i) => <DropdownMenuItem key={i} asChild>{React.cloneElement(btn, { variant: 'ghost', className: 'w-full justify-start h-9 px-2 rounded-none' })}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
       )
@@ -1054,7 +1054,7 @@ export default function WorkPlanningPage() {
   const endMonth = new Date(new Date().getFullYear() + 5, 11);
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-0 bg-white" id="planning-container">
+    <div className="flex flex-col flex-1 h-full min-h-0 bg-white rounded-none" id="planning-container">
       <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 md:p-6 border-b bg-slate-50/30">
         <div className="flex items-center gap-2 w-full lg:w-auto">
           {renderActionButtons()}
@@ -1063,10 +1063,10 @@ export default function WorkPlanningPage() {
             onValueChange={(value) => setSelectedProjectId(value || null)}
             disabled={isLoadingProjects}
           >
-            <SelectTrigger className="flex-1 lg:w-[280px] h-9 font-bold">
+            <SelectTrigger className="flex-1 lg:w-[280px] h-9 font-bold rounded-none">
               <SelectValue placeholder="Project selecteren..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-none">
               {projects?.map((project) => (
                 <SelectItem key={project.id} value={project.id!}>
                   {project.projectnaam}
@@ -1076,17 +1076,17 @@ export default function WorkPlanningPage() {
           </Select>
         </div>
         <div className="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={prevWeek}>
+          <div className="flex items-center gap-1 bg-white p-1 rounded-none shadow-sm border border-slate-200">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none" onClick={prevWeek}>
                 <ChevronLeft className="h-4 w-4" />
             </Button>
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant={'ghost'} className="h-8 px-2 font-black uppercase text-[10px] tracking-widest text-slate-600">
+                    <Button variant={'ghost'} className="h-8 px-2 font-black uppercase text-[10px] tracking-widest text-slate-600 rounded-none">
                         {format(start, 'd MMM', { locale: nl })} - {format(end, 'd MMM yyyy', { locale: nl })}
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
+                <PopoverContent className="w-auto p-0 rounded-none" align="end">
                     <Calendar
                         mode="single"
                         selected={currentDate}
@@ -1096,10 +1096,11 @@ export default function WorkPlanningPage() {
                         endMonth={endMonth}
                         initialFocus
                         locale={nl}
+                        className="rounded-none"
                     />
                 </PopoverContent>
             </Popover>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={nextWeek}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none" onClick={nextWeek}>
                 <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -1163,15 +1164,16 @@ export default function WorkPlanningPage() {
                                 [medewerker.id]: checked ? 'Actief' : 'Inactief'
                               }));
                             }}
-                            className="h-4 w-4"
+                            className="h-4 w-4 rounded-none"
                           />
                         )}
-                        <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm shrink-0">
+                        <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm shrink-0 rounded-none">
                            <AvatarImage
                                 src={medewerker.avatarUrl}
                                 alt={`${medewerker.voornaam} ${medewerker.achternaam}`}
+                                className="rounded-none"
                               />
-                          <AvatarFallback className="text-[10px] font-black bg-primary text-white">{getInitials(medewerker.voornaam, medewerker.achternaam)}</AvatarFallback>
+                          <AvatarFallback className="text-[10px] font-black bg-primary text-white rounded-none">{getInitials(medewerker.voornaam, medewerker.achternaam)}</AvatarFallback>
                         </Avatar>
                         <span className="font-black text-xs truncate text-slate-900">{`${medewerker.voornaam || ''} ${medewerker.tussenvoegsel || ''} ${medewerker.achternaam || ''}`.trim()}</span>
                       </div>
@@ -1230,7 +1232,7 @@ export default function WorkPlanningPage() {
                         >
                             <div className="flex-1 space-y-1 relative z-10">
                               {isLoadingDiensten ? (
-                                  <Skeleton className="h-10 w-full rounded-lg" />
+                                  <Skeleton className="h-10 w-full rounded-none" />
                               ) : (
                                 dienstenForDay?.map(dienst => (
                                     <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => {
@@ -1253,12 +1255,12 @@ export default function WorkPlanningPage() {
           <DropdownMenuTrigger
             style={contextMenu ? { position: 'fixed', left: contextMenu.x, top: contextMenu.y } : {}}
           />
-          <DropdownMenuContent onContextMenu={(e) => e.preventDefault()} className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
+          <DropdownMenuContent onContextMenu={(e) => e.preventDefault()} className="w-56 rounded-none shadow-xl p-2 border-slate-100">
             {contextMenu?.cellContext && (
                 <DropdownMenuItem onClick={() => {
                     handleOpenSheetForNew(contextMenu.cellContext!.medewerker, contextMenu.cellContext!.datum);
                     setContextMenu(null);
-                }} className="h-10 font-bold rounded-lg">
+                }} className="h-10 font-bold rounded-none">
                     <Plus className="mr-3 h-4 w-4 text-primary" />
                     Nieuwe dienst
                 </DropdownMenuItem>
@@ -1267,7 +1269,7 @@ export default function WorkPlanningPage() {
               <DropdownMenuItem onClick={() => {
                   setCopiedDienst(contextMenu.dienst!);
                   setContextMenu(null);
-                }} className="h-10 font-bold rounded-lg">
+                }} className="h-10 font-bold rounded-none">
                 <Copy className="mr-3 h-4 w-4 text-primary" />
                 Kopiëren
               </DropdownMenuItem>
@@ -1275,12 +1277,12 @@ export default function WorkPlanningPage() {
             
             {contextMenu?.dayHeaderContext && (
                 <>
-                    <DropdownMenuItem onClick={handleCopyDay} className="h-10 font-bold rounded-lg">
+                    <DropdownMenuItem onClick={handleCopyDay} className="h-10 font-bold rounded-none">
                         <Copy className="mr-3 h-4 w-4 text-primary" />
                         Kopieer Dag
                     </DropdownMenuItem>
                     {copiedDay && (
-                        <DropdownMenuItem onClick={() => contextMenu.dayHeaderContext && handlePasteDay(contextMenu.dayHeaderContext.datum)} className="h-10 font-bold rounded-lg">
+                        <DropdownMenuItem onClick={() => contextMenu.dayHeaderContext && handlePasteDay(contextMenu.dayHeaderContext.datum)} className="h-10 font-bold rounded-none">
                             <ClipboardCopy className="mr-3 h-4 w-4 text-primary" />
                             Plak Dag
                         </DropdownMenuItem>
@@ -1291,13 +1293,13 @@ export default function WorkPlanningPage() {
             {(contextMenu?.cellContext || contextMenu?.dienst) && (copiedDienst || selectedCells.length > 0) && <DropdownMenuSeparator />}
 
             {copiedDienst && (
-              <DropdownMenuItem onClick={handlePaste} disabled={selectedCells.length === 0} className="h-10 font-bold rounded-lg">
+              <DropdownMenuItem onClick={handlePaste} disabled={selectedCells.length === 0} className="h-10 font-bold rounded-none">
                 <ClipboardCopy className="mr-3 h-4 w-4 text-primary" />
                 Plakken
               </DropdownMenuItem>
             )}
             {selectedCells.length > 0 && (
-                <DropdownMenuItem onClick={handleDeleteSelected} className="h-10 font-bold rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50">
+                <DropdownMenuItem onClick={handleDeleteSelected} className="h-10 font-bold rounded-none text-red-600 focus:text-red-600 focus:bg-red-50">
                     <Trash2 className="mr-3 h-4 w-4" />
                     Verwijder selectie
                 </DropdownMenuItem>
