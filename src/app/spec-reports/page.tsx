@@ -169,20 +169,23 @@ export default function SpecReportsPage() {
     setIsDialogOpen(true);
   };
   
-  const isSvg = (str: string) => {
+  const isCustomHtml = (str: string) => {
     if (!str) return false;
     const trimmed = str.trim().toLowerCase();
-    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
+    return (trimmed.startsWith('<') && (trimmed.endsWith('>') || trimmed.includes('/>'))) || 
+           trimmed.includes('<svg') || 
+           trimmed.includes('<img') ||
+           trimmed.includes('<a');
   };
 
   const renderMarkerIcon = (category: string) => {
     const iconVal = categoryIcons[category];
     if (!iconVal) return <Icons.Bell className="h-5 w-5 text-white" />;
     
-    if (isSvg(iconVal)) {
+    if (isCustomHtml(iconVal)) {
         return (
             <div 
-                className="h-5 w-5 flex items-center justify-center text-white [&>svg]:h-full [&>svg]:w-full" 
+                className="h-5 w-5 flex items-center justify-center text-white [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
                 dangerouslySetInnerHTML={{ __html: iconVal }} 
             />
         );
@@ -225,7 +228,7 @@ export default function SpecReportsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       placeholder="Zoek op omschrijving of werksoort" 
-                      className="pl-9 bg-card"
+                      className="pl-9 bg-card rounded-none"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -238,10 +241,10 @@ export default function SpecReportsPage() {
                   onValueChange={(value) => setSelectedProjectId(value || null)}
                   disabled={isLoadingProjects}
                 >
-                  <SelectTrigger id="project-select" className="w-full md:w-72 bg-card">
+                  <SelectTrigger id="project-select" className="w-full md:w-72 bg-card rounded-none">
                     <SelectValue placeholder="Selecteer een project" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-none">
                     {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -249,11 +252,11 @@ export default function SpecReportsPage() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 pointer-events-auto w-full md:w-auto">
             <div className='flex gap-2 items-center'>
-                    {canCreate && <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
+                    {canCreate && <Button onClick={handleNewMelding} disabled={!selectedProjectId} className="rounded-none">
                         <Plus className="mr-2 h-4 w-4" />
                         Nieuwe Besteksmelding
                     </Button>}
-                    <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')} className="bg-card">
+                    <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')} className="bg-card rounded-none">
                       {viewMode === 'map' ? <List className="mr-2 h-4 w-4" /> : <MapIcon className="mr-2 h-4 w-4" />}
                       {viewMode === 'map' ? 'Lijst' : 'Kaart'}
                     </Button>
@@ -308,7 +311,7 @@ export default function SpecReportsPage() {
                             <span className="font-semibold">Aangemaakt:</span>
                             <span>{selectedMelding.datum}</span>
                         </div>
-                         <Button size="sm" className="w-full mt-2" onClick={() => setIsDialogOpen(true)}>
+                         <Button size="sm" className="w-full mt-2 rounded-none" onClick={() => setIsDialogOpen(true)}>
                           Details bekijken
                         </Button>
                     </div>
@@ -317,8 +320,8 @@ export default function SpecReportsPage() {
         </MapGL>
       ) : (
         <div className="pt-36 px-4 pb-4 h-full flex flex-col">
-            <h1 className="text-xl font-bold mb-4">Overzicht Besteksmeldingen ({filteredMeldingen?.length || 0})</h1>
-            <Card className='flex-1 flex flex-col min-h-0'>
+            <h1 className="text-xl font-bold mb-4 uppercase font-black tracking-tight">Overzicht Besteksmeldingen ({filteredMeldingen?.length || 0})</h1>
+            <Card className='flex-1 flex flex-col min-h-0 rounded-none shadow-xl border-none'>
                 <CardContent className='p-0 flex-1 min-h-0'>
                     <BestekmeldingenList meldingen={filteredMeldingen || []} onMeldingClick={handleMeldingClickFromList} />
                 </CardContent>

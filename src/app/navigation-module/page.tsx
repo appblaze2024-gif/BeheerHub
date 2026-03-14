@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -626,20 +625,23 @@ export default function StartNavigationPage() {
     return new Set(userFolders.flatMap(f => f.taskIds || []));
   }, [userFolders]);
 
-  const isSvg = (str: string) => {
-    if (!str) false;
+  const isCustomHtml = (str: string) => {
+    if (!str) return false;
     const trimmed = str.trim().toLowerCase();
-    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
+    return (trimmed.startsWith('<') && (trimmed.endsWith('>') || trimmed.includes('/>'))) || 
+           trimmed.includes('<svg') || 
+           trimmed.includes('<img') ||
+           trimmed.includes('<a');
   };
 
   const renderCategoryIcon = (category: string) => {
     const iconVal = categoryIcons[category];
     if (!iconVal) return null;
     
-    if (isSvg(iconVal)) {
+    if (isCustomHtml(iconVal)) {
         return (
             <div 
-                className="h-5 w-5 flex items-center justify-center text-primary [&>svg]:h-full [&>svg]:w-full" 
+                className="h-5 w-5 flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
                 dangerouslySetInnerHTML={{ __html: iconVal }} 
             />
         );
@@ -777,8 +779,8 @@ export default function StartNavigationPage() {
         }
     }
     
-    return sequenceMissions(base);
-  }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders, sequenceMissions]);
+    return base;
+  }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders]);
 
   const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
     const originStr = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : "My+Location";
@@ -820,7 +822,7 @@ export default function StartNavigationPage() {
             setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
             setTimeout(() => {
                 setIsRecalculating(false);
-                toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie. Nummers blijven ongewijzigd." });
+                toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie." });
             }, 1200);
         },
         () => {
@@ -1066,7 +1068,7 @@ export default function StartNavigationPage() {
                                     )}>
                                         <div className="flex items-center gap-2 p-2.5 min-w-0">
                                             {/* Category Icon Square */}
-                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-black bg-transparent">
+                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-black bg-transparent ml-1">
                                                 {renderCategoryIcon(m.hoofdcategorie)}
                                             </div>
 

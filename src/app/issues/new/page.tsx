@@ -226,21 +226,21 @@ function SmartPasteDialog({ onParsed, instructions, trigger }: { onParsed: (data
         <Dialog>
             <DialogTrigger asChild>
                 {trigger || (
-                    <Button variant="outline" size="sm" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl">
+                    <Button variant="outline" size="sm" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-none">
                         <ClipboardPaste className="mr-2 h-3.5 w-3.5" />
                         Smart Paste
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-xl rounded-3xl border-none shadow-2xl">
+            <DialogContent className="sm:max-w-xl rounded-none border-none shadow-2xl">
                 <DialogHeader>
                     <DialogTitle className="font-black uppercase tracking-tight">AI Smart Paste</DialogTitle>
                     <DialogDescription className="font-bold text-slate-500">Plak tekst uit een ander systeem om velden automatisch in te vullen.</DialogDescription>
                 </DialogHeader>
-                <div className="py-4"><Textarea placeholder="Plak hier de tekst..." className="min-h-[200px] text-xs font-medium rounded-2xl border-slate-100 bg-slate-50" value={text} onChange={(e) => setText(e.target.value)} /></div>
+                <div className="py-4"><Textarea placeholder="Plak hier de tekst..." className="min-h-[200px] text-xs font-medium rounded-none border-slate-100 bg-slate-50" value={text} onChange={(e) => setText(e.target.value)} /></div>
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="ghost" className="font-bold">Annuleren</Button></DialogClose>
-                    <Button onClick={handlePaste} disabled={isProcessing || !text.trim()} className="font-black uppercase rounded-xl px-8 shadow-xl shadow-primary/20">
+                    <DialogClose asChild><Button variant="ghost" className="font-bold rounded-none">Annuleren</Button></DialogClose>
+                    <Button onClick={handlePaste} disabled={isProcessing || !text.trim()} className="font-black uppercase rounded-none px-8 shadow-xl shadow-primary/20">
                         {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                         Verwerken
                     </Button>
@@ -269,10 +269,13 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   const [isUploading, setIsUploading] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<string | null>(null);
 
-  const isSvg = (str: string) => {
+  const isCustomHtml = (str: string) => {
     if (!str) return false;
     const trimmed = str.trim().toLowerCase();
-    return trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
+    return (trimmed.startsWith('<') && (trimmed.endsWith('>') || trimmed.includes('/>'))) || 
+           trimmed.includes('<svg') || 
+           trimmed.includes('<img') ||
+           trimmed.includes('<a');
   };
 
   const filteredIcons = React.useMemo(() => {
@@ -285,7 +288,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   React.useEffect(() => {
     if (editTarget) {
         const currentIcon = categoryIcons[editTarget] || 'AlertCircle';
-        if (isSvg(currentIcon)) {
+        if (isCustomHtml(currentIcon)) {
             setActiveTab('html');
             setHtmlIcon(currentIcon);
         } else if (currentIcon.startsWith('http')) {
@@ -378,10 +381,13 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   const renderCurrentIcon = (val: string, isPreview = false) => {
     if (!val) return <CircleHelp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: '#cbd5e1' }} />;
     
-    if (isSvg(val)) {
+    if (isCustomHtml(val)) {
         return (
             <div 
-                className={cn("flex items-center justify-center [&>svg]:h-full [&>svg]:w-full", isPreview ? "h-12 w-12 text-primary" : "h-5 w-5 text-primary")} 
+                className={cn(
+                    "flex items-center justify-center [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center", 
+                    isPreview ? "h-12 w-12 text-primary" : "h-5 w-5 text-primary"
+                )} 
                 dangerouslySetInnerHTML={{ __html: val }} 
             />
         );
@@ -389,7 +395,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     
     if (val.startsWith('http')) {
         return (
-            <div className={cn("relative flex items-center justify-center overflow-hidden", isPreview ? "h-12 w-12 rounded-2xl" : "h-5 w-5 rounded-lg")}>
+            <div className={cn("relative flex items-center justify-center overflow-hidden", isPreview ? "h-12 w-12 rounded-none" : "h-5 w-5 rounded-none")}>
                 <img src={val} alt="icon" className="h-full w-full object-cover" />
             </div>
         );
@@ -409,7 +415,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
-      <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+      <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-none">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
           <DialogTitle className="font-black uppercase tracking-tight">
             {editTarget ? `Icoon wijzigen: ${editTarget}` : 'Hoofdtypes Beheren'}
@@ -422,17 +428,17 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             {!editTarget && (
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam nieuw hoofdtype</Label>
-                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Verlichting..." className="font-bold h-11 rounded-xl" />
+                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Verlichting..." className="font-bold h-11 rounded-none" />
               </div>
             )}
 
-            <div className="space-y-6 bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100 shadow-inner">
+            <div className="space-y-6 bg-slate-50 p-6 rounded-none border-2 border-slate-100 shadow-inner">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                     <Label className="text-[10px] font-black uppercase text-slate-400">Configureer Icoon</Label>
                     <p className="text-[10px] text-slate-400 font-bold uppercase italic">Selecteer een bron en pas het icoon aan.</p>
                 </div>
-                <div className="h-16 w-16 bg-white rounded-2xl border-2 border-primary/10 flex items-center justify-center shadow-lg overflow-hidden">
+                <div className="h-16 w-16 bg-white rounded-none border-2 border-primary/10 flex items-center justify-center shadow-lg overflow-hidden">
                     {activeTab === 'preset' ? (
                         <div style={{ color: selectedColor }}>
                             {renderCurrentIcon(`lucide:${selectedIconName}:${selectedColor}`, true)}
@@ -444,10 +450,10 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid grid-cols-3 h-11 rounded-xl bg-slate-200 p-1 mb-6">
-                      <TabsTrigger value="preset" className="text-[10px] font-black uppercase">Standaard</TabsTrigger>
-                      <TabsTrigger value="upload" className="text-[10px] font-black uppercase">Upload</TabsTrigger>
-                      <TabsTrigger value="html" className="text-[10px] font-black uppercase">HTML/SVG</TabsTrigger>
+                  <TabsList className="grid grid-cols-3 h-11 rounded-none bg-slate-200 p-1 mb-6">
+                      <TabsTrigger value="preset" className="text-[10px] font-black uppercase rounded-none">Standaard</TabsTrigger>
+                      <TabsTrigger value="upload" className="text-[10px] font-black uppercase rounded-none">Upload</TabsTrigger>
+                      <TabsTrigger value="html" className="text-[10px] font-black uppercase rounded-none">HTML/SVG</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="preset" className="space-y-6 mt-0">
@@ -459,14 +465,14 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                                       key={c.value}
                                       type="button"
                                       className={cn(
-                                          "h-8 w-8 rounded-full border-2 transition-all",
+                                          "h-8 w-8 rounded-none border-2 transition-all",
                                           selectedColor === c.value ? "border-slate-900 scale-110 shadow-md" : "border-transparent"
                                       )}
                                       style={{ backgroundColor: c.value }}
                                       onClick={() => setSelectedColor(c.value)}
                                   />
                               ))}
-                              <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-slate-200">
+                              <div className="relative h-8 w-8 rounded-none overflow-hidden border-2 border-slate-200">
                                   <input type="color" value={selectedColor} onChange={e => setSelectedColor(e.target.value)} className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer" />
                                   <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
                               </div>
@@ -476,7 +482,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                       <div className="space-y-3">
                           <div className="relative">
                               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                              <Input placeholder="Zoek icoon..." className="h-10 pl-9 font-bold rounded-xl border-slate-200 bg-white" value={iconSearch} onChange={e => setIconSearch(e.target.value)} />
+                              <Input placeholder="Zoek icoon..." className="h-10 pl-9 font-bold rounded-none border-slate-200 bg-white" value={iconSearch} onChange={e => setIconSearch(e.target.value)} />
                           </div>
                           <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar p-1">
                               {filteredIcons.map(name => {
@@ -487,7 +493,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                                           type="button" 
                                           variant={selectedIconName === name ? "default" : "outline"} 
                                           size="icon" 
-                                          className="h-10 w-10 p-0 rounded-xl" 
+                                          className="h-10 w-10 p-0 rounded-none" 
                                           onClick={() => setSelectedIconName(name)}
                                       >
                                           <Icon className="h-5 w-5" style={{ color: selectedIconName === name ? undefined : selectedColor }} />
@@ -499,7 +505,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                   </TabsContent>
 
                   <TabsContent value="upload" className="space-y-4 mt-0">
-                      <Button variant="outline" className="h-24 w-full flex-col gap-2 rounded-3xl border-dashed border-2 border-slate-200 bg-white" onClick={() => document.getElementById('icon-upload-input')?.click()} disabled={isUploading}>
+                      <Button variant="outline" className="h-24 w-full flex-col gap-2 rounded-none border-dashed border-2 border-slate-200 bg-white" onClick={() => document.getElementById('icon-upload-input')?.click()} disabled={isUploading}>
                           {isUploading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <Upload className="h-8 w-8 text-slate-300" />}
                           <span className="text-[10px] font-black uppercase text-slate-400">Kies Afbeelding</span>
                       </Button>
@@ -508,19 +514,19 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
 
                   <TabsContent value="html" className="space-y-4 mt-0">
                       <Textarea 
-                          placeholder="Plak hier uw <svg> code..." 
-                          className="font-mono text-[10px] min-h-[150px] rounded-2xl border-slate-200 p-4 leading-relaxed bg-slate-50 shadow-inner"
+                          placeholder="Plak hier uw <svg> of <img> code..." 
+                          className="font-mono text-[10px] min-h-[150px] rounded-none border-slate-200 p-4 leading-relaxed bg-slate-50 shadow-inner"
                           value={htmlIcon}
                           onChange={e => setHtmlIcon(e.target.value)}
                       />
                   </TabsContent>
               </Tabs>
 
-              <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-12 font-black uppercase shadow-xl shadow-primary/20 rounded-2xl text-xs">
+              <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-12 font-black uppercase shadow-xl shadow-primary/20 rounded-none text-xs">
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                 {editTarget ? 'Wijzigingen Opslaan' : 'Nieuw Type Toevoegen'}
               </Button>
-              {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-black uppercase text-[10px] text-slate-400">Annuleren</Button>}
+              {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-black uppercase text-[10px] text-slate-400 rounded-none">Annuleren</Button>}
             </div>
 
             <div className="space-y-3">
@@ -530,18 +536,18 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                 </div>
                 <div className="grid gap-2">
                 {currentOptions.map(name => (
-                    <div key={name} className={cn("flex items-center justify-between p-3 bg-white border-2 rounded-2xl group transition-all shadow-sm", editTarget === name ? "border-primary bg-primary/5" : "border-slate-100 hover:border-primary/20")}>
+                    <div key={name} className={cn("flex items-center justify-between p-3 bg-white border-2 rounded-none group transition-all shadow-sm", editTarget === name ? "border-primary bg-primary/5" : "border-slate-100 hover:border-primary/20")}>
                       <div className="flex items-center gap-4 flex-1 min-w-0" onClick={() => setEditTarget(name)}>
-                          <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-inner flex items-center justify-center w-10 h-10 shrink-0 cursor-pointer">
+                          <div className="bg-slate-50 p-2 rounded-none border border-slate-100 shadow-inner flex items-center justify-center w-10 h-10 shrink-0 cursor-pointer">
                               {renderCurrentIcon(categoryIcons[name])}
                           </div>
                           <span className="text-sm font-black uppercase tracking-tight text-slate-700 truncate">{name}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-slate-500 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
                               <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-slate-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
                               <Trash2 className="h-4 w-4" />
                           </Button>
                       </div>
@@ -607,27 +613,27 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl">
+      <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl">
         <DialogHeader className="p-6 bg-slate-50 border-b">
           <DialogTitle className="font-black uppercase">Subtypes voor: {parentCategory}</DialogTitle>
           <DialogDescription>Beheer specifieke onderdelen binnen dit hoofdtype.</DialogDescription>
         </DialogHeader>
         <div className="space-y-6 p-6">
           <div className="flex gap-2">
-            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nieuw subtype..." className="font-bold h-11 rounded-xl" />
-            <Button onClick={handleAdd} disabled={!newName.trim() || isSaving} className="h-11 font-black uppercase rounded-xl px-6 shadow-xl shadow-primary/20">
+            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nieuw subtype..." className="font-bold h-11 rounded-none" />
+            <Button onClick={handleAdd} disabled={!newName.trim() || isSaving} className="h-11 font-black uppercase rounded-none px-6 shadow-xl shadow-primary/20">
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </Button>
           </div>
 
           <div className="space-y-2">
             <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Actieve Subtypes</Label>
-            <ScrollArea className="h-64 rounded-2xl border-2 border-slate-50 p-2 bg-slate-50/30 shadow-inner">
+            <ScrollArea className="h-64 rounded-none border-2 border-slate-50 p-2 bg-slate-50/30 shadow-inner">
               <div className="grid gap-1">
                 {currentSubtypes.map(name => (
-                  <div key={name} className="flex items-center justify-between p-3 bg-white rounded-xl border border-transparent shadow-sm group">
+                  <div key={name} className="flex items-center justify-between p-3 bg-white rounded-none border border-transparent shadow-sm group">
                     <span className="text-xs font-black uppercase tracking-tight text-slate-700">{name}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(name)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-none opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(name)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -972,7 +978,7 @@ export default function NewIssuePage() {
 
   const renderMediaAndMap = () => (
     <div className="space-y-4">
-      <Card className="rounded-[2rem] overflow-hidden shadow-sm border-slate-200">
+      <Card className="rounded-none overflow-hidden shadow-sm border-slate-200">
         <CardHeader className="bg-slate-50 border-b py-2 px-4">
           <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie Preview</CardTitle>
         </CardHeader>
@@ -991,7 +997,7 @@ export default function NewIssuePage() {
         </div>
       </Card>
 
-      <Card className="rounded-[2rem] bg-white shadow-sm border-slate-200 overflow-hidden">
+      <Card className="rounded-none bg-white shadow-sm border-slate-200 overflow-hidden">
         <CardHeader className="bg-slate-50 border-b py-2 px-4">
           <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Media & Bijlagen</CardTitle>
         </CardHeader>
@@ -999,12 +1005,12 @@ export default function NewIssuePage() {
           {uploadedPhotos.length > 0 ? (
             <div className="grid grid-cols-3 gap-2">
               {uploadedPhotos.map((p, i) => (
-                <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border group">
+                <div key={i} className="relative aspect-square rounded-none overflow-hidden border group">
                   <Image src={p.url} alt="foto" fill className="object-cover" />
                   <Button 
                     variant="destructive" 
                     size="icon" 
-                    className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 h-6 w-6 rounded-none opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}
                   >
                     <X className="h-3 w-3" />
@@ -1024,12 +1030,12 @@ export default function NewIssuePage() {
           {uploadedFiles.length > 0 ? (
             <div className="space-y-2">
               {uploadedFiles.map((f, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                <div key={i} className="flex items-center justify-between p-2 rounded-none bg-slate-50 border border-slate-100">
                   <div className="flex items-center gap-2 truncate">
                     <FileIcon className="h-4 w-4 text-blue-500 shrink-0" />
                     <span className="text-xs font-bold truncate">{f.name}</span>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 rounded-none" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -1052,11 +1058,11 @@ export default function NewIssuePage() {
             <div className="flex items-center gap-2">
                 {!isReadOnly && (
                     <>
-                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200 rounded-xl" onClick={() => document.getElementById('media-doc-input')?.click()}>
+                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200 rounded-none" onClick={() => document.getElementById('media-doc-input')?.click()}>
                             <UploadCloud className="h-4 w-4 text-primary" /> <span className="hidden sm:inline">DOC</span>
                             <input type="file" id="media-doc-input" className="hidden" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'files')} />
                         </Button>
-                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200 rounded-xl" onClick={() => document.getElementById('media-photo-input')?.click()}>
+                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200 rounded-none" onClick={() => document.getElementById('media-photo-input')?.click()}>
                             <Camera className="h-4 w-4 text-green-600" /> <span className="hidden sm:inline">FOTO</span>
                             <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'fotos')} />
                         </Button>
@@ -1068,19 +1074,19 @@ export default function NewIssuePage() {
                     <>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-9 w-9 border-slate-200 rounded-xl">
+                                <Button variant="outline" size="icon" className="h-9 w-9 border-slate-200 rounded-none">
                                     <MoreHorizontal className="h-4 w-4 text-slate-600" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 rounded-2xl shadow-xl p-2 border-none">
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-xl h-10 cursor-pointer font-bold text-green-600">
+                            <DropdownMenuContent align="end" className="w-56 rounded-none shadow-xl p-2 border-none">
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-none h-10 cursor-pointer font-bold text-green-600">
                                     <IssueImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
                                         <div className="flex items-center w-full">
                                             <FileSpreadsheet className="mr-2 h-4 w-4" /> EXCEL Import
                                         </div>
                                     </IssueImportDialog>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-xl h-10 cursor-pointer font-bold text-slate-600">
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-none h-10 cursor-pointer font-bold text-slate-600">
                                     <SmartPasteDialog 
                                         onParsed={(d) => form.reset({ ...form.getValues(), ...d })} 
                                         instructions={aiConfig?.instructions || ''} 
@@ -1094,12 +1100,12 @@ export default function NewIssuePage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <Separator orientation="vertical" className="h-5 mx-1" />
-                        <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-4 md:px-8 shadow-xl shadow-primary/20 rounded-xl">
+                        <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-4 md:px-8 shadow-xl shadow-primary/20 rounded-none">
                             {isSubmitting ? <Loader2 className="mr-2 h-3 w-3 lg:h-4 lg:w-4 animate-spin" /> : <Check className="mr-2 h-3 w-3 lg:h-4 lg:w-4" />} {meldingId ? 'BIJWERKEN' : 'OPSLAAN'}
                         </Button>
                     </>
                 )}
-                {isReadOnly && <Badge className="bg-primary text-white font-black uppercase px-4 h-9 rounded-xl shadow-md">ARCHIEF (READ-ONLY)</Badge>}
+                {isReadOnly && <Badge className="bg-primary text-white font-black uppercase px-4 h-9 rounded-none shadow-md">ARCHIEF (READ-ONLY)</Badge>}
             </div>
         </header>
 
@@ -1110,44 +1116,44 @@ export default function NewIssuePage() {
                   <div className="space-y-4">
                     <Accordion type="multiple" defaultValue={["section-1"]} className="w-full">
                       <AccordionItem value="section-1" className="border-none">
-                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-3xl mb-2 shadow-sm border border-slate-100">
+                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-none mb-2 shadow-sm border border-slate-100">
                           <span className="text-xs font-black uppercase tracking-widest text-slate-900">Basisgegevens</span>
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0 space-y-2 relative overflow-visible">
                           <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="intakenummer" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label={<>Datum<span className="text-red-500">*</span></>}>
                               <FormField control={form.control} name="meldingsdatum" render={({ field, fieldState }) => (
-                                <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                               )} />
                             </FormRow>
                             <FormRow label={<>Tijdstip<span className="text-red-500">*</span></>}>
                               <FormField control={form.control} name="meldingsuur" render={({ field, fieldState }) => (
-                                <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                               )} />
                             </FormRow>
                           </div>
                           <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="aangenomen_door" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label="Extern Nr.">
                               <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
-                                <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-xl" /></FormControl></FormItem>
+                                <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-none" /></FormControl></FormItem>
                               )} />
                             </FormRow>
                             <FormRow label="Status">
                               <FormField control={form.control} name="status" render={({ field }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className="h-11 font-bold rounded-xl"><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent className="rounded-2xl">{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <FormControl><SelectTrigger className="h-11 font-bold rounded-none"><SelectValue /></SelectTrigger></FormControl>
+                                    <SelectContent className="rounded-none">{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1157,9 +1163,9 @@ export default function NewIssuePage() {
                             <FormRow label="Containernr.">
                               <FormField control={form.control} name="containernummer" render={({ field }) => (
                                 <FormItem className="relative">
-                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-xl" autoComplete="off" /></FormControl>
+                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-none" autoComplete="off" /></FormControl>
                                   {containerSuggestions.length > 0 && (
-                                    <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                    <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                                       <ScrollArea className="max-h-60">
                                         {containerSuggestions.map(obj => (
                                           <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleContainerSelect(obj)}>
@@ -1177,8 +1183,8 @@ export default function NewIssuePage() {
                               <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
-                                    <SelectContent className="rounded-2xl">{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <FormControl><SelectTrigger className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                    <SelectContent className="rounded-none">{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1188,28 +1194,28 @@ export default function NewIssuePage() {
                       </AccordionItem>
 
                       <AccordionItem value="section-2" className="border-none">
-                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-3xl mb-2 shadow-sm border border-slate-100">
+                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-none mb-2 shadow-sm border border-slate-100">
                           <span className="text-xs font-black uppercase tracking-widest text-slate-900">Locatie & Gebied</span>
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0 space-y-2">
                           <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}>
-                            <FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}>
-                              <FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} />
+                              <FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} />
                             </FormRow>
                             <FormRow label="Plaats">
-                              <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-xl" /></FormControl></FormItem>)} />
+                              <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-none" /></FormControl></FormItem>)} />
                             </FormRow>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label="Postcode">
-                              <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-xl" /></FormControl></FormItem>)} />
+                              <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-none" /></FormControl></FormItem>)} />
                             </FormRow>
                             <FormRow label="Werkgebied">
                               <FormField control={form.control} name="werkgebied" render={({ field }) => (
-                                <FormItem><FormControl><Input {...field} value={field.value || ''} disabled className="h-11 font-black bg-slate-50 text-primary border-primary/20 rounded-xl" /></FormControl></FormItem>
+                                <FormItem><FormControl><Input {...field} value={field.value || ''} disabled className="h-11 font-black bg-slate-50 text-primary border-primary/20 rounded-none" /></FormControl></FormItem>
                               )} />
                             </FormRow>
                           </div>
@@ -1217,7 +1223,7 @@ export default function NewIssuePage() {
                       </AccordionItem>
 
                       <AccordionItem value="section-3" className="border-none">
-                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-3xl mb-2 shadow-sm border border-slate-100">
+                        <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-none mb-2 shadow-sm border border-slate-100">
                           <span className="text-xs font-black uppercase tracking-widest text-slate-900">Omschrijving</span>
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0 space-y-4">
@@ -1227,9 +1233,9 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                     <FormControl>
-                                      <SelectTrigger className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                      <SelectTrigger className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent className="rounded-2xl">{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1239,9 +1245,9 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}>
                                     <FormControl>
-                                      <SelectTrigger className={cn("h-11 font-bold rounded-xl", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                      <SelectTrigger className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent className="rounded-2xl">{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1249,7 +1255,7 @@ export default function NewIssuePage() {
                           </div>
                           <FormRow label="Memo">
                             <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                              <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[120px] font-bold rounded-2xl" placeholder="Aanvullende info..." /></FormControl></FormItem>
+                              <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[120px] font-bold rounded-none" placeholder="Aanvullende info..." /></FormControl></FormItem>
                             )} />
                           </FormRow>
                         </AccordionContent>
@@ -1262,39 +1268,39 @@ export default function NewIssuePage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-4">
-                      <Card className="rounded-[2.5rem] bg-white shadow-sm border-slate-200 relative overflow-visible">
+                      <Card className="rounded-none bg-white shadow-sm border-slate-200 relative overflow-visible">
                         <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
                         <CardContent className="p-4 pt-2">
                           <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="intakenummer" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
                             <FormRow label={<>Datum<span className="text-red-500">*</span></>}>
                               <FormField control={form.control} name="meldingsdatum" render={({ field, fieldState }) => (
-                                <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                               )} />
                             </FormRow>
                             <FormRow label={<>Tijdstip<span className="text-red-500">*</span></>}>
                               <FormField control={form.control} name="meldingsuur" render={({ field, fieldState }) => (
-                                <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                               )} />
                             </FormRow>
                           </div>
                           <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="aangenomen_door" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
-                            <FormRow label="Extern Nr."><FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-lg" /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label="Extern Nr."><FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl></FormItem>)} /></FormRow>
                             <FormRow label="Status">
                               <FormField control={form.control} name="status" render={({ field }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className="h-8 text-xs font-bold rounded-lg"><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent className="rounded-xl">{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <FormControl><SelectTrigger className="h-8 text-xs font-bold rounded-none"><SelectValue /></SelectTrigger></FormControl>
+                                    <SelectContent className="rounded-none">{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1304,9 +1310,9 @@ export default function NewIssuePage() {
                             <FormRow label="Containernr.">
                               <FormField control={form.control} name="containernummer" render={({ field }) => (
                                 <FormItem className="relative">
-                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-lg" autoComplete="off" /></FormControl>
+                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" autoComplete="off" /></FormControl>
                                   {containerSuggestions.length > 0 && (
-                                    <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                    <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                                       <ScrollArea className="max-h-60">
                                         {containerSuggestions.map(obj => (
                                           <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex items-center justify-between group" onClick={() => handleContainerSelect(obj)}>
@@ -1324,8 +1330,8 @@ export default function NewIssuePage() {
                               <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
-                                    <SelectContent className="rounded-xl">{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                    <SelectContent className="rounded-none">{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1334,21 +1340,21 @@ export default function NewIssuePage() {
                         </CardContent>
                       </Card>
 
-                      <Card className="rounded-[2.5rem] bg-white shadow-sm border-slate-200 overflow-hidden">
+                      <Card className="rounded-none bg-white shadow-sm border-slate-200 overflow-hidden">
                         <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
                         <CardContent className="p-4 pt-2 space-y-3">
-                          <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
+                          <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
-                            <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-lg" /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl></FormItem>)} /></FormRow>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-lg" /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl></FormItem>)} /></FormRow>
                             <FormRow label={<span className="flex items-center gap-1"><LayoutGrid className="h-3 w-3" /> Werkgebied</span>}>
                               <FormField control={form.control} name="werkgebied" render={({ field }) => (
                                 <FormItem>
                                   <FormControl>
-                                    <Input {...field} value={field.value || ''} disabled className="h-8 text-[10px] font-black uppercase bg-slate-50 text-primary border-primary/20 shadow-inner rounded-lg" placeholder="Wordt berekend..." />
+                                    <Input {...field} value={field.value || ''} disabled className="h-8 text-[10px] font-black uppercase bg-slate-50 text-primary border-primary/20 shadow-inner rounded-none" placeholder="Wordt berekend..." />
                                   </FormControl>
                                 </FormItem>
                               )} />
@@ -1359,7 +1365,7 @@ export default function NewIssuePage() {
                     </div>
 
                     <div className="space-y-4">
-                      <Card className="rounded-[2.5rem] bg-white shadow-sm border-slate-200 overflow-hidden">
+                      <Card className="rounded-none bg-white shadow-sm border-slate-200 overflow-hidden">
                         <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
                         <CardContent className="p-4 pt-2">
                           <div className="grid grid-cols-2 gap-3">
@@ -1368,9 +1374,9 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                     <FormControl>
-                                      <SelectTrigger className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                      <SelectTrigger className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent className="rounded-xl">{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1380,9 +1386,9 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly || !currentHoofdcategorie}>
                                     <FormControl>
-                                      <SelectTrigger className={cn("h-8 text-xs font-bold rounded-lg", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
+                                      <SelectTrigger className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent className="rounded-xl">{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1390,7 +1396,7 @@ export default function NewIssuePage() {
                           </div>
                           <FormRow label="Memo">
                             <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                              <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[100px] text-xs font-medium border-slate-100 bg-slate-50/30 rounded-xl" placeholder="Aanvullende info..." /></FormControl></FormItem>
+                              <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[100px] text-xs font-medium border-slate-100 bg-slate-50/30 rounded-none" placeholder="Aanvullende info..." /></FormControl></FormItem>
                             )} />
                           </FormRow>
                         </CardContent>
