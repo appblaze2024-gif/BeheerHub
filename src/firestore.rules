@@ -22,6 +22,7 @@ service cloud.firestore {
     }
 
     function isPrivileged() {
+      // Robust check for privileged roles
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
@@ -50,8 +51,9 @@ service cloud.firestore {
 
       // Mappenbeheer per gebruiker (Subcollectie)
       match /folders/{folderId} {
+        // Essential access for user and their supervisors
         allow read, list, get: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
-        allow create, delete: if isPrivileged();
+        allow create, delete: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
         allow update: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
 

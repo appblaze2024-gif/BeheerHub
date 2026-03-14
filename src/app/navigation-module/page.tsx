@@ -616,6 +616,13 @@ export default function StartNavigationPage() {
     return new Set(userFolders.flatMap(f => f.taskIds || []));
   }, [userFolders]);
 
+  /**
+   * Sequencing logic requested by user:
+   * 1. Group missions by city.
+   * 2. Find the closest city to current location.
+   * 3. Sort all missions within that city by proximity (Nearest Neighbor).
+   * 4. Repeat for the next closest city.
+   */
   const sequenceMissions = useCallback((missions: any[]) => {
     if (missions.length === 0) return [];
     
@@ -634,7 +641,7 @@ export default function StartNavigationPage() {
 
     while (remaining.length > 0) {
         // Step 1: Find the absolute closest mission in the remaining pool to decide the current city
-        let absoluteClosestIdx = 0;
+        let absoluteClosestIdx = -1;
         let minDist = Infinity;
         for (let i = 0; i < remaining.length; i++) {
             const d = turf.distance(currentPos, turf.point([remaining[i].longitude, remaining[i].latitude]));
@@ -644,6 +651,8 @@ export default function StartNavigationPage() {
             }
         }
 
+        if (absoluteClosestIdx === -1) break;
+
         const targetCity = getCityKey(remaining[absoluteClosestIdx]);
         
         // Step 2: Extract all missions from this specific city
@@ -652,7 +661,7 @@ export default function StartNavigationPage() {
 
         // Step 3: Sequence all missions WITHIN this city using nearest-neighbor
         while (cityMissions.length > 0) {
-            let closestInCityIdx = 0;
+            let closestInCityIdx = -1;
             let minCityDist = Infinity;
             for (let i = 0; i < cityMissions.length; i++) {
                 const d = turf.distance(currentPos, turf.point([cityMissions[i].longitude, cityMissions[i].latitude]));
@@ -661,6 +670,7 @@ export default function StartNavigationPage() {
                     closestInCityIdx = i;
                 }
             }
+            if (closestInCityIdx === -1) break;
             const [next] = cityMissions.splice(closestInCityIdx, 1);
             result.push(next);
             currentPos = turf.point([next.longitude, next.latitude]);
@@ -1108,6 +1118,7 @@ export default function StartNavigationPage() {
                 onCompleted={(id) => { 
                     setCompletedObjects(prev => [...prev, id]); 
                     setActiveWerkbonId(null);
+                    handleRecalculateRoute(); 
                 }}
             />
         )}
