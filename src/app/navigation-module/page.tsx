@@ -36,6 +36,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, 
@@ -79,16 +89,6 @@ import {
   AlertCircle
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter,
-  DialogDescription,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, RouteAssignment, UserFolder, UserProfile } from '@/lib/types';
@@ -641,7 +641,7 @@ export default function StartNavigationPage() {
     if (isCustomHtml(iconVal)) {
         return (
             <div 
-                className="h-8 w-8 flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
+                className="h-10 w-10 flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
                 dangerouslySetInnerHTML={{ __html: iconVal }} 
             />
         );
@@ -649,7 +649,7 @@ export default function StartNavigationPage() {
     
     if (iconVal.startsWith('http')) {
         return (
-            <div className="h-8 w-8 relative flex items-center justify-center rounded-none overflow-hidden">
+            <div className="h-10 w-10 relative flex items-center justify-center rounded-none overflow-hidden">
                 <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
             </div>
         );
@@ -660,11 +660,11 @@ export default function StartNavigationPage() {
         const name = parts[1];
         const color = parts[2];
         const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className="h-8 w-8" style={{ color: color || '#007AFF' }} />;
+        return <IconComp className="h-10 w-10" style={{ color: color || '#007AFF' }} />;
     }
 
     const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
-    return <IconComp className="h-8 w-8 text-slate-400" />;
+    return <IconComp className="h-10 w-10 text-slate-400" />;
   };
 
   const sequenceMissions = useCallback((missions: any[]) => {
