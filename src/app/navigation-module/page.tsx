@@ -1100,7 +1100,7 @@ export default function StartNavigationPage() {
                                                     <Button 
                                                         variant="outline" 
                                                         size="icon" 
-                                                        className="h-10 w-10 rounded-none border-none bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
+                                                        className="h-10 w-10 rounded-none border border-black bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
                                                         onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
                                                     >
                                                         <Navigation className="h-5 w-5" />
