@@ -695,8 +695,8 @@ export default function StartNavigationPage() {
         }
     }
     
-    return sequenceMissions(base);
-  }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders, sequenceMissions]);
+    return base; // Show in manual order if required, but keep it stable for mobile navigation
+  }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders]);
 
   const handleCreateFolder = async () => {
     if (!firestore || !managedUserId || !newFolderName.trim()) return;
@@ -933,7 +933,7 @@ export default function StartNavigationPage() {
                                 <div className="flex items-center gap-2">
                                     <div className="flex-1 min-w-0">
                                         <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
-                                            <SelectTrigger className="h-10 font-black border-none rounded-none bg-slate-50 px-3 text-[9px] shadow-inner uppercase min-w-0">
+                                            <SelectTrigger className="h-10 font-black border-none rounded-none bg-slate-50 px-3 text-xs shadow-inner uppercase min-w-0">
                                                 <div className="flex items-center gap-2 truncate">
                                                     <UserIcon className="h-3.5 w-3.5 text-primary shrink-0" />
                                                     <SelectValue placeholder="COLLEGA..." />
