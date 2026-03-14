@@ -453,7 +453,7 @@ function IntegratedWerkbonOverlay({
                                     {hoeveelheden.map(h => (
                                         <div key={h.id} className="flex justify-between items-center p-4 bg-white border-2 border-slate-100 rounded-none shadow-sm">
                                             <div className="flex flex-col"><span className="text-sm font-black uppercase tracking-tight text-slate-900">{h.type}</span><span className="text-[9px] text-slate-400 uppercase font-black tracking-widest">{h.eenheid}</span></div>
-                                            <div className="flex items-center gap-6"><span className="text-2xl font-black text-primary leading-none tabular-nums">{h.aantal}</span><Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-none h-10 w-10" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-5 w-5" /></Button></div>
+                                            <div className="flex items-center gap-6"><span className="text-2xl font-black text-primary leading-none tabular-nums">{h.aantal}</span><Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-none h-10 w-10" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4 lg:h-5 lg:w-5" /></Button></div>
                                         </div>
                                     ))}
                                 </div>
@@ -1013,7 +1013,9 @@ export default function StartNavigationPage() {
                                 const isCompleted = m.status === 'Afgerond';
                                 const stableIndex = missionNumbersRef.current[m.id] || '?';
                                 return (
-                                    <Card key={m.id} className={cn(
+                                    <Card key={m.id} 
+                                        onClick={() => setActiveWerkbonId(m.id)}
+                                        className={cn(
                                         "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
                                         isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                     )}>
@@ -1052,17 +1054,6 @@ export default function StartNavigationPage() {
                                                         <Navigation className="h-5 w-5" />
                                                     </Button>
                                                 )}
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="icon" 
-                                                    className={cn(
-                                                        "h-10 w-10 rounded-none border-none transition-all active:scale-90 shadow-sm",
-                                                        isCompleted ? "bg-green-100 text-green-600" : "bg-green-50 text-green-600 hover:bg-green-100"
-                                                    )}
-                                                    onClick={(e) => { e.stopPropagation(); setActiveWerkbonId(m.id); }}
-                                                >
-                                                    {isCompleted ? <Check className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
-                                                </Button>
                                                 
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -1072,12 +1063,12 @@ export default function StartNavigationPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-64 rounded-none shadow-2xl p-2 border-none">
                                                         <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">VERPLAATSEN NAAR...</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => handleMoveToFolder(m.id, null)} className="font-black rounded-none h-12 cursor-pointer text-sm">
+                                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, null); }} className="font-black rounded-none h-12 cursor-pointer text-sm">
                                                             <Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (VRIJ)
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator className="bg-slate-100 my-2" />
                                                         {userFolders?.map(folder => (
-                                                            <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(m.id, folder.id)} className="font-black rounded-none h-12 cursor-pointer text-sm">
+                                                            <DropdownMenuItem key={folder.id} onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, folder.id); }} className="font-black rounded-none h-12 cursor-pointer text-sm">
                                                                 <Folder className="h-5 w-5 mr-3 text-primary" /> {folder.name.toUpperCase()}
                                                             </DropdownMenuItem>
                                                         ))}
