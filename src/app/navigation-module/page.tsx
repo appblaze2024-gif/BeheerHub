@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -139,7 +140,7 @@ function SectionRow({
     return (
         <button 
             onClick={onClick}
-            className="w-full flex items-center justify-between p-4 bg-white border-b border-slate-100 active:bg-slate-50 transition-colors"
+            className="w-full flex items-center justify-between p-4 bg-white border-b border-slate-100 active:bg-slate-50 transition-colors rounded-none"
         >
             <div className="flex items-center gap-3">
                 <div className="relative">
@@ -390,7 +391,7 @@ function IntegratedWerkbonOverlay({
                                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                         {melding.fotos?.map((p, i) => (
                                             <div key={`bron-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-md" onClick={() => setPreviewImage(p.url)}>
-                                                <Image src={p.url} alt="bron" fill className="object-cover" />
+                                                <Image src={p.url} alt="bron" fill className="object-cover rounded-none" />
                                             </div>
                                         ))}
                                     </div>
@@ -407,7 +408,7 @@ function IntegratedWerkbonOverlay({
                                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                         {afhandelingFotos.map((p, i) => (
                                             <div key={`new-${i}`} className="relative aspect-square cursor-pointer overflow-hidden rounded-none border-2 border-slate-100 shadow-lg group" onClick={() => setPreviewImage(p.url)}>
-                                                <Image src={p.url} alt="afhandeling" fill className="object-cover" />
+                                                <Image src={p.url} alt="afhandeling" fill className="object-cover rounded-none" />
                                                 <Button variant="destructive" size="icon" className="absolute right-1 top-1 h-8 w-8 rounded-none border-2 border-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); setAfhandelingFotos(prev => prev.filter(x => x.storagePath !== p.storagePath)); }}><X className="h-4 w-4" /></Button>
                                             </div>
                                         ))}
@@ -615,6 +616,60 @@ export default function StartNavigationPage() {
     return new Set(userFolders.flatMap(f => f.taskIds || []));
   }, [userFolders]);
 
+  const sequenceMissions = useCallback((missions: any[]) => {
+    if (missions.length === 0) return [];
+    
+    const pending = missions.filter(m => m.status !== 'Afgerond');
+    const completed = missions.filter(m => m.status === 'Afgerond');
+
+    if (pending.length === 0) return completed;
+
+    const startLoc = userLocation || SIMULATION_START_LOCATION;
+    let currentPos = turf.point([startLoc.longitude, startLoc.latitude]);
+    let result: any[] = [];
+    let remaining = [...pending];
+
+    // Helper: Group by normalized city name
+    const getCityKey = (m: any) => (m.plaats || 'Onbekend').toLowerCase().trim();
+
+    while (remaining.length > 0) {
+        // Step 1: Find the absolute closest mission in the remaining pool to decide the current city
+        let absoluteClosestIdx = 0;
+        let minDist = Infinity;
+        for (let i = 0; i < remaining.length; i++) {
+            const d = turf.distance(currentPos, turf.point([remaining[i].longitude, remaining[i].latitude]));
+            if (d < minDist) {
+                minDist = d;
+                absoluteClosestIdx = i;
+            }
+        }
+
+        const targetCity = getCityKey(remaining[absoluteClosestIdx]);
+        
+        // Step 2: Extract all missions from this specific city
+        let cityMissions = remaining.filter(m => getCityKey(m) === targetCity);
+        remaining = remaining.filter(m => getCityKey(m) !== targetCity);
+
+        // Step 3: Sequence all missions WITHIN this city using nearest-neighbor
+        while (cityMissions.length > 0) {
+            let closestInCityIdx = 0;
+            let minCityDist = Infinity;
+            for (let i = 0; i < cityMissions.length; i++) {
+                const d = turf.distance(currentPos, turf.point([cityMissions[i].longitude, cityMissions[i].latitude]));
+                if (d < minCityDist) {
+                    minCityDist = d;
+                    closestInCityIdx = i;
+                }
+            }
+            const [next] = cityMissions.splice(closestInCityIdx, 1);
+            result.push(next);
+            currentPos = turf.point([next.longitude, next.latitude]);
+        }
+    }
+    
+    return [...result, ...completed];
+  }, [userLocation]);
+
   const filteredMeldingen = useMemo(() => {
     const poolMap = new Map<string, any>();
     if (type === 'meldingen') {
@@ -626,7 +681,7 @@ export default function StartNavigationPage() {
         }
         if (debouncedSearchQuery) {
             const q = debouncedSearchQuery.toLowerCase();
-            result = result.filter(m => m.intakenummer.toLowerCase().includes(q));
+            result = result.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
         }
         return result;
     } else if (type === 'prullenbakken' && selectedRouteId && currentProject && allObjects) {
@@ -645,42 +700,6 @@ export default function StartNavigationPage() {
     return [];
   }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
 
-  const sequenceMissions = useCallback((missions: any[]) => {
-    if (missions.length === 0) return [];
-    
-    const pending = missions.filter(m => m.status !== 'Afgerond');
-    const completed = missions.filter(m => m.status === 'Afgerond');
-
-    if (pending.length === 0) return completed;
-
-    const startLoc = userLocation || SIMULATION_START_LOCATION;
-    let result: any[] = [];
-    let remaining = [...pending];
-    let currentPos = turf.point([startLoc.longitude, startLoc.latitude]);
-
-    if (priorityMissionId) {
-        const pIdx = remaining.findIndex(m => m.id === priorityMissionId);
-        if (pIdx !== -1) {
-            const [p] = remaining.splice(pIdx, 1);
-            result.push(p);
-            currentPos = turf.point([p.longitude, p.latitude]);
-        }
-    }
-
-    while (remaining.length > 0) {
-        let closestIdx = 0; let minDist = Infinity;
-        for (let i = 0; i < remaining.length; i++) {
-            const dist = turf.distance(currentPos, turf.point([remaining[i].longitude, remaining[i].latitude]));
-            if (dist < minDist) { minDist = dist; closestIdx = i; }
-        }
-        const [next] = remaining.splice(closestIdx, 1);
-        result.push(next);
-        currentPos = turf.point([next.longitude, next.latitude]);
-    }
-    
-    return [...result, ...completed];
-  }, [userLocation, priorityMissionId]);
-
   const displayedMissions = useMemo(() => {
     let base = filteredMeldingen;
     
@@ -695,8 +714,8 @@ export default function StartNavigationPage() {
         }
     }
     
-    return base; // Show in manual order if required, but keep it stable for mobile navigation
-  }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders]);
+    return sequenceMissions(base);
+  }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders, sequenceMissions]);
 
   const handleCreateFolder = async () => {
     if (!firestore || !managedUserId || !newFolderName.trim()) return;
@@ -797,7 +816,7 @@ export default function StartNavigationPage() {
             setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
             setTimeout(() => {
                 setIsRecalculating(false);
-                toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie." });
+                toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie en stad-groepering." });
             }, 1200);
         },
         () => {
@@ -858,16 +877,16 @@ export default function StartNavigationPage() {
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative overflow-hidden">
             {isMeldingenType ? (
                 <div className="flex-1 flex flex-col min-h-0">
-                    <div className="p-3 border-b bg-white shrink-0 space-y-2">
+                    <div className="p-3 border-b bg-white shrink-0 space-y-3">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input placeholder="ZOEKEN..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                            <Input placeholder="ZOEKEN OP NUMMER OF ADRES..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex flex-col gap-2">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="flex-1 h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3 min-w-0">
+                                    <Button variant="outline" className="w-full h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3">
                                         <div className="flex items-center gap-2 truncate">
                                             {selectedFolderId === null ? (
                                                 <Inbox className="h-4 w-4 text-primary shrink-0" />
@@ -980,7 +999,7 @@ export default function StartNavigationPage() {
                                         "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
                                         isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                     )}>
-                                        <div className="flex items-center gap-2 p-2 sm:p-3 min-w-0">
+                                        <div className="flex items-center gap-2 p-2.5 min-w-0">
                                             <div className={cn(
                                                 "h-10 w-10 flex items-center justify-center text-sm font-black shrink-0",
                                                 isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
@@ -990,15 +1009,18 @@ export default function StartNavigationPage() {
                                             <div className="flex-1 min-w-0 ml-1">
                                                 <div className="flex items-center justify-between mb-1 gap-1 leading-none">
                                                     <h3 className={cn(
-                                                        "font-black text-sm sm:text-base uppercase tracking-tight truncate",
+                                                        "font-black text-sm uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
                                                     )}>{m.intakenummer}</h3>
                                                     {m.status === 'Nieuw' && (
                                                         <Badge className="text-[10px] font-black uppercase bg-red-600 text-white h-5 px-2 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
                                                     )}
                                                 </div>
-                                                <p className={cn("text-xs sm:text-sm font-black truncate leading-tight", isCompleted ? "text-green-700/60" : "text-slate-900")}>
-                                                    {m.straatnaam} {m.huisnummer}, {m.plaats}
+                                                <p className={cn("text-xs font-black truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-900")}>
+                                                    {m.straatnaam} {m.huisnummer}
+                                                </p>
+                                                <p className={cn("text-[10px] font-bold truncate leading-tight uppercase mt-0.5", isCompleted ? "text-green-600/40" : "text-slate-400")}>
+                                                    {m.plaats}
                                                 </p>
                                             </div>
                                             <div className="flex gap-1.5 shrink-0 items-center ml-2">
