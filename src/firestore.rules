@@ -22,7 +22,6 @@ service cloud.firestore {
     }
 
     function isPrivileged() {
-      // Robust check for privileged roles
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
@@ -43,18 +42,15 @@ service cloud.firestore {
       allow read, list: if isSignedIn();
       allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       
-      // Gebruikers mogen hun eigen profiel bijwerken (behalve rol/permissies)
       allow update: if (isSignedIn() && request.auth.uid == userId && 
                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])) 
                     || isAdmin();
       allow delete: if isAdmin();
 
       // Mappenbeheer per gebruiker (Subcollectie)
+      // Expliciete regels voor de collectie zelf en documenten
       match /folders/{folderId} {
-        // Essential access for user and their supervisors
-        allow read, list, get: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
-        allow create, delete: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
-        allow update: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
+        allow read, list, get, write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
 
       // Berichten tussen gebruikers

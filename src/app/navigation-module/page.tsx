@@ -523,6 +523,9 @@ export default function StartNavigationPage() {
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 
+  // Stable numbering
+  const missionNumbersRef = useRef<Record<string, number>>({});
+
   const mapRef = useRef<MapRef>(null);
 
   useEffect(() => {
@@ -616,13 +619,6 @@ export default function StartNavigationPage() {
     return new Set(userFolders.flatMap(f => f.taskIds || []));
   }, [userFolders]);
 
-  /**
-   * Sequencing logic requested by user:
-   * 1. Group missions by city.
-   * 2. Find the closest city to current location.
-   * 3. Sort all missions within that city by proximity (Nearest Neighbor).
-   * 4. Repeat for the next closest city.
-   */
   const sequenceMissions = useCallback((missions: any[]) => {
     if (missions.length === 0) return [];
     
@@ -636,11 +632,9 @@ export default function StartNavigationPage() {
     let result: any[] = [];
     let remaining = [...pending];
 
-    // Helper: Group by normalized city name
     const getCityKey = (m: any) => (m.plaats || 'Onbekend').toLowerCase().trim();
 
     while (remaining.length > 0) {
-        // Step 1: Find the absolute closest mission in the remaining pool to decide the current city
         let absoluteClosestIdx = -1;
         let minDist = Infinity;
         for (let i = 0; i < remaining.length; i++) {
@@ -654,12 +648,9 @@ export default function StartNavigationPage() {
         if (absoluteClosestIdx === -1) break;
 
         const targetCity = getCityKey(remaining[absoluteClosestIdx]);
-        
-        // Step 2: Extract all missions from this specific city
         let cityMissions = remaining.filter(m => getCityKey(m) === targetCity);
         remaining = remaining.filter(m => getCityKey(m) !== targetCity);
 
-        // Step 3: Sequence all missions WITHIN this city using nearest-neighbor
         while (cityMissions.length > 0) {
             let closestInCityIdx = -1;
             let minCityDist = Infinity;
@@ -709,6 +700,22 @@ export default function StartNavigationPage() {
     }
     return [];
   }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
+
+  // Maintain stable numbering
+  useEffect(() => {
+    if (filteredMeldingen.length > 0) {
+        const currentMapping = { ...missionNumbersRef.current };
+        let max = Object.values(currentMapping).reduce((a, b) => Math.max(a, b), 0);
+        
+        filteredMeldingen.forEach(m => {
+            if (!currentMapping[m.id]) {
+                max++;
+                currentMapping[m.id] = max;
+            }
+        });
+        missionNumbersRef.current = currentMapping;
+    }
+  }, [filteredMeldingen]);
 
   const displayedMissions = useMemo(() => {
     let base = filteredMeldingen;
@@ -826,7 +833,7 @@ export default function StartNavigationPage() {
             setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
             setTimeout(() => {
                 setIsRecalculating(false);
-                toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie en stad-groepering." });
+                toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie. Nummers blijven ongewijzigd." });
             }, 1200);
         },
         () => {
@@ -1002,8 +1009,9 @@ export default function StartNavigationPage() {
                     
                     <ScrollArea className="flex-1">
                         <div className="max-w-3xl mx-auto flex flex-col gap-1 p-2 pb-24">
-                            {displayedMissions.map((m, index) => {
+                            {displayedMissions.map((m) => {
                                 const isCompleted = m.status === 'Afgerond';
+                                const stableIndex = missionNumbersRef.current[m.id] || '?';
                                 return (
                                     <Card key={m.id} className={cn(
                                         "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
@@ -1014,7 +1022,7 @@ export default function StartNavigationPage() {
                                                 "h-10 w-10 flex items-center justify-center text-sm font-black shrink-0",
                                                 isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
                                             )}>
-                                                {index + 1}
+                                                {stableIndex}
                                             </div>
                                             <div className="flex-1 min-w-0 ml-1">
                                                 <div className="flex items-center justify-between mb-1 gap-1 leading-none">
