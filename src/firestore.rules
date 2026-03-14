@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -24,6 +25,10 @@ service cloud.firestore {
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     // --- RULES ---
 
     // Route assignments
@@ -44,10 +49,8 @@ service cloud.firestore {
       allow delete: if isAdmin();
 
       // Mappenbeheer per gebruiker (Subcollectie)
-      // Gebruikers mogen hun eigen mappen inzien en bewerken (taken toevoegen).
-      // Beheerders mogen alle mappen inzien en bewerken (aanmaken/verwijderen).
       match /folders/{folderId} {
-        allow get, list: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
+        allow read, list, get: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
         allow create, delete: if isPrivileged();
         allow update: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }

@@ -812,11 +812,11 @@ export default function StartNavigationPage() {
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
-            <div className="flex items-center gap-3">
-                 <Button variant="ghost" size="icon" className="rounded-full h-10 w-10" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6 text-slate-600" /></Button>
-                 <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
+            <div className="flex items-center gap-3 min-w-0">
+                 <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 shrink-0" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6 text-slate-600" /></Button>
+                 <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none truncate">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
                 <Popover>
                     <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
                     <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-none shadow-2xl bg-white border-none">
@@ -856,16 +856,16 @@ export default function StartNavigationPage() {
             </div>
         </header>
 
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative">
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative overflow-hidden">
             {isMeldingenType ? (
                 <div className="flex-1 flex flex-col min-h-0">
                     <div className="p-3 border-b bg-white shrink-0 space-y-2">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input placeholder="ZOEKEN..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                            <Input placeholder="ZOEKEN..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                         </div>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" className="flex-1 h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3 min-w-0">
@@ -885,7 +885,7 @@ export default function StartNavigationPage() {
                                                         : (userFolders?.find(f => f.id === selectedFolderId)?.name.toUpperCase() || 'KIES MAP...')}
                                             </span>
                                         </div>
-                                        <ChevronDown className="h-3.5 w-3.5 opacity-40 shrink-0" />
+                                        <ChevronDown className="h-3.5 w-3.5 opacity-40 shrink-0 ml-2" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-[calc(100vw-1.5rem)] sm:w-80 rounded-none border-none shadow-2xl p-2">
@@ -929,47 +929,47 @@ export default function StartNavigationPage() {
                                     )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                        </div>
 
-                        {isPrivileged && (
-                            <div className="flex items-center gap-2 pt-1 border-t border-slate-50">
-                                <div className="flex-1 min-w-0">
-                                    <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
-                                        <SelectTrigger className="h-9 font-black border-none rounded-none bg-white px-3 text-[9px] shadow-sm uppercase">
-                                            <div className="flex items-center gap-2 truncate">
-                                                <UserIcon className="h-3.5 w-3.5 text-primary shrink-0" />
-                                                <SelectValue placeholder="COLLEGA..." />
+                            {isPrivileged && (
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
+                                            <SelectTrigger className="h-10 font-black border-none rounded-none bg-slate-50 px-3 text-[9px] shadow-inner uppercase min-w-0">
+                                                <div className="flex items-center gap-2 truncate">
+                                                    <UserIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+                                                    <SelectValue placeholder="COLLEGA..." />
+                                                </div>
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-none shadow-2xl border-slate-100">
+                                                {users?.map(u => (
+                                                    <SelectItem key={u.id} value={u.id} className="text-xs font-bold uppercase">{u.displayName || u.email}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" className="h-10 w-10 p-0 rounded-none border-none bg-slate-100 shadow-inner text-primary hover:bg-slate-200 shrink-0">
+                                                <FolderPlus className="h-4 w-4" />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="rounded-none border-none shadow-2xl p-6 max-w-xs">
+                                            <DialogHeader>
+                                                <DialogTitle className="font-black uppercase tracking-tight text-base">Nieuwe Map</DialogTitle>
+                                                <DialogDescription className="font-bold text-slate-500 text-xs">Voor {users?.find(u => u.id === managedUserId)?.displayName || 'collega'}.</DialogDescription>
+                                            </DialogHeader>
+                                            <div className="py-4">
+                                                <Input placeholder="NAAM..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-black uppercase rounded-none text-center text-sm shadow-sm border-2" />
                                             </div>
-                                        </SelectTrigger>
-                                        <SelectContent className="rounded-none shadow-2xl border-slate-100">
-                                            {users?.map(u => (
-                                                <SelectItem key={u.id} value={u.id} className="text-xs font-bold uppercase">{u.displayName || u.email}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                            <DialogFooter className="gap-2">
+                                                <DialogClose asChild><Button variant="ghost" className="font-black uppercase h-10 text-xs flex-1">Stop</Button></DialogClose>
+                                                <Button onClick={handleCreateFolder} className="h-10 px-6 font-black uppercase rounded-none bg-primary text-white shadow-xl flex-1 text-xs">Maken</Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
                                 </div>
-                                <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline" className="h-9 w-9 p-0 rounded-none border-none bg-slate-100 shadow-inner text-primary hover:bg-slate-200">
-                                            <FolderPlus className="h-4 w-4" />
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="rounded-none border-none shadow-2xl p-6 max-w-xs">
-                                        <DialogHeader>
-                                            <DialogTitle className="font-black uppercase tracking-tight text-base">Nieuwe Map</DialogTitle>
-                                            <DialogDescription className="font-bold text-slate-500 text-xs">Voor {users?.find(u => u.id === managedUserId)?.displayName || 'collega'}.</DialogDescription>
-                                        </DialogHeader>
-                                        <div className="py-4">
-                                            <Input placeholder="NAAM..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-black uppercase rounded-none text-center text-sm shadow-sm border-2" />
-                                        </div>
-                                        <DialogFooter className="gap-2">
-                                            <DialogClose asChild><Button variant="ghost" className="font-black uppercase h-10 text-xs flex-1">Stop</Button></DialogClose>
-                                            <Button onClick={handleCreateFolder} className="h-10 px-6 font-black uppercase rounded-none bg-primary text-white shadow-xl flex-1 text-xs">Maken</Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                     
                     <ScrollArea className="flex-1">
@@ -981,7 +981,7 @@ export default function StartNavigationPage() {
                                         "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
                                         isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                     )}>
-                                        <div className="flex items-center gap-2 p-2 sm:p-3">
+                                        <div className="flex items-center gap-2 p-2 sm:p-3 min-w-0">
                                             <div className={cn(
                                                 "h-10 w-10 flex items-center justify-center text-sm font-black shrink-0",
                                                 isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
@@ -1002,7 +1002,7 @@ export default function StartNavigationPage() {
                                                     {m.straatnaam} {m.huisnummer}, {m.plaats}
                                                 </p>
                                             </div>
-                                            <div className="flex gap-1.5 shrink-0 items-center">
+                                            <div className="flex gap-1.5 shrink-0 items-center ml-2">
                                                 {!isCompleted && (
                                                     <Button 
                                                         variant="outline" 
