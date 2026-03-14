@@ -1057,7 +1057,6 @@ export default function StartNavigationPage() {
                         <div className="max-w-3xl mx-auto flex flex-col gap-1 p-2 pb-24">
                             {displayedMissions.map((m) => {
                                 const isCompleted = m.status === 'Afgerond';
-                                const stableIndex = missionNumbersRef.current[m.id] || '?';
                                 return (
                                     <Card key={m.id} 
                                         onClick={() => setActiveWerkbonId(m.id)}
@@ -1066,15 +1065,8 @@ export default function StartNavigationPage() {
                                         isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                     )}>
                                         <div className="flex items-center gap-2 p-2.5 min-w-0">
-                                            <div className={cn(
-                                                "h-10 w-10 flex items-center justify-center text-sm font-black shrink-0",
-                                                isCompleted ? "bg-green-600 text-white" : "bg-slate-900 text-white"
-                                            )}>
-                                                {stableIndex}
-                                            </div>
-                                            
                                             {/* Category Icon Square */}
-                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-black bg-transparent ml-1">
+                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-black bg-transparent">
                                                 {renderCategoryIcon(m.hoofdcategorie)}
                                             </div>
 
