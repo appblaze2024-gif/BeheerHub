@@ -107,8 +107,6 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-  DialogTrigger,
-  DialogClose
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -1074,7 +1072,7 @@ export default function StartNavigationPage() {
                                             </div>
                                             
                                             {/* Category Icon Square */}
-                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-slate-100 bg-transparent ml-1">
+                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-black bg-transparent ml-1">
                                                 {renderCategoryIcon(m.hoofdcategorie)}
                                             </div>
 
