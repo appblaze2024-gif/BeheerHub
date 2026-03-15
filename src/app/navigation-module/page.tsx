@@ -732,6 +732,12 @@ export default function StartNavigationPage() {
             const q = debouncedSearchQuery.toLowerCase();
             result = result.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
         }
+        
+        // Use smart sequencing when user location is available
+        if (userLocation) {
+            return sequenceMissions(result);
+        }
+        
         return result;
     } else if (type === 'prullenbakken' && selectedRouteId && currentProject && allObjects) {
         const route = currentProject.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
@@ -747,7 +753,7 @@ export default function StartNavigationPage() {
         }));
     }
     return [];
-  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
+  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, userLocation, sequenceMissions]);
 
   // Maintain stable numbering
   useEffect(() => {
@@ -1070,7 +1076,7 @@ export default function StartNavigationPage() {
                                     )}>
                                         <div className="flex items-center gap-2 p-2.5 min-w-0">
                                             {/* Category Icon Square */}
-                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-black bg-transparent ml-1">
+                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 bg-transparent ml-1">
                                                 {renderCategoryIcon(m.hoofdcategorie)}
                                             </div>
 
