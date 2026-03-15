@@ -352,7 +352,7 @@ function IntegratedWerkbonOverlay({
     );
 
     return (
-        <div className="fixed inset-0 z-[200] flex flex-col h-full bg-white relative animate-in slide-in-from-right duration-300">
+        <div className="fixed inset-0 z-[200] flex flex-col h-full bg-white animate-in slide-in-from-right duration-300">
             {subView === 'main' ? (
                 <>
                     <header className="h-14 bg-slate-900 text-white flex items-center justify-between px-3 shrink-0">
@@ -900,52 +900,54 @@ export default function StartNavigationPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
-        <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
-            <div className="flex items-center gap-3 min-w-0">
-                 <Button variant="ghost" size="icon" className="rounded-none h-10 w-10 shrink-0" onClick={() => router.push('/')}>
-                    <ArrowLeft className="h-6 w-6" />
-                 </Button>
-                 <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none truncate">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-                <Popover>
-                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-none hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
-                    <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-none shadow-2xl bg-white border-none">
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-6 w-6 text-primary" /><h4 className="text-sm font-black uppercase tracking-tight">Instellingen</h4></div>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div><Label className="text-xs font-black uppercase">Auto-open</Label><p className="text-[10px] font-bold text-slate-400">Open bij 10s stilstand</p></div>
-                                    <Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabledState} />
+        {!activeWerkbonId && (
+            <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
+                <div className="flex items-center gap-3 min-w-0">
+                    <Button variant="ghost" size="icon" className="rounded-none h-10 w-10 shrink-0" onClick={() => router.push('/')}>
+                        <ArrowLeft className="h-6 w-6" />
+                    </Button>
+                    <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none truncate">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                    <Popover>
+                        <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-none hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
+                        <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-none shadow-2xl bg-white border-none">
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3 border-b pb-4"><Sliders className="h-6 w-6 text-primary" /><h4 className="text-sm font-black uppercase tracking-tight">Instellingen</h4></div>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div><Label className="text-xs font-black uppercase">Auto-open</Label><p className="text-[10px] font-bold text-slate-400">Open bij 10s stilstand</p></div>
+                                        <Switch checked={autoOpenEnabled} onCheckedChange={setAutoOpenEnabledState} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-                
-                {isMeldingenType ? (
-                    navigationState === 'setup' ? (
-                        <Button 
-                            className="h-11 w-11 p-0 font-black uppercase bg-primary text-white shadow-xl rounded-none border-none hover:bg-primary/90" 
-                            onClick={handleRecalculateRoute} 
-                            disabled={displayedMissions.length === 0 || isRecalculating}
-                        >
-                            {isRecalculating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
-                        </Button>
+                        </PopoverContent>
+                    </Popover>
+                    
+                    {isMeldingenType ? (
+                        navigationState === 'setup' ? (
+                            <Button 
+                                className="h-11 w-11 p-0 font-black uppercase bg-primary text-white shadow-xl rounded-none border-none hover:bg-primary/90" 
+                                onClick={handleRecalculateRoute} 
+                                disabled={displayedMissions.length === 0 || isRecalculating}
+                            >
+                                {isRecalculating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
+                            </Button>
+                        ) : (
+                            <Button variant="destructive" className="h-11 px-5 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
+                        )
                     ) : (
-                        <Button variant="destructive" className="h-11 px-5 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
-                    )
-                ) : (
-                    navigationState === 'setup' ? (
-                        <Button className="h-11 px-5 font-black uppercase bg-primary text-white shadow-xl rounded-none tracking-widest text-xs" onClick={() => handleStartRit()} disabled={displayedMissions.length === 0}>
-                            <Play className="h-4 w-4 mr-2 fill-current" /> START
-                        </Button>
-                    ) : (
-                        <Button variant="destructive" className="h-11 px-5 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
-                    )
-                )}
-            </div>
-        </header>
+                        navigationState === 'setup' ? (
+                            <Button className="h-11 px-5 font-black uppercase bg-primary text-white shadow-xl rounded-none tracking-widest text-xs" onClick={() => handleStartRit()} disabled={displayedMissions.length === 0}>
+                                <Play className="h-4 w-4 mr-2 fill-current" /> START
+                            </Button>
+                        ) : (
+                            <Button variant="destructive" className="h-11 px-5 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
+                        )
+                    )}
+                </div>
+            </header>
+        )}
 
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative overflow-hidden">
             {isMeldingenType ? (
