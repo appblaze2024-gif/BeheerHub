@@ -318,14 +318,7 @@ export default function ObjectsPage() {
           "w-full lg:w-80 border-r bg-white flex flex-col shrink-0",
           isTablet && selectedObject ? "hidden" : "flex"
         )}>
-          <div className="p-4 border-b flex justify-between items-center bg-slate-50/20">
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Alles</span>
-              <span className="text-2xl font-black text-slate-900 leading-tight">
-                {isLoadingObjects ? '...' : filteredObjectsList.length}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
+          <div className="p-4 border-b flex justify-end items-center bg-slate-50/20 gap-2">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -361,7 +354,6 @@ export default function ObjectsPage() {
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
-            </div>
           </div>
           <ScrollArea className="flex-1">
             {isLoadingObjects ? (
