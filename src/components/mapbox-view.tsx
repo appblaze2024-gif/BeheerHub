@@ -78,7 +78,7 @@ export function MapboxView({
   highlightedObject = null 
 }: MapboxViewProps) {
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
-  const [hoveredPin, setHoveredPin] = React.useState<MapObject | null>(null);
+  const [hoveredPin, setHoveredPin] = React.useState<MapboxViewProps['highlightedObject'] | null>(null);
   const { profile } = useProfile();
   const firestore = useFirestore();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';

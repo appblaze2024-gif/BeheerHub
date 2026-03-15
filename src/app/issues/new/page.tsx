@@ -937,7 +937,7 @@ export default function NewIssuePage() {
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
-      intakenummer: format(new Date(), 'yyyyMMdd') + '0001', 
+      intakenummer: format(new Date(), 'yyyyMMdd') + '', 
       status: 'Nieuw', 
       meldingsdatum: new Date(), 
       meldingsuur: format(new Date(), 'HH:mm'),
@@ -969,7 +969,7 @@ export default function NewIssuePage() {
     }
   }, [watchDate]);
 
-  const [idSuffix, setIdSuffix] = React.useState('0001');
+  const [idSuffix, setIdSuffix] = React.useState('');
 
   React.useEffect(() => {
     if (existingMelding) {
@@ -1284,7 +1284,7 @@ export default function NewIssuePage() {
         
         // RESET FORM FOR CONTINUOUS ENTRY
         form.reset({
-            intakenummer: format(new Date(), 'yyyyMMdd') + '0001',
+            intakenummer: format(new Date(), 'yyyyMMdd') + '',
             status: 'Nieuw',
             meldingsdatum: new Date(),
             meldingsuur: format(new Date(), 'HH:mm'),
@@ -1299,7 +1299,7 @@ export default function NewIssuePage() {
             plaats: '',
             extra_informatie: '',
         });
-        setIdSuffix('0001');
+        setIdSuffix('');
         setUploadedFiles([]);
         setUploadedPhotos([]);
         setLocation(null);
@@ -1537,7 +1537,7 @@ export default function NewIssuePage() {
                                     <div className="absolute z-[100] w-[150%] left-0 mt-1 bg-white border-2 rounded-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                                       <ScrollArea className="max-h-60">
                                         {containerSuggestions.map(obj => (
-                                          <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex flex-col gap-0.5" onClick={() => handleContainerSelect(obj)}>
+                                          <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex items-center justify-between group" onClick={() => handleContainerSelect(obj)}>
                                             <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
                                             <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer} • {obj.plaats}</p>
                                           </button>
