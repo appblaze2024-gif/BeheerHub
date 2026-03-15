@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -42,7 +43,7 @@ import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, arrayRemove, writeBatch, limit } from 'firebase/firestore';
+import { collection, doc, query, where, arrayRemove, writeBatch, limit, orderBy } from 'firebase/firestore';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -147,21 +148,28 @@ export default function ObjectsPage() {
     // If searching, use server-side prefix filtering on ID number to save reads
     if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
         const q = debouncedSearchTerm.toUpperCase();
-        const baseQuery = typeFilter === 'all' 
-            ? baseCol 
-            : query(baseCol, where('locatieType', '==', typeFilter));
-            
-        return query(
-            baseQuery,
-            where('idNummer', '>=', q),
-            where('idNummer', '<=', q + '\uf8ff'),
-            limit(100)
-        );
+        
+        if (typeFilter === 'all') {
+            return query(
+                baseCol,
+                where('idNummer', '>=', q),
+                where('idNummer', '<=', q + '\uf8ff'),
+                limit(100)
+            );
+        } else {
+            return query(
+                baseCol,
+                where('locatieType', '==', typeFilter),
+                where('idNummer', '>=', q),
+                where('idNummer', '<=', q + '\uf8ff'),
+                limit(100)
+            );
+        }
     }
 
     // Default browse view with small limit
-    if (typeFilter === 'all') return query(baseCol, limit(100));
-    return query(baseCol, where('locatieType', '==', typeFilter), limit(100));
+    if (typeFilter === 'all') return query(baseCol, orderBy('idNummer'), limit(100));
+    return query(baseCol, where('locatieType', '==', typeFilter), orderBy('idNummer'), limit(100));
   }, [firestore, typeFilter, debouncedSearchTerm]);
 
   const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
@@ -172,11 +180,10 @@ export default function ObjectsPage() {
 
   const filteredObjectsList = React.useMemo(() => {
     if (!objects) return [];
-    let filtered = objects;
+    let filtered = [...objects];
 
-    // Client-side fallback for address searching if needed, 
-    // though server-side ID search is primary for read efficiency
-    if (searchTerm) {
+    // Client-side address fallback for short searches
+    if (searchTerm && searchTerm.length > 0 && searchTerm.length < 2) {
       const q = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (obj) =>
@@ -192,7 +199,7 @@ export default function ObjectsPage() {
           const from = turf.point([currentUserCoords.longitude, currentUserCoords.latitude]);
           const to = turf.point([obj.longitude, obj.latitude]);
           const distance = turf.distance(from, to, { units: 'meters' });
-          return distance <= 25;
+          return distance <= 0.025; // 25 meters
         } catch (e) {
           return false;
         }
@@ -347,6 +354,7 @@ export default function ObjectsPage() {
         const updatedFilters = customFilters.map(f => f === filterToRename ? newFilterName.trim() : f);
         batch.set(filtersRef, { custom: updatedFilters }, { merge: true });
         
+        // Caution: This could be a lot of updates. We only update what's in the current view or small limit.
         if (objects && objects.length > 0) {
             objects.forEach(obj => {
                 if (obj.locatieType === filterToRename) {

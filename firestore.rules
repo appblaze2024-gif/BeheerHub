@@ -22,7 +22,7 @@ service cloud.firestore {
     }
 
     function isPrivileged() {
-      return isSignedIn() && (isAdmin() || (userExists() && getUserData().role == 'toezichthouder'));
+      return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
     function isOwner(userId) {
@@ -30,6 +30,12 @@ service cloud.firestore {
     }
 
     // --- RULES ---
+
+    // Objecten (GIS) - Staan bovenaan voor snelle toegang en duidelijke rechten
+    match /objects/{objectId} {
+      allow read, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
 
     // Route assignments
     match /route_assignments/{assignmentId} {
@@ -50,9 +56,7 @@ service cloud.firestore {
 
       // Mappenbeheer per gebruiker (Subcollectie)
       match /folders/{folderId} {
-        allow read, list, get: if isOwner(userId) || isPrivileged();
-        allow create, delete: if isPrivileged();
-        allow update: if isOwner(userId) || isPrivileged();
+        allow read, list, get, write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
 
       // Berichten tussen gebruikers
@@ -106,12 +110,6 @@ service cloud.firestore {
         allow read, list: if isSignedIn();
         allow write: if isPrivileged();
       }
-    }
-
-    // Objecten (GIS)
-    match /objects/{objectId} {
-      allow read, list: if isSignedIn();
-      allow write: if isPrivileged();
     }
 
     // Algemene instellingen

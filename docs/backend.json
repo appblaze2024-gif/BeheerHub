@@ -122,6 +122,25 @@
         "status": { "type": "string" }
       },
       "required": ["id", "merk", "model"]
+    },
+    "Object": {
+      "title": "Object",
+      "description": "GIS objecten (prullenbakken, containers, etc).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "idNummer": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "locatieType": { "type": "string" },
+        "locatieSubType": { "type": "string" },
+        "straatnaam": { "type": "string" },
+        "huisnummer": { "type": "string" },
+        "postcode": { "type": "string" },
+        "plaats": { "type": "string" },
+        "locatieWerkgebieden": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "latitude", "longitude", "locatieType"]
     }
   },
   "auth": {
@@ -155,6 +174,10 @@
     "/voertuigen/{voertuigId}": {
       "schema": { "$ref": "#/entities/Voertuig" },
       "description": "Voertuiggegevens."
+    },
+    "/objects/{objectId}": {
+      "schema": { "$ref": "#/entities/Object" },
+      "description": "GIS objecten (prullenbakken, containers, etc)."
     },
     "/voertuigen/{voertuigId}/maintenance/{id}": {
       "schema": { "type": "object" },
