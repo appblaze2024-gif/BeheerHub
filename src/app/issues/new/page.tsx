@@ -1513,7 +1513,9 @@ export default function NewIssuePage() {
                           {m.status}
                         </Badge>
                       </div>
-                      <p className="text-[11px] font-bold text-slate-600 truncate">{m.subcategorie}</p>
+                      <p className="text-[11px] font-black text-slate-700 truncate uppercase tracking-tight">
+                        {m.hoofdcategorie} <span className="mx-1 text-slate-300 font-normal">/</span> {m.subcategorie}
+                      </p>
                       <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">Melder: {m.melder || 'Anoniem'} • {m.datum}</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
