@@ -31,9 +31,9 @@ service cloud.firestore {
 
     // --- RULES ---
 
-    // Objecten (GIS) - Staan bovenaan voor snelle toegang en duidelijke rechten
+    // Objecten (GIS) - Prioriteit voor leesbaarheid voor al het personeel
     match /objects/{objectId} {
-      allow read, list: if isSignedIn();
+      allow read, get, list: if isSignedIn();
       allow write: if isPrivileged();
     }
 

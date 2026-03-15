@@ -199,7 +199,7 @@ export default function ObjectsPage() {
           const from = turf.point([currentUserCoords.longitude, currentUserCoords.latitude]);
           const to = turf.point([obj.longitude, obj.latitude]);
           const distance = turf.distance(from, to, { units: 'meters' });
-          return distance <= 0.025; // 25 meters
+          return distance <= 25; // 25 meters
         } catch (e) {
           return false;
         }
