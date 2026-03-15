@@ -112,8 +112,8 @@ function Header() {
           )}
         </div>
         
-        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0 rounded-none">
-          <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-black uppercase rounded-none">
+        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0">
+          <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-black uppercase">
             {profile?.firstName?.[0]}{profile?.lastName?.[0]}
           </AvatarFallback>
         </Avatar>

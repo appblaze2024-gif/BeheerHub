@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -471,7 +470,7 @@ export default function MailPage() {
                                         <div className="flex gap-1">
                                             {isPdf && (
                                                 <Button variant="secondary" size="sm" onClick={() => handleForwardToMelding(att)} disabled={isForwarding} className="h-8 font-black uppercase text-[10px] tracking-tight bg-blue-600 text-white hover:bg-blue-700">
-                                                    {isForwarding ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <Bell className="h-3 w-3 mr-1.5" />}
+                                                    {isForwarding ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <Sparkles className="h-3 w-3 mr-1.5" />}
                                                     Inlezen als Melding
                                                 </Button>
                                             )}
