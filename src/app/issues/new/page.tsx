@@ -563,32 +563,111 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   );
 }
 
-function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtypes, allSubtypesMap }: { 
+function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtypes, allSubtypesMap, subtypeIcons }: { 
   open: boolean, 
   onOpenChange: (open: boolean) => void, 
   parentCategory: string,
   currentSubtypes: string[],
-  allSubtypesMap: Record<string, string[]>
+  allSubtypesMap: Record<string, string[]>,
+  subtypeIcons: Record<string, string>
 }) {
   const firestore = useFirestore();
+  const app = useFirebaseApp();
   const { toast } = useToast();
   const [newName, setNewName] = React.useState('');
+  const [selectedIconName, setSelectedIconName] = React.useState('AlertCircle');
+  const [selectedColor, setSelectedColor] = React.useState('#007AFF');
+  const [iconSearch, setIconSearch] = React.useState('');
   const [isSaving, setIsSaving] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState('preset');
+  const [htmlIcon, setHtmlIcon] = React.useState('');
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [editTarget, setEditTarget] = React.useState<string | null>(null);
 
-  const handleAdd = async () => {
-    if (!newName.trim() || !firestore || !parentCategory) return;
+  const isCustomHtml = (str: string) => {
+    if (!str) return false;
+    const s = str.trim().toLowerCase();
+    return s.includes('<svg') || s.includes('<img') || s.includes('<a') || s.includes('<div') || (s.startsWith('<') && s.includes('>'));
+  };
+
+  const filteredIcons = React.useMemo(() => {
+    const all = Object.keys(Icons).filter(name => typeof (Icons as any)[name] === 'function' || typeof (Icons as any)[name] === 'object');
+    if (!iconSearch.trim()) return all.slice(0, 100);
+    const q = iconSearch.toLowerCase();
+    return all.filter(name => name.toLowerCase().includes(q)).slice(0, 100);
+  }, [iconSearch]);
+
+  React.useEffect(() => {
+    if (editTarget) {
+        const fullKey = `${parentCategory}:${editTarget}`;
+        const currentIcon = subtypeIcons[fullKey] || 'AlertCircle';
+        if (isCustomHtml(currentIcon)) {
+            setActiveTab('html');
+            setHtmlIcon(currentIcon);
+        } else if (currentIcon.startsWith('http')) {
+            setActiveTab('upload');
+            setHtmlIcon(currentIcon);
+        } else if (currentIcon.startsWith('lucide:')) {
+            setActiveTab('preset');
+            const parts = currentIcon.split(':');
+            setSelectedIconName(parts[1] || 'AlertCircle');
+            setSelectedColor(parts[2] || '#007AFF');
+        } else {
+            setActiveTab('preset');
+            setSelectedIconName(currentIcon);
+            setSelectedColor('#007AFF');
+        }
+    }
+  }, [editTarget, parentCategory, subtypeIcons]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !app) return;
+    setIsUploading(true);
+    const storage = getStorage(app);
+    const path = `settings/subtype_icons/${Date.now()}_${file.name}`;
+    try {
+        const snapshot = await uploadBytesResumable(ref(storage, path), file);
+        const url = await getDownloadURL(snapshot.ref);
+        setHtmlIcon(url);
+        toast({ title: "Afbeelding geüpload" });
+    } catch (err: any) {
+        console.error("Icon upload error:", err);
+        toast({ variant: 'destructive', title: "Upload mislukt" });
+    } finally {
+        setIsUploading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    const target = editTarget || newName.trim();
+    if (!target || !firestore || !parentCategory) return;
     setIsSaving(true);
     try {
-      const updatedSubtypes = Array.from(new Set([...currentSubtypes, newName.trim()]));
-      const newMap = { ...allSubtypesMap, [parentCategory]: updatedSubtypes };
+      let finalIcon = '';
+      if (activeTab === 'html') {
+          finalIcon = htmlIcon.trim();
+      } else if (activeTab === 'upload') {
+          finalIcon = htmlIcon;
+      } else {
+          finalIcon = `lucide:${selectedIconName}:${selectedColor}`;
+      }
+
+      const fullKey = `${parentCategory}:${target}`;
+      const updatedSubtypes = editTarget ? currentSubtypes : Array.from(new Set([...currentSubtypes, target]));
+      const updatedSubtypeMap = { ...allSubtypesMap, [parentCategory]: updatedSubtypes };
+      const updatedIcons = { ...subtypeIcons, [fullKey]: finalIcon };
       
       await setDocumentNonBlocking(doc(firestore, 'settings', 'issue_options'), {
-        subcategorieen: newMap
+        subcategorieen: updatedSubtypeMap,
+        subtypeIcons: updatedIcons
       }, { merge: true });
       
-      toast({ title: 'Subtype toegevoegd' });
+      toast({ title: editTarget ? 'Subtype icoon bijgewerkt' : 'Subtype toegevoegd' });
       setNewName('');
-      onOpenChange(false);
+      setHtmlIcon('');
+      setEditTarget(null);
+      if (!editTarget) onOpenChange(false);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Fout bij opslaan' });
     } finally {
@@ -599,11 +678,15 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
   const handleDelete = async (name: string) => {
     if (!firestore || !parentCategory) return;
     try {
+      const fullKey = `${parentCategory}:${name}`;
       const updatedSubtypes = currentSubtypes.filter(o => o !== name);
       const newMap = { ...allSubtypesMap, [parentCategory]: updatedSubtypes };
+      const newIcons = { ...subtypeIcons };
+      delete newIcons[fullKey];
 
       await setDocumentNonBlocking(doc(firestore, 'settings', 'issue_options'), {
-        subcategorieen: newMap
+        subcategorieen: newMap,
+        subtypeIcons: newIcons
       }, { merge: true });
       
       toast({ title: 'Subtype verwijderd' });
@@ -612,37 +695,185 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="font-black uppercase">Subtypes voor: {parentCategory}</DialogTitle>
-          <DialogDescription>Beheer specifieke onderdelen binnen dit hoofdtype.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-6 p-6">
-          <div className="flex gap-2">
-            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nieuw subtype..." className="font-bold h-11 rounded-none" />
-            <Button onClick={handleAdd} disabled={!newName.trim() || isSaving} className="h-11 font-black uppercase rounded-none px-6 shadow-xl shadow-primary/20">
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            </Button>
-          </div>
+  const renderCurrentIcon = (val: string, isPreview = false) => {
+    if (!val) return <CircleHelp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: '#cbd5e1' }} />;
+    
+    if (isCustomHtml(val)) {
+        return (
+            <div 
+                className={cn(
+                    "flex items-center justify-center [&_svg]:h-full [&_svg]:w-full [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_a]:flex [&_a]:items-center [&_a]:justify-center [&_a]:h-full [&_a]:w-full", 
+                    isPreview ? "h-full w-full p-2" : "h-9 w-9 text-primary"
+                )} 
+                dangerouslySetInnerHTML={{ __html: val }} 
+            />
+        );
+    }
+    
+    if (val.startsWith('http')) {
+        return (
+            <div className={cn("relative flex items-center justify-center overflow-hidden", isPreview ? "h-full w-full rounded-none" : "h-9 w-9 rounded-none")}>
+                <img src={val} alt="icon" className="h-full w-full object-contain" />
+            </div>
+        );
+    }
 
-          <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Actieve Subtypes</Label>
-            <ScrollArea className="h-64 rounded-none border-2 border-slate-50 p-2 bg-slate-50/30 shadow-inner">
-              <div className="grid gap-1">
-                {currentSubtypes.map(name => (
-                  <div key={name} className="flex items-center justify-between p-3 bg-white rounded-none border border-transparent shadow-sm group">
-                    <span className="text-xs font-black uppercase tracking-tight text-slate-700">{name}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-none opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(name)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
+    if (val.startsWith('lucide:')) {
+        const parts = val.split(':');
+        const name = parts[1];
+        const color = parts[2];
+        const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
+        return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-9 w-9")} style={{ color: color || '#007AFF' }} />;
+    }
+
+    const IconComp = (Icons as any)[val] || Icons.CircleHelp;
+    return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-9 w-9")} style={{ color: '#007AFF' }} />;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
+      <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-none">
+        <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
+          <DialogTitle className="font-black uppercase tracking-tight">
+            {editTarget ? `Subtype icoon: ${editTarget}` : `Subtypes Beheren: ${parentCategory}`}
+          </DialogTitle>
+          <DialogDescription className="text-slate-400 font-bold">Wijs specifieke iconen toe aan subtypes.</DialogDescription>
+        </DialogHeader>
+        
+        <ScrollArea className="flex-1 bg-white">
+          <div className="space-y-8 p-6 pb-20">
+            {!editTarget && (
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam nieuw subtype</Label>
+                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Losse tegel..." className="font-bold h-11 rounded-none" />
               </div>
-            </ScrollArea>
+            )}
+
+            <div className="space-y-6 bg-slate-50 p-6 rounded-none border-2 border-slate-100 shadow-inner">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase text-slate-400">Configureer Icoon</Label>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase italic">Selecteer een bron voor het subtype icoon.</p>
+                </div>
+                <div className="h-16 w-16 bg-white rounded-none border-2 border-primary/10 flex items-center justify-center shadow-lg overflow-hidden">
+                    {activeTab === 'preset' ? (
+                        <div style={{ color: selectedColor }}>
+                            {renderCurrentIcon(`lucide:${selectedIconName}:${selectedColor}`, true)}
+                        </div>
+                    ) : (
+                        renderCurrentIcon(htmlIcon, true)
+                    )}
+                </div>
+              </div>
+
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid grid-cols-3 h-11 rounded-none bg-slate-200 p-1 mb-6">
+                      <TabsTrigger value="preset" className="text-[10px] font-black uppercase rounded-none">Standaard</TabsTrigger>
+                      <TabsTrigger value="upload" className="text-[10px] font-black uppercase rounded-none">Upload</TabsTrigger>
+                      <TabsTrigger value="html" className="text-[10px] font-black uppercase rounded-none">HTML/SVG</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="preset" className="space-y-6 mt-0">
+                      <div className="space-y-3">
+                          <Label className="text-[10px] font-black uppercase text-slate-400">Kleur</Label>
+                          <div className="flex flex-wrap gap-2">
+                              {PRESET_COLORS.map(c => (
+                                  <button
+                                      key={c.value}
+                                      type="button"
+                                      className={cn(
+                                          "h-8 w-8 rounded-none border-2 transition-all",
+                                          selectedColor === c.value ? "border-slate-900 scale-110 shadow-md" : "border-transparent"
+                                      )}
+                                      style={{ backgroundColor: c.value }}
+                                      onClick={() => setSelectedColor(c.value)}
+                                  />
+                              ))}
+                              <div className="relative h-8 w-8 rounded-none overflow-hidden border-2 border-slate-200">
+                                  <input type="color" value={selectedColor} onChange={e => setSelectedColor(e.target.value)} className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer" />
+                                  <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="space-y-3">
+                          <div className="relative">
+                              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Input placeholder="Zoek icoon..." className="h-10 pl-9 font-bold rounded-none border-slate-200 bg-white" value={iconSearch} onChange={e => setIconSearch(e.target.value)} />
+                          </div>
+                          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar p-1">
+                              {filteredIcons.map(name => {
+                                  const Icon = (Icons as any)[name];
+                                  return (
+                                      <Button 
+                                          key={name} 
+                                          type="button" 
+                                          variant={selectedIconName === name ? "default" : "outline"} 
+                                          size="icon" 
+                                          className="h-10 w-10 p-0 rounded-none" 
+                                          onClick={() => setSelectedIconName(name)}
+                                      >
+                                          <Icon className="h-5 w-5" style={{ color: selectedIconName === name ? undefined : selectedColor }} />
+                                      </Button>
+                                  );
+                              })}
+                          </div>
+                      </div>
+                  </TabsContent>
+
+                  <TabsContent value="upload" className="space-y-4 mt-0">
+                      <Button variant="outline" className="h-24 w-full flex-col gap-2 rounded-none border-dashed border-2 border-slate-200 bg-white" onClick={() => document.getElementById('subtype-icon-upload')?.click()} disabled={isUploading}>
+                          {isUploading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <Upload className="h-8 w-8 text-slate-300" />}
+                          <span className="text-[10px] font-black uppercase text-slate-400">Kies Afbeelding</span>
+                      </Button>
+                      <input type="file" id="subtype-icon-upload" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                  </TabsContent>
+
+                  <TabsContent value="html" className="space-y-4 mt-0">
+                      <Textarea 
+                          placeholder="Plak hier uw <svg> of <img> code..." 
+                          className="font-mono text-[10px] min-h-[150px] rounded-none border-slate-200 p-4 leading-relaxed bg-slate-50 shadow-inner"
+                          value={htmlIcon}
+                          onChange={e => setHtmlIcon(e.target.value)}
+                      />
+                  </TabsContent>
+              </Tabs>
+
+              <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-12 font-black uppercase shadow-xl shadow-primary/20 rounded-none text-xs">
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                {editTarget ? 'Wijzigingen Opslaan' : 'Nieuw Subtype Toevoegen'}
+              </Button>
+              {editTarget && <Button variant="ghost" onClick={() => setEditTarget(null)} className="w-full h-10 font-black uppercase text-[10px] text-slate-400 rounded-none">Annuleren</Button>}
+            </div>
+
+            <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huidige Subtypes ({currentSubtypes.length})</Label>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Wijs icoon toe aan subtype</p>
+                </div>
+                <div className="grid gap-2">
+                {currentSubtypes.map(name => (
+                    <div key={name} className={cn("flex items-center justify-between p-3 bg-white border-2 rounded-none group transition-all shadow-sm", editTarget === name ? "border-primary bg-primary/5" : "border-slate-100 hover:border-primary/20")}>
+                      <div className="flex items-center gap-4 flex-1 min-w-0" onClick={() => setEditTarget(name)}>
+                          <div className="bg-slate-50 p-2 rounded-none border border-slate-100 shadow-inner flex items-center justify-center w-10 h-10 shrink-0 cursor-pointer">
+                              {renderCurrentIcon(subtypeIcons[`${parentCategory}:${name}`])}
+                          </div>
+                          <span className="text-sm font-black uppercase tracking-tight text-slate-700 truncate">{name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-slate-500 hover:text-primary hover:bg-primary/5" onClick={() => setEditTarget(name)}>
+                              <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-slate-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(name)}>
+                              <Trash2 className="h-4 w-4" />
+                          </Button>
+                      </div>
+                    </div>
+                ))}
+                </div>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
@@ -684,6 +915,7 @@ export default function NewIssuePage() {
   const hoofdcategorieen = dbOptions?.hoofdcategorieen || DEFAULT_HOOFDCATEGORIE_OPTIONS;
   const subcategorieenMap = dbOptions?.subcategorieen || DEFAULT_SUBCATEGORIE_MAPPING;
   const categoryIcons = dbOptions?.categoryIcons || {};
+  const subtypeIcons = dbOptions?.subtypeIcons || {};
 
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
   const { data: aiConfig } = useDoc<{ instructions: string }>(aiConfigRef);
@@ -774,8 +1006,19 @@ export default function NewIssuePage() {
     return s.includes('<svg') || s.includes('<img') || s.includes('<a') || s.includes('<div') || (s.startsWith('<') && s.includes('>'));
   };
 
-  const renderCategoryIcon = (category: string) => {
-    const iconVal = categoryIcons[category];
+  const renderCategoryIcon = (category: string, subcategory?: string) => {
+    let iconVal = null;
+    
+    // Check subtype first if provided
+    if (category && subcategory) {
+        iconVal = subtypeIcons[`${category}:${subcategory}`];
+    }
+    
+    // Fallback to hoofdtype icon
+    if (!iconVal) {
+        iconVal = categoryIcons[category];
+    }
+
     if (!iconVal) return null;
     
     if (isCustomHtml(iconVal)) {
@@ -1516,6 +1759,7 @@ export default function NewIssuePage() {
           parentCategory={currentHoofdcategorie}
           currentSubtypes={subcategorieen}
           allSubtypesMap={subcategorieenMap}
+          subtypeIcons={subtypeIcons}
         />
 
         <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
@@ -1543,7 +1787,7 @@ export default function NewIssuePage() {
                     }}
                   >
                     <div className="h-10 w-10 flex items-center justify-center shrink-0">
-                        {renderCategoryIcon(m.hoofdcategorie)}
+                        {renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">

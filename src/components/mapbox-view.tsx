@@ -86,6 +86,7 @@ export function MapboxView({
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
   const categoryIcons = dbOptions?.categoryIcons || {};
+  const subtypeIcons = dbOptions?.subtypeIcons || {};
 
   // De-duplicate objects by location with priority
   const uniqueObjects = React.useMemo(() => {
@@ -121,7 +122,7 @@ export function MapboxView({
   React.useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver(() => { mapRef.current?.getMap().resize(); });
-    observer.observe(containerRef.current);
+    observer.observe(mapContainerRef.current);
     return () => observer.disconnect();
   }, []);
 
@@ -161,8 +162,17 @@ export function MapboxView({
     return s.includes('<svg') || s.includes('<img') || s.includes('<a') || s.includes('<div') || (s.startsWith('<') && s.includes('>'));
   };
 
-  const renderMarkerIcon = (category: string) => {
-    const iconVal = categoryIcons[category];
+  const renderMarkerIcon = (category: string, subcategory?: string) => {
+    let iconVal = null;
+    
+    if (category && subcategory) {
+        iconVal = subtypeIcons[`${category}:${subcategory}`];
+    }
+    
+    if (!iconVal) {
+        iconVal = categoryIcons[category];
+    }
+
     if (!iconVal) return <Icons.CircleHelp className="h-5 w-5 text-white" />;
     
     if (isCustomHtml(iconVal)) {
@@ -202,6 +212,7 @@ export function MapboxView({
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         
         const categoryKey = obj.hoofdcategorie || obj.werksoort;
+        const subcategoryKey = obj.subcategorie;
         const isIssue = !!categoryKey;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
 
@@ -221,7 +232,7 @@ export function MapboxView({
                 isHighlighted && "ring-4 ring-black/20 scale-125",
                 interactive && "cursor-pointer hover:scale-110"
               )}>
-                {renderMarkerIcon(categoryKey)}
+                {renderMarkerIcon(categoryKey, subcategoryKey)}
                 {!isCompleted && (
                   <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-black">
                     <Icons.Wrench className="h-2.5 w-2.5 text-slate-900" />
@@ -283,7 +294,7 @@ export function MapboxView({
         );
     }
     return markerElements;
-  }, [uniqueObjects, longitude, latitude, mainLocationLabel, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive, categoryIcons]);
+  }, [uniqueObjects, longitude, latitude, mainLocationLabel, selectedObjects, onObjectSelect, showHeatmap, highlightedObject, interactive, categoryIcons, subtypeIcons]);
 
   const pinToShow = hoveredPin || selectedPin;
 

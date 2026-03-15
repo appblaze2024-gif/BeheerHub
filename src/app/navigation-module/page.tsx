@@ -586,6 +586,7 @@ export default function StartNavigationPage() {
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
   const categoryIcons = dbOptions?.categoryIcons || {};
+  const subtypeIcons = dbOptions?.subtypeIcons || {};
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -634,8 +635,19 @@ export default function StartNavigationPage() {
            trimmed.includes('<a');
   };
 
-  const renderCategoryIcon = (category: string) => {
-    const iconVal = categoryIcons[category];
+  const renderCategoryIcon = (category: string, subcategory?: string) => {
+    let iconVal = null;
+    
+    // Check subtype first if provided
+    if (category && subcategory) {
+        iconVal = subtypeIcons[`${category}:${subcategory}`];
+    }
+    
+    // Fallback to hoofdtype icon
+    if (!iconVal) {
+        iconVal = categoryIcons[category];
+    }
+
     if (!iconVal) return null;
     
     if (isCustomHtml(iconVal)) {
@@ -1108,7 +1120,7 @@ export default function StartNavigationPage() {
                                     )}>
                                         <div className="flex items-center gap-2 p-2.5 min-w-0">
                                             <div className="h-10 w-10 flex items-center justify-center shrink-0 bg-transparent ml-1">
-                                                {renderCategoryIcon(m.hoofdcategorie)}
+                                                {renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}
                                             </div>
 
                                             <div className="flex-1 min-w-0 ml-1">

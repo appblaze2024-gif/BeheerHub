@@ -51,6 +51,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Textarea } from '@/components/ui/textarea';
 import { useProject } from '@/context/project-context';
 import { useProfile } from '@/firebase/profile-provider';
+import { ObjectImageUploader } from '@/components/object-image-uploader';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -469,9 +470,12 @@ export default function ObjectsPage() {
                   <MapboxView latitude={selectedObject.latitude} longitude={selectedObject.longitude} interactive={false} />
                 </Card>
 
-                <Card className="h-48 border-slate-200 border-dashed border-2 bg-white/50 flex flex-col items-center justify-center text-slate-300 gap-3 group cursor-pointer hover:bg-white hover:border-primary/30 transition-all rounded-3xl">
-                  <ImageIcon className="h-10 w-10 opacity-10 group-hover:scale-110 transition-transform" />
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em]">Geen Media</p>
+                <Card className="rounded-[2.5rem] overflow-hidden shadow-xl border-none">
+                  <ObjectImageUploader 
+                    objectId={selectedObject.id}
+                    imageUrl={selectedObject.imageUrl || null}
+                    imageHint={`${selectedObject.idNummer || selectedObject.id}`}
+                  />
                 </Card>
               </div>
             </div>
