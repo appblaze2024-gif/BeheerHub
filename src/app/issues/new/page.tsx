@@ -734,7 +734,7 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
       <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-none">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
-          <DialogTitle className="font-black uppercase tracking-tight">
+          <DialogTitle className="text-xl font-black uppercase tracking-tight">
             {editTarget ? `Subtype icoon: ${editTarget}` : `Subtypes Beheren: ${parentCategory}`}
           </DialogTitle>
           <DialogDescription className="text-slate-400 font-bold">Wijs specifieke iconen toe aan subtypes.</DialogDescription>
@@ -933,7 +933,7 @@ export default function NewIssuePage() {
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
-      intakenummer: format(new Date(), 'yyyyMMdd') + Math.floor(Math.random() * 100).toString().padStart(2, '0'), 
+      intakenummer: format(new Date(), 'yyyyMMdd') + '0001', 
       status: 'Nieuw', 
       meldingsdatum: new Date(), 
       meldingsuur: format(new Date(), 'HH:mm'),
@@ -954,6 +954,18 @@ export default function NewIssuePage() {
     return ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld'].includes(existingMelding.status);
   }, [existingMelding]);
 
+  const watchDate = form.watch('meldingsdatum');
+  const idPrefix = React.useMemo(() => {
+    try {
+      const d = watchDate instanceof Date ? watchDate : new Date(watchDate);
+      return format(d, 'yyyyMMdd');
+    } catch (e) {
+      return format(new Date(), 'yyyyMMdd');
+    }
+  }, [watchDate]);
+
+  const [idSuffix, setIdSuffix] = React.useState('0001');
+
   React.useEffect(() => {
     if (existingMelding) {
       form.reset({
@@ -964,8 +976,21 @@ export default function NewIssuePage() {
       setUploadedFiles(existingMelding.files || []);
       setUploadedPhotos(existingMelding.fotos || []);
       setLocation({ latitude: existingMelding.latitude, longitude: existingMelding.longitude });
+      
+      const fullId = existingMelding.intakenummer || '';
+      if (fullId.length > 8) {
+        setIdSuffix(fullId.substring(8));
+      } else {
+        setIdSuffix(fullId);
+      }
     }
   }, [existingMelding, form]);
+
+  React.useEffect(() => {
+    if (!isReadOnly) {
+      form.setValue('intakenummer', idPrefix + idSuffix);
+    }
+  }, [idPrefix, idSuffix, form, isReadOnly]);
 
   React.useEffect(() => {
     if (!meldingId && profile && !form.getValues('aangenomen_door')) {
@@ -1254,7 +1279,7 @@ export default function NewIssuePage() {
         
         // RESET FORM FOR CONTINUOUS ENTRY
         form.reset({
-            intakenummer: format(new Date(), 'yyyyMMdd') + Math.floor(Math.random() * 100).toString().padStart(2, '0'),
+            intakenummer: format(new Date(), 'yyyyMMdd') + '0001',
             status: 'Nieuw',
             meldingsdatum: new Date(),
             meldingsuur: format(new Date(), 'HH:mm'),
@@ -1269,6 +1294,7 @@ export default function NewIssuePage() {
             plaats: '',
             extra_informatie: '',
         });
+        setIdSuffix('0001');
         setUploadedFiles([]);
         setUploadedPhotos([]);
         setLocation(null);
@@ -1427,8 +1453,20 @@ export default function NewIssuePage() {
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0 space-y-2 relative overflow-visible">
                           <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
-                            <FormField control={form.control} name="intakenummer" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                            <div className="flex gap-1">
+                              <div className="h-11 flex items-center bg-slate-50 px-3 text-sm font-black text-slate-400 rounded-none border border-slate-100">
+                                {idPrefix}
+                              </div>
+                              <Input 
+                                value={idSuffix} 
+                                onChange={(e) => setIdSuffix(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                                placeholder="0000"
+                                disabled={isReadOnly}
+                                className="h-11 w-20 font-bold rounded-none border-slate-100 bg-slate-50"
+                              />
+                            </div>
+                            <FormField control={form.control} name="intakenummer" render={({ field }) => (
+                              <input type="hidden" {...field} />
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
@@ -1578,8 +1616,20 @@ export default function NewIssuePage() {
                         <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
                         <CardContent className="p-4 pt-2">
                           <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
-                            <FormField control={form.control} name="intakenummer" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                            <div className="flex gap-1">
+                              <div className="h-8 flex items-center bg-slate-50 px-2 text-[10px] font-black text-slate-400 rounded-none border border-slate-100">
+                                {idPrefix}
+                              </div>
+                              <Input 
+                                value={idSuffix} 
+                                onChange={(e) => setIdSuffix(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                                placeholder="0000"
+                                disabled={isReadOnly}
+                                className="h-8 w-16 text-[10px] font-bold rounded-none border-slate-100 bg-slate-50"
+                              />
+                            </div>
+                            <FormField control={form.control} name="intakenummer" render={({ field }) => (
+                              <input type="hidden" {...field} />
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">

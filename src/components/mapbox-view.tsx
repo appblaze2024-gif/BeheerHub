@@ -125,12 +125,6 @@ export function MapboxView({
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
-
-  const initialViewState = {
-    longitude: (typeof longitude === 'number' && !isNaN(longitude)) ? longitude : 5.2913,
-    latitude: (typeof latitude === 'number' && !isNaN(latitude)) ? latitude : 52.1326,
-    zoom: (typeof longitude === 'number' && !isNaN(longitude)) && (typeof latitude === 'number' && !isNaN(latitude)) ? 19 : 7,
-  };
   
   React.useEffect(() => {
     const map = mapRef.current?.getMap();
