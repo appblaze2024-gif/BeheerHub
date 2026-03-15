@@ -722,7 +722,8 @@ export default function StartNavigationPage() {
   const filteredMeldingen = useMemo(() => {
     const poolMap = new Map<string, any>();
     if (type === 'meldingen') {
-        rawActiveMeldingen?.forEach(m => { poolMap.set(m.id, m); });
+        if (!rawActiveMeldingen) return [];
+        rawActiveMeldingen.forEach(m => { poolMap.set(m.id, m); });
         let result = Array.from(poolMap.values());
         if (!isPrivileged) {
             const userName = profile?.displayName || profile?.email || 'Onbekend';
@@ -732,11 +733,11 @@ export default function StartNavigationPage() {
             const q = debouncedSearchQuery.toLowerCase();
             result = result.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
         }
-        return result;
+        return sequenceMissions(result);
     } else if (type === 'prullenbakken' && selectedRouteId && currentProject && allObjects) {
         const route = currentProject.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
         if (!route) return [];
-        return allObjects.filter(obj => 
+        let result = allObjects.filter(obj => 
             Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route.naam)
         ).map(obj => ({
             ...obj,
@@ -745,9 +746,10 @@ export default function StartNavigationPage() {
             subcategorie: obj.locatieSubType || 'Prullenbak',
             status: completedObjects.includes(obj.id) ? 'Afgerond' : 'Open'
         }));
+        return sequenceMissions(result);
     }
     return [];
-  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
+  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, sequenceMissions]);
 
   // Maintain stable numbering
   useEffect(() => {
