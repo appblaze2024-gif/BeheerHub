@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -980,7 +981,7 @@ export default function StartNavigationPage() {
                         <div className="flex flex-col gap-2">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="w-full h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3">
+                                    <Button variant="outline" className="w-full h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3 overflow-visible">
                                         <div className="flex items-center gap-2 min-w-0">
                                             <div className="relative">
                                                 {selectedFolderId === null ? (
@@ -994,7 +995,7 @@ export default function StartNavigationPage() {
                                                     {activeFolderCount}
                                                 </Badge>
                                             </div>
-                                            <span className="truncate text-xs font-black">
+                                            <span className="text-xs font-black">
                                                 {activeFolderLabel}
                                             </span>
                                         </div>

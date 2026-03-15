@@ -24,6 +24,7 @@ import {
   ChevronRight,
   ArrowLeft,
   Bell,
+  Sparkles,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
