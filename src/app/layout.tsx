@@ -66,12 +66,12 @@ function Header() {
 
   return (
     <header className="h-20 flex items-center justify-end px-4 lg:px-8 bg-transparent shrink-0 sticky top-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-lg px-2 sm:px-4 py-1 sm:py-1.5 rounded-none shadow-lg border border-slate-100/50 pointer-events-auto max-w-[90vw] sm:max-w-none">
+      <div className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-lg px-2 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-100/50 pointer-events-auto max-w-[90vw] sm:max-w-none">
         <div className="flex items-center gap-0.5 sm:gap-1">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 sm:h-9 sm:w-9 rounded-none text-primary hover:bg-primary/10"
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10"
             onClick={goToHome}
             title="Home"
           >
@@ -79,14 +79,14 @@ function Header() {
           </Button>
           <NotificationCenter />
           <AppInfoDialog>
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-none text-primary hover:bg-primary/10">
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10">
               <Info className="h-4 w-4" />
             </Button>
           </AppInfoDialog>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 sm:h-9 sm:w-9 rounded-none text-primary hover:bg-primary/10"
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10"
             onClick={handleSignOut}
           >
             <LogOutIcon className="h-4 w-4" />
@@ -112,8 +112,8 @@ function Header() {
           )}
         </div>
         
-        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0">
-          <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-black uppercase">
+        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0 rounded-full">
+          <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-black uppercase rounded-full">
             {profile?.firstName?.[0]}{profile?.lastName?.[0]}
           </AvatarFallback>
         </Avatar>

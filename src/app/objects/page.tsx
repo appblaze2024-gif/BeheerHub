@@ -102,6 +102,7 @@ export default function ObjectsPage() {
   const [isImporting, setIsImporting] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
   const [typeFilter, setTypeFilter] = React.useState<string | null>(null);
@@ -115,6 +116,14 @@ export default function ObjectsPage() {
   const [isProximityFilterActive, setIsProximityFilterActive] = React.useState(false);
   const [currentUserCoords, setCurrentUserCoords] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [isFindingLocation, setIsFindingLocation] = React.useState(false);
+
+  // Debounce search term to avoid excessive reads
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   React.useEffect(() => {
     const action = searchParams.get('action');
@@ -134,9 +143,26 @@ export default function ObjectsPage() {
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !typeFilter) return null;
     const baseCol = collection(firestore, 'objects');
-    if (typeFilter === 'all') return query(baseCol, limit(500));
-    return query(baseCol, where('locatieType', '==', typeFilter), limit(500));
-  }, [firestore, typeFilter]);
+    
+    // If searching, use server-side prefix filtering on ID number to save reads
+    if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
+        const q = debouncedSearchTerm.toUpperCase();
+        const baseQuery = typeFilter === 'all' 
+            ? baseCol 
+            : query(baseCol, where('locatieType', '==', typeFilter));
+            
+        return query(
+            baseQuery,
+            where('idNummer', '>=', q),
+            where('idNummer', '<=', q + '\uf8ff'),
+            limit(100)
+        );
+    }
+
+    // Default browse view with small limit
+    if (typeFilter === 'all') return query(baseCol, limit(100));
+    return query(baseCol, where('locatieType', '==', typeFilter), limit(100));
+  }, [firestore, typeFilter, debouncedSearchTerm]);
 
   const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
   const { data: filtersData } = useDoc<{ custom: string[] }>(filtersRef);
@@ -148,6 +174,8 @@ export default function ObjectsPage() {
     if (!objects) return [];
     let filtered = objects;
 
+    // Client-side fallback for address searching if needed, 
+    // though server-side ID search is primary for read efficiency
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -422,7 +450,7 @@ export default function ObjectsPage() {
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
           <div className="relative w-full max-w-[200px] hidden md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <Input placeholder="Snelzoeken..." className="pl-9 h-9 text-xs font-medium rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!typeFilter} />
+            <Input placeholder="Type ID om te zoeken..." className="pl-9 h-9 text-xs font-black uppercase rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!typeFilter} />
           </div>
           
           <div className="flex items-center gap-2 shrink-0">
@@ -513,7 +541,7 @@ export default function ObjectsPage() {
               <ScrollArea className="flex-1">
                 {isLoadingObjects ? (
                   <div className="p-4 space-y-4">
-                    {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+                    {[1,2,3,4,5].map(i => <Skeleton className="h-16 w-full rounded-xl" key={i} />)}
                   </div>
                 ) : filteredObjectsList.length > 0 ? (
                   <div className="p-2 space-y-1">
@@ -533,7 +561,7 @@ export default function ObjectsPage() {
                           <MapPin className={cn("h-5 w-5", selectedObject?.id === obj.id ? "text-white" : "text-slate-400")} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-bold truncate tracking-tight">{obj.idNummer || obj.id}</p>
+                          <p className="text-sm font-bold truncate tracking-tight uppercase">{obj.idNummer || obj.id}</p>
                           <p className={cn("text-xs font-medium truncate mt-0.5", selectedObject?.id === obj.id ? "text-white/80" : "text-slate-500")}>
                             {obj.straatnaam} {obj.huisnummer}
                           </p>
@@ -543,8 +571,9 @@ export default function ObjectsPage() {
                   </div>
                 ) : (
                   <div className="p-12 text-center text-muted-foreground">
-                    <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest">Geen resultaten</p>
+                    <Search className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Geen objecten gevonden</p>
+                    <p className="text-[9px] font-bold mt-1">Probeer een andere zoekterm of categorie.</p>
                   </div>
                 )}
               </ScrollArea>
@@ -556,86 +585,86 @@ export default function ObjectsPage() {
                   <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-10 custom-scrollbar">
                     <div className="flex items-center justify-between mb-8">
                       <div className="space-y-1">
-                        <h2 className="text-3xl font-bold tracking-tight text-slate-900">{selectedObject.idNummer || selectedObject.id}</h2>
-                        <div className="flex gap-2">
-                          <Badge variant="outline" className="h-6 font-medium text-[10px] border-slate-200">{selectedObject.locatieType}</Badge>
-                          <Badge className="h-6 font-medium text-[10px] bg-primary">{selectedObject.isActief ? 'Operationeel' : 'Inactief'}</Badge>
+                        <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900 leading-none">{selectedObject.idNummer || selectedObject.id}</h2>
+                        <div className="flex gap-2 pt-2">
+                          <Badge variant="outline" className="h-6 font-black uppercase text-[9px] tracking-widest border-slate-200 bg-slate-50">{selectedObject.locatieType}</Badge>
+                          <Badge className={cn("h-6 font-black uppercase text-[9px] tracking-widest border-none shadow-sm", selectedObject.isActief ? "bg-green-500" : "bg-slate-400")}>{selectedObject.isActief ? 'Operationeel' : 'Inactief'}</Badge>
                         </div>
                       </div>
-                      {isTablet && <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => setSelectedObject(null)}><ArrowLeft className="h-5 w-5" /></Button>}
+                      {isTablet && <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setSelectedObject(null)}><ArrowLeft className="h-5 w-5" /></Button>}
                     </div>
 
                     <div className="space-y-6">
-                        <div className="flex items-center justify-between border-b pb-3">
-                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Locatie & Adres</h3>
-                            {isGeocoding && <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest animate-pulse"><RefreshCw className="h-3 w-3 animate-spin" /> Adres bijwerken...</div>}
+                        <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+                            <h3 className="text-sm font-black uppercase tracking-[0.1em] text-slate-900 flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Locatie & Adres</h3>
+                            {isGeocoding && <div className="flex items-center gap-2 text-primary font-black text-[9px] uppercase tracking-widest animate-pulse"><RefreshCw className="h-3 w-3 animate-spin" /> Adres bijwerken...</div>}
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                             <div className="space-y-2">
-                                <Label className="text-xs font-medium text-slate-500 ml-1">Straatnaam</Label>
-                                <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Straatnaam</Label>
+                                <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-medium text-slate-500 ml-1">Huisnummer</Label>
-                                <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huisnummer</Label>
+                                <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-medium text-slate-500 ml-1">Postcode</Label>
-                                <Input value={selectedObject.postcode || ''} onChange={e => handleUpdateField('postcode', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Postcode</Label>
+                                <Input value={selectedObject.postcode || ''} onChange={e => handleUpdateField('postcode', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-medium text-slate-500 ml-1">Plaats</Label>
-                                <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Plaats</Label>
+                                <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-medium text-slate-500 ml-1">Latitude (Y)</Label>
-                                <Input type="number" value={selectedObject.latitude || ''} onChange={e => handleUpdateCoords('latitude', parseFloat(e.target.value))} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Latitude (Y)</Label>
+                                <Input type="number" value={selectedObject.latitude || ''} onChange={e => handleUpdateCoords('latitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-xl border-slate-200" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-medium text-slate-500 ml-1">Longitude (X)</Label>
-                                <Input type="number" value={selectedObject.longitude || ''} onChange={e => handleUpdateCoords('longitude', parseFloat(e.target.value))} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Longitude (X)</Label>
+                                <Input type="number" value={selectedObject.longitude || ''} onChange={e => handleUpdateCoords('longitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-xl border-slate-200" disabled={!canEdit} />
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-6">
-                        <h3 className="text-lg font-bold text-slate-900 border-b pb-3 flex items-center gap-2"><Tag className="h-5 w-5 text-primary" /> Categorisering</h3>
+                        <h3 className="text-sm font-black uppercase tracking-[0.1em] text-slate-900 border-b-2 border-slate-100 pb-3 flex items-center gap-2"><Tag className="h-5 w-5 text-primary" /> Categorisering</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                             <div className="space-y-2">
-                                <Label className="text-xs font-medium text-slate-500 ml-1">Hoofdtype</Label>
-                                <Input value={selectedObject.locatieType || ''} onChange={e => handleUpdateField('locatieType', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Hoofdtype</Label>
+                                <Input value={selectedObject.locatieType || ''} onChange={e => handleUpdateField('locatieType', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-medium text-slate-500 ml-1">Subtype</Label>
-                                <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
+                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Subtype</Label>
+                                <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200" disabled={!canEdit} />
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-500 ml-1">Memo / Waarschuwing</Label>
-                      <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed" disabled={!canEdit} />
+                      <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Memo / Waarschuwing</Label>
+                      <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden voor uitvoering..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed bg-slate-50/30" disabled={!canEdit} />
                     </div>
                   </div>
 
                   <div className="w-full md:w-[400px] border-l bg-slate-50/30 flex flex-col p-6 gap-6 overflow-y-auto no-scrollbar">
-                    <Card className="aspect-square w-full border-none shadow-lg ring-1 ring-black/5 rounded-[2rem] overflow-hidden">
+                    <Card className="aspect-square w-full border-none shadow-2xl ring-4 ring-white rounded-[2rem] overflow-hidden">
                       <MapboxView latitude={selectedObject.latitude} longitude={selectedObject.longitude} interactive={false} />
                     </Card>
 
-                    <Card className="h-48 border-slate-200 border-dashed border-2 bg-transparent flex flex-col items-center justify-center text-slate-300 gap-3 group cursor-pointer hover:bg-slate-50 transition-colors">
-                      <ImageIcon className="h-8 w-8 opacity-20 group-hover:scale-110 transition-transform" />
-                      <p className="text-xs font-medium uppercase tracking-widest">Geen Media</p>
+                    <Card className="h-48 border-slate-200 border-dashed border-2 bg-white/50 flex flex-col items-center justify-center text-slate-300 gap-3 group cursor-pointer hover:bg-white hover:border-primary/30 transition-all rounded-3xl">
+                      <ImageIcon className="h-10 w-10 opacity-10 group-hover:scale-110 transition-transform" />
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em]">Geen Media</p>
                     </Card>
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full p-12 text-center">
-                  <div className="bg-slate-50 p-8 rounded-3xl shadow-xl border border-slate-100 mb-6">
-                    <MapPin className="h-12 w-12 text-slate-200" />
+                <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/30">
+                  <div className="bg-white p-10 rounded-[3rem] shadow-2xl border-4 border-slate-50 mb-8 animate-in zoom-in-95 duration-700">
+                    <MapPin className="h-16 w-16 text-primary/20 animate-pulse" />
                   </div>
-                  <h3 className="text-xl font-bold tracking-tight text-slate-900">Geen object geselecteerd</h3>
-                  <p className="text-slate-400 font-medium max-w-xs mx-auto text-sm">Kies een unit uit de lijst aan de linkerkant om de details te beheren.</p>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-2">Geen object geselecteerd</h3>
+                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest max-w-[250px] mx-auto leading-relaxed">Kies een unit uit de lijst om de details en geografische data te beheren.</p>
                 </div>
               )}
             </main>
@@ -644,19 +673,21 @@ export default function ObjectsPage() {
       </div>
 
       <Dialog open={isAddFilterDialogOpen} onOpenChange={setIsAddFilterDialogOpen}>
-        <DialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
+        <DialogContent className="rounded-3xl border-none shadow-2xl p-8 max-w-sm overflow-hidden">
           <DialogHeader>
-            <DialogTitle>{!!filterToRename ? 'Filter hernoemen' : 'Nieuw filter'}</DialogTitle>
-            <DialogDescription className="font-medium text-slate-500">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">
+                {!!filterToRename ? 'Filter hernoemen' : 'Nieuw filter'}
+            </DialogTitle>
+            <DialogDescription className="font-bold text-slate-500">
                 {!!filterToRename ? `Wijzig de naam van '${filterToRename}'.` : 'Geef een naam op voor de nieuwe categorie.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-6">
-            <Input value={newFilterName} onChange={e => setNewFilterName(e.target.value)} placeholder="Bv. Parkbankjes" className="h-12 font-bold rounded-xl text-center text-lg shadow-sm" autoFocus />
+          <div className="py-8">
+            <Input value={newFilterName} onChange={e => setNewFilterName(e.target.value)} placeholder="Bv. Parkbankjes" className="h-14 font-black uppercase rounded-2xl text-center text-xl shadow-inner bg-slate-50 border-none focus:ring-primary/20" autoFocus />
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)} className="font-bold">Annuleren</Button>
-            <Button onClick={!!filterToRename ? handleRenameFilter : handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-bold rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
+            <Button onClick={!!filterToRename ? handleRenameFilter : handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-black uppercase tracking-tight rounded-2xl shadow-xl shadow-primary/20">
                 {isSavingFilter ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Opslaan'}
             </Button>
           </DialogFooter>

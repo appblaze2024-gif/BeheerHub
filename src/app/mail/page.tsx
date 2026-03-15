@@ -383,7 +383,7 @@ export default function MailPage() {
             <div className={cn("border-r flex flex-col min-h-0", isMobile && selectedMail ? "hidden" : "flex")}>
               <div className="p-3 border-b flex items-center gap-2">
                 <div className="relative flex-1"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Zoeken..." className="pl-9" /></div>
-                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => fetchAndSetEmails(true)} disabled={isLoading}>{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</Button></TooltipTrigger><TooltipContent><p>E-mails vernieuwen</p></TooltipContent></Tooltip></TooltipProvider>
+                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => fetchAndSetEmails(true)} disabled={isLoading}>{isLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</Button></TooltipTrigger><TooltipContent><p>E-mails vernieuwen</p></TooltipContent></Tooltip></TooltipProvider>
               </div>
               <div className="flex-1 overflow-y-auto relative">
                 {isLoading && !!mails.length && (<div className="absolute inset-0 bg-background/50 z-10 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>)}
