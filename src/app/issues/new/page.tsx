@@ -34,7 +34,9 @@ import {
   AlertCircle,
   Palette,
   Search as SearchIcon,
-  ChevronLeft
+  ChevronLeft,
+  History,
+  AlertTriangle
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { 
@@ -106,6 +108,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import * as turf from '@turf/turf';
 
@@ -741,6 +745,29 @@ export default function NewIssuePage() {
   const watchHuisnummer = form.watch('huisnummer');
   const watchPlaats = form.watch('plaats');
 
+  // Address History & Duplicate Detection
+  const addressQuery = useMemoFirebase(() => {
+    if (!firestore || !watchStraat || !watchHuisnummer) return null;
+    return query(
+      collection(firestore, 'meldingen'),
+      where('straatnaam', '==', watchStraat),
+      where('huisnummer', '==', watchHuisnummer),
+      limit(20)
+    );
+  }, [firestore, watchStraat, watchHuisnummer]);
+
+  const { data: addressHistory } = useCollection<Melding>(addressQuery);
+
+  const openIssuesAtAddress = React.useMemo(() => {
+    if (!addressHistory) return [];
+    return addressHistory.filter(m => 
+      m.id !== meldingId && 
+      !['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld'].includes(m.status)
+    );
+  }, [addressHistory, meldingId]);
+
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
+
   React.useEffect(() => {
     const geocodeAddress = async () => {
       // If triggered by handleContainerSelect, skip and reset flag
@@ -1338,8 +1365,37 @@ export default function NewIssuePage() {
                       </Card>
 
                       <Card className="rounded-none bg-white shadow-sm border-slate-200 overflow-hidden">
-                        <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
+                        <CardHeader className="bg-slate-50 border-b py-2 px-4 flex flex-row items-center justify-between space-y-0">
+                          <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle>
+                          {addressHistory && addressHistory.length > 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-primary hover:bg-primary/5 rounded-none"
+                                    onClick={() => setIsHistoryDialogOpen(true)}
+                                  >
+                                    <History className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="rounded-none font-bold text-[10px] uppercase">Bekijk historie op dit adres</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </CardHeader>
                         <CardContent className="p-4 pt-2 space-y-3">
+                          {openIssuesAtAddress.length > 0 && (
+                            <Alert variant="destructive" className="mb-2 rounded-none border-2 border-destructive animate-in fade-in slide-in-from-top-2 py-2">
+                              <AlertTriangle className="h-4 w-4" />
+                              <AlertTitle className="text-[9px] font-black uppercase tracking-tight">Dubbele Melding!</AlertTitle>
+                              <AlertDescription className="text-[9px] font-bold leading-tight">
+                                Er {openIssuesAtAddress.length === 1 ? 'is' : 'zijn'} al {openIssuesAtAddress.length} openstaande melding{openIssuesAtAddress.length === 1 ? '' : 'en'} op dit adres.
+                              </AlertDescription>
+                            </Alert>
+                          )}
                           <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
@@ -1422,6 +1478,56 @@ export default function NewIssuePage() {
           currentSubtypes={subcategorieen}
           allSubtypesMap={subcategorieenMap}
         />
+
+        <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+          <DialogContent className="sm:max-w-2xl rounded-none border-none shadow-2xl p-0 overflow-hidden">
+            <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
+              <div className="flex items-center gap-3">
+                <History className="h-6 w-6 text-primary" />
+                <div>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tight">Adres Historie</DialogTitle>
+                  <DialogDescription className="text-slate-400 font-bold uppercase text-[10px]">
+                    {watchStraat} {watchHuisnummer}, {watchPlaats}
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh]">
+              <div className="p-6 space-y-4">
+                {addressHistory?.map((m) => (
+                  <div 
+                    key={m.id} 
+                    className="p-4 bg-slate-50 border-2 border-slate-100 rounded-none flex items-center justify-between group cursor-pointer hover:border-primary/20"
+                    onClick={() => {
+                      setIsHistoryDialogOpen(false);
+                      router.push(`/issues/new?id=${m.id}`);
+                    }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-black uppercase text-slate-900">{m.intakenummer}</span>
+                        <Badge variant="outline" className={cn(
+                          "text-[8px] h-4 font-black uppercase border-slate-200",
+                          !['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld'].includes(m.status) ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"
+                        )}>
+                          {m.status}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] font-bold text-slate-600 truncate">{m.subcategorie}</p>
+                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">Melder: {m.melder || 'Anoniem'} • {m.datum}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+            <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
+              <DialogClose asChild>
+                <Button variant="ghost" className="font-bold rounded-none">Sluiten</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }
