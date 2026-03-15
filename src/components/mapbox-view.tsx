@@ -155,20 +155,20 @@ export function MapboxView({
     }
   }, [wijkPolygons, longitude, latitude, highlightedObject, uniqueObjects]);
 
-  const isSvg = (str: string) => {
+  const isCustomHtml = (str: string) => {
     if (!str) return false;
-    const trimmed = str.trim().toLowerCase();
-    return trimmed.startsWith('<svg') || trimmed.includes('<svg') || trimmed.includes('xmlns="http://www.w3.org/2000/svg"');
+    const s = str.trim().toLowerCase();
+    return s.includes('<svg') || s.includes('<img') || s.includes('<a') || s.includes('<div') || (s.startsWith('<') && s.includes('>'));
   };
 
   const renderMarkerIcon = (category: string) => {
     const iconVal = categoryIcons[category];
     if (!iconVal) return <Icons.CircleHelp className="h-5 w-5 text-white" />;
     
-    if (isSvg(iconVal)) {
+    if (isCustomHtml(iconVal)) {
         return (
             <div 
-                className="h-5 w-5 flex items-center justify-center text-white [&>svg]:h-full [&>svg]:w-full" 
+                className="h-7 w-7 flex items-center justify-center text-white [&_svg]:h-full [&_svg]:w-full [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_a]:flex [&_a]:items-center [&_a]:justify-center [&_a]:h-full [&_a]:w-full" 
                 dangerouslySetInnerHTML={{ __html: iconVal }} 
             />
         );
@@ -176,7 +176,7 @@ export function MapboxView({
     
     if (iconVal.startsWith('http')) {
         return (
-            <div className="h-5 w-5 relative flex items-center justify-center">
+            <div className="h-7 w-7 relative flex items-center justify-center">
                 <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
             </div>
         );

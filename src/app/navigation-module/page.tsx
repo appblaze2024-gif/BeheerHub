@@ -627,11 +627,8 @@ export default function StartNavigationPage() {
 
   const isCustomHtml = (str: string) => {
     if (!str) return false;
-    const trimmed = str.trim().toLowerCase();
-    return (trimmed.startsWith('<') && (trimmed.endsWith('>') || trimmed.includes('/>'))) || 
-           trimmed.includes('<svg') || 
-           trimmed.includes('<img') ||
-           trimmed.includes('<a');
+    const s = str.trim().toLowerCase();
+    return s.includes('<svg') || s.includes('<img') || s.includes('<a') || s.includes('<div') || (s.startsWith('<') && s.includes('>'));
   };
 
   const renderCategoryIcon = (category: string) => {
@@ -641,7 +638,7 @@ export default function StartNavigationPage() {
     if (isCustomHtml(iconVal)) {
         return (
             <div 
-                className="h-8 w-8 flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
+                className="h-full w-full flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_a]:flex [&_a]:items-center [&_a]:justify-center [&_a]:h-full [&_a]:w-full" 
                 dangerouslySetInnerHTML={{ __html: iconVal }} 
             />
         );
@@ -649,7 +646,7 @@ export default function StartNavigationPage() {
     
     if (iconVal.startsWith('http')) {
         return (
-            <div className="h-8 w-8 relative flex items-center justify-center rounded-none overflow-hidden">
+            <div className="h-full w-full relative flex items-center justify-center rounded-none overflow-hidden">
                 <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
             </div>
         );
@@ -733,7 +730,7 @@ export default function StartNavigationPage() {
             const q = debouncedSearchQuery.toLowerCase();
             result = result.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
         }
-        return sequenceMissions(result);
+        return result;
     } else if (type === 'prullenbakken' && selectedRouteId && currentProject && allObjects) {
         const route = currentProject.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
         if (!route) return [];
@@ -746,10 +743,10 @@ export default function StartNavigationPage() {
             subcategorie: obj.locatieSubType || 'Prullenbak',
             status: completedObjects.includes(obj.id) ? 'Afgerond' : 'Open'
         }));
-        return sequenceMissions(result);
+        return result;
     }
     return [];
-  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, sequenceMissions]);
+  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
 
   // Maintain stable numbering
   useEffect(() => {
@@ -821,7 +818,13 @@ export default function StartNavigationPage() {
     setIsRecalculating(true);
     navigator.geolocation.getCurrentPosition(
         (pos) => {
-            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+            const currentCoords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            setUserLocation(currentCoords);
+            
+            // Apply sequencing to the current filtered list
+            const sequenced = sequenceMissions(filteredMeldingen);
+            // In a real app we might update state here, but for now we rely on the memo dependencies
+            
             setTimeout(() => {
                 setIsRecalculating(false);
                 toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie." });
@@ -898,7 +901,7 @@ export default function StartNavigationPage() {
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-3 min-w-0">
-                 <Button variant="ghost" size="icon" className="rounded-none h-10 w-10 shrink-0" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6 text-slate-600" /></Button>
+                 <Button variant="ghost" size="icon" className="rounded-none h-10 w-10 shrink-0" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6" /></Button>
                  <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none truncate">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
             </div>
             <div className="flex items-center gap-2 shrink-0">

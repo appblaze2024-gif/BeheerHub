@@ -271,11 +271,8 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
 
   const isCustomHtml = (str: string) => {
     if (!str) return false;
-    const trimmed = str.trim().toLowerCase();
-    return (trimmed.startsWith('<') && (trimmed.endsWith('>') || trimmed.includes('/>'))) || 
-           trimmed.includes('<svg') || 
-           trimmed.includes('<img') ||
-           trimmed.includes('<a');
+    const s = str.trim().toLowerCase();
+    return s.includes('<svg') || s.includes('<img') || s.includes('<a') || s.includes('<div') || (s.startsWith('<') && s.includes('>'));
   };
 
   const filteredIcons = React.useMemo(() => {
@@ -385,8 +382,8 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
         return (
             <div 
                 className={cn(
-                    "flex items-center justify-center [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center", 
-                    isPreview ? "h-12 w-12 text-primary" : "h-5 w-5 text-primary"
+                    "flex items-center justify-center [&_svg]:h-full [&_svg]:w-full [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_a]:flex [&_a]:items-center [&_a]:justify-center [&_a]:h-full [&_a]:w-full", 
+                    isPreview ? "h-full w-full p-2" : "h-9 w-9 text-primary"
                 )} 
                 dangerouslySetInnerHTML={{ __html: val }} 
             />
@@ -395,8 +392,8 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     
     if (val.startsWith('http')) {
         return (
-            <div className={cn("relative flex items-center justify-center overflow-hidden", isPreview ? "h-12 w-12 rounded-none" : "h-5 w-5 rounded-none")}>
-                <img src={val} alt="icon" className="h-full w-full object-cover" />
+            <div className={cn("relative flex items-center justify-center overflow-hidden", isPreview ? "h-full w-full rounded-none" : "h-9 w-9 rounded-none")}>
+                <img src={val} alt="icon" className="h-full w-full object-contain" />
             </div>
         );
     }
@@ -406,11 +403,11 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
         const name = parts[1];
         const color = parts[2];
         const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: color || '#007AFF' }} />;
+        return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-9 w-9")} style={{ color: color || '#007AFF' }} />;
     }
 
     const IconComp = (Icons as any)[val] || Icons.CircleHelp;
-    return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-5 w-5")} style={{ color: '#007AFF' }} />;
+    return <IconComp className={cn(isPreview ? "h-12 w-12" : "h-9 w-9")} style={{ color: '#007AFF' }} />;
   };
 
   return (
