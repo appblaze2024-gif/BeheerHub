@@ -88,6 +88,13 @@ export function MapboxView({
   const categoryIcons = dbOptions?.categoryIcons || {};
   const subtypeIcons = dbOptions?.subtypeIcons || {};
 
+  // Initial view state for the map
+  const initialViewState = {
+    longitude: longitude || 5.2913,
+    latitude: latitude || 52.1326,
+    zoom: objects && objects.length > 0 ? 11 : 13,
+  };
+
   // De-duplicate objects by location with priority
   const uniqueObjects = React.useMemo(() => {
     if (!objects) return [];
