@@ -31,6 +31,12 @@ service cloud.firestore {
 
     // --- RULES ---
 
+    // Objecten (GIS) - Bovenaan voor prioriteit en openbare leesbaarheid voor personeel
+    match /objects/{objectId} {
+      allow read, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
     // Route assignments
     match /route_assignments/{assignmentId} {
       allow read, list: if isSignedIn();
@@ -42,14 +48,13 @@ service cloud.firestore {
       allow read, list: if isSignedIn();
       allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       
+      // Gebruikers mogen hun eigen profiel bijwerken (behalve rol/permissies)
       allow update: if (isSignedIn() && request.auth.uid == userId && 
                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])) 
                     || isAdmin();
       allow delete: if isAdmin();
 
       // Mappenbeheer per gebruiker (Subcollectie)
-      // Gebruikers mogen hun eigen mappen inzien en beheren.
-      // Beheerders mogen alle mappen beheren.
       match /folders/{folderId} {
         allow read, list, get, write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
@@ -105,12 +110,6 @@ service cloud.firestore {
         allow read, list: if isSignedIn();
         allow write: if isPrivileged();
       }
-    }
-
-    // Objecten (GIS)
-    match /objects/{objectId} {
-      allow read, list: if isSignedIn();
-      allow write: if isPrivileged();
     }
 
     // Algemene instellingen
