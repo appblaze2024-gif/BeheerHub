@@ -615,7 +615,7 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl">
-        <DialogHeader className="p-6 bg-slate-50 border-b">
+        <DialogHeader>
           <DialogTitle className="font-black uppercase">Subtypes voor: {parentCategory}</DialogTitle>
           <DialogDescription>Beheer specifieke onderdelen binnen dit hoofdtype.</DialogDescription>
         </DialogHeader>
@@ -1536,12 +1536,15 @@ export default function NewIssuePage() {
                 {addressHistory?.map((m) => (
                   <div 
                     key={m.id} 
-                    className="p-4 bg-slate-50 border-2 border-slate-100 rounded-none flex items-center justify-between group cursor-pointer hover:border-primary/20"
+                    className="p-4 bg-slate-50 border-2 border-slate-100 rounded-none flex items-center gap-4 group cursor-pointer hover:border-primary/20"
                     onClick={() => {
                       setIsHistoryDialogOpen(false);
                       router.push(`/issues/new?id=${m.id}`);
                     }}
                   >
+                    <div className="h-10 w-10 flex items-center justify-center shrink-0">
+                        {renderCategoryIcon(m.hoofdcategorie)}
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-black uppercase text-slate-900">{m.intakenummer}</span>
@@ -1557,12 +1560,7 @@ export default function NewIssuePage() {
                       </p>
                       <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">Melder: {m.melder || 'Anoniem'} • {m.datum}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-black bg-white ml-2">
-                            {renderCategoryIcon(m.hoofdcategorie)}
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
-                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
                   </div>
                 ))}
               </div>

@@ -896,7 +896,9 @@ export default function StartNavigationPage() {
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         <header className="h-16 border-b bg-white flex items-center justify-between px-4 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-3 min-w-0">
-                 <Button variant="ghost" size="icon" className="rounded-none h-10 w-10 shrink-0" onClick={() => router.push('/')}><ArrowLeft className="h-6 w-6" /></Button>
+                 <Button variant="ghost" size="icon" className="rounded-none h-10 w-10 shrink-0" onClick={() => router.push('/')}>
+                    <ArrowLeft className="h-6 w-6" />
+                 </Button>
                  <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none truncate">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
             </div>
             <div className="flex items-center gap-2 shrink-0">
