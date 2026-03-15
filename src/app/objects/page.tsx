@@ -50,7 +50,6 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
-import { useProfile } from '@/firebase/profile-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,7 +105,7 @@ export default function ObjectsPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
-  const [typeFilter, setTypeFilter] = React.useState<string | null>(null);
+  const [typeFilter] = React.useState<string>('all');
   const [isAddFilterDialogOpen, setIsAddFilterDialogOpen] = React.useState(false);
   const [newFilterName, setNewFilterName] = React.useState('');
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
@@ -142,35 +141,23 @@ export default function ObjectsPage() {
   }, [searchParams, canImport, canExport, router]);
 
   const objectsQuery = useMemoFirebase(() => {
-    if (!firestore || !typeFilter) return null;
+    if (!firestore) return null;
     const baseCol = collection(firestore, 'objects');
     
     // If searching, use server-side prefix filtering on ID number to save reads
     if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
         const q = debouncedSearchTerm.toUpperCase();
-        
-        if (typeFilter === 'all') {
-            return query(
-                baseCol,
-                where('idNummer', '>=', q),
-                where('idNummer', '<=', q + '\uf8ff'),
-                limit(100)
-            );
-        } else {
-            return query(
-                baseCol,
-                where('locatieType', '==', typeFilter),
-                where('idNummer', '>=', q),
-                where('idNummer', '<=', q + '\uf8ff'),
-                limit(100)
-            );
-        }
+        return query(
+            baseCol,
+            where('idNummer', '>=', q),
+            where('idNummer', '<=', q + '\uf8ff'),
+            limit(100)
+        );
     }
 
     // Default browse view with small limit
-    if (typeFilter === 'all') return query(baseCol, orderBy('idNummer'), limit(100));
-    return query(baseCol, where('locatieType', '==', typeFilter), orderBy('idNummer'), limit(100));
-  }, [firestore, typeFilter, debouncedSearchTerm]);
+    return query(baseCol, orderBy('idNummer'), limit(100));
+  }, [firestore, debouncedSearchTerm]);
 
   const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
   const { data: filtersData } = useDoc<{ custom: string[] }>(filtersRef);
@@ -243,7 +230,7 @@ export default function ObjectsPage() {
   };
 
   const handleDeleteFilteredObjects = async () => {
-    if (!firestore || !filteredObjectsList.length || !typeFilter || !canDelete) return;
+    if (!firestore || !filteredObjectsList.length || !canDelete) return;
     
     setIsDeletingAll(true);
     const batchSize = 500;
@@ -344,112 +331,15 @@ export default function ObjectsPage() {
     }
   };
 
-  const handleRenameFilter = async () => {
-    if (!firestore || !newFilterName.trim() || !filtersRef || !filterToRename || !canEdit) return;
-    setIsSavingFilter(true);
-    setIsAddFilterDialogOpen(false);
-    
-    try {
-        const batch = writeBatch(firestore);
-        const updatedFilters = customFilters.map(f => f === filterToRename ? newFilterName.trim() : f);
-        batch.set(filtersRef, { custom: updatedFilters }, { merge: true });
-        
-        // Caution: This could be a lot of updates. We only update what's in the current view or small limit.
-        if (objects && objects.length > 0) {
-            objects.forEach(obj => {
-                if (obj.locatieType === filterToRename) {
-                    batch.update(doc(firestore, 'objects', obj.id), { locatieType: newFilterName.trim() });
-                }
-            });
-        }
-
-        await batch.commit();
-        if (typeFilter === filterToRename) setTypeFilter(newFilterName.trim());
-        toast({ title: 'Filter hernoemd', description: `De categorie '${filterToRename}' is nu '${newFilterName}'.` });
-        setFilterToRename(null);
-        setNewFilterName('');
-    } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet hernoemen.' });
-    } finally {
-        setIsSavingFilter(false);
-    }
-  };
-
-  const handleDeleteFilter = async (filterName: string) => {
-    if (!firestore || !filtersRef || !canEdit) return;
-    try {
-        await updateDocumentNonBlocking(filtersRef, { custom: arrayRemove(filterName) });
-        if (typeFilter === filterName) setTypeFilter(null);
-        toast({ title: 'Filter verwijderd', description: `De categorie '${filterName}' is verwijderd.` });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet verwijderen.' });
-    }
-  };
-
-  const openRenameDialog = (filterName: string) => {
-    if (!canEdit) return;
-    setFilterToRename(filterName);
-    setNewFilterName(filterName);
-    setIsAddFilterDialogOpen(true);
-  };
-
   return (
     <div className="flex flex-col h-full bg-slate-50">
       <header className="h-16 border-b bg-white flex items-center justify-between px-4 sm:px-6 gap-2 shrink-0 shadow-sm overflow-x-auto no-scrollbar">
         <div className="flex items-center gap-2 shrink-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 font-bold gap-2 rounded-lg border-slate-200 shrink-0">
-                <Filter className="h-4 w-4 text-slate-400" /> 
-                <span className="max-w-[100px] truncate">
-                  {typeFilter ? (typeFilter === 'all' ? 'Alle Objecten' : typeFilter) : 'Categorie'}
-                </span>
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 rounded-xl shadow-xl p-1.5 border-slate-200">
-              <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1">Systeem Categorieën</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setTypeFilter('all')} className="rounded-lg h-9 text-xs font-semibold">
-                Toon alles
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1">Filters</DropdownMenuLabel>
-              <ScrollArea className="max-h-60">
-                {customFilters.filter(f => !!f).map(filter => (
-                  <div key={filter} className="flex items-center group px-1">
-                    <DropdownMenuItem onClick={() => setTypeFilter(filter)} className="flex-1 rounded-lg h-9 text-xs font-semibold">
-                      {filter}
-                    </DropdownMenuItem>
-                    {canEdit && (
-                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-primary" onClick={(e) => { e.stopPropagation(); openRenameDialog(filter); }}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteFilter(filter); }}>
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </ScrollArea>
-              {canEdit && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => { setFilterToRename(null); setNewFilterName(''); setIsAddFilterDialogOpen(true); }} className="rounded-lg h-9 text-xs font-bold text-primary">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Nieuwe categorie
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-lg px-2 sm:px-3", viewMode === 'list' && "bg-white shadow-sm")} onClick={() => setViewMode('list')} disabled={!typeFilter}>
+            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-lg px-2 sm:px-3", viewMode === 'list' && "bg-white shadow-sm")} onClick={() => setViewMode('list')}>
               <List className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Lijst</span>
             </Button>
-            <Button variant={viewMode === 'map' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-lg px-2 sm:px-3", viewMode === 'map' && "bg-white shadow-sm")} onClick={() => setViewMode('map')} disabled={!typeFilter}>
+            <Button variant={viewMode === 'map' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-lg px-2 sm:px-3", viewMode === 'map' && "bg-white shadow-sm")} onClick={() => setViewMode('map')}>
               <MapIcon className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Kaart</span>
             </Button>
           </div>
@@ -458,7 +348,7 @@ export default function ObjectsPage() {
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
           <div className="relative w-full max-w-[200px] hidden md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <Input placeholder="Type ID om te zoeken..." className="pl-9 h-9 text-xs font-black uppercase rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!typeFilter} />
+            <Input placeholder="Zoek op ID of adres..." className="pl-9 h-9 text-xs font-black uppercase rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
           
           <div className="flex items-center gap-2 shrink-0">
@@ -474,7 +364,7 @@ export default function ObjectsPage() {
             
             {canExport && (
               <ObjectExportDialog objects={objects} projects={projects}>
-                <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200 shrink-0 px-3" disabled={!typeFilter}>
+                <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200 shrink-0 px-3">
                   <Download className="h-4 w-4 sm:mr-2" /> 
                   <span className="hidden sm:inline">Export</span>
                 </Button>
@@ -485,222 +375,186 @@ export default function ObjectsPage() {
       </header>
 
       <div className="flex-1 flex min-h-0">
-        {!typeFilter ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-50/30">
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 mb-6 animate-in zoom-in-95 duration-500">
-              <Filter className="h-12 w-12 text-primary animate-pulse" />
+        <aside className={cn(
+          "w-full lg:w-80 border-r bg-white flex flex-col shrink-0",
+          isTablet && selectedObject ? "hidden" : "flex"
+        )}>
+          <div className="p-4 border-b flex justify-between items-center bg-slate-50/20">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold text-slate-500">Resultaten</span>
+              <span className="text-2xl font-bold text-slate-900 leading-tight">
+                {isLoadingObjects ? '...' : filteredObjectsList.length}
+              </span>
             </div>
-            <h3 className="text-xl font-bold mb-2 text-slate-900">Selecteer een Categorie</h3>
-            <p className="text-sm text-slate-500 font-medium max-w-xs mx-auto leading-relaxed">
-              Kies linksboven een filter om de bijbehorende objecten te laden.
-            </p>
-          </div>
-        ) : (
-          <>
-            <aside className={cn(
-              "w-full lg:w-80 border-r bg-white flex flex-col shrink-0",
-              isTablet && selectedObject ? "hidden" : "flex"
-            )}>
-              <div className="p-4 border-b flex justify-between items-center bg-slate-50/20">
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-semibold text-slate-500">Resultaten</span>
-                  <span className="text-2xl font-bold text-slate-900 leading-tight">
-                    {isLoadingObjects ? '...' : filteredObjectsList.length}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant={isProximityFilterActive ? "default" : "outline"} size="icon" className={cn("h-9 w-9 rounded-xl transition-all", isProximityFilterActive ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "text-slate-400 border-slate-200")} onClick={handleToggleProximityFilter} disabled={isLoadingObjects}>
+                          {isFindingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Objecten binnen 25m filteren</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                {filteredObjectsList.length > 0 && canDelete && (
+                  <AlertDialog>
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant={isProximityFilterActive ? "default" : "outline"} size="icon" className={cn("h-9 w-9 rounded-xl transition-all", isProximityFilterActive ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "text-slate-400 border-slate-200")} onClick={handleToggleProximityFilter} disabled={isLoadingObjects}>
-                              {isFindingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-red-400 border-slate-200 hover:text-red-600 hover:bg-red-50">
+                            {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Objecten binnen 25m filteren</TooltipContent>
+                        </AlertDialogTrigger>
+                        <TooltipContent>Alle objecten in deze filter wissen</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-
-                    {filteredObjectsList.length > 0 && canDelete && (
-                      <AlertDialog>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-red-400 border-slate-200 hover:text-red-600 hover:bg-red-50">
-                                {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                              </Button>
-                            </AlertDialogTrigger>
-                            <TooltipContent>Alle objecten in deze filter wissen</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                            <AlertDialogDescription>Dit zal <strong>{filteredObjectsList.length} objecten</strong> definitief verwijderen.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteFilteredObjects} className="bg-red-600 hover:bg-red-700">Ja, alles wissen</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                        <AlertDialogDescription>Dit zal <strong>{filteredObjectsList.length} objecten</strong> definitief verwijderen.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteFilteredObjects} className="bg-red-600 hover:bg-red-700">Ja, alles wissen</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            {isLoadingObjects ? (
+              <div className="p-4 space-y-4">
+                {[1,2,3,4,5].map(i => <Skeleton className="h-16 w-full rounded-xl" key={i} />)}
+              </div>
+            ) : filteredObjectsList.length > 0 ? (
+              <div className="p-2 space-y-1">
+                {filteredObjectsList.map(obj => (
+                  <button
+                    key={obj.id}
+                    onClick={() => setSelectedObject(obj)}
+                    className={cn(
+                      "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group",
+                      selectedObject?.id === obj.id ? "bg-primary text-white shadow-md" : "hover:bg-slate-50"
                     )}
+                  >
+                    <div className={cn(
+                      "h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border",
+                      selectedObject?.id === obj.id ? "bg-white/20 border-white/20" : "bg-slate-100 border-slate-200"
+                    )}>
+                      <MapPin className={cn("h-5 w-5", selectedObject?.id === obj.id ? "text-white" : "text-slate-400")} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold truncate tracking-tight uppercase">{obj.idNummer || obj.id}</p>
+                      <p className={cn("text-xs font-medium truncate mt-0.5", selectedObject?.id === obj.id ? "text-white/80" : "text-slate-500")}>
+                        {obj.straatnaam} {obj.huisnummer}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center text-muted-foreground">
+                <Search className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Geen objecten gevonden</p>
+                <p className="text-[9px] font-bold mt-1">Probeer een andere zoekterm of voer een import uit.</p>
+              </div>
+            )}
+          </ScrollArea>
+        </aside>
+
+        <main className="flex-1 overflow-hidden relative bg-white">
+          {selectedObject ? (
+            <div className="h-full flex flex-col md:flex-row min-h-0">
+              <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-10 custom-scrollbar">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="space-y-1">
+                    <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900 leading-none">{selectedObject.idNummer || selectedObject.id}</h2>
+                    <div className="flex gap-2 pt-2">
+                      <Badge variant="outline" className="h-6 font-black uppercase text-[9px] tracking-widest border-slate-200 bg-slate-50">{selectedObject.locatieType}</Badge>
+                      <Badge className={cn("h-6 font-black uppercase text-[9px] tracking-widest border-none shadow-sm", selectedObject.isActief ? "bg-green-500" : "bg-slate-400")}>{selectedObject.isActief ? 'Operationeel' : 'Inactief'}</Badge>
+                    </div>
+                  </div>
+                  {isTablet && <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setSelectedObject(null)}><ArrowLeft className="h-5 w-5" /></Button>}
+                </div>
+
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+                        <h3 className="text-sm font-black uppercase tracking-[0.1em] text-slate-900 flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Locatie & Adres</h3>
+                        {isGeocoding && <div className="flex items-center gap-2 text-primary font-black text-[9px] uppercase tracking-widest animate-pulse"><RefreshCw className="h-3 w-3 animate-spin" /> Adres bijwerken...</div>}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Straatnaam</Label>
+                            <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huisnummer</Label>
+                            <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Postcode</Label>
+                            <Input value={selectedObject.postcode || ''} onChange={e => handleUpdateField('postcode', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Plaats</Label>
+                            <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Latitude (Y)</Label>
+                            <Input type="number" value={selectedObject.latitude || ''} onChange={e => handleUpdateCoords('latitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-xl border-slate-200" disabled={!canEdit} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Longitude (X)</Label>
+                            <Input type="number" value={selectedObject.longitude || ''} onChange={e => handleUpdateCoords('longitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-xl border-slate-200" disabled={!canEdit} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <h3 className="text-sm font-black uppercase tracking-[0.1em] text-slate-900 border-b-2 border-slate-100 pb-3 flex items-center gap-2"><Tag className="h-5 w-5 text-primary" /> Categorisering</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Hoofdtype</Label>
+                            <Input value={selectedObject.locatieType || ''} onChange={e => handleUpdateField('locatieType', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200" disabled={!canEdit} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Subtype</Label>
+                            <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200" disabled={!canEdit} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Memo / Waarschuwing</Label>
+                  <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden voor uitvoering..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed bg-slate-50/30" disabled={!canEdit} />
                 </div>
               </div>
-              <ScrollArea className="flex-1">
-                {isLoadingObjects ? (
-                  <div className="p-4 space-y-4">
-                    {[1,2,3,4,5].map(i => <Skeleton className="h-16 w-full rounded-xl" key={i} />)}
-                  </div>
-                ) : filteredObjectsList.length > 0 ? (
-                  <div className="p-2 space-y-1">
-                    {filteredObjectsList.map(obj => (
-                      <button
-                        key={obj.id}
-                        onClick={() => setSelectedObject(obj)}
-                        className={cn(
-                          "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group",
-                          selectedObject?.id === obj.id ? "bg-primary text-white shadow-md" : "hover:bg-slate-50"
-                        )}
-                      >
-                        <div className={cn(
-                          "h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border",
-                          selectedObject?.id === obj.id ? "bg-white/20 border-white/20" : "bg-slate-100 border-slate-200"
-                        )}>
-                          <MapPin className={cn("h-5 w-5", selectedObject?.id === obj.id ? "text-white" : "text-slate-400")} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold truncate tracking-tight uppercase">{obj.idNummer || obj.id}</p>
-                          <p className={cn("text-xs font-medium truncate mt-0.5", selectedObject?.id === obj.id ? "text-white/80" : "text-slate-500")}>
-                            {obj.straatnaam} {obj.huisnummer}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-12 text-center text-muted-foreground">
-                    <Search className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">Geen objecten gevonden</p>
-                    <p className="text-[9px] font-bold mt-1">Probeer een andere zoekterm of categorie.</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </aside>
 
-            <main className="flex-1 overflow-hidden relative bg-white">
-              {selectedObject ? (
-                <div className="h-full flex flex-col md:flex-row min-h-0">
-                  <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-10 custom-scrollbar">
-                    <div className="flex items-center justify-between mb-8">
-                      <div className="space-y-1">
-                        <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900 leading-none">{selectedObject.idNummer || selectedObject.id}</h2>
-                        <div className="flex gap-2 pt-2">
-                          <Badge variant="outline" className="h-6 font-black uppercase text-[9px] tracking-widest border-slate-200 bg-slate-50">{selectedObject.locatieType}</Badge>
-                          <Badge className={cn("h-6 font-black uppercase text-[9px] tracking-widest border-none shadow-sm", selectedObject.isActief ? "bg-green-500" : "bg-slate-400")}>{selectedObject.isActief ? 'Operationeel' : 'Inactief'}</Badge>
-                        </div>
-                      </div>
-                      {isTablet && <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setSelectedObject(null)}><ArrowLeft className="h-5 w-5" /></Button>}
-                    </div>
+              <div className="w-full md:w-[400px] border-l bg-slate-50/30 flex flex-col p-6 gap-6 overflow-y-auto no-scrollbar">
+                <Card className="aspect-square w-full border-none shadow-2xl ring-4 ring-white rounded-[2rem] overflow-hidden">
+                  <MapboxView latitude={selectedObject.latitude} longitude={selectedObject.longitude} interactive={false} />
+                </Card>
 
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-                            <h3 className="text-sm font-black uppercase tracking-[0.1em] text-slate-900 flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Locatie & Adres</h3>
-                            {isGeocoding && <div className="flex items-center gap-2 text-primary font-black text-[9px] uppercase tracking-widest animate-pulse"><RefreshCw className="h-3 w-3 animate-spin" /> Adres bijwerken...</div>}
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Straatnaam</Label>
-                                <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huisnummer</Label>
-                                <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Postcode</Label>
-                                <Input value={selectedObject.postcode || ''} onChange={e => handleUpdateField('postcode', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Plaats</Label>
-                                <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Latitude (Y)</Label>
-                                <Input type="number" value={selectedObject.latitude || ''} onChange={e => handleUpdateCoords('latitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-xl border-slate-200" disabled={!canEdit} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Longitude (X)</Label>
-                                <Input type="number" value={selectedObject.longitude || ''} onChange={e => handleUpdateCoords('longitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-xl border-slate-200" disabled={!canEdit} />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        <h3 className="text-sm font-black uppercase tracking-[0.1em] text-slate-900 border-b-2 border-slate-100 pb-3 flex items-center gap-2"><Tag className="h-5 w-5 text-primary" /> Categorisering</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Hoofdtype</Label>
-                                <Input value={selectedObject.locatieType || ''} onChange={e => handleUpdateField('locatieType', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200" disabled={!canEdit} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Subtype</Label>
-                                <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200" disabled={!canEdit} />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Memo / Waarschuwing</Label>
-                      <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden voor uitvoering..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed bg-slate-50/30" disabled={!canEdit} />
-                    </div>
-                  </div>
-
-                  <div className="w-full md:w-[400px] border-l bg-slate-50/30 flex flex-col p-6 gap-6 overflow-y-auto no-scrollbar">
-                    <Card className="aspect-square w-full border-none shadow-2xl ring-4 ring-white rounded-[2rem] overflow-hidden">
-                      <MapboxView latitude={selectedObject.latitude} longitude={selectedObject.longitude} interactive={false} />
-                    </Card>
-
-                    <Card className="h-48 border-slate-200 border-dashed border-2 bg-white/50 flex flex-col items-center justify-center text-slate-300 gap-3 group cursor-pointer hover:bg-white hover:border-primary/30 transition-all rounded-3xl">
-                      <ImageIcon className="h-10 w-10 opacity-10 group-hover:scale-110 transition-transform" />
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em]">Geen Media</p>
-                    </Card>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/30">
-                  <div className="bg-white p-10 rounded-[3rem] shadow-2xl border-4 border-slate-50 mb-8 animate-in zoom-in-95 duration-700">
-                    <MapPin className="h-16 w-16 text-primary/20 animate-pulse" />
-                  </div>
-                  <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-2">Geen object geselecteerd</h3>
-                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest max-w-[250px] mx-auto leading-relaxed">Kies een unit uit de lijst om de details en geografische data te beheren.</p>
-                </div>
-              )}
-            </main>
-          </>
-        )}
+                <Card className="h-48 border-slate-200 border-dashed border-2 bg-white/50 flex flex-col items-center justify-center text-slate-300 gap-3 group cursor-pointer hover:bg-white hover:border-primary/30 transition-all rounded-3xl">
+                  <ImageIcon className="h-10 w-10 opacity-10 group-hover:scale-110 transition-transform" />
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em]">Geen Media</p>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/30">
+              <div className="bg-white p-10 rounded-[3rem] shadow-2xl border-4 border-slate-50 mb-8 animate-in zoom-in-95 duration-700">
+                <MapPin className="h-16 w-16 text-primary/20 animate-pulse" />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-2">Geen object geselecteerd</h3>
+              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest max-w-[250px] mx-auto leading-relaxed">Kies een unit uit de lijst om de details en geografische data te beheren.</p>
+            </div>
+          )}
+        </main>
       </div>
-
-      <Dialog open={isAddFilterDialogOpen} onOpenChange={setIsAddFilterDialogOpen}>
-        <DialogContent className="rounded-3xl border-none shadow-2xl p-8 max-w-sm overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase tracking-tight">
-                {!!filterToRename ? 'Filter hernoemen' : 'Nieuw filter'}
-            </DialogTitle>
-            <DialogDescription className="font-bold text-slate-500">
-                {!!filterToRename ? `Wijzig de naam van '${filterToRename}'.` : 'Geef een naam op voor de nieuwe categorie.'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-8">
-            <Input value={newFilterName} onChange={e => setNewFilterName(e.target.value)} placeholder="Bv. Parkbankjes" className="h-14 font-black uppercase rounded-2xl text-center text-xl shadow-inner bg-slate-50 border-none focus:ring-primary/20" autoFocus />
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)} className="font-bold">Annuleren</Button>
-            <Button onClick={!!filterToRename ? handleRenameFilter : handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-black uppercase tracking-tight rounded-2xl shadow-xl shadow-primary/20">
-                {isSavingFilter ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Opslaan'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
