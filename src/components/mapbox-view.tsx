@@ -122,7 +122,7 @@ export function MapboxView({
   React.useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver(() => { mapRef.current?.getMap().resize(); });
-    observer.observe(mapContainerRef.current);
+    observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
 
