@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
+import { nl } from 'date-fns/locale';
 import { 
   Loader2, 
   UploadCloud, 
@@ -36,7 +37,8 @@ import {
   Search as SearchIcon,
   ChevronLeft,
   History,
-  AlertTriangle
+  AlertTriangle,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { 
@@ -110,6 +112,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 import * as turf from '@turf/turf';
 
@@ -958,6 +962,7 @@ export default function NewIssuePage() {
   const idPrefix = React.useMemo(() => {
     try {
       const d = watchDate instanceof Date ? watchDate : new Date(watchDate);
+      if (!isValid(d)) return format(new Date(), 'yyyyMMdd');
       return format(d, 'yyyyMMdd');
     } catch (e) {
       return format(new Date(), 'yyyyMMdd');
@@ -1453,17 +1458,37 @@ export default function NewIssuePage() {
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0 space-y-2 relative overflow-visible">
                           <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
-                            <div className="flex gap-1">
-                              <div className="h-11 flex items-center bg-slate-50 px-3 text-sm font-black text-slate-400 rounded-none border border-slate-100">
-                                {idPrefix}
+                            <div className="flex gap-2 items-center">
+                              <div className="flex-1 flex items-stretch border-2 border-slate-100 rounded-none overflow-hidden h-11 bg-slate-50">
+                                <div className="flex items-center px-3 text-sm font-black text-slate-400 border-r border-slate-100">
+                                  {idPrefix}
+                                </div>
+                                <Input 
+                                  value={idSuffix} 
+                                  onChange={(e) => setIdSuffix(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                                  placeholder="0000"
+                                  disabled={isReadOnly}
+                                  className="border-none bg-transparent shadow-none focus-visible:ring-0 font-black h-full text-base"
+                                />
                               </div>
-                              <Input 
-                                value={idSuffix} 
-                                onChange={(e) => setIdSuffix(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                                placeholder="0000"
-                                disabled={isReadOnly}
-                                className="h-11 w-20 font-bold rounded-none border-slate-100 bg-slate-50"
-                              />
+                              {!isReadOnly && (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" size="icon" className="h-11 w-11 rounded-none border-slate-200 shrink-0">
+                                      <CalendarIcon className="h-5 w-5 text-slate-500" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0 rounded-none border-none shadow-2xl" align="end">
+                                    <Calendar
+                                      mode="single"
+                                      selected={watchDate}
+                                      onSelect={(date) => date && form.setValue('meldingsdatum', date)}
+                                      initialFocus
+                                      locale={nl}
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              )}
                             </div>
                             <FormField control={form.control} name="intakenummer" render={({ field }) => (
                               <input type="hidden" {...field} />
@@ -1616,17 +1641,37 @@ export default function NewIssuePage() {
                         <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
                         <CardContent className="p-4 pt-2">
                           <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
-                            <div className="flex gap-1">
-                              <div className="h-8 flex items-center bg-slate-50 px-2 text-[10px] font-black text-slate-400 rounded-none border border-slate-100">
-                                {idPrefix}
+                            <div className="flex gap-2 items-center">
+                              <div className="flex-1 flex items-stretch border-2 border-slate-100 rounded-none overflow-hidden h-10 bg-slate-50">
+                                <div className="flex items-center px-3 text-[11px] font-black text-slate-400 border-r border-slate-100">
+                                  {idPrefix}
+                                </div>
+                                <Input 
+                                  value={idSuffix} 
+                                  onChange={(e) => setIdSuffix(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                                  placeholder="0000"
+                                  disabled={isReadOnly}
+                                  className="border-none bg-transparent shadow-none focus-visible:ring-0 font-black h-full text-sm"
+                                />
                               </div>
-                              <Input 
-                                value={idSuffix} 
-                                onChange={(e) => setIdSuffix(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                                placeholder="0000"
-                                disabled={isReadOnly}
-                                className="h-8 w-16 text-[10px] font-bold rounded-none border-slate-100 bg-slate-50"
-                              />
+                              {!isReadOnly && (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-none border-slate-200 shrink-0">
+                                      <CalendarIcon className="h-4 w-4 text-slate-500" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0 rounded-none border-none shadow-2xl" align="end">
+                                    <Calendar
+                                      mode="single"
+                                      selected={watchDate}
+                                      onSelect={(date) => date && form.setValue('meldingsdatum', date)}
+                                      initialFocus
+                                      locale={nl}
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              )}
                             </div>
                             <FormField control={form.control} name="intakenummer" render={({ field }) => (
                               <input type="hidden" {...field} />
@@ -1731,7 +1776,7 @@ export default function NewIssuePage() {
                           <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
-                            <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => ( <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl></FormItem>)} /></FormRow>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl></FormItem>)} /></FormRow>
