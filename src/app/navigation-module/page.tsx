@@ -641,7 +641,7 @@ export default function StartNavigationPage() {
     if (isCustomHtml(iconVal)) {
         return (
             <div 
-                className="h-9 w-9 flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
+                className="h-8 w-8 flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
                 dangerouslySetInnerHTML={{ __html: iconVal }} 
             />
         );
@@ -649,7 +649,7 @@ export default function StartNavigationPage() {
     
     if (iconVal.startsWith('http')) {
         return (
-            <div className="h-9 w-9 relative flex items-center justify-center rounded-none overflow-hidden">
+            <div className="h-8 w-8 relative flex items-center justify-center rounded-none overflow-hidden">
                 <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
             </div>
         );
@@ -660,11 +660,11 @@ export default function StartNavigationPage() {
         const name = parts[1];
         const color = parts[2];
         const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className="h-9 w-9" style={{ color: color || '#007AFF' }} />;
+        return <IconComp className="h-8 w-8" style={{ color: color || '#007AFF' }} />;
     }
 
     const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
-    return <IconComp className="h-9 w-9 text-slate-400" />;
+    return <IconComp className="h-8 w-8 text-slate-400" />;
   };
 
   const sequenceMissions = useCallback((missions: any[]) => {
@@ -981,7 +981,7 @@ export default function StartNavigationPage() {
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" className="w-full h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3">
-                                        <div className="flex items-center gap-2 truncate">
+                                        <div className="flex items-center gap-2 min-w-0">
                                             <div className="relative">
                                                 {selectedFolderId === null ? (
                                                     <Inbox className="h-4 w-4 text-primary shrink-0" />
@@ -990,7 +990,7 @@ export default function StartNavigationPage() {
                                                 ) : (
                                                     <Folder className="h-4 w-4 text-primary shrink-0" />
                                                 )}
-                                                <Badge className="absolute -top-2 -right-2 h-4 min-w-[1rem] px-1 flex items-center justify-center text-[8px] font-black rounded-none border border-white">
+                                                <Badge className="absolute -top-2 -right-2 h-4 min-w-[1rem] px-1 flex items-center justify-center text-[8px] font-black rounded-none border border-white z-10">
                                                     {activeFolderCount}
                                                 </Badge>
                                             </div>
