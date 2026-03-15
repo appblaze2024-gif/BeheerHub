@@ -725,12 +725,10 @@ export default function StartNavigationPage() {
         rawActiveMeldingen?.forEach(m => { poolMap.set(m.id, m); });
         let result = Array.from(poolMap.values());
         
-        // Handle targeted user filtering for privileged users
         const isSuperAdmin = profile?.role === 'Super admin';
         const viewingSelf = managedUserId === user?.uid;
         
         if (!(isSuperAdmin && viewingSelf)) {
-            // Filter by the selected user's name unless Super Admin is viewing themselves
             const targetUser = users?.find(u => u.id === managedUserId);
             const targetUserName = targetUser?.displayName || targetUser?.email || 'Onbekend';
             result = result.filter(m => m.behandelaar === targetUserName);
@@ -741,7 +739,6 @@ export default function StartNavigationPage() {
             result = result.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
         }
         
-        // Use smart sequencing when user location is available
         if (userLocation) {
             return sequenceMissions(result);
         }
@@ -762,6 +759,16 @@ export default function StartNavigationPage() {
     }
     return [];
   }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, userLocation, sequenceMissions, managedUserId, users, user]);
+
+  const inboxCount = useMemo(() => 
+    filteredMeldingen.filter(m => !missionsInAnyFolder.has(m.id)).length
+  , [filteredMeldingen, missionsInAnyFolder]);
+
+  const allCount = filteredMeldingen.length;
+
+  const getFolderCount = useCallback((folder: UserFolder) => {
+    return (folder.taskIds || []).filter(id => filteredMeldingen.some(m => m.id === id)).length;
+  }, [filteredMeldingen]);
 
   // Maintain stable numbering
   useEffect(() => {
@@ -906,6 +913,10 @@ export default function StartNavigationPage() {
     }
   };
 
+  const activeFolder = userFolders?.find(f => f.id === selectedFolderId);
+  const activeFolderLabel = selectedFolderId === null ? 'INBOX (VRIJ)' : selectedFolderId === 'all' ? 'ALLE MELDINGEN' : (activeFolder?.name.toUpperCase() || 'KIES MAP...');
+  const activeFolderCount = selectedFolderId === null ? inboxCount : selectedFolderId === 'all' ? allCount : (activeFolder ? getFolderCount(activeFolder) : 0);
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden text-sm">
         {!activeWerkbonId && (
@@ -971,19 +982,20 @@ export default function StartNavigationPage() {
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" className="w-full h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3">
                                         <div className="flex items-center gap-2 truncate">
-                                            {selectedFolderId === null ? (
-                                                <Inbox className="h-4 w-4 text-primary shrink-0" />
-                                            ) : selectedFolderId === 'all' ? (
-                                                <LayoutGrid className="h-4 w-4 text-primary shrink-0" />
-                                            ) : (
-                                                <Folder className="h-4 w-4 text-primary shrink-0" />
-                                            )}
+                                            <div className="relative">
+                                                {selectedFolderId === null ? (
+                                                    <Inbox className="h-4 w-4 text-primary shrink-0" />
+                                                ) : selectedFolderId === 'all' ? (
+                                                    <LayoutGrid className="h-4 w-4 text-primary shrink-0" />
+                                                ) : (
+                                                    <Folder className="h-4 w-4 text-primary shrink-0" />
+                                                )}
+                                                <Badge className="absolute -top-2 -right-2 h-4 min-w-[1rem] px-1 flex items-center justify-center text-[8px] font-black rounded-none border border-white">
+                                                    {activeFolderCount}
+                                                </Badge>
+                                            </div>
                                             <span className="truncate text-xs font-black">
-                                                {selectedFolderId === null 
-                                                    ? 'INBOX (VRIJ)' 
-                                                    : selectedFolderId === 'all' 
-                                                        ? 'ALLE MELDINGEN' 
-                                                        : (userFolders?.find(f => f.id === selectedFolderId)?.name.toUpperCase() || 'KIES MAP...')}
+                                                {activeFolderLabel}
                                             </span>
                                         </div>
                                         <ChevronDown className="h-3.5 w-3.5 opacity-40 shrink-0 ml-2" />
@@ -991,11 +1003,17 @@ export default function StartNavigationPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-[calc(100vw-1.5rem)] sm:w-80 rounded-none border-none shadow-2xl p-2">
                                     <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">WEERGAVE</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-black rounded-none h-12 cursor-pointer text-sm">
-                                        <LayoutGrid className="h-5 w-5 mr-3 text-slate-400" /> ALLE MELDINGEN
+                                    <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4">
+                                        <div className="flex items-center">
+                                            <LayoutGrid className="h-5 w-5 mr-3 text-slate-400" /> ALLE MELDINGEN
+                                        </div>
+                                        <Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{allCount}</Badge>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-black rounded-none h-12 cursor-pointer text-sm">
-                                        <Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (VRIJ)
+                                    <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4">
+                                        <div className="flex items-center">
+                                            <Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (VRIJ)
+                                        </div>
+                                        <Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{inboxCount}</Badge>
                                     </DropdownMenuItem>
                                     
                                     {userFolders && userFolders.length > 0 && (
@@ -1006,9 +1024,13 @@ export default function StartNavigationPage() {
                                                 <div key={folder.id} className="flex items-center group relative">
                                                     <DropdownMenuItem 
                                                         onClick={() => setSelectedFolderId(folder.id)} 
-                                                        className="flex-1 font-black rounded-none h-12 cursor-pointer text-sm"
+                                                        className="flex-1 font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-12"
                                                     >
-                                                        <Folder className="h-5 w-5 mr-3 text-primary" /> {folder.name.toUpperCase()}
+                                                        <div className="flex items-center truncate">
+                                                            <Folder className="h-5 w-5 mr-3 text-primary shrink-0" /> 
+                                                            <span className="truncate">{folder.name.toUpperCase()}</span>
+                                                        </div>
+                                                        <Badge variant="secondary" className="h-5 rounded-none font-black text-[10px] shrink-0">{getFolderCount(folder)}</Badge>
                                                     </DropdownMenuItem>
                                                     {isPrivileged && (
                                                         <Button 
@@ -1085,7 +1107,6 @@ export default function StartNavigationPage() {
                                         isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                     )}>
                                         <div className="flex items-center gap-2 p-2.5 min-w-0">
-                                            {/* Category Icon Square */}
                                             <div className="h-10 w-10 flex items-center justify-center shrink-0 bg-transparent ml-1">
                                                 {renderCategoryIcon(m.hoofdcategorie)}
                                             </div>
