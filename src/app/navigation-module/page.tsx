@@ -724,10 +724,18 @@ export default function StartNavigationPage() {
     if (type === 'meldingen') {
         rawActiveMeldingen?.forEach(m => { poolMap.set(m.id, m); });
         let result = Array.from(poolMap.values());
-        if (!isPrivileged) {
-            const userName = profile?.displayName || profile?.email || 'Onbekend';
-            result = result.filter(m => m.behandelaar === userName);
+        
+        // Handle targeted user filtering for privileged users
+        const isSuperAdmin = profile?.role === 'Super admin';
+        const viewingSelf = managedUserId === user?.uid;
+        
+        if (!(isSuperAdmin && viewingSelf)) {
+            // Filter by the selected user's name unless Super Admin is viewing themselves
+            const targetUser = users?.find(u => u.id === managedUserId);
+            const targetUserName = targetUser?.displayName || targetUser?.email || 'Onbekend';
+            result = result.filter(m => m.behandelaar === targetUserName);
         }
+
         if (debouncedSearchQuery) {
             const q = debouncedSearchQuery.toLowerCase();
             result = result.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
@@ -753,7 +761,7 @@ export default function StartNavigationPage() {
         }));
     }
     return [];
-  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, userLocation, sequenceMissions]);
+  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, userLocation, sequenceMissions, managedUserId, users, user]);
 
   // Maintain stable numbering
   useEffect(() => {
