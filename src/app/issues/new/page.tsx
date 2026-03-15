@@ -768,6 +768,45 @@ export default function NewIssuePage() {
 
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
 
+  const isCustomHtml = (str: string) => {
+    if (!str) return false;
+    const s = str.trim().toLowerCase();
+    return s.includes('<svg') || s.includes('<img') || s.includes('<a') || s.includes('<div') || (s.startsWith('<') && s.includes('>'));
+  };
+
+  const renderCategoryIcon = (category: string) => {
+    const iconVal = categoryIcons[category];
+    if (!iconVal) return null;
+    
+    if (isCustomHtml(iconVal)) {
+        return (
+            <div 
+                className="h-full w-full flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_a]:flex [&_a]:items-center [&_a]:justify-center [&_a]:h-full [&_a]:w-full" 
+                dangerouslySetInnerHTML={{ __html: iconVal }} 
+            />
+        );
+    }
+    
+    if (iconVal.startsWith('http')) {
+        return (
+            <div className="h-full w-full relative flex items-center justify-center rounded-none overflow-hidden">
+                <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
+            </div>
+        );
+    }
+
+    if (iconVal.startsWith('lucide:')) {
+        const parts = iconVal.split(':');
+        const name = parts[1];
+        const color = parts[2];
+        const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
+        return <IconComp className="h-8 w-8" style={{ color: color || '#007AFF' }} />;
+    }
+
+    const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
+    return <IconComp className="h-8 w-8 text-slate-400" />;
+  };
+
   React.useEffect(() => {
     const geocodeAddress = async () => {
       // If triggered by handleContainerSelect, skip and reset flag
@@ -1518,7 +1557,12 @@ export default function NewIssuePage() {
                       </p>
                       <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">Melder: {m.melder || 'Anoniem'} • {m.datum}</p>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 flex items-center justify-center shrink-0 border border-black bg-white ml-2">
+                            {renderCategoryIcon(m.hoofdcategorie)}
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
+                    </div>
                   </div>
                 ))}
               </div>

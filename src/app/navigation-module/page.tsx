@@ -627,8 +627,11 @@ export default function StartNavigationPage() {
 
   const isCustomHtml = (str: string) => {
     if (!str) return false;
-    const s = str.trim().toLowerCase();
-    return s.includes('<svg') || s.includes('<img') || s.includes('<a') || s.includes('<div') || (s.startsWith('<') && s.includes('>'));
+    const trimmed = str.trim().toLowerCase();
+    return (trimmed.startsWith('<') && (trimmed.endsWith('>') || trimmed.includes('/>'))) || 
+           trimmed.includes('<svg') || 
+           trimmed.includes('<img') ||
+           trimmed.includes('<a');
   };
 
   const renderCategoryIcon = (category: string) => {
@@ -638,7 +641,7 @@ export default function StartNavigationPage() {
     if (isCustomHtml(iconVal)) {
         return (
             <div 
-                className="h-full w-full flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_a]:flex [&_a]:items-center [&_a]:justify-center [&_a]:h-full [&_a]:w-full" 
+                className="h-9 w-9 flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
                 dangerouslySetInnerHTML={{ __html: iconVal }} 
             />
         );
@@ -646,7 +649,7 @@ export default function StartNavigationPage() {
     
     if (iconVal.startsWith('http')) {
         return (
-            <div className="h-full w-full relative flex items-center justify-center rounded-none overflow-hidden">
+            <div className="h-9 w-9 relative flex items-center justify-center rounded-none overflow-hidden">
                 <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
             </div>
         );
@@ -657,11 +660,11 @@ export default function StartNavigationPage() {
         const name = parts[1];
         const color = parts[2];
         const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className="h-8 w-8" style={{ color: color || '#007AFF' }} />;
+        return <IconComp className="h-9 w-9" style={{ color: color || '#007AFF' }} />;
     }
 
     const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
-    return <IconComp className="h-8 w-8 text-slate-400" />;
+    return <IconComp className="h-9 w-9 text-slate-400" />;
   };
 
   const sequenceMissions = useCallback((missions: any[]) => {
@@ -719,8 +722,7 @@ export default function StartNavigationPage() {
   const filteredMeldingen = useMemo(() => {
     const poolMap = new Map<string, any>();
     if (type === 'meldingen') {
-        if (!rawActiveMeldingen) return [];
-        rawActiveMeldingen.forEach(m => { poolMap.set(m.id, m); });
+        rawActiveMeldingen?.forEach(m => { poolMap.set(m.id, m); });
         let result = Array.from(poolMap.values());
         if (!isPrivileged) {
             const userName = profile?.displayName || profile?.email || 'Onbekend';
@@ -734,7 +736,7 @@ export default function StartNavigationPage() {
     } else if (type === 'prullenbakken' && selectedRouteId && currentProject && allObjects) {
         const route = currentProject.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
         if (!route) return [];
-        let result = allObjects.filter(obj => 
+        return allObjects.filter(obj => 
             Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route.naam)
         ).map(obj => ({
             ...obj,
@@ -743,7 +745,6 @@ export default function StartNavigationPage() {
             subcategorie: obj.locatieSubType || 'Prullenbak',
             status: completedObjects.includes(obj.id) ? 'Afgerond' : 'Open'
         }));
-        return result;
     }
     return [];
   }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects]);
@@ -818,13 +819,7 @@ export default function StartNavigationPage() {
     setIsRecalculating(true);
     navigator.geolocation.getCurrentPosition(
         (pos) => {
-            const currentCoords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-            setUserLocation(currentCoords);
-            
-            // Apply sequencing to the current filtered list
-            const sequenced = sequenceMissions(filteredMeldingen);
-            // In a real app we might update state here, but for now we rely on the memo dependencies
-            
+            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
             setTimeout(() => {
                 setIsRecalculating(false);
                 toast({ title: "Route herberekend", description: "De lijstvolgorde is bijgewerkt op basis van uw huidige locatie." });
