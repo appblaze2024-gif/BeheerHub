@@ -1,13 +1,10 @@
-
 'use client';
 
 import * as React from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
-  Filter,
   Map as MapIcon,
   Search,
-  ChevronDown,
   MapPin,
   ChevronRight,
   Upload,
@@ -17,55 +14,27 @@ import {
   Loader2,
   Trash2,
   Tag,
-  X,
   Pencil,
   LocateFixed,
   RefreshCw,
-  AlertCircle,
-  PlusCircle,
   ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectGroup,
-  SelectLabel,
-} from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
-import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, arrayRemove, writeBatch, limit, orderBy } from 'firebase/firestore';
+import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, doc, query, where, writeBatch, limit, orderBy } from 'firebase/firestore';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
 import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,6 +50,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
 import { useProject } from '@/context/project-context';
+import { useProfile } from '@/firebase/profile-provider';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -105,11 +75,6 @@ export default function ObjectsPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
-  const [typeFilter] = React.useState<string>('all');
-  const [isAddFilterDialogOpen, setIsAddFilterDialogOpen] = React.useState(false);
-  const [newFilterName, setNewFilterName] = React.useState('');
-  const [isSavingFilter, setIsSavingFilter] = React.useState(false);
-  const [filterToRename, setFilterToRename] = React.useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = React.useState(false);
   const [isGeocoding, setIsGeocoding] = React.useState(false);
 
@@ -117,7 +82,6 @@ export default function ObjectsPage() {
   const [currentUserCoords, setCurrentUserCoords] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [isFindingLocation, setIsFindingLocation] = React.useState(false);
 
-  // Debounce search term to avoid excessive reads
   React.useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -144,7 +108,6 @@ export default function ObjectsPage() {
     if (!firestore) return null;
     const baseCol = collection(firestore, 'objects');
     
-    // If searching, use server-side prefix filtering on ID number to save reads
     if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
         const q = debouncedSearchTerm.toUpperCase();
         return query(
@@ -155,13 +118,8 @@ export default function ObjectsPage() {
         );
     }
 
-    // Default browse view with small limit
     return query(baseCol, orderBy('idNummer'), limit(100));
   }, [firestore, debouncedSearchTerm]);
-
-  const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
-  const { data: filtersData } = useDoc<{ custom: string[] }>(filtersRef);
-  const customFilters = filtersData?.custom || [];
 
   const { data: objects, isLoading: isLoadingObjects } = useCollection<any>(objectsQuery);
 
@@ -169,7 +127,6 @@ export default function ObjectsPage() {
     if (!objects) return [];
     let filtered = [...objects];
 
-    // Client-side address fallback for short searches
     if (searchTerm && searchTerm.length > 0 && searchTerm.length < 2) {
       const q = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -186,7 +143,7 @@ export default function ObjectsPage() {
           const from = turf.point([currentUserCoords.longitude, currentUserCoords.latitude]);
           const to = turf.point([obj.longitude, obj.latitude]);
           const distance = turf.distance(from, to, { units: 'meters' });
-          return distance <= 25; // 25 meters
+          return distance <= 25;
         } catch (e) {
           return false;
         }
@@ -245,10 +202,7 @@ export default function ObjectsPage() {
         });
         await batch.commit();
       }
-      toast({ 
-        title: 'Gereed', 
-        description: `${itemsToDelete.length} objecten verwijderd.` 
-      });
+      toast({ title: 'Gereed', description: `${itemsToDelete.length} objecten verwijderd.` });
       setSelectedObject(null);
     } catch (error) {
       console.error("Delete error:", error);
@@ -316,21 +270,6 @@ export default function ObjectsPage() {
     }
   };
 
-  const handleAddCustomFilter = async () => {
-    if (!firestore || !newFilterName.trim() || !filtersRef || !canEdit) return;
-    setIsAddFilterDialogOpen(false);
-    setIsSavingFilter(true);
-    try {
-        await setDocumentNonBlocking(filtersRef, { custom: Array.from(new Set([...customFilters, newFilterName.trim()])) }, { merge: true });
-        toast({ title: 'Filter toegevoegd', description: `De categorie '${newFilterName}' is toegevoegd.` });
-        setNewFilterName('');
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet opslaan.' });
-    } finally {
-        setIsSavingFilter(false);
-    }
-  };
-
   return (
     <div className="flex flex-col h-full bg-slate-50">
       <header className="h-16 border-b bg-white flex items-center justify-between px-4 sm:px-6 gap-2 shrink-0 shadow-sm overflow-x-auto no-scrollbar">
@@ -346,7 +285,7 @@ export default function ObjectsPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-          <div className="relative w-full max-w-[200px] hidden md:block">
+          <div className="relative w-full max-w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input placeholder="Zoek op ID of adres..." className="pl-9 h-9 text-xs font-black uppercase rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
@@ -381,8 +320,8 @@ export default function ObjectsPage() {
         )}>
           <div className="p-4 border-b flex justify-between items-center bg-slate-50/20">
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-slate-500">Resultaten</span>
-              <span className="text-2xl font-bold text-slate-900 leading-tight">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Alles</span>
+              <span className="text-2xl font-black text-slate-900 leading-tight">
                 {isLoadingObjects ? '...' : filteredObjectsList.length}
               </span>
             </div>
@@ -407,7 +346,7 @@ export default function ObjectsPage() {
                             {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                           </Button>
                         </AlertDialogTrigger>
-                        <TooltipContent>Alle objecten in deze filter wissen</TooltipContent>
+                        <TooltipContent>Alle getoonde objecten wissen</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                     <AlertDialogContent>
@@ -447,8 +386,8 @@ export default function ObjectsPage() {
                       <MapPin className={cn("h-5 w-5", selectedObject?.id === obj.id ? "text-white" : "text-slate-400")} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold truncate tracking-tight uppercase">{obj.idNummer || obj.id}</p>
-                      <p className={cn("text-xs font-medium truncate mt-0.5", selectedObject?.id === obj.id ? "text-white/80" : "text-slate-500")}>
+                      <p className="text-sm font-black truncate tracking-tight uppercase">{obj.idNummer || obj.id}</p>
+                      <p className={cn("text-xs font-medium truncate mt-0.5 uppercase tracking-tighter", selectedObject?.id === obj.id ? "text-white/80" : "text-slate-500")}>
                         {obj.straatnaam} {obj.huisnummer}
                       </p>
                     </div>
@@ -459,7 +398,7 @@ export default function ObjectsPage() {
               <div className="p-12 text-center text-muted-foreground">
                 <Search className="h-8 w-8 mx-auto mb-2 opacity-20" />
                 <p className="text-[10px] font-black uppercase tracking-widest">Geen objecten gevonden</p>
-                <p className="text-[9px] font-bold mt-1">Probeer een andere zoekterm of voer een import uit.</p>
+                <p className="text-[9px] font-bold mt-1 uppercase">Probeer een andere zoekterm.</p>
               </div>
             )}
           </ScrollArea>
@@ -529,7 +468,7 @@ export default function ObjectsPage() {
 
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Memo / Waarschuwing</Label>
-                  <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden voor uitvoering..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed bg-slate-50/30" disabled={!canEdit} />
+                  <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden voor uitvoering..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed bg-slate-50/30 shadow-inner" disabled={!canEdit} />
                 </div>
               </div>
 
@@ -549,8 +488,8 @@ export default function ObjectsPage() {
               <div className="bg-white p-10 rounded-[3rem] shadow-2xl border-4 border-slate-50 mb-8 animate-in zoom-in-95 duration-700">
                 <MapPin className="h-16 w-16 text-primary/20 animate-pulse" />
               </div>
-              <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-2">Geen object geselecteerd</h3>
-              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest max-w-[250px] mx-auto leading-relaxed">Kies een unit uit de lijst om de details en geografische data te beheren.</p>
+              <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-2">Alle Objecten</h3>
+              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest max-w-[250px] mx-auto leading-relaxed">Kies een unit uit de lijst aan de linkerzijde om de details en geografische data te beheren.</p>
             </div>
           )}
         </main>
