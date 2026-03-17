@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -977,7 +976,7 @@ export default function StartNavigationPage() {
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative overflow-hidden">
             {isMeldingenType ? (
                 <div className="flex-1 flex flex-col min-h-0">
-                    <div className="p-3 border-b bg-white shrink-0 space-y-3">
+                    <div className="p-3 border-b bg-white shrink-0 space-y-3 lg:w-[30%] rounded-none">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input placeholder="ZOEKEN OP NUMMER OF ADRES..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
