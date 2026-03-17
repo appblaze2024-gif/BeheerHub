@@ -492,8 +492,8 @@ export default function StartNavigationPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
-  const searchParamsSource = useSearchParams();
-  const type = searchParamsSource.get('type');
+  const searchParams = useSearchParams();
+  const type = searchParams.get('type');
   const isMeldingenType = type === 'meldingen';
   
   const { profile } = useProfile();
@@ -639,21 +639,14 @@ export default function StartNavigationPage() {
 
   const renderCategoryIcon = (category: string, subcategory?: string) => {
     let iconVal = null;
-    
-    if (category && subcategory) {
-        iconVal = subtypeIcons[`${category}:${subcategory}`];
-    }
-    
-    if (!iconVal) {
-        iconVal = categoryIcons[category];
-    }
-
+    if (category && subcategory) iconVal = subtypeIcons[`${category}:${subcategory}`];
+    if (!iconVal) iconVal = categoryIcons[category];
     if (!iconVal) return null;
     
     if (isCustomHtml(iconVal)) {
         return (
             <div 
-                className="h-9 w-9 flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
+                className="h-full w-full flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
                 dangerouslySetInnerHTML={{ __html: iconVal }} 
             />
         );
@@ -661,7 +654,7 @@ export default function StartNavigationPage() {
     
     if (iconVal.startsWith('http')) {
         return (
-            <div className="h-9 w-9 relative flex items-center justify-center rounded-none overflow-hidden">
+            <div className="h-full w-full relative flex items-center justify-center rounded-none overflow-hidden">
                 <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
             </div>
         );
@@ -672,54 +665,40 @@ export default function StartNavigationPage() {
         const name = parts[1];
         const color = parts[2];
         const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className="h-9 w-9" style={{ color: color || '#007AFF' }} />;
+        return <IconComp className="h-full w-full" style={{ color: color || '#007AFF' }} />;
     }
 
     const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
-    return <IconComp className="h-9 w-9 text-slate-400" />;
+    return <IconComp className="h-full w-full text-slate-400" />;
   };
 
   const sequenceMissions = useCallback((missions: any[]) => {
     if (missions.length === 0) return [];
-    
     const pending = missions.filter(m => m.status !== 'Afgerond');
     const completed = missions.filter(m => m.status === 'Afgerond');
-
     if (pending.length === 0) return completed;
-
     const startLoc = userLocation || SIMULATION_START_LOCATION;
     let currentPos = turf.point([startLoc.longitude, startLoc.latitude]);
     let result: any[] = [];
     let remaining = [...pending];
-
     const getCityKey = (m: any) => (m.plaats || 'Onbekend').toLowerCase().trim();
-
     while (remaining.length > 0) {
         let absoluteClosestIdx = -1;
         let minDist = Infinity;
         for (let i = 0; i < remaining.length; i++) {
             const d = turf.distance(currentPos, turf.point([remaining[i].longitude, remaining[i].latitude]));
-            if (d < minDist) {
-                minDist = d;
-                absoluteClosestIdx = i;
-            }
+            if (d < minDist) { minDist = d; absoluteClosestIdx = i; }
         }
-
         if (absoluteClosestIdx === -1) break;
-
         const targetCity = getCityKey(remaining[absoluteClosestIdx]);
         let cityMissions = remaining.filter(m => getCityKey(m) === targetCity);
         remaining = remaining.filter(m => getCityKey(m) !== targetCity);
-
         while (cityMissions.length > 0) {
             let closestInCityIdx = -1;
             let minCityDist = Infinity;
             for (let i = 0; i < cityMissions.length; i++) {
                 const d = turf.distance(currentPos, turf.point([cityMissions[i].longitude, cityMissions[i].latitude]));
-                if (d < minCityDist) {
-                    minCityDist = d;
-                    closestInCityIdx = i;
-                }
+                if (d < minCityDist) { minCityDist = d; closestInCityIdx = i; }
             }
             if (closestInCityIdx === -1) break;
             const [next] = cityMissions.splice(closestInCityIdx, 1);
@@ -727,7 +706,6 @@ export default function StartNavigationPage() {
             currentPos = turf.point([next.longitude, next.latitude]);
         }
     }
-    
     return [...result, ...completed];
   }, [userLocation]);
 
@@ -736,25 +714,18 @@ export default function StartNavigationPage() {
     if (type === 'meldingen') {
         rawActiveMeldingen?.forEach(m => { poolMap.set(m.id, m); });
         let result = Array.from(poolMap.values());
-        
         const isSuperAdmin = profile?.role === 'Super admin';
         const viewingSelf = managedUserId === user?.uid;
-        
         if (!(isSuperAdmin && viewingSelf)) {
             const targetUser = users?.find(u => u.id === managedUserId);
             const targetUserName = targetUser?.displayName || targetUser?.email || 'Onbekend';
             result = result.filter(m => m.behandelaar === targetUserName);
         }
-
         if (debouncedSearchQuery) {
             const q = debouncedSearchQuery.toLowerCase();
             result = result.filter(m => m.intakenummer.toLowerCase().includes(q) || (m.straatnaam || '').toLowerCase().includes(q));
         }
-        
-        if (userLocation) {
-            return sequenceMissions(result);
-        }
-        
+        if (userLocation) return sequenceMissions(result);
         return result;
     } else if (type === 'prullenbakken' && selectedRouteId && currentProject && allObjects) {
         const route = currentProject.prullenbakkenroutes?.find(r => r.id === selectedRouteId);
@@ -784,18 +755,12 @@ export default function StartNavigationPage() {
 
   const displayedMissions = useMemo(() => {
     let base = filteredMeldingen;
-    
-    if (selectedFolderId === null) {
-        base = filteredMeldingen.filter(m => !missionsInAnyFolder.has(m.id));
-    } else if (selectedFolderId !== 'all') {
+    if (selectedFolderId === null) base = filteredMeldingen.filter(m => !missionsInAnyFolder.has(m.id));
+    else if (selectedFolderId !== 'all') {
         const currentFolder = userFolders?.find(f => f.id === selectedFolderId);
-        if (currentFolder) {
-            base = filteredMeldingen.filter(m => (currentFolder.taskIds || []).includes(m.id));
-        } else {
-            base = [];
-        }
+        if (currentFolder) base = filteredMeldingen.filter(m => (currentFolder.taskIds || []).includes(m.id));
+        else base = [];
     }
-    
     return base;
   }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders]);
 
@@ -807,27 +772,16 @@ export default function StartNavigationPage() {
 
   const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
     const originStr = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : "My+Location";
-
     if (lat && lng) {
       window.open(`https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${lat},${lng}`, '_blank');
       return;
     }
-    
     const pendingMissions = displayedMissions.filter(m => m.status !== 'Afgerond');
     if (pendingMissions.length === 0) return;
-    
     const dest = pendingMissions[pendingMissions.length - 1];
     const waypoints = pendingMissions.slice(0, -1).filter(m => m.latitude && m.longitude).map(m => `${m.latitude},${m.longitude}`).join('|');
     window.open(`https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${dest.latitude},${dest.longitude}${waypoints ? `&waypoints=${waypoints}` : ''}`, '_blank');
   }, [displayedMissions, userLocation]);
-
-  const handleStartRit = async (forcedPriorityId?: string) => {
-    if (displayedMissions.length === 0 && !forcedPriorityId) return;
-    if (forcedPriorityId) setPriorityMissionId(forcedPriorityId);
-    if (assignments?.[0] && firestore) updateDocumentNonBlocking(doc(firestore, 'route_assignments', assignments[0].id), { status: 'Started' });
-    setNavigationState('navigating');
-    if (isMeldingenType) openInGoogleMaps();
-  };
 
   const handleStopRit = async () => {
     setNavigationState('setup'); setPriorityMissionId(null);
@@ -838,7 +792,6 @@ export default function StartNavigationPage() {
         toast({ variant: 'destructive', title: 'Fout', description: 'GPS niet beschikbaar op dit apparaat.' });
         return;
     }
-
     setIsRecalculating(true);
     navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -874,28 +827,20 @@ export default function StartNavigationPage() {
 
   const handleMoveToFolder = async (taskId: string, folderId: string | null) => {
     if (!firestore || !managedUserId || !userFolders) return;
-    
     const batch = writeBatch(firestore);
-    
     userFolders.forEach(folder => {
         if ((folder.taskIds || []).includes(taskId)) {
             const folderRef = doc(firestore, 'users', managedUserId, 'folders', folder.id);
-            batch.update(folderRef, {
-                taskIds: (folder.taskIds || []).filter(id => id !== taskId)
-            });
+            batch.update(folderRef, { taskIds: (folder.taskIds || []).filter(id => id !== taskId) });
         }
     });
-    
     if (folderId) {
         const targetFolder = userFolders.find(f => f.id === folderId);
         if (targetFolder) {
             const folderRef = doc(firestore, 'users', managedUserId, 'folders', folderId);
-            batch.update(folderRef, {
-                taskIds: [...(targetFolder.taskIds || []), taskId]
-            });
+            batch.update(folderRef, { taskIds: [...(targetFolder.taskIds || []), taskId] });
         }
     }
-    
     try {
         await batch.commit();
         toast({ title: folderId ? "Verplaatst naar map" : "Verwijderd uit mappen" });
@@ -944,160 +889,56 @@ export default function StartNavigationPage() {
                             </div>
                         </PopoverContent>
                     </Popover>
-                    
                     {isMeldingenType ? (
                         navigationState === 'setup' ? (
-                            <Button 
-                                className="h-11 w-11 p-0 font-black uppercase bg-primary text-white shadow-xl rounded-none border-none hover:bg-primary/90" 
-                                onClick={handleRecalculateRoute} 
-                                disabled={displayedMissions.length === 0 || isRecalculating}
-                            >
+                            <Button className="h-11 w-11 p-0 font-black uppercase bg-primary text-white shadow-xl rounded-none border-none hover:bg-primary/90" onClick={handleRecalculateRoute} disabled={displayedMissions.length === 0 || isRecalculating}>
                                 {isRecalculating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
                             </Button>
                         ) : (
                             <Button variant="destructive" className="h-11 px-5 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
                         )
-                    ) : (
-                        navigationState === 'setup' ? (
-                            <Button className="h-11 px-5 font-black uppercase bg-primary text-white shadow-xl rounded-none tracking-widest text-xs" onClick={() => handleStartRit()} disabled={displayedMissions.length === 0}>
-                                <Play className="h-4 w-4 mr-2 fill-current" /> START
-                            </Button>
-                        ) : (
-                            <Button variant="destructive" className="h-11 px-5 font-black uppercase rounded-none shadow-xl tracking-widest text-xs" onClick={handleStopRit}>STOP</Button>
-                        )
-                    )}
+                    ) : null}
                 </div>
             </header>
         )}
 
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative overflow-hidden">
-            {/* Top Control Section (30% width container on desktop) */}
             {isMeldingenType && (
                 <div className="w-full bg-white border-b p-4 shrink-0">
                     <div className="md:max-w-[30%] space-y-3">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input 
-                                placeholder="ZOEKEN OP NUMMER OF ADRES..." 
-                                className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" 
-                                value={searchQuery} 
-                                onChange={e => setSearchQuery(e.target.value)} 
-                            />
+                            <Input placeholder="ZOEKEN..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                         </div>
-                        
                         <div className="flex flex-col gap-2">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" className="w-full h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3 overflow-visible">
                                         <div className="flex items-center gap-2 min-w-0">
                                             <div className="relative">
-                                                {selectedFolderId === null ? (
-                                                    <Inbox className="h-4 w-4 text-primary shrink-0" />
-                                                ) : selectedFolderId === 'all' ? (
-                                                    <LayoutGrid className="h-4 w-4 text-primary shrink-0" />
-                                                ) : (
-                                                    <Folder className="h-4 w-4 text-primary shrink-0" />
-                                                )}
-                                                <Badge className="absolute -top-2 -right-2 h-4 min-w-[1rem] px-1 flex items-center justify-center text-[8px] font-black rounded-none border border-white z-10">
-                                                    {activeFolderCount}
-                                                </Badge>
+                                                {selectedFolderId === null ? <Inbox className="h-4 w-4 text-primary shrink-0" /> : selectedFolderId === 'all' ? <LayoutGrid className="h-4 w-4 text-primary shrink-0" /> : <Folder className="h-4 w-4 text-primary shrink-0" />}
+                                                <Badge className="absolute -top-2 -right-2 h-4 min-w-[1rem] px-1 flex items-center justify-center text-[8px] font-black rounded-none border border-white z-10">{activeFolderCount}</Badge>
                                             </div>
-                                            <span className="text-xs font-black">
-                                                {activeFolderLabel}
-                                            </span>
+                                            <span className="text-xs font-black truncate">{activeFolderLabel}</span>
                                         </div>
                                         <ChevronDown className="h-3.5 w-3.5 opacity-40 shrink-0 ml-2" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-[calc(100vw-1.5rem)] sm:w-80 rounded-none border-none shadow-2xl p-2">
-                                    <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">WEERGAVE</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4">
-                                        <div className="flex items-center">
-                                            <LayoutGrid className="h-5 w-5 mr-3 text-slate-400" /> ALLE MELDINGEN
-                                        </div>
-                                        <Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{allCount}</Badge>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4">
-                                        <div className="flex items-center">
-                                            <Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (VRIJ)
-                                        </div>
-                                        <Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{inboxCount}</Badge>
-                                    </DropdownMenuItem>
-                                    
-                                    {userFolders && userFolders.length > 0 && (
-                                        <>
-                                            <DropdownMenuSeparator className="bg-slate-100 my-2" />
-                                            <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">WERK-MAPPEN</DropdownMenuLabel>
-                                            {userFolders.map(folder => (
-                                                <div key={folder.id} className="flex items-center group relative">
-                                                    <DropdownMenuItem 
-                                                        onClick={() => setSelectedFolderId(folder.id)} 
-                                                        className="flex-1 font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-12"
-                                                    >
-                                                        <div className="flex items-center truncate">
-                                                            <Folder className="h-5 w-5 mr-3 text-primary shrink-0" /> 
-                                                            <span className="truncate">{folder.name.toUpperCase()}</span>
-                                                        </div>
-                                                        <Badge variant="secondary" className="h-5 rounded-none font-black text-[10px] shrink-0">{getFolderCount(folder)}</Badge>
-                                                    </DropdownMenuItem>
-                                                    {isPrivileged && (
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="absolute right-2 h-9 w-9 text-slate-300 hover:text-red-600 rounded-none opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            onClick={(e) => { 
-                                                                e.preventDefault(); 
-                                                                e.stopPropagation(); 
-                                                                handleDeleteFolder(folder.id); 
-                                                            }}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </>
-                                    )}
+                                <DropdownMenuContent align="start" className="w-80 rounded-none border-none shadow-2xl p-2">
+                                    <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4"><div className="flex items-center"><LayoutGrid className="h-5 w-5 mr-3 text-slate-400" /> ALLE MELDINGEN</div><Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{allCount}</Badge></DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4"><div className="flex items-center"><Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (VRIJ)</div><Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{inboxCount}</Badge></DropdownMenuItem>
+                                    {userFolders?.map(folder => (
+                                        <DropdownMenuItem key={folder.id} onClick={() => setSelectedFolderId(folder.id)} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4"><div className="flex items-center"><Folder className="h-5 w-5 mr-3 text-primary shrink-0" /> {folder.name.toUpperCase()}</div><Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{getFolderCount(folder)}</Badge></DropdownMenuItem>
+                                    ))}
                                 </DropdownMenuContent>
                             </DropdownMenu>
-
                             {isPrivileged && (
                                 <div className="flex items-center gap-2">
-                                    <div className="flex-1 min-w-0">
-                                        <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
-                                            <SelectTrigger className="h-10 font-black border-none rounded-none bg-slate-50 px-3 text-xs shadow-inner uppercase min-w-0">
-                                                <div className="flex items-center gap-2 truncate">
-                                                    <UserIcon className="h-3.5 w-3.5 text-primary shrink-0" />
-                                                    <SelectValue placeholder="COLLEGA..." />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-none shadow-2xl border-slate-100">
-                                                {users?.map(u => (
-                                                    <SelectItem key={u.id} value={u.id} className="text-xs font-bold uppercase">{u.displayName || u.email}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button variant="outline" className="h-10 w-10 p-0 rounded-none border-none bg-slate-100 shadow-inner text-primary hover:bg-slate-200 shrink-0">
-                                                <FolderPlus className="h-4 w-4" />
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="rounded-none border-none shadow-2xl p-6 max-w-xs">
-                                            <DialogHeader>
-                                                <DialogTitle className="font-black uppercase tracking-tight text-base">Nieuwe Map</DialogTitle>
-                                                <DialogDescription className="font-bold text-slate-500 text-xs">Voor {users?.find(u => u.id === managedUserId)?.displayName || 'collega'}.</DialogDescription>
-                                            </DialogHeader>
-                                            <div className="py-4">
-                                                <Input placeholder="NAAM..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-black uppercase rounded-none text-center text-sm shadow-sm border-2" />
-                                            </div>
-                                            <DialogFooter className="gap-2">
-                                                <DialogClose asChild><Button variant="ghost" className="font-black uppercase h-10 text-xs flex-1">Stop</Button></DialogClose>
-                                                <Button onClick={handleCreateFolder} className="h-10 px-6 font-black uppercase rounded-none bg-primary text-white shadow-xl flex-1 text-xs">Maken</Button>
-                                            </DialogFooter>
-                                        </DialogContent>
-                                    </Dialog>
+                                    <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
+                                        <SelectTrigger className="flex-1 h-10 font-black border-none rounded-none bg-slate-50 px-3 text-xs shadow-inner uppercase min-w-0"><div className="flex items-center gap-2 truncate"><UserIcon className="h-3.5 w-3.5 text-primary shrink-0" /><SelectValue placeholder="COLLEGA..." /></div></SelectTrigger>
+                                        <SelectContent className="rounded-none shadow-2xl border-slate-100">{users?.map(u => (<SelectItem key={u.id} value={u.id} className="text-xs font-bold uppercase">{u.displayName || u.email}</SelectItem>))}</SelectContent>
+                                    </Select>
+                                    <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}><DialogTrigger asChild><Button variant="outline" className="h-10 w-10 p-0 rounded-none border-none bg-slate-100 shadow-inner text-primary shrink-0"><FolderPlus className="h-4 w-4" /></Button></DialogTrigger><DialogContent className="rounded-none border-none shadow-2xl p-6 max-w-xs"><DialogHeader><DialogTitle className="font-black uppercase tracking-tight text-base">Nieuwe Map</DialogTitle></DialogHeader><div className="py-4"><Input placeholder="NAAM..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-black uppercase rounded-none text-center text-sm shadow-sm border-2" /></div><DialogFooter className="gap-2"><DialogClose asChild><Button variant="ghost" className="font-black uppercase h-10 text-xs flex-1">Stop</Button></DialogClose><Button onClick={handleCreateFolder} className="h-10 px-6 font-black uppercase rounded-none bg-primary text-white shadow-xl flex-1 text-xs">Maken</Button></DialogFooter></DialogContent></Dialog>
                                 </div>
                             )}
                         </div>
@@ -1108,8 +949,8 @@ export default function StartNavigationPage() {
             <div className="flex-1 flex flex-col min-h-0">
                 <div className="flex-1 relative overflow-y-auto">
                     {isMeldingenType ? (
-                        <div className="w-full flex flex-col">
-                            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 pb-24">
+                        <div className="w-full flex flex-col h-full overflow-hidden">
+                            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 px-4 py-2 flex-1 content-start">
                                 {paginatedMissions.map((m, index) => {
                                     const isCompleted = m.status === 'Afgerond';
                                     const missionNumber = (currentPage - 1) * itemsPerPage + index + 1;
@@ -1117,41 +958,25 @@ export default function StartNavigationPage() {
                                         <Card key={m.id} 
                                             onClick={() => setActiveWerkbonId(m.id)}
                                             className={cn(
-                                            "rounded-none border-none shadow-sm overflow-hidden active:scale-[0.99] transition-all cursor-pointer group h-20",
+                                            "rounded-none border-none shadow-sm overflow-hidden active:scale-[0.99] transition-all cursor-pointer group h-14",
                                             isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                         )}>
-                                            <div className="flex items-center gap-4 px-4 h-full min-w-0">
-                                                <div className="text-sm font-black text-slate-300 shrink-0 w-6 text-center">
-                                                    {missionNumber}
-                                                </div>
-                                                <div className="h-12 w-12 flex items-center justify-center shrink-0">
-                                                    {renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}
-                                                </div>
+                                            <div className="flex items-center gap-3 px-3 h-full min-w-0">
+                                                <div className="text-[10px] font-black text-slate-300 shrink-0 w-5 text-center">{missionNumber}</div>
+                                                <div className="h-10 w-10 flex items-center justify-center shrink-0">{renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}</div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between mb-1 gap-2 leading-none">
-                                                        <h3 className={cn(
-                                                            "font-black text-base uppercase tracking-tight truncate",
-                                                            isCompleted ? "text-green-800" : "text-slate-900"
-                                                        )}>{m.intakenummer}</h3>
-                                                        {m.status === 'Nieuw' && (
-                                                            <Badge className="text-[10px] font-black uppercase bg-red-600 text-white h-5 px-2 rounded-none shadow-sm shrink-0">NEW</Badge>
-                                                        )}
+                                                    <div className="flex items-center gap-2 leading-none mb-0.5">
+                                                        <h3 className={cn("font-black text-sm uppercase tracking-tight truncate", isCompleted ? "text-green-800" : "text-slate-900")}>{m.intakenummer}</h3>
+                                                        {m.status === 'Nieuw' && <Badge className="text-[8px] font-black uppercase bg-red-600 text-white h-4 px-1 rounded-none shadow-sm shrink-0">NEW</Badge>}
                                                     </div>
-                                                    <p className={cn("text-sm font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-600")}>
-                                                        {m.straatnaam} {m.huisnummer}, {m.plaats}
-                                                    </p>
+                                                    <p className={cn("text-[11px] font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-500")}>{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
                                                 </div>
-                                                <div className="flex gap-2 shrink-0 items-center">
-                                                    {!isCompleted && (
-                                                        <Button 
-                                                            variant="outline" 
-                                                            size="icon" 
-                                                            className="h-12 w-12 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100 shadow-sm" 
-                                                            onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
-                                                        >
-                                                            <Navigation className="h-6 w-6" />
-                                                        </Button>
-                                                    )}
+                                                <div className="flex gap-1 shrink-0 items-center">
+                                                    {!isCompleted && <Button variant="outline" size="icon" className="h-9 w-9 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100" onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}><Navigation className="h-5 w-5" /></Button>}
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-slate-300 hover:text-slate-600" onClick={e => e.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-56 rounded-none border-none shadow-2xl p-2"><DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-1">Verplaatsen naar...</DropdownMenuLabel><DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, null); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Inbox className="mr-2 h-4 w-4" /> Inbox (Vrij)</DropdownMenuItem>{userFolders?.map(f => (<DropdownMenuItem key={f.id} onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, f.id); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Folder className="mr-2 h-4 w-4" /> {f.name}</DropdownMenuItem>))}</DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             </div>
                                         </Card>
@@ -1159,49 +984,28 @@ export default function StartNavigationPage() {
                                 })}
                             </div>
                             {totalPages > 1 && (
-                                <div className="flex items-center justify-center gap-4 py-8 mb-20">
-                                    <Button variant="outline" className="rounded-none font-black uppercase h-10 px-6 border-slate-200" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
-                                        <ChevronLeft className="h-4 w-4 mr-2" /> Vorige
-                                    </Button>
+                                <div className="flex items-center justify-center gap-4 py-4 bg-white border-t mt-auto">
+                                    <Button variant="outline" className="rounded-none font-black uppercase h-9 px-4 border-slate-200" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft className="h-4 w-4 mr-2" /> Vorige</Button>
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pagina {currentPage} / {totalPages}</span>
-                                    <Button variant="outline" className="rounded-none font-black uppercase h-10 px-6 border-slate-200" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
-                                        Volgende <ChevronRight className="h-4 w-4 ml-2" />
-                                    </Button>
+                                    <Button variant="outline" className="rounded-none font-black uppercase h-9 px-4 border-slate-200" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Volgende <ChevronRight className="h-4 w-4 ml-2" /></Button>
                                 </div>
                             )}
                         </div>
                     ) : (
                         <MapGL ref={mapRef} initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN}>
-                            {allObjects?.map(obj => (
-                                <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
-                                    <div className="h-4 w-4 rounded-none bg-primary border-2 border-white shadow-md" />
-                                </Marker>
-                            ))}
+                            {allObjects?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="h-4 w-4 rounded-none bg-primary border-2 border-white shadow-md" /></Marker>))}
                         </MapGL>
                     )}
                 </div>
             </div>
 
             {isRecalculating && (
-                <div className="fixed inset-0 z-[300] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
-                    <div className="bg-slate-900 p-8 rounded-none shadow-2xl flex flex-col items-center gap-4 text-white">
-                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                        <p className="text-xs font-black uppercase tracking-[0.3em]">HERBEREKENEN...</p>
-                    </div>
-                </div>
+                <div className="fixed inset-0 z-[300] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300"><div className="bg-slate-900 p-8 rounded-none shadow-2xl flex flex-col items-center gap-4 text-white"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-xs font-black uppercase tracking-[0.3em]">HERBEREKENEN...</p></div></div>
             )}
         </div>
 
         {activeWerkbonId && (
-            <IntegratedWerkbonOverlay 
-                meldingId={activeWerkbonId} 
-                onClose={() => setActiveWerkbonId(null)} 
-                onCompleted={(id) => { 
-                    setCompletedObjects(prev => [...prev, id]); 
-                    setActiveWerkbonId(null);
-                    handleRecalculateRoute(); 
-                }}
-            />
+            <IntegratedWerkbonOverlay meldingId={activeWerkbonId} onClose={() => setActiveWerkbonId(null)} onCompleted={(id) => { setCompletedObjects(prev => [...prev, id]); setActiveWerkbonId(null); handleRecalculateRoute(); }} />
         )}
     </div>
   );
