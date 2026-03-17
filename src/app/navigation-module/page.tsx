@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -181,7 +180,7 @@ function IntegratedWerkbonOverlay({
     const { profile } = useProfile();
     const { toast } = useToast();
 
-    const [subView, setSubView] = useState<'main' | 'werkzaamheden' | 'map' | 'docs' | 'photos' | 'materials'>('main');
+    const [subView, setSubView] = useState<'main' | 'werkzaamheden' | 'docs' | 'photos' | 'materials'>('main');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [afhandelingBijzonderheden, setAfhandelingBijzonderheden] = useState('');
     const [isListening, setIsListening] = useState(false);
@@ -286,10 +285,6 @@ function IntegratedWerkbonOverlay({
                             <MapPin className="h-4 w-4 text-slate-900 shrink-0 mt-0.5" />
                             <span>{melding.straatnaam} {melding.huisnummer}, {melding.postcode} {melding.plaats}</span>
                         </div>
-                        <div className="flex items-start gap-2.5 text-[11px] font-bold text-slate-700">
-                            <Tag className="h-4 w-4 text-slate-900 shrink-0 mt-0.5" />
-                            <span className="uppercase tracking-tight">{melding.hoofdcategorie}</span>
-                        </div>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1">
                             <div className="flex items-center gap-2 text-[11px] font-bold text-slate-700">
                                 <Calendar className="h-4 w-4 text-slate-900" />
@@ -387,7 +382,7 @@ function IntegratedWerkbonOverlay({
                     )}
                     {subView === 'photos' && (
                         <>
-                            {renderSubViewHeaderHeader("FOTO'S")}
+                            {renderSubViewHeader("FOTO'S")}
                             <div className="flex-1 p-4 space-y-8 overflow-y-auto">
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Melding Foto's</Label>
@@ -498,13 +493,14 @@ export default function StartNavigationPage() {
   const { user } = useUser();
   const router = useRouter();
   const searchParamsSource = useSearchParams();
+  const type = searchParamsSource.get('type');
+  const isMeldingenType = type === 'meldingen';
+  
   const { profile } = useProfile();
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
   const { selectedProjectId } = useProject();
   
-  const type = searchParamsSource.get('type'); 
-  const isMeldingenType = type === 'meldingen';
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
   
@@ -974,10 +970,11 @@ export default function StartNavigationPage() {
             </header>
         )}
 
-        <div className="flex-1 flex flex-col md:flex-row min-h-0 bg-slate-50 relative overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative overflow-hidden">
+            {/* Top Control Section (30% width container on desktop) */}
             {isMeldingenType && (
-                <div className="w-full md:w-[30%] flex flex-col min-h-0 md:h-full bg-white border-r shrink-0">
-                    <div className="p-3 border-b space-y-3">
+                <div className="w-full bg-white border-b p-4 shrink-0">
+                    <div className="md:max-w-[30%] space-y-3">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input 
@@ -1105,152 +1102,73 @@ export default function StartNavigationPage() {
                             )}
                         </div>
                     </div>
-                    <ScrollArea className="flex-1">
-                        <div className="py-2">
-                            {paginatedMissions.length > 0 ? (
-                                <div className="divide-y divide-slate-100">
-                                    {paginatedMissions.map((m, index) => {
-                                        const isCompleted = m.status === 'Afgerond';
-                                        const missionNumber = (currentPage - 1) * itemsPerPage + index + 1;
-                                        return (
-                                            <div key={m.id} 
-                                                onClick={() => setActiveWerkbonId(m.id)}
-                                                className={cn(
-                                                "p-3 flex items-center gap-3 transition-all cursor-pointer group hover:bg-slate-50",
-                                                isCompleted ? "bg-green-50/50 opacity-60" : "bg-white"
-                                            )}>
-                                                <div className="text-[10px] font-black text-slate-300 shrink-0 w-6 text-center">
-                                                    {missionNumber}
-                                                </div>
-                                                <div className="h-10 w-10 flex items-center justify-center shrink-0">
-                                                    {renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between mb-0.5 gap-1 leading-none">
-                                                        <h3 className={cn(
-                                                            "font-black text-sm uppercase tracking-tight truncate",
-                                                            isCompleted ? "text-green-800" : "text-slate-900"
-                                                        )}>{m.intakenummer}</h3>
-                                                        {m.status === 'Nieuw' && (
-                                                            <Badge className="text-[10px] font-black uppercase bg-red-600 text-white h-5 px-2 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
-                                                        )}
-                                                    </div>
-                                                    <p className={cn("text-xs font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-600")}>
-                                                        {m.straatnaam} {m.huisnummer}, {m.plaats}
-                                                    </p>
-                                                </div>
-                                                <div className="flex gap-1.5 shrink-0 items-center">
-                                                    {!isCompleted && (
-                                                        <Button 
-                                                            variant="outline" 
-                                                            size="icon" 
-                                                            className="h-10 w-10 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100 shadow-sm" 
-                                                            onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
-                                                        >
-                                                            <Navigation className="h-5 w-5" />
-                                                        </Button>
-                                                    )}
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-10 w-8 rounded-none border-none" onClick={e => e.stopPropagation()}>
-                                                                <MoreVertical className="h-5 w-5 text-slate-400" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-64 rounded-none shadow-2xl p-2 border-none">
-                                                            <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2">VERPLAATSEN NAAR...</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, null); }} className="font-black rounded-none h-12 cursor-pointer text-sm">
-                                                                <Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (VRIJ)
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator className="bg-slate-100 my-2" />
-                                                            {userFolders?.map(folder => (
-                                                                <DropdownMenuItem key={folder.id} onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, folder.id); }} className="font-black rounded-none h-12 cursor-pointer text-sm">
-                                                                    <Folder className="h-5 w-5 mr-3 text-primary" /> {folder.name.toUpperCase()}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="py-24 text-center opacity-20">
-                                    <Archive className="h-12 w-12 mx-auto mb-4" />
-                                    <p className="font-black uppercase tracking-[0.2em] text-[10px]">Geen opdrachten</p>
-                                </div>
-                            )}
-                        </div>
-                    </ScrollArea>
                 </div>
             )}
 
             <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex-1 relative">
+                <div className="flex-1 relative overflow-y-auto">
                     {isMeldingenType ? (
-                        <div className="absolute inset-0 flex flex-col">
-                            <ScrollArea className="flex-1">
-                                <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 pb-24">
-                                    {paginatedMissions.map((m, index) => {
-                                        const isCompleted = m.status === 'Afgerond';
-                                        const missionNumber = (currentPage - 1) * itemsPerPage + index + 1;
-                                        return (
-                                            <Card key={m.id} 
-                                                onClick={() => setActiveWerkbonId(m.id)}
-                                                className={cn(
-                                                "rounded-none border-none shadow-sm overflow-hidden active:scale-[0.99] transition-all cursor-pointer group h-20",
-                                                isCompleted ? "bg-green-50 opacity-80" : "bg-white"
-                                            )}>
-                                                <div className="flex items-center gap-4 px-4 h-full min-w-0">
-                                                    <div className="text-sm font-black text-slate-300 shrink-0 w-6 text-center">
-                                                        {missionNumber}
-                                                    </div>
-                                                    <div className="h-12 w-12 flex items-center justify-center shrink-0">
-                                                        {renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between mb-1 gap-2 leading-none">
-                                                            <h3 className={cn(
-                                                                "font-black text-base uppercase tracking-tight truncate",
-                                                                isCompleted ? "text-green-800" : "text-slate-900"
-                                                            )}>{m.intakenummer}</h3>
-                                                            {m.status === 'Nieuw' && (
-                                                                <Badge className="text-[10px] font-black uppercase bg-red-600 text-white h-5 px-2 rounded-none shadow-sm shrink-0">NEW</Badge>
-                                                            )}
-                                                        </div>
-                                                        <p className={cn("text-sm font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-600")}>
-                                                            {m.straatnaam} {m.huisnummer}, {m.plaats}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex gap-2 shrink-0 items-center">
-                                                        {!isCompleted && (
-                                                            <Button 
-                                                                variant="outline" 
-                                                                size="icon" 
-                                                                className="h-12 w-12 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100 shadow-sm" 
-                                                                onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
-                                                            >
-                                                                <Navigation className="h-6 w-6" />
-                                                            </Button>
+                        <div className="w-full flex flex-col">
+                            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 pb-24">
+                                {paginatedMissions.map((m, index) => {
+                                    const isCompleted = m.status === 'Afgerond';
+                                    const missionNumber = (currentPage - 1) * itemsPerPage + index + 1;
+                                    return (
+                                        <Card key={m.id} 
+                                            onClick={() => setActiveWerkbonId(m.id)}
+                                            className={cn(
+                                            "rounded-none border-none shadow-sm overflow-hidden active:scale-[0.99] transition-all cursor-pointer group h-20",
+                                            isCompleted ? "bg-green-50 opacity-80" : "bg-white"
+                                        )}>
+                                            <div className="flex items-center gap-4 px-4 h-full min-w-0">
+                                                <div className="text-sm font-black text-slate-300 shrink-0 w-6 text-center">
+                                                    {missionNumber}
+                                                </div>
+                                                <div className="h-12 w-12 flex items-center justify-center shrink-0">
+                                                    {renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between mb-1 gap-2 leading-none">
+                                                        <h3 className={cn(
+                                                            "font-black text-base uppercase tracking-tight truncate",
+                                                            isCompleted ? "text-green-800" : "text-slate-900"
+                                                        )}>{m.intakenummer}</h3>
+                                                        {m.status === 'Nieuw' && (
+                                                            <Badge className="text-[10px] font-black uppercase bg-red-600 text-white h-5 px-2 rounded-none shadow-sm shrink-0">NEW</Badge>
                                                         )}
                                                     </div>
+                                                    <p className={cn("text-sm font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-600")}>
+                                                        {m.straatnaam} {m.huisnummer}, {m.plaats}
+                                                    </p>
                                                 </div>
-                                            </Card>
-                                        );
-                                    })}
+                                                <div className="flex gap-2 shrink-0 items-center">
+                                                    {!isCompleted && (
+                                                        <Button 
+                                                            variant="outline" 
+                                                            size="icon" 
+                                                            className="h-12 w-12 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100 shadow-sm" 
+                                                            onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
+                                                        >
+                                                            <Navigation className="h-6 w-6" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-4 py-8 mb-20">
+                                    <Button variant="outline" className="rounded-none font-black uppercase h-10 px-6 border-slate-200" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                                        <ChevronLeft className="h-4 w-4 mr-2" /> Vorige
+                                    </Button>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pagina {currentPage} / {totalPages}</span>
+                                    <Button variant="outline" className="rounded-none font-black uppercase h-10 px-6 border-slate-200" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                                        Volgende <ChevronRight className="h-4 w-4 ml-2" />
+                                    </Button>
                                 </div>
-                                {totalPages > 1 && (
-                                    <div className="flex items-center justify-center gap-4 py-8 mb-20">
-                                        <Button variant="outline" className="rounded-none font-black uppercase h-10 px-6 border-slate-200" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
-                                            <ChevronLeft className="h-4 w-4 mr-2" /> Vorige
-                                        </Button>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pagina {currentPage} / {totalPages}</span>
-                                        <Button variant="outline" className="rounded-none font-black uppercase h-10 px-6 border-slate-200" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
-                                            Volgende <ChevronRight className="h-4 w-4 ml-2" />
-                                        </Button>
-                                    </div>
-                                )}
-                            </ScrollArea>
+                            )}
                         </div>
                     ) : (
                         <MapGL ref={mapRef} initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN}>
