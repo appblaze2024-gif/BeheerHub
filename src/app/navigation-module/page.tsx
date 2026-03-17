@@ -492,8 +492,8 @@ export default function StartNavigationPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const type = searchParams.get('type');
+  const rawSearchParams = useSearchParams();
+  const type = rawSearchParams.get('type');
   const isMeldingenType = type === 'meldingen';
   
   const { profile } = useProfile();
