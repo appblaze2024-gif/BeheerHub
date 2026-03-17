@@ -31,15 +31,15 @@ service cloud.firestore {
 
     // --- RULES ---
 
-    // Objecten (GIS) - Bovenaan voor prioriteit en openbare leesbaarheid voor personeel
-    match /objects/{objectId} {
-      allow read, list: if isSignedIn();
+    // Route assignments
+    match /route_assignments/{assignmentId} {
+      allow read, get, list: if isSignedIn();
       allow write: if isPrivileged();
     }
 
-    // Route assignments
-    match /route_assignments/{assignmentId} {
-      allow read, list: if isSignedIn();
+    // Objecten (GIS)
+    match /objects/{objectId} {
+      allow read, get, list: if isSignedIn();
       allow write: if isPrivileged();
     }
 
@@ -48,32 +48,28 @@ service cloud.firestore {
       allow read, list: if isSignedIn();
       allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       
-      // Gebruikers mogen hun eigen profiel bijwerken (behalve rol/permissies)
       allow update: if (isSignedIn() && request.auth.uid == userId && 
                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])) 
                     || isAdmin();
       allow delete: if isAdmin();
 
-      // Mappenbeheer per gebruiker (Subcollectie)
       match /folders/{folderId} {
         allow read, list, get, write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
 
-      // Berichten tussen gebruikers
       match /messages/{messageId} {
         allow read, list: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == resource.data.fromUserId);
         allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
         allow update, delete: if isSignedIn() && request.auth.uid == userId;
       }
 
-      // Routes per gebruiker
       match /routes/{routeId} {
         allow read, list: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
         allow write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
     }
 
-    // Projecten en bijbehorende data
+    // Projecten
     match /projects/{projectId} {
       allow read, list: if isSignedIn();
       allow write: if isPrivileged();

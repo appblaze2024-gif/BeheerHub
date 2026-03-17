@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -979,7 +980,12 @@ export default function StartNavigationPage() {
                     <div className="p-3 border-b bg-white shrink-0 space-y-3 lg:w-[30%] rounded-none">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input placeholder="ZOEKEN OP NUMMER OF ADRES..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                            <Input 
+                                placeholder="ZOEKEN OP NUMMER OF ADRES..." 
+                                className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" 
+                                value={searchQuery} 
+                                onChange={e => setSearchQuery(e.target.value)} 
+                            />
                         </div>
                         
                         <div className="flex flex-col gap-2">
@@ -1101,7 +1107,7 @@ export default function StartNavigationPage() {
                     </div>
                     
                     <ScrollArea className="flex-1">
-                        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 pb-4 md:gap-4 md:p-4">
+                        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 p-2 pb-4 md:gap-4 md:p-4">
                             {paginatedMissions.map((m, index) => {
                                 const isCompleted = m.status === 'Afgerond';
                                 const missionNumber = (currentPage - 1) * itemsPerPage + index + 1;
