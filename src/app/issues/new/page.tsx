@@ -258,11 +258,12 @@ function SmartPasteDialog({ onParsed, instructions, trigger }: { onParsed: (data
     );
 }
 
-function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIcons }: { 
+function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIcons, allOptionsData }: { 
   open: boolean, 
   onOpenChange: (open: boolean) => void, 
   currentOptions: string[],
-  categoryIcons: Record<string, string>
+  categoryIcons: Record<string, string>,
+  allOptionsData?: any
 }) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
@@ -292,6 +293,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
 
   React.useEffect(() => {
     if (editTarget) {
+        setNewName(editTarget);
         const currentIcon = categoryIcons[editTarget] || 'AlertCircle';
         if (isCustomHtml(currentIcon)) {
             setActiveTab('html');
@@ -309,6 +311,8 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             setSelectedIconName(currentIcon);
             setSelectedColor('#007AFF');
         }
+    } else {
+        setNewName('');
     }
   }, [editTarget, categoryIcons]);
 
@@ -332,8 +336,8 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
   };
 
   const handleSave = async () => {
-    const target = editTarget || newName.trim();
-    if (!target || !firestore) return;
+    const targetName = newName.trim();
+    if (!targetName || !firestore) return;
     setIsSaving(true);
     try {
       let finalIcon = '';
@@ -345,15 +349,51 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
           finalIcon = `lucide:${selectedIconName}:${selectedColor}`;
       }
 
-      const updatedOptions = editTarget ? currentOptions : Array.from(new Set([...currentOptions, target]));
-      const updatedIcons = { ...categoryIcons, [target]: finalIcon };
-      
+      let updatedOptions = [...currentOptions];
+      let updatedIcons = { ...categoryIcons };
+      let updatedSubtypes = { ...(allOptionsData?.subcategorieen || {}) };
+      let updatedSubtypeIcons = { ...(allOptionsData?.subtypeIcons || {}) };
+
+      if (editTarget && targetName !== editTarget) {
+        // Rename logic
+        updatedOptions = updatedOptions.map(o => o === editTarget ? targetName : o);
+        
+        // Move icon
+        delete updatedIcons[editTarget];
+        updatedIcons[targetName] = finalIcon;
+
+        // Move subcategories
+        if (updatedSubtypes[editTarget]) {
+            updatedSubtypes[targetName] = updatedSubtypes[editTarget];
+            delete updatedSubtypes[editTarget];
+        }
+
+        // Move subtype icons
+        Object.keys(updatedSubtypeIcons).forEach(key => {
+            if (key.startsWith(`${editTarget}:`)) {
+                const parts = key.split(':');
+                const suffix = parts.slice(1).join(':');
+                updatedSubtypeIcons[`${targetName}:${suffix}`] = updatedSubtypeIcons[key];
+                delete updatedSubtypeIcons[key];
+            }
+        });
+      } else {
+        // New or just icon update
+        const finalTarget = editTarget || targetName;
+        if (!editTarget) {
+            updatedOptions = Array.from(new Set([...currentOptions, targetName]));
+        }
+        updatedIcons[finalTarget] = finalIcon;
+      }
+
       await setDocumentNonBlocking(doc(firestore, 'settings', 'issue_options'), {
         hoofdcategorieen: updatedOptions,
-        categoryIcons: updatedIcons
+        categoryIcons: updatedIcons,
+        subcategorieen: updatedSubtypes,
+        subtypeIcons: updatedSubtypeIcons
       }, { merge: true });
       
-      toast({ title: editTarget ? 'Icoon bijgewerkt' : 'Hoofdtype toegevoegd' });
+      toast({ title: editTarget ? 'Bijgewerkt' : 'Hoofdtype toegevoegd' });
       setNewName('');
       setHtmlIcon('');
       setEditTarget(null);
@@ -423,19 +463,24 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
       <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-none">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
           <DialogTitle className="font-black uppercase tracking-tight">
-            {editTarget ? `Icoon wijzigen: ${editTarget}` : 'Hoofdtypes Beheren'}
+            {editTarget ? `Bewerken: ${editTarget}` : 'Hoofdtypes Beheren'}
           </DialogTitle>
-          <DialogDescription className="text-slate-400 font-bold">Voeg types toe en koppel een eigen icoon, afbeelding of SVG.</DialogDescription>
+          <DialogDescription className="text-slate-400 font-bold">Voeg types toe of wijzig namen en iconen.</DialogDescription>
         </DialogHeader>
         
         <ScrollArea className="flex-1 bg-white">
           <div className="space-y-8 p-6 pb-20">
-            {!editTarget && (
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam nieuw hoofdtype</Label>
-                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Verlichting..." className="font-bold h-11 rounded-none" />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                {editTarget ? 'Naam wijzigen' : 'Naam nieuw hoofdtype'}
+              </Label>
+              <Input 
+                value={newName} 
+                onChange={e => setNewName(e.target.value)} 
+                placeholder="Bv. Verlichting..." 
+                className="font-bold h-11 rounded-none border-2 focus:ring-primary/20" 
+              />
+            </div>
 
             <div className="space-y-6 bg-slate-50 p-6 rounded-none border-2 border-slate-100 shadow-inner">
               <div className="flex items-center justify-between">
@@ -527,7 +572,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
                   </TabsContent>
               </Tabs>
 
-              <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-12 font-black uppercase shadow-xl shadow-primary/20 rounded-none text-xs">
+              <Button onClick={handleSave} disabled={isSaving || isUploading || !newName.trim()} className="w-full h-12 font-black uppercase shadow-xl shadow-primary/20 rounded-none text-xs">
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                 {editTarget ? 'Wijzigingen Opslaan' : 'Nieuw Type Toevoegen'}
               </Button>
@@ -537,7 +582,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
             <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huidige Types ({currentOptions.length})</Label>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Klik op een icoon om te bewerken</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Klik op een item om te bewerken</p>
                 </div>
                 <div className="grid gap-2">
                 {currentOptions.map(name => (
@@ -603,6 +648,7 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
 
   React.useEffect(() => {
     if (editTarget) {
+        setNewName(editTarget);
         const fullKey = `${parentCategory}:${editTarget}`;
         const currentIcon = subtypeIcons[fullKey] || 'AlertCircle';
         if (isCustomHtml(currentIcon)) {
@@ -621,6 +667,8 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
             setSelectedIconName(currentIcon);
             setSelectedColor('#007AFF');
         }
+    } else {
+        setNewName('');
     }
   }, [editTarget, parentCategory, subtypeIcons]);
 
@@ -644,8 +692,8 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
   };
 
   const handleSave = async () => {
-    const target = editTarget || newName.trim();
-    if (!target || !firestore || !parentCategory) return;
+    const targetName = newName.trim();
+    if (!targetName || !firestore || !parentCategory) return;
     setIsSaving(true);
     try {
       let finalIcon = '';
@@ -657,17 +705,33 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
           finalIcon = `lucide:${selectedIconName}:${selectedColor}`;
       }
 
-      const fullKey = `${parentCategory}:${target}`;
-      const updatedSubtypes = editTarget ? currentSubtypes : Array.from(new Set([...currentSubtypes, target]));
+      let updatedSubtypes = [...currentSubtypes];
+      let updatedIcons = { ...subtypeIcons };
+
+      if (editTarget && targetName !== editTarget) {
+        // Rename logic
+        updatedSubtypes = updatedSubtypes.map(o => o === editTarget ? targetName : o);
+        
+        // Move icon
+        delete updatedIcons[`${parentCategory}:${editTarget}`];
+        updatedIcons[`${parentCategory}:${targetName}`] = finalIcon;
+      } else {
+        // New or just icon update
+        const finalTarget = editTarget || targetName;
+        if (!editTarget) {
+            updatedSubtypes = Array.from(new Set([...currentSubtypes, targetName]));
+        }
+        updatedIcons[`${parentCategory}:${finalTarget}`] = finalIcon;
+      }
+
       const updatedSubtypeMap = { ...allSubtypesMap, [parentCategory]: updatedSubtypes };
-      const updatedIcons = { ...subtypeIcons, [fullKey]: finalIcon };
       
       await setDocumentNonBlocking(doc(firestore, 'settings', 'issue_options'), {
         subcategorieen: updatedSubtypeMap,
         subtypeIcons: updatedIcons
       }, { merge: true });
       
-      toast({ title: editTarget ? 'Subtype icoon bijgewerkt' : 'Subtype toegevoegd' });
+      toast({ title: editTarget ? 'Bijgewerkt' : 'Subtype toegevoegd' });
       setNewName('');
       setHtmlIcon('');
       setEditTarget(null);
@@ -739,19 +803,24 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
       <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-none">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
           <DialogTitle className="text-xl font-black uppercase tracking-tight">
-            {editTarget ? `Subtype icoon: ${editTarget}` : `Subtypes Beheren: ${parentCategory}`}
+            {editTarget ? `Bewerken: ${editTarget}` : `Subtypes: ${parentCategory}`}
           </DialogTitle>
-          <DialogDescription className="text-slate-400 font-bold">Wijs specifieke iconen toe aan subtypes.</DialogDescription>
+          <DialogDescription className="text-slate-400 font-bold">Wijzig namen en iconen voor subtypes.</DialogDescription>
         </DialogHeader>
         
         <ScrollArea className="flex-1 bg-white">
           <div className="space-y-8 p-6 pb-20">
-            {!editTarget && (
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam nieuw subtype</Label>
-                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Bv. Losse tegel..." className="font-bold h-11 rounded-none" />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+                {editTarget ? 'Naam wijzigen' : 'Naam nieuw subtype'}
+              </Label>
+              <Input 
+                value={newName} 
+                onChange={e => setNewName(e.target.value)} 
+                placeholder="Bv. Losse tegel..." 
+                className="font-bold h-11 rounded-none border-2 focus:ring-primary/20" 
+              />
+            </div>
 
             <div className="space-y-6 bg-slate-50 p-6 rounded-none border-2 border-slate-100 shadow-inner">
               <div className="flex items-center justify-between">
@@ -843,7 +912,7 @@ function ManageSubtypeDialog({ open, onOpenChange, parentCategory, currentSubtyp
                   </TabsContent>
               </Tabs>
 
-              <Button onClick={handleSave} disabled={isSaving || isUploading || (!editTarget && !newName.trim())} className="w-full h-12 font-black uppercase shadow-xl shadow-primary/20 rounded-none text-xs">
+              <Button onClick={handleSave} disabled={isSaving || isUploading || !newName.trim()} className="w-full h-12 font-black uppercase shadow-xl shadow-primary/20 rounded-none text-xs">
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                 {editTarget ? 'Wijzigingen Opslaan' : 'Nieuw Subtype Toevoegen'}
               </Button>
@@ -1847,6 +1916,7 @@ export default function NewIssuePage() {
           onOpenChange={setIsManageHoofdtypeOpen} 
           currentOptions={hoofdcategorieen}
           categoryIcons={categoryIcons}
+          allOptionsData={dbOptions}
         />
         <ManageSubtypeDialog 
           open={isManageSubtypeOpen} 
