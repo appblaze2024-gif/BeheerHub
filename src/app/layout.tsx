@@ -104,7 +104,7 @@ function Header() {
           </p>
           {profile?.role && (
             <Badge className={cn(
-              "mt-0.5 sm:mt-1 h-3.5 px-1.5 text-[7px] font-black uppercase border-none rounded-none",
+              "mt-0.5 sm:mt-1 h-3.5 px-1.5 text-[7px] font-black uppercase border-none rounded-full",
               profile.role === 'Super admin' ? "bg-red-500 text-white" : "bg-primary text-white"
             )}>
               {profile.role}
