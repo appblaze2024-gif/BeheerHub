@@ -1699,12 +1699,12 @@ export default function NewIssuePage() {
                           </FormRow>
                           {isReadOnly && existingMelding?.afhandeling_bijzonderheden && (
                             <FormRow label="Afhandeling (Medewerker)">
-                                <div className="p-3 bg-slate-900 text-white rounded-none border-2 border-slate-800 shadow-inner">
-                                    <p className="text-xs font-medium leading-relaxed italic">
+                                <div className="p-3 bg-slate-50 text-slate-900 rounded-none border-2 border-slate-200 shadow-inner">
+                                    <p className="text-xs font-bold leading-relaxed">
                                         {existingMelding.afhandeling_bijzonderheden}
                                     </p>
-                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
-                                        <UserIcon className="h-3 w-3 text-slate-400" />
+                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200">
+                                        <UserIcon className="h-3 w-3 text-primary" />
                                         <span className="text-[9px] font-black uppercase text-slate-400">
                                             Door: {existingMelding.afgehandeld_door || existingMelding.behandelaar || 'Onbekend'}
                                         </span>
@@ -1916,12 +1916,12 @@ export default function NewIssuePage() {
                           </FormRow>
                           {isReadOnly && existingMelding?.afhandeling_bijzonderheden && (
                             <FormRow label="Afhandeling (Medewerker)">
-                                <div className="p-3 bg-slate-900 text-white rounded-none border-2 border-slate-800 shadow-inner">
-                                    <p className="text-xs font-medium leading-relaxed italic">
+                                <div className="p-3 bg-slate-50 text-slate-900 rounded-none border-2 border-slate-200 shadow-inner">
+                                    <p className="text-xs font-bold leading-relaxed">
                                         {existingMelding.afhandeling_bijzonderheden}
                                     </p>
-                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
-                                        <UserIcon className="h-3 w-3 text-slate-400" />
+                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200">
+                                        <UserIcon className="h-3 w-3 text-primary" />
                                         <span className="text-[9px] font-black uppercase text-slate-400">
                                             Door: {existingMelding.afgehandeld_door || existingMelding.behandelaar || 'Onbekend'}
                                         </span>
