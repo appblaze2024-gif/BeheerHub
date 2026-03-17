@@ -496,8 +496,7 @@ export default function StartNavigationPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
-  const rawSearchParams = useSearchParams();
-  const searchParams = React.use(rawSearchParams as any) as any;
+  const searchParams = useSearchParams();
   const { profile } = useProfile();
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
@@ -771,7 +770,7 @@ export default function StartNavigationPage() {
         }));
     }
     return [];
-  }, [type, rawActiveMeldingen, isPrivileged, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, userLocation, sequenceMissions, managedUserId, users, user]);
+  }, [type, rawActiveMeldingen, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, userLocation, sequenceMissions, managedUserId, users, user]);
 
   const inboxCount = useMemo(() => 
     filteredMeldingen.filter(m => !missionsInAnyFolder.has(m.id)).length
