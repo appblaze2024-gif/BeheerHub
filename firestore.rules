@@ -63,6 +63,12 @@ service cloud.firestore {
         allow update, delete: if isSignedIn() && request.auth.uid == userId;
       }
 
+      match /messages/{messageId} {
+        allow read, list: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == resource.data.fromUserId);
+        allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
+        allow update, delete: if isSignedIn() && request.auth.uid == userId;
+      }
+
       match /routes/{routeId} {
         allow read, list: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
         allow write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
