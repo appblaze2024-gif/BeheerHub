@@ -530,9 +530,6 @@ export default function StartNavigationPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  // Stable numbering
-  const missionNumbersRef = useRef<Record<string, number>>({});
-
   const mapRef = useRef<MapRef>(null);
 
   useEffect(() => {
@@ -647,12 +644,10 @@ export default function StartNavigationPage() {
   const renderCategoryIcon = (category: string, subcategory?: string) => {
     let iconVal = null;
     
-    // Check subtype first if provided
     if (category && subcategory) {
         iconVal = subtypeIcons[`${category}:${subcategory}`];
     }
     
-    // Fallback to hoofdtype icon
     if (!iconVal) {
         iconVal = categoryIcons[category];
     }
@@ -789,22 +784,6 @@ export default function StartNavigationPage() {
 
   const getFolderCount = useCallback((folder: UserFolder) => {
     return (folder.taskIds || []).filter(id => filteredMeldingen.some(m => m.id === id)).length;
-  }, [filteredMeldingen]);
-
-  // Maintain stable numbering
-  useEffect(() => {
-    if (filteredMeldingen.length > 0) {
-        const currentMapping = { ...missionNumbersRef.current };
-        let max = Object.values(currentMapping).reduce((a, b) => Math.max(a, b), 0);
-        
-        filteredMeldingen.forEach(m => {
-            if (!currentMapping[m.id]) {
-                max++;
-                currentMapping[m.id] = max;
-            }
-        });
-        missionNumbersRef.current = currentMapping;
-    }
   }, [filteredMeldingen]);
 
   const displayedMissions = useMemo(() => {
@@ -1124,8 +1103,9 @@ export default function StartNavigationPage() {
                     
                     <ScrollArea className="flex-1">
                         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 pb-4 md:gap-4 md:p-4">
-                            {paginatedMissions.map((m) => {
+                            {paginatedMissions.map((m, index) => {
                                 const isCompleted = m.status === 'Afgerond';
+                                const missionNumber = (currentPage - 1) * itemsPerPage + index + 1;
                                 return (
                                     <Card key={m.id} 
                                         onClick={() => setActiveWerkbonId(m.id)}
@@ -1134,6 +1114,9 @@ export default function StartNavigationPage() {
                                         isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                     )}>
                                         <div className="flex items-center gap-3 px-3 h-full min-w-0">
+                                            <div className="text-[10px] font-black text-slate-300 shrink-0 w-4 text-center">
+                                                {missionNumber}
+                                            </div>
                                             <div className="h-10 w-10 flex items-center justify-center shrink-0 bg-transparent">
                                                 {renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}
                                             </div>
