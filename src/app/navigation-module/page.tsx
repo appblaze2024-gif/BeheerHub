@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -525,6 +526,10 @@ export default function StartNavigationPage() {
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
   // Stable numbering
   const missionNumbersRef = useRef<Record<string, number>>({});
 
@@ -620,6 +625,10 @@ export default function StartNavigationPage() {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedFolderId, managedUserId]);
 
   const missionsInAnyFolder = useMemo(() => {
     if (!userFolders) return new Set<string>();
@@ -814,6 +823,12 @@ export default function StartNavigationPage() {
     
     return base;
   }, [filteredMeldingen, selectedFolderId, missionsInAnyFolder, userFolders]);
+
+  const totalPages = Math.ceil(displayedMissions.length / itemsPerPage);
+  const paginatedMissions = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return displayedMissions.slice(start, start + itemsPerPage);
+  }, [displayedMissions, currentPage]);
 
   const openInGoogleMaps = useCallback((lat?: number, lng?: number) => {
     const originStr = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : "My+Location";
@@ -1108,23 +1123,23 @@ export default function StartNavigationPage() {
                     </div>
                     
                     <ScrollArea className="flex-1">
-                        <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-2 p-2 pb-24 md:gap-4 md:p-4">
-                            {displayedMissions.map((m) => {
+                        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 pb-4 md:gap-4 md:p-4">
+                            {paginatedMissions.map((m) => {
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
                                     <Card key={m.id} 
                                         onClick={() => setActiveWerkbonId(m.id)}
                                         className={cn(
-                                        "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group h-full",
+                                        "rounded-none border-none shadow-sm overflow-hidden active:scale-[0.99] transition-all cursor-pointer group h-16",
                                         isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                     )}>
-                                        <div className="flex items-center gap-2 p-2.5 min-w-0 h-full">
-                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 bg-transparent ml-1">
+                                        <div className="flex items-center gap-3 px-3 h-full min-w-0">
+                                            <div className="h-10 w-10 flex items-center justify-center shrink-0 bg-transparent">
                                                 {renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}
                                             </div>
 
-                                            <div className="flex-1 min-w-0 ml-1">
-                                                <div className="flex items-center justify-between mb-1 gap-1 leading-none">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-0.5 gap-1 leading-none">
                                                     <h3 className={cn(
                                                         "font-black text-sm uppercase tracking-tight truncate",
                                                         isCompleted ? "text-green-800" : "text-slate-900"
@@ -1133,19 +1148,16 @@ export default function StartNavigationPage() {
                                                         <Badge className="text-[10px] font-black uppercase bg-red-600 text-white h-5 px-2 rounded-none animate-pulse shrink-0 shadow-sm">NEW</Badge>
                                                     )}
                                                 </div>
-                                                <p className={cn("text-xs font-black truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-900")}>
-                                                    {m.straatnaam} {m.huisnummer}
-                                                </p>
-                                                <p className={cn("text-[10px] font-bold truncate leading-tight uppercase mt-0.5", isCompleted ? "text-green-600/40" : "text-slate-400")}>
-                                                    {m.plaats}
+                                                <p className={cn("text-xs font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-600")}>
+                                                    {m.straatnaam} {m.huisnummer}, {m.plaats}
                                                 </p>
                                             </div>
-                                            <div className="flex gap-1.5 shrink-0 items-center ml-2">
+                                            <div className="flex gap-1.5 shrink-0 items-center">
                                                 {!isCompleted && (
                                                     <Button 
                                                         variant="outline" 
                                                         size="icon" 
-                                                        className="h-10 w-10 rounded-none border border-black bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
+                                                        className="h-10 w-10 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100 transition-all active:scale-90 shadow-sm" 
                                                         onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}
                                                     >
                                                         <Navigation className="h-5 w-5" />
@@ -1183,6 +1195,40 @@ export default function StartNavigationPage() {
                                 </div>
                             )}
                         </div>
+
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-4 py-6 mb-20">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="rounded-none font-bold h-9 px-4"
+                                    disabled={currentPage === 1}
+                                    onClick={() => {
+                                        setCurrentPage(p => p - 1);
+                                        const scrollNode = document.querySelector('[data-radix-scroll-area-viewport]');
+                                        if (scrollNode) scrollNode.scrollTop = 0;
+                                    }}
+                                >
+                                    <ChevronLeft className="h-4 w-4 mr-1" /> Vorige
+                                </Button>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    Pagina {currentPage} van {totalPages}
+                                </span>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="rounded-none font-bold h-9 px-4"
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => {
+                                        setCurrentPage(p => p + 1);
+                                        const scrollNode = document.querySelector('[data-radix-scroll-area-viewport]');
+                                        if (scrollNode) scrollNode.scrollTop = 0;
+                                    }}
+                                >
+                                    Volgende <ChevronRight className="h-4 w-4 ml-1" />
+                                </Button>
+                            </div>
+                        )}
                     </ScrollArea>
                 </div>
             ) : (
