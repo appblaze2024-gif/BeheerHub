@@ -313,7 +313,7 @@ export default function ArchiveIssuesPage() {
     <div className="flex flex-col h-[calc(100vh-6.1rem)] overflow-hidden bg-background">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
         <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => router.back()} className="shrink-0 rounded-full h-9 w-9">
+            <Button variant="outline" size="icon" onClick={() => router.back()} className="shrink-0 rounded-none h-9 w-9">
                 <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">Meldingen Archief</h1>
@@ -323,7 +323,7 @@ export default function ArchiveIssuesPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                     placeholder="Zoek op ID of adres..."
-                    className="pl-9 h-9 border-slate-200"
+                    className="pl-9 h-9 border-slate-200 rounded-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -331,19 +331,19 @@ export default function ArchiveIssuesPage() {
             
             <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 font-bold rounded-xl border-slate-200 shadow-sm">
+                <Button variant="outline" size="sm" className="h-9 font-bold rounded-none border-slate-200 shadow-sm">
                     <Filter className="mr-2 h-4 w-4" />
                     Filter {Object.values(filters).filter(v => v !== '' && v !== 'alle' && v !== 'all').length > 0 && (
-                      <Badge className="ml-1 h-4 px-1 rounded-full bg-primary text-white text-[8px]">
+                      <Badge className="ml-1 h-4 px-1 rounded-none bg-primary text-white text-[8px]">
                         {Object.values(filters).filter(v => v !== '' && v !== 'alle' && v !== 'all').length}
                       </Badge>
                     )}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-xl rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
+              <DialogContent className="sm:max-w-xl rounded-none border-none shadow-2xl p-0 overflow-hidden">
                 <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
                   <div className="flex items-center gap-3">
-                    <div className="bg-primary p-2 rounded-xl">
+                    <div className="bg-primary p-2 rounded-none">
                       <ListFilter className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -359,34 +359,34 @@ export default function ArchiveIssuesPage() {
                     <div className="space-y-3">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Snelkeuze Periode</Label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('today')} className="h-9 font-bold text-[11px] rounded-xl border-slate-200">Vandaag</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('week')} className="h-9 font-bold text-[11px] rounded-xl border-slate-200">Deze Week</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('month')} className="h-9 font-bold text-[11px] rounded-xl border-slate-200">Deze Maand</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('year')} className="h-9 font-bold text-[11px] rounded-xl border-slate-200">Dit Jaar</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('today')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Vandaag</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('week')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Deze Week</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('month')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Deze Maand</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('year')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Dit Jaar</Button>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Vanaf Datum</Label>
-                        <Input type="date" value={filters.startDate} onChange={e => setFilters(prev => ({...prev, startDate: e.target.value}))} className="h-11 font-bold rounded-xl border-slate-200" />
+                        <Input type="date" value={filters.startDate} onChange={e => setFilters(prev => ({...prev, startDate: e.target.value}))} className="h-11 font-bold rounded-none border-slate-200" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Tot Datum</Label>
-                        <Input type="date" value={filters.endDate} onChange={e => setFilters(prev => ({...prev, endDate: e.target.value}))} className="h-11 font-bold rounded-xl border-slate-200" />
+                        <Input type="date" value={filters.endDate} onChange={e => setFilters(prev => ({...prev, endDate: e.target.value}))} className="h-11 font-bold rounded-none border-slate-200" />
                       </div>
                     </div>
 
-                    <Separator />
+                    <Separator className="bg-slate-100" />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Hoofdcategorie</Label>
                         <Select value={filters.hoofdcategorie} onValueChange={v => setFilters(prev => ({...prev, hoofdcategorie: v, subcategorie: 'all'}))}>
-                          <SelectTrigger className="h-11 font-bold rounded-xl border-slate-200">
+                          <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-none">
                             <SelectItem value="alle">-- Alle categorieën --</SelectItem>
                             {hoofdcategorieen.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                           </SelectContent>
@@ -395,10 +395,10 @@ export default function ArchiveIssuesPage() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Subcategorie</Label>
                         <Select value={filters.subcategorie} onValueChange={v => setFilters(prev => ({...prev, subcategorie: v}))} disabled={filters.hoofdcategorie === 'alle'}>
-                          <SelectTrigger className="h-11 font-bold rounded-xl border-slate-200">
+                          <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-none">
                             <SelectItem value="all">-- Alle subcategorieën --</SelectItem>
                             {dbOptions?.subcategorieen?.[filters.hoofdcategorie]?.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                           </SelectContent>
@@ -410,10 +410,10 @@ export default function ArchiveIssuesPage() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Behandelaar</Label>
                         <Select value={filters.behandelaar} onValueChange={v => setFilters(prev => ({...prev, behandelaar: v}))}>
-                          <SelectTrigger className="h-11 font-bold rounded-xl border-slate-200">
+                          <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-none">
                             <SelectItem value="alle">-- Alle behandelaars --</SelectItem>
                             {users?.map(u => (
                               <SelectItem key={u.id} value={u.displayName || u.email!}>
@@ -426,10 +426,10 @@ export default function ArchiveIssuesPage() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Status</Label>
                         <Select value={filters.status} onValueChange={v => setFilters(prev => ({...prev, status: v}))}>
-                          <SelectTrigger className="h-11 font-bold rounded-xl border-slate-200">
+                          <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-none">
                             <SelectItem value="alle">-- Alle archief statussen --</SelectItem>
                             {closedStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                           </SelectContent>
@@ -440,11 +440,11 @@ export default function ArchiveIssuesPage() {
                 </ScrollArea>
 
                 <DialogFooter className="p-6 border-t bg-slate-50 shrink-0 flex flex-col sm:flex-row gap-3">
-                  <Button variant="ghost" onClick={() => setFilters(INITIAL_FILTERS)} className="font-bold flex-1 rounded-xl h-12">Filters Wissen</Button>
-                  <Button variant="outline" onClick={handleExport} className="font-black uppercase tracking-tight flex-1 rounded-xl h-12 shadow-sm gap-2">
+                  <Button variant="ghost" onClick={() => setFilters(INITIAL_FILTERS)} className="font-bold flex-1 rounded-none h-12">Filters Wissen</Button>
+                  <Button variant="outline" onClick={handleExport} className="font-black uppercase tracking-tight flex-1 rounded-none h-12 shadow-sm gap-2">
                     <FileSpreadsheet className="h-4 w-4" /> Export Excel
                   </Button>
-                  <Button onClick={() => setIsFilterOpen(false)} className="font-black uppercase tracking-tight flex-1 rounded-xl h-12 shadow-xl shadow-primary/20 gap-2">
+                  <Button onClick={() => setIsFilterOpen(false)} className="font-black uppercase tracking-tight flex-1 rounded-none h-12 shadow-xl shadow-primary/20 gap-2">
                     <Check className="h-4 w-4" /> Toepassen
                   </Button>
                 </DialogFooter>
@@ -457,7 +457,7 @@ export default function ArchiveIssuesPage() {
         {isLoadingMeldingen ? (
             <LoadingScreen message="Archief laden..." />
         ) : filteredMeldingen.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+            <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-none border-2 border-dashed border-slate-200">
                 <Info className="h-12 w-12 text-slate-300 mb-4" />
                 <p className="font-black uppercase tracking-tight text-slate-900">Geen meldingen gevonden</p>
                 <p className="text-sm text-slate-500 mt-1">Pas de zoekterm of filters aan.</p>
@@ -472,24 +472,24 @@ export default function ArchiveIssuesPage() {
                         <Card 
                             key={melding.id} 
                             onClick={() => router.push(`/issues/new?id=${melding.id}`)}
-                            className="overflow-hidden border-none shadow-lg active:scale-[0.98] transition-transform"
+                            className="overflow-hidden border-none shadow-lg active:scale-[0.98] transition-transform rounded-none"
                         >
                             <CardContent className="p-0">
                                 <div className="p-4 bg-slate-50 border-b flex justify-between items-start">
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs font-black text-slate-300">{index + 1}</span>
                                         <div className="space-y-0.5">
-                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Intakenummer</p>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Intakenummer</p>
                                             <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{melding.intakenummer}</p>
                                         </div>
                                     </div>
-                                    <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-tighter h-5 px-2 bg-slate-200 text-slate-600 border-none">
+                                    <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-tighter h-5 px-2 bg-slate-200 text-slate-600 border-none rounded-none">
                                         {melding.status}
                                     </Badge>
                                 </div>
                                 <div className="p-4 space-y-3">
                                     <div className="flex items-start gap-3">
-                                        <div className="bg-primary/10 p-2 rounded-lg shrink-0">
+                                        <div className="bg-primary/10 p-2 rounded-none shrink-0">
                                             <MapPin className="h-4 w-4 text-primary" />
                                         </div>
                                         <div className="min-w-0">
@@ -503,7 +503,7 @@ export default function ArchiveIssuesPage() {
                                     </div>
                                     
                                     <div className="flex items-center gap-3">
-                                        <div className="bg-blue-50 p-2 rounded-lg shrink-0">
+                                        <div className="bg-blue-50 p-2 rounded-none shrink-0">
                                             <Tag className="h-4 w-4 text-blue-600" />
                                         </div>
                                         <div className="min-w-0">
@@ -527,7 +527,7 @@ export default function ArchiveIssuesPage() {
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border-2 border-slate-100 bg-slate-50">
+                                        <div className="flex items-center gap-2 px-2.5 py-1 rounded-none border-2 border-slate-100 bg-slate-50">
                                             <User className="h-3 w-3 text-primary" />
                                             <span className="text-[10px] font-black text-primary uppercase truncate max-w-[100px]">
                                                 {formatDisplayName(melding.afgehandeld_door || melding.behandelaar)}
@@ -550,7 +550,7 @@ export default function ArchiveIssuesPage() {
                     ))}
                 </div>
 
-                <div className="hidden md:block border rounded-xl overflow-hidden shadow-sm bg-white">
+                <div className="hidden md:block border rounded-none overflow-hidden shadow-sm bg-white">
                     <div className="overflow-x-auto">
                         <Table className="border-collapse w-full">
                             <TableHeader className="sticky top-0 bg-slate-100 z-10">
