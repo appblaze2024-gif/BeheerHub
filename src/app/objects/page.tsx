@@ -275,11 +275,11 @@ export default function ObjectsPage() {
     <div className="flex flex-col h-full bg-slate-50">
       <header className="h-16 border-b bg-white flex items-center justify-between px-4 sm:px-6 gap-2 shrink-0 shadow-sm overflow-x-auto no-scrollbar">
         <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-lg px-2 sm:px-3", viewMode === 'list' && "bg-white shadow-sm")} onClick={() => setViewMode('list')}>
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-none shrink-0">
+            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-none px-2 sm:px-3", viewMode === 'list' && "bg-white shadow-sm")} onClick={() => setViewMode('list')}>
               <List className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Lijst</span>
             </Button>
-            <Button variant={viewMode === 'map' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-lg px-2 sm:px-3", viewMode === 'map' && "bg-white shadow-sm")} onClick={() => setViewMode('map')}>
+            <Button variant={viewMode === 'map' ? 'secondary' : 'ghost'} size="sm" className={cn("h-8 font-bold rounded-none px-2 sm:px-3", viewMode === 'map' && "bg-white shadow-sm")} onClick={() => setViewMode('map')}>
               <MapIcon className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Kaart</span>
             </Button>
           </div>
@@ -288,13 +288,13 @@ export default function ObjectsPage() {
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
           <div className="relative w-full max-w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <Input placeholder="Zoek op ID of adres..." className="pl-9 h-9 text-xs font-black uppercase rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            <Input placeholder="Zoek op ID of adres..." className="pl-9 h-9 text-xs font-black uppercase rounded-none border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
           
           <div className="flex items-center gap-2 shrink-0">
             {canImport && (
               <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
-                <Button variant="default" size="sm" className="h-9 font-black uppercase tracking-tight bg-primary text-white shadow-lg shadow-primary/20 px-3 sm:px-4 rounded-xl shrink-0">
+                <Button variant="default" size="sm" className="h-9 font-black uppercase tracking-tight bg-primary text-white shadow-lg shadow-primary/20 px-3 sm:px-4 rounded-none shrink-0">
                   <Upload className="h-4 w-4 sm:mr-2" /> 
                   <span className="hidden sm:inline">IMPORT</span>
                   <span className="sm:hidden text-[10px]">IMP</span>
@@ -304,7 +304,7 @@ export default function ObjectsPage() {
             
             {canExport && (
               <ObjectExportDialog objects={objects} projects={projects}>
-                <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200 shrink-0 px-3">
+                <Button variant="outline" size="sm" className="h-9 font-bold rounded-none border-slate-200 shrink-0 px-3">
                   <Download className="h-4 w-4 sm:mr-2" /> 
                   <span className="hidden sm:inline">Export</span>
                 </Button>
@@ -323,7 +323,7 @@ export default function ObjectsPage() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant={isProximityFilterActive ? "default" : "outline"} size="icon" className={cn("h-9 w-9 rounded-xl transition-all", isProximityFilterActive ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "text-slate-400 border-slate-200")} onClick={handleToggleProximityFilter} disabled={isLoadingObjects}>
+                      <Button variant={isProximityFilterActive ? "default" : "outline"} size="icon" className={cn("h-9 w-9 rounded-none transition-all", isProximityFilterActive ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "text-slate-400 border-slate-200")} onClick={handleToggleProximityFilter} disabled={isLoadingObjects}>
                           {isFindingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
                       </Button>
                     </TooltipTrigger>
@@ -336,21 +336,21 @@ export default function ObjectsPage() {
                     <TooltipProvider>
                       <Tooltip>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-red-400 border-slate-200 hover:text-red-600 hover:bg-red-50">
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-none text-red-400 border-slate-200 hover:text-red-600 hover:bg-red-50">
                             {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                           </Button>
                         </AlertDialogTrigger>
                         <TooltipContent>Alle getoonde objecten wissen</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="rounded-none">
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                        <AlertDialogDescription>Dit zal <strong>{filteredObjectsList.length} objecten</strong> definitief verwijderen.</AlertDialogDescription>
+                        <AlertDialogTitle className="font-black uppercase">Weet u het zeker?</AlertDialogTitle>
+                        <AlertDialogDescription className="font-bold">Dit zal <strong>{filteredObjectsList.length} objecten</strong> definitief verwijderen.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteFilteredObjects} className="bg-red-600 hover:bg-red-700">Ja, alles wissen</AlertDialogAction>
+                        <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteFilteredObjects} className="bg-red-600 hover:bg-red-700 rounded-none font-black uppercase">Ja, alles wissen</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -359,7 +359,7 @@ export default function ObjectsPage() {
           <ScrollArea className="flex-1">
             {isLoadingObjects ? (
               <div className="p-4 space-y-4">
-                {[1,2,3,4,5].map(i => <Skeleton className="h-16 w-full rounded-xl" key={i} />)}
+                {[1,2,3,4,5].map(i => <Skeleton className="h-16 w-full rounded-none" key={i} />)}
               </div>
             ) : filteredObjectsList.length > 0 ? (
               <div className="p-2 space-y-1">
@@ -368,12 +368,12 @@ export default function ObjectsPage() {
                     key={obj.id}
                     onClick={() => setSelectedObject(obj)}
                     className={cn(
-                      "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group",
-                      selectedObject?.id === obj.id ? "bg-primary text-white shadow-md" : "hover:bg-slate-50"
+                      "w-full flex items-start gap-3 p-3 rounded-none transition-all text-left group border-2",
+                      selectedObject?.id === obj.id ? "bg-primary border-primary text-white shadow-md" : "hover:bg-slate-50 border-transparent"
                     )}
                   >
                     <div className={cn(
-                      "h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border",
+                      "h-10 w-10 rounded-none flex items-center justify-center shrink-0 border",
                       selectedObject?.id === obj.id ? "bg-white/20 border-white/20" : "bg-slate-100 border-slate-200"
                     )}>
                       <MapPin className={cn("h-5 w-5", selectedObject?.id === obj.id ? "text-white" : "text-slate-400")} />
@@ -405,11 +405,11 @@ export default function ObjectsPage() {
                   <div className="space-y-1">
                     <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900 leading-none">{selectedObject.idNummer || selectedObject.id}</h2>
                     <div className="flex gap-2 pt-2">
-                      <Badge variant="outline" className="h-6 font-black uppercase text-[9px] tracking-widest border-slate-200 bg-slate-50">{selectedObject.locatieType}</Badge>
-                      <Badge className={cn("h-6 font-black uppercase text-[9px] tracking-widest border-none shadow-sm", selectedObject.isActief ? "bg-green-500" : "bg-slate-400")}>{selectedObject.isActief ? 'Operationeel' : 'Inactief'}</Badge>
+                      <Badge variant="outline" className="h-6 font-black uppercase text-[9px] tracking-widest border-slate-200 bg-slate-50 rounded-none">{selectedObject.locatieType}</Badge>
+                      <Badge className={cn("h-6 font-black uppercase text-[9px] tracking-widest border-none shadow-sm rounded-none", selectedObject.isActief ? "bg-green-500" : "bg-slate-400")}>{selectedObject.isActief ? 'Operationeel' : 'Inactief'}</Badge>
                     </div>
                   </div>
-                  {isTablet && <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setSelectedObject(null)}><ArrowLeft className="h-5 w-5" /></Button>}
+                  {isTablet && <Button variant="outline" size="icon" className="h-10 w-10 rounded-none border-slate-200" onClick={() => setSelectedObject(null)}><ArrowLeft className="h-5 w-5" /></Button>}
                 </div>
 
                 <div className="space-y-6">
@@ -420,27 +420,27 @@ export default function ObjectsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Straatnaam</Label>
-                            <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
+                            <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-bold rounded-none border-slate-200 bg-slate-50/50" disabled={!canEdit} />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Huisnummer</Label>
-                            <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
+                            <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-bold rounded-none border-slate-200 bg-slate-50/50" disabled={!canEdit} />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Postcode</Label>
-                            <Input value={selectedObject.postcode || ''} onChange={e => handleUpdateField('postcode', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
+                            <Input value={selectedObject.postcode || ''} onChange={e => handleUpdateField('postcode', e.target.value)} className="h-11 font-bold rounded-none border-slate-200 bg-slate-50/50" disabled={!canEdit} />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Plaats</Label>
-                            <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200 bg-slate-50/50" disabled={!canEdit} />
+                            <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-bold rounded-none border-slate-200 bg-slate-50/50" disabled={!canEdit} />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Latitude (Y)</Label>
-                            <Input type="number" value={selectedObject.latitude || ''} onChange={e => handleUpdateCoords('latitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-xl border-slate-200" disabled={!canEdit} />
+                            <Input type="number" value={selectedObject.latitude || ''} onChange={e => handleUpdateCoords('latitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-none border-slate-200" disabled={!canEdit} />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Longitude (X)</Label>
-                            <Input type="number" value={selectedObject.longitude || ''} onChange={e => handleUpdateCoords('longitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-xl border-slate-200" disabled={!canEdit} />
+                            <Input type="number" value={selectedObject.longitude || ''} onChange={e => handleUpdateCoords('longitude', parseFloat(e.target.value))} className="h-11 font-mono text-xs rounded-none border-slate-200" disabled={!canEdit} />
                         </div>
                     </div>
                 </div>
@@ -450,38 +450,39 @@ export default function ObjectsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Hoofdtype</Label>
-                            <Input value={selectedObject.locatieType || ''} onChange={e => handleUpdateField('locatieType', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200" disabled={!canEdit} />
+                            <Input value={selectedObject.locatieType || ''} onChange={e => handleUpdateField('locatieType', e.target.value)} className="h-11 font-bold rounded-none border-slate-200" disabled={!canEdit} />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Subtype</Label>
-                            <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-bold rounded-xl border-slate-200" disabled={!canEdit} />
+                            <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-bold rounded-none border-slate-200" disabled={!canEdit} />
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Memo / Waarschuwing</Label>
-                  <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden voor uitvoering..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed bg-slate-50/30 shadow-inner" disabled={!canEdit} />
+                  <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden voor uitvoering..." className="min-h-[120px] rounded-none border-slate-200 font-medium resize-none leading-relaxed bg-slate-50/30 shadow-inner" disabled={!canEdit} />
                 </div>
               </div>
 
               <div className="w-full md:w-[400px] border-l bg-slate-50/30 flex flex-col p-6 gap-6 overflow-y-auto no-scrollbar">
-                <Card className="aspect-square w-full border-none shadow-2xl ring-4 ring-white rounded-[2rem] overflow-hidden">
+                <Card className="aspect-square w-full border-none shadow-2xl ring-4 ring-white rounded-none overflow-hidden">
                   <MapboxView latitude={selectedObject.latitude} longitude={selectedObject.longitude} interactive={false} />
                 </Card>
 
-                <Card className="rounded-[2.5rem] overflow-hidden shadow-xl border-none">
+                <Card className="rounded-none overflow-hidden shadow-xl border-none">
                   <ObjectImageUploader 
                     objectId={selectedObject.id}
                     imageUrl={selectedObject.imageUrl || null}
                     imageHint={`${selectedObject.idNummer || selectedObject.id}`}
+                    className="rounded-none"
                   />
                 </Card>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/30">
-              <div className="bg-white p-10 rounded-[3rem] shadow-2xl border-4 border-slate-50 mb-8 animate-in zoom-in-95 duration-700">
+              <div className="bg-white p-10 rounded-none shadow-2xl border-4 border-slate-50 mb-8 animate-in zoom-in-95 duration-700">
                 <MapPin className="h-16 w-16 text-primary/20 animate-pulse" />
               </div>
               <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-2">Alle Objecten</h3>
