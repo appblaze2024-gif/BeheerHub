@@ -38,7 +38,8 @@ import {
   ChevronLeft,
   History,
   AlertTriangle,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  User as UserIcon
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { 
@@ -1696,6 +1697,21 @@ export default function NewIssuePage() {
                               <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[120px] font-bold rounded-none" placeholder="Aanvullende info..." /></FormControl></FormItem>
                             )} />
                           </FormRow>
+                          {isReadOnly && existingMelding?.afhandeling_bijzonderheden && (
+                            <FormRow label="Afhandeling (Medewerker)">
+                                <div className="p-3 bg-slate-900 text-white rounded-none border-2 border-slate-800 shadow-inner">
+                                    <p className="text-xs font-medium leading-relaxed italic">
+                                        {existingMelding.afhandeling_bijzonderheden}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
+                                        <UserIcon className="h-3 w-3 text-slate-400" />
+                                        <span className="text-[9px] font-black uppercase text-slate-400">
+                                            Door: {existingMelding.afgehandeld_door || existingMelding.behandelaar || 'Onbekend'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </FormRow>
+                          )}
                         </AccordionContent>
                       </AccordionItem>
                     </Accordion>
@@ -1760,7 +1776,7 @@ export default function NewIssuePage() {
                           </div>
                           <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="aangenomen_door" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">
@@ -1898,6 +1914,21 @@ export default function NewIssuePage() {
                               <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[100px] text-xs font-medium border-slate-100 bg-slate-50/30 rounded-none" placeholder="Aanvullende info..." /></FormControl></FormItem>
                             )} />
                           </FormRow>
+                          {isReadOnly && existingMelding?.afhandeling_bijzonderheden && (
+                            <FormRow label="Afhandeling (Medewerker)">
+                                <div className="p-3 bg-slate-900 text-white rounded-none border-2 border-slate-800 shadow-inner">
+                                    <p className="text-xs font-medium leading-relaxed italic">
+                                        {existingMelding.afhandeling_bijzonderheden}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
+                                        <UserIcon className="h-3 w-3 text-slate-400" />
+                                        <span className="text-[9px] font-black uppercase text-slate-400">
+                                            Door: {existingMelding.afgehandeld_door || existingMelding.behandelaar || 'Onbekend'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </FormRow>
+                          )}
                         </CardContent>
                       </Card>
                     </div>

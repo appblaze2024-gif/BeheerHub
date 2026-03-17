@@ -492,8 +492,8 @@ export default function StartNavigationPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
-  const rawSearchParams = useSearchParams();
-  const type = rawSearchParams.get('type');
+  const searchParams = useSearchParams();
+  const type = searchParams.get('type');
   const isMeldingenType = type === 'meldingen';
   
   const { profile } = useProfile();
@@ -975,7 +975,7 @@ export default function StartNavigationPage() {
                                                     {!isCompleted && <Button variant="outline" size="icon" className="h-9 w-9 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100" onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}><Navigation className="h-5 w-5" /></Button>}
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-slate-300 hover:text-slate-600" onClick={e => e.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-56 rounded-none border-none shadow-2xl p-2"><DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-1">Verplaatsen naar...</DropdownMenuLabel><DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, null); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Inbox className="mr-2 h-4 w-4" /> Inbox (Vrij)</DropdownMenuItem>{userFolders?.map(f => (<DropdownMenuItem key={f.id} onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, f.id); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Folder className="mr-2 h-4 w-4" /> {f.name}</DropdownMenuItem>))}</DropdownMenuContent>
+                                                        <DropdownMenuContent align="end" className="w-56 rounded-none border-none shadow-2xl p-2"><DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-1">Verplaatsen naar...</DropdownMenuLabel><DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, null); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Inbox className="mr-2 h-4 w-4" /> Inbox (Vrij)</DropdownMenuItem>{userFolders?.map(f => (<DropdownMenuItem key={f.id} onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, f.id); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Folder className="mr-2 h-4 w-4" /> {f.name}</DropdownMenuItem>))}</DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </div>
                                             </div>
