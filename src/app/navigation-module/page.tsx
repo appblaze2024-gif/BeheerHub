@@ -481,7 +481,7 @@ function IntegratedWerkbonOverlay({
             {previewImage && (
                 <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
                     <div className="flex justify-end p-6 shrink-0"><Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-none h-12 w-12 border-2 border-white/20"><X className="h-8 w-8" /></Button></div>
-                    <div className="flex-1 relative flex items-center justify-center overflow-hidden"><img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} /></div>
+                    <div className="flex-1 relative flex items-center justify-center overflow-hidden"><img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain" onClick={(e) => { e.stopPropagation(); }} /></div>
                 </div>
             )}
         </div>
@@ -524,7 +524,7 @@ export default function StartNavigationPage() {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 16;
 
   const mapRef = useRef<MapRef>(null);
 
