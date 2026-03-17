@@ -37,10 +37,6 @@ import {
   endOfMonth, 
   startOfYear, 
   endOfYear,
-  subDays,
-  subWeeks,
-  subMonths,
-  isWithinInterval
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
@@ -75,7 +71,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import * as XLSX from 'xlsx';
+import { useToast } from '@/components/ui/use-toast';
 
 const closedStatuses = ["Afgerond", "Niet in beheer", "Geweigerd", "Dubbel gemeld"];
 
@@ -101,6 +99,7 @@ export default function ArchiveIssuesPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const { profile } = useProfile();
+  const { toast } = useToast();
   const router = useRouter();
   const isMobile = useIsMobile();
   
@@ -283,6 +282,13 @@ export default function ArchiveIssuesPage() {
     
     XLSX.writeFile(workbook, `BeheerHub_Export_Archief_${format(new Date(), 'yyyy-MM-dd_HHmm')}.xlsx`);
     toast({ title: "Export voltooid", description: "Het Excel bestand is gedownload." });
+  };
+
+  const handleSort = (field: string) => {
+    setSortConfig(prev => ({
+      field,
+      order: prev.field === field && prev.order === 'desc' ? 'asc' : 'desc'
+    }));
   };
 
   const formatDisplayName = (nameOrEmail?: string) => {
@@ -606,7 +612,7 @@ export default function ArchiveIssuesPage() {
                                         <TableCell className="font-bold py-2 px-4 border-r border-slate-100 text-slate-400 text-[10px] w-[50px]">{index + 1}</TableCell>
                                         <TableCell className="font-black py-2 px-4 border-r border-slate-100">{melding.intakenummer || '-'}</TableCell>
                                         <TableCell className="py-2 px-4 border-r border-slate-100 text-[11px] font-bold text-slate-500">{melding.extern_meldingsnummer || '-'}</TableCell>
-                                        <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-bold text-slate-900">{[melding.straatnaam, m.huisnummer, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
+                                        <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-bold text-slate-900">{[melding.straatnaam, melding.huisnummer, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
                                         <TableCell className="py-2 px-4 border-r border-slate-100">
                                             <div className="flex flex-col">
                                                 <span className="text-[11px] font-bold text-slate-600">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</span>
