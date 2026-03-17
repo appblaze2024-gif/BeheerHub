@@ -1699,7 +1699,7 @@ export default function NewIssuePage() {
                           </FormRow>
                           {isReadOnly && existingMelding?.afhandeling_bijzonderheden && (
                             <FormRow label="Afhandeling (Medewerker)">
-                                <div className="p-3 bg-slate-50 text-slate-900 rounded-none border-2 border-slate-200 shadow-inner">
+                                <div className="p-3 bg-white text-slate-900 rounded-none border-2 border-slate-100 shadow-inner min-h-[100px]">
                                     <p className="text-xs font-bold leading-relaxed">
                                         {existingMelding.afhandeling_bijzonderheden}
                                     </p>
@@ -1916,7 +1916,7 @@ export default function NewIssuePage() {
                           </FormRow>
                           {isReadOnly && existingMelding?.afhandeling_bijzonderheden && (
                             <FormRow label="Afhandeling (Medewerker)">
-                                <div className="p-3 bg-slate-50 text-slate-900 rounded-none border-2 border-slate-200 shadow-inner">
+                                <div className="p-3 bg-white text-slate-900 rounded-none border-2 border-slate-100 shadow-inner min-h-[100px]">
                                     <p className="text-xs font-bold leading-relaxed">
                                         {existingMelding.afhandeling_bijzonderheden}
                                     </p>
