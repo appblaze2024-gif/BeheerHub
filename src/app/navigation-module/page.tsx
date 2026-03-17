@@ -509,7 +509,7 @@ export default function StartNavigationPage() {
   
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = useState<'setup' | 'navigating'>('setup');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = setSearchQuery('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [activeWerkbonId, setActiveWerkbonId] = useState<string | null>(null);
   const [priorityMissionId, setPriorityMissionId] = useState<string | null>(null);
@@ -1108,17 +1108,17 @@ export default function StartNavigationPage() {
                     </div>
                     
                     <ScrollArea className="flex-1">
-                        <div className="max-w-3xl mx-auto flex flex-col gap-1 p-2 pb-24">
+                        <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 p-2 pb-24 md:gap-4 md:p-4">
                             {displayedMissions.map((m) => {
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
                                     <Card key={m.id} 
                                         onClick={() => setActiveWerkbonId(m.id)}
                                         className={cn(
-                                        "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group",
+                                        "rounded-none border-none shadow-md overflow-hidden active:scale-[0.99] transition-all cursor-pointer group h-full",
                                         isCompleted ? "bg-green-50 opacity-80" : "bg-white"
                                     )}>
-                                        <div className="flex items-center gap-2 p-2.5 min-w-0">
+                                        <div className="flex items-center gap-2 p-2.5 min-w-0 h-full">
                                             <div className="h-10 w-10 flex items-center justify-center shrink-0 bg-transparent ml-1">
                                                 {renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}
                                             </div>
