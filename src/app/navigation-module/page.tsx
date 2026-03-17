@@ -496,7 +496,8 @@ export default function StartNavigationPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const rawSearchParams = useSearchParams();
+  const searchParams = React.use(rawSearchParams as any) as any;
   const { profile } = useProfile();
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
@@ -1108,7 +1109,7 @@ export default function StartNavigationPage() {
                     </div>
                     
                     <ScrollArea className="flex-1">
-                        <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 p-2 pb-24 md:gap-4 md:p-4">
+                        <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-2 p-2 pb-24 md:gap-4 md:p-4">
                             {displayedMissions.map((m) => {
                                 const isCompleted = m.status === 'Afgerond';
                                 return (
