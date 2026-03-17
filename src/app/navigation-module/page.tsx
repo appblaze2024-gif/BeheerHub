@@ -333,7 +333,7 @@ function IntegratedWerkbonOverlay({
                             <AlertDialogTitle className="font-black uppercase tracking-tight text-lg">Melding afmelden?</AlertDialogTitle>
                             <AlertDialogDescription className="font-bold text-slate-500 text-sm">De werkbon wordt voltooid en de rit wordt hervat.</AlertDialogDescription>
                         </AlertDialogHeader>
-                        <AlertDialogFooter className="gap-2 mt-4">
+                        <AlertDialogFooter>
                             <AlertDialogCancel className="rounded-none font-black uppercase h-12 border-2 text-xs">Annuleren</AlertDialogCancel>
                             <AlertDialogAction onClick={handleAfronden} className="bg-orange-600 hover:bg-orange-700 rounded-none font-black uppercase tracking-tight h-12 px-8 text-xs">Afmelden</AlertDialogAction>
                         </AlertDialogFooter>
@@ -509,7 +509,7 @@ export default function StartNavigationPage() {
   
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = useState<'setup' | 'navigating'>('setup');
-  const [searchQuery, setSearchQuery] = setSearchQuery('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [activeWerkbonId, setActiveWerkbonId] = useState<string | null>(null);
   const [priorityMissionId, setPriorityMissionId] = useState<string | null>(null);
