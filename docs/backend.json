@@ -25,6 +25,34 @@
       },
       "required": ["id", "email", "role"]
     },
+    "GisFolder": {
+      "title": "GisFolder",
+      "description": "Een map om GIS-lagen in te organiseren.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "parentId": { "type": "string", "description": "ID van de bovenliggende map (of null voor root)." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "GisLayer": {
+      "title": "GisLayer",
+      "description": "Een geografische kaartlaag geüpload door de gebruiker.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "folderId": { "type": "string", "description": "ID van de map waarin deze laag staat (of null voor root)." },
+        "data": { "type": "object", "description": "GeoJSON data van de laag." },
+        "visible": { "type": "boolean" },
+        "color": { "type": "string" },
+        "type": { "type": "string", "enum": ["fill", "line", "circle"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "data", "visible", "color", "type", "createdAt"]
+    },
     "UserFolder": {
       "title": "UserFolder",
       "description": "Een map aangemaakt door een gebruiker om taken in te organiseren.",
@@ -150,6 +178,14 @@
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/UserProfile" },
       "description": "Gebruikersprofielen."
+    },
+    "/users/{userId}/gisFolders/{folderId}": {
+      "schema": { "$ref": "#/entities/GisFolder" },
+      "description": "Mappen voor GIS-lagen."
+    },
+    "/users/{userId}/gisLayers/{layerId}": {
+      "schema": { "$ref": "#/entities/GisLayer" },
+      "description": "Geüploade GIS-lagen."
     },
     "/users/{userId}/folders/{folderId}": {
       "schema": { "$ref": "#/entities/UserFolder" },

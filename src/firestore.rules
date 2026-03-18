@@ -31,7 +31,7 @@ service cloud.firestore {
 
     // --- RULES ---
 
-    // Route assignments - Expliciet toegang toestaan voor alle ingelogde gebruikers voor reads
+    // Route assignments
     match /route_assignments/{assignmentId} {
       allow read, get, list: if isSignedIn();
       allow write: if isPrivileged();
@@ -57,6 +57,14 @@ service cloud.firestore {
         allow read, list, get, write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
 
+      match /gisFolders/{folderId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /gisLayers/{layerId} {
+        allow read, write: if isOwner(userId);
+      }
+
       match /messages/{messageId} {
         allow read, list: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == resource.data.fromUserId);
         allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
@@ -69,13 +77,13 @@ service cloud.firestore {
       }
     }
 
-    // Projecten
+    // Projecten - Eenvoudige regels om permissiefouten te voorkomen
     match /projects/{projectId} {
-      allow read, list: if isSignedIn();
+      allow read, get, list: if isSignedIn();
       allow write: if isPrivileged();
 
       match /{allSubcollections=**} {
-        allow read, list: if isSignedIn();
+        allow read, get, list: if isSignedIn();
         allow write: if isPrivileged();
       }
     }
