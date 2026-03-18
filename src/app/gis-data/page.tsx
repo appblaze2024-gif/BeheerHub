@@ -40,7 +40,8 @@ import {
   MousePointer,
   Route,
   Square,
-  Save
+  Save,
+  Minus
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -133,7 +134,7 @@ export default function GISDataPage() {
   const [drawingName, setDrawingName] = useState('Nieuwe Tekening');
 
   // Base Map Style
-  const [activeMapStyle, setActiveMapStyle] = useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/light-v11');
+  const [activeMapStyle, setActiveMapStyle] = useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
 
   // Interaction state
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
@@ -187,9 +188,12 @@ export default function GISDataPage() {
     map.addControl(draw, 'top-right');
     drawRef.current = draw;
     
-    // Hide controls initially
-    const drawControl = document.querySelector('.mapboxgl-ctrl-group');
-    if (drawControl) (drawControl as HTMLElement).style.display = 'none';
+    // Explicitly hide draw controls by default using CSS
+    const drawControl = document.querySelector('.mapboxgl-ctrl-group:last-child');
+    if (drawControl) {
+      (drawControl as HTMLElement).classList.add('mapbox-draw-control-group');
+      (drawControl as HTMLElement).style.display = 'none';
+    }
   };
 
   const toggleDrawingMode = () => {
@@ -197,7 +201,7 @@ export default function GISDataPage() {
     setIsDrawingMode(newState);
     setIsUploadOpen(false);
     
-    const drawControl = document.querySelector('.mapboxgl-ctrl-group');
+    const drawControl = document.querySelector('.mapbox-draw-control-group');
     if (drawControl) {
       (drawControl as HTMLElement).style.display = newState ? 'block' : 'none';
     }
@@ -879,6 +883,31 @@ export default function GISDataPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <style jsx global>{`
+        .mapboxgl-ctrl-group.mapbox-draw-control-group button {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: white;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .mapboxgl-ctrl-group.mapbox-draw-control-group button:last-child {
+          border-bottom: none;
+        }
+        .mapboxgl-ctrl-group.mapbox-draw-control-group button:hover {
+          background-color: #f8fafc;
+        }
+        .mapboxgl-ctrl-group.mapbox-draw-control-group {
+          box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 0 !important;
+          margin-top: 10px !important;
+          z-index: 100 !important;
+        }
+      `}</style>
     </div>
   );
 }
