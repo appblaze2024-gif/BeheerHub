@@ -1,4 +1,3 @@
-
 export const permissionConfig = [
     { 
         module: 'projects', 
@@ -54,6 +53,7 @@ export const permissionConfig = [
             { id: 'export', label: 'Export' },
         ]
     },
+    { module: 'gisData', label: 'GIS-data', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'edit', label: 'Bewerken' }] },
     { module: 'inventory', label: 'Voorraadbeheer', actions: [{ id: 'view', label: 'Bekijken' }] },
     { 
         module: 'issues', 

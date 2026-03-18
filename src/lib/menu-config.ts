@@ -14,6 +14,7 @@ import {
   FileWarning,
   Cpu,
   ShieldCheck,
+  Layers,
 } from 'lucide-react';
 import { ElementType } from 'react';
 
@@ -93,6 +94,12 @@ export const allMenuItems: MenuItem[] = [
         { href: '/objects?action=import', label: 'Import', id: 'import' },
         { href: '/objects?action=export', label: 'Export', id: 'export' },
       ]
+    },
+    { 
+      href: '/gis-data', 
+      label: 'GIS-data', 
+      icon: Layers, 
+      module: 'gisData' 
     },
     { href: '/spec-reports', label: 'Bestek', icon: FileWarning, module: 'specReports' },
     { 
