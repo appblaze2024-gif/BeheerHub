@@ -58,11 +58,7 @@ export default function GISDataPage() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans">
       {/* Top Header Bar */}
-      <header className="h-10 bg-[#009ee3] text-white flex items-center justify-between px-4 shrink-0 z-50 shadow-md">
-        <div className="flex items-center gap-4">
-          {/* Titel en credit tekst verwijderd op verzoek van gebruiker */}
-        </div>
-        
+      <header className="h-10 bg-[#009ee3] text-white flex items-center justify-end px-4 shrink-0 z-50 shadow-md">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 rounded-none">
             <List className="h-4 w-4" />
@@ -128,24 +124,6 @@ export default function GISDataPage() {
           <div className="flex flex-col bg-white shadow-2xl border border-slate-200 w-10">
             <ToolButton icon={Home} onClick={() => mapRef.current?.flyTo({ center: [initialViewState.longitude, initialViewState.latitude], zoom: initialViewState.zoom })} />
             <ToolButton icon={Maximize2} />
-          </div>
-        </div>
-
-        {/* Legend/Info Overlay - Right Bottom */}
-        <div className="absolute bottom-10 right-16 z-10 hidden md:block">
-          <div className="bg-white/90 backdrop-blur-md p-3 border border-slate-200 shadow-xl min-w-[120px] flex flex-col gap-2 rounded-none">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 bg-green-500 rounded-none border border-black/10" />
-              <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">Dijkvak Noord</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 bg-blue-500 rounded-none border border-black/10" />
-              <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">Dijkvak West</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 bg-orange-500 rounded-none border border-black/10" />
-              <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">Areaal Grens</span>
-            </div>
           </div>
         </div>
 
