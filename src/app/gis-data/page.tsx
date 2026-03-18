@@ -31,7 +31,8 @@ import {
   Folder,
   ChevronRight,
   MoreVertical,
-  Plus
+  Plus,
+  Edit2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
+  DialogClose
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/components/ui/use-toast';
@@ -99,6 +101,11 @@ export default function GISDataPage() {
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
+  
+  // New state for interactivity
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
+  const [editingLayer, setEditingLayer] = useState<GISLayer | null>(null);
+  const [newLayerName, setNewLayerName] = useState('');
 
   // Firestore Data
   const foldersQuery = useMemoFirebase(() => {
@@ -232,6 +239,15 @@ export default function GISDataPage() {
     deleteDocumentNonBlocking(layerRef);
   };
 
+  const handleRenameLayer = async () => {
+    if (!editingLayer || !newLayerName.trim() || !user || !firestore) return;
+    const layerRef = doc(firestore, 'users', user.uid, 'gisLayers', editingLayer.id);
+    updateDocumentNonBlocking(layerRef, { name: newLayerName.trim() });
+    setEditingLayer(null);
+    setNewLayerName('');
+    toast({ title: 'Laag hernoemd' });
+  };
+
   const handleCreateFolder = async () => {
     if (!user || !firestore || !newFolderName.trim()) return;
     const foldersCol = collection(firestore, 'users', user.uid, 'gisFolders');
@@ -244,6 +260,15 @@ export default function GISDataPage() {
     setIsNewFolderOpen(false);
     setParentFolderId(null);
     toast({ title: 'Map aangemaakt' });
+  };
+
+  const toggleFolderExpansion = (folderId: string) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
+      return next;
+    });
   };
 
   const deleteFolder = async (folderId: string) => {
@@ -286,36 +311,41 @@ export default function GISDataPage() {
 
     return (
       <div key={folderId || 'root'} className="space-y-1">
-        {folders.map(folder => (
-          <div key={folder.id} className="space-y-1">
-            <div 
-              style={{ paddingLeft: `${level * 12}px` }}
-              className="flex items-center justify-between p-2 hover:bg-slate-50 group border border-transparent"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <Folder className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate">{folder.name}</span>
+        {folders.map(folder => {
+          const isExpanded = expandedFolders.has(folder.id);
+          return (
+            <div key={folder.id} className="space-y-1">
+              <div 
+                style={{ paddingLeft: `${level * 12}px` }}
+                className="flex items-center justify-between p-2 hover:bg-slate-50 group border border-transparent cursor-pointer"
+                onClick={() => toggleFolderExpansion(folder.id)}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
+                  <Folder className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate">{folder.name}</span>
+                </div>
+                <div className="flex items-center opacity-0 group-hover:opacity-100" onClick={e => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-none"><MoreVertical className="h-3.5 w-3.5" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-none">
+                      <DropdownMenuItem onClick={() => { setParentFolderId(folder.id); setIsNewFolderOpen(true); }} className="text-[10px] font-black uppercase"><FolderPlus className="mr-2 h-3.5 w-3.5" /> Submap</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => deleteFolder(folder.id)} className="text-red-600 text-[10px] font-black uppercase"><Trash2 className="mr-2 h-3.5 w-3.5" /> Verwijderen</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-              <div className="flex items-center opacity-0 group-hover:opacity-100">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-none"><MoreVertical className="h-3.5 w-3.5" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="rounded-none">
-                    <DropdownMenuItem onClick={() => { setParentFolderId(folder.id); setIsNewFolderOpen(true); }} className="text-[10px] font-black uppercase"><FolderPlus className="mr-2 h-3.5 w-3.5" /> Submap</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => deleteFolder(folder.id)} className="text-red-600 text-[10px] font-black uppercase"><Trash2 className="mr-2 h-3.5 w-3.5" /> Verwijderen</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              {isExpanded && renderFolderContent(folder.id, level + 1)}
             </div>
-            {renderFolderContent(folder.id, level + 1)}
-          </div>
-        ))}
+          );
+        })}
         {layers.map(layer => (
           <div 
             key={layer.id} 
-            style={{ paddingLeft: `${level * 12}px` }}
+            style={{ paddingLeft: `${(level + (folderId ? 1 : 0)) * 12 + 16}px` }}
             className="flex items-center justify-between p-2 hover:bg-slate-50 group border border-transparent hover:border-slate-100"
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -342,12 +372,14 @@ export default function GISDataPage() {
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none"><ChevronDown className="h-3.5 w-3.5 text-slate-400" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-none shadow-xl">
+                  <DropdownMenuItem onClick={() => { setEditingLayer(layer); setNewLayerName(layer.name); }} className="text-[10px] font-black uppercase"><Edit2 className="mr-2 h-3.5 w-3.5" /> Hernoemen</DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => moveLayerToFolder(layer.id, null)} className="text-[10px] font-black uppercase">Naar Home (Root)</DropdownMenuItem>
                   {dbFolders?.filter(f => f.id !== layer.folderId).map(f => (
                     <DropdownMenuItem key={f.id} onClick={() => moveLayerToFolder(layer.id, f.id)} className="text-[10px] font-black uppercase">Naar map: {f.name}</DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => removeLayer(layer.id)} className="text-red-600 text-[10px] font-black uppercase">Verwijderen</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => removeLayer(layer.id)} className="text-red-600 text-[10px] font-black uppercase"><Trash2 className="mr-2 h-3.5 w-3.5" /> Verwijderen</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -501,6 +533,30 @@ export default function GISDataPage() {
           <img src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png" alt="BeheerHub" className="h-2 opacity-50" />
         </div>
       </div>
+
+      {/* Layer Renaming Dialog */}
+      <Dialog open={!!editingLayer} onOpenChange={(open) => !open && setEditingLayer(null)}>
+        <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-black uppercase tracking-tight">Laag Hernoemen</DialogTitle>
+            <DialogDescription className="font-bold text-slate-500">Voer een nieuwe naam in voor deze kaartlaag.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input 
+              placeholder="Laagnaam..." 
+              value={newLayerName} 
+              onChange={e => setNewLayerName(e.target.value)} 
+              className="h-12 font-bold rounded-none border-2 focus:ring-primary/20"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleRenameLayer()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditingLayer(null)} className="font-bold rounded-none">Annuleren</Button>
+            <Button onClick={handleRenameLayer} className="font-black uppercase rounded-none px-8" disabled={!newLayerName.trim()}>Opslaan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
         <DialogContent className="sm:max-w-xl rounded-none border-none shadow-2xl p-0 overflow-hidden">
