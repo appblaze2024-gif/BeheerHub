@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import MapGL, { NavigationControl, ScaleControl, Source, Layer, type MapRef } from 'react-map-gl';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { 
   Search, 
   Layers, 
@@ -34,7 +36,11 @@ import {
   Edit2,
   Palette,
   Check,
-  Map as MapTypeIcon
+  Map as MapTypeIcon,
+  MousePointer,
+  Route,
+  Square,
+  Save
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -111,6 +117,7 @@ export default function GISDataPage() {
   const { setIsHeaderVisible } = useNavigationUI();
   const { toast } = useToast();
   const mapRef = useRef<MapRef>(null);
+  const drawRef = useRef<MapboxDraw | null>(null);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -120,6 +127,11 @@ export default function GISDataPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   
+  // Drawing state
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [isSaveDrawingOpen, setIsSaveDrawingOpen] = useState(false);
+  const [drawingName, setDrawingName] = useState('Nieuwe Tekening');
+
   // Base Map Style
   const [activeMapStyle, setActiveMapStyle] = useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/light-v11');
 
@@ -156,6 +168,71 @@ export default function GISDataPage() {
     zoom: 10,
     pitch: 0,
     bearing: 0
+  };
+
+  const handleMapLoad = () => {
+    if (!mapRef.current) return;
+    const map = mapRef.current.getMap();
+    
+    const draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {
+        point: true,
+        line_string: true,
+        polygon: true,
+        trash: true
+      }
+    });
+    
+    map.addControl(draw, 'top-right');
+    drawRef.current = draw;
+    
+    // Hide controls initially
+    const drawControl = document.querySelector('.mapboxgl-ctrl-group');
+    if (drawControl) (drawControl as HTMLElement).style.display = 'none';
+  };
+
+  const toggleDrawingMode = () => {
+    const newState = !isDrawingMode;
+    setIsDrawingMode(newState);
+    setIsUploadOpen(false);
+    
+    const drawControl = document.querySelector('.mapboxgl-ctrl-group');
+    if (drawControl) {
+      (drawControl as HTMLElement).style.display = newState ? 'block' : 'none';
+    }
+
+    if (!newState && drawRef.current) {
+      drawRef.current.deleteAll();
+    }
+
+    if (newState) {
+      toast({ title: "Tekenmodus geactiveerd", description: "Gebruik de tools rechtsboven om objecten te tekenen." });
+    }
+  };
+
+  const handleSaveDrawing = async () => {
+    if (!drawRef.current || !user || !firestore) return;
+    const features = drawRef.current.getAll();
+    if (features.features.length === 0) {
+      toast({ variant: 'destructive', title: "Geen data", description: "Teken eerst iets op de kaart." });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const layersCol = collection(firestore, 'users', user.uid, 'gisLayers');
+      await saveLayer(drawingName, features, layersCol);
+      
+      toggleDrawingMode();
+      setIsSaveDrawingOpen(false);
+      setDrawingName('Nieuwe Tekening');
+      toast({ title: "Laag opgeslagen", description: "De handmatige laag is toegevoegd aan je lijst." });
+    } catch (err) {
+      toast({ variant: 'destructive', title: "Fout", description: "Kon de tekening niet opslaan." });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -432,6 +509,17 @@ export default function GISDataPage() {
     <div className="relative h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans">
       <header className="h-10 bg-[#009ee3] text-white flex items-center justify-end px-4 shrink-0 z-50 shadow-md">
         <div className="flex items-center gap-1">
+          {isDrawingMode && (
+            <div className="flex items-center gap-2 mr-4 bg-white/10 px-3 py-1 animate-in slide-in-from-top-2">
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/80">Tekenen...</span>
+              <Button size="sm" className="h-7 px-3 text-[9px] font-black uppercase bg-green-600 hover:bg-green-700" onClick={() => setIsSaveDrawingOpen(true)}>
+                <Save className="mr-1.5 h-3 w-3" /> Opslaan
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 px-3 text-[9px] font-black uppercase text-red-200 hover:bg-red-600/20" onClick={toggleDrawingMode}>
+                <X className="mr-1.5 h-3 w-3" /> Stoppen
+              </Button>
+            </div>
+          )}
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 rounded-none">
             <List className="h-4 w-4" />
           </Button>
@@ -463,6 +551,7 @@ export default function GISDataPage() {
           style={{ width: '100%', height: '100%' }}
           mapStyle={activeMapStyle}
           mapboxAccessToken={MAPBOX_TOKEN}
+          onLoad={handleMapLoad}
         >
           <NavigationControl position="bottom-right" showCompass={false} />
           <ScaleControl position="bottom-left" />
@@ -548,7 +637,7 @@ export default function GISDataPage() {
             </Popover>
 
             <ToolButton icon={MousePointer2} />
-            <ToolButton icon={Pencil} />
+            <ToolButton icon={Pencil} active={isDrawingMode} onClick={toggleDrawingMode} />
             <ToolButton icon={Printer} />
             <ToolButton icon={Download} />
             <ToolButton icon={Library} />
@@ -574,7 +663,7 @@ export default function GISDataPage() {
                 onClick={() => setIsUploadOpen(true)}
                 className="h-10 font-black uppercase text-[9px] tracking-widest rounded-none shadow-lg shadow-primary/20 bg-primary"
               >
-                <UploadCloud className="mr-2 h-4 w-4" /> Lagen
+                <UploadCloud className="mr-2 h-4 w-4" /> Toevoegen
               </Button>
               <Button 
                 variant="outline"
@@ -604,6 +693,33 @@ export default function GISDataPage() {
           <img src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png" alt="BeheerHub" className="h-2 opacity-50" />
         </div>
       </div>
+
+      {/* Save Drawing Dialog */}
+      <Dialog open={isSaveDrawingOpen} onOpenChange={setIsSaveDrawingOpen}>
+        <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-black uppercase tracking-tight">Tekening Opslaan</DialogTitle>
+            <DialogDescription className="font-bold text-slate-500">Geef de nieuwe laag een naam om deze permanent te bewaren.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Naam van de laag</Label>
+            <Input 
+              placeholder="Bv. Gebiedsafbakening..." 
+              value={drawingName} 
+              onChange={e => setDrawingName(e.target.value)} 
+              className="h-12 font-bold rounded-none border-2 focus:ring-primary/20"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsSaveDrawingOpen(false)} className="font-bold rounded-none">Annuleren</Button>
+            <Button onClick={handleSaveDrawing} className="font-black uppercase rounded-none px-8" disabled={!drawingName.trim() || isProcessing}>
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Opslaan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Layer Dialog */}
       <Dialog open={!!editingLayer} onOpenChange={(open) => !open && setEditingLayer(null)}>
@@ -711,13 +827,14 @@ export default function GISDataPage() {
               </div>
               <div>
                 <DialogTitle className="text-xl font-black uppercase tracking-tight text-white">GIS Lagen Toevoegen</DialogTitle>
-                <DialogDescription className="text-slate-400 font-bold uppercase text-[10px]">GeoJSON, Shapefiles of Spreadsheets.</DialogDescription>
+                <DialogDescription className="text-slate-400 font-bold uppercase text-[10px]">Importeer data of teken handmatig.</DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
           <div className="p-8 space-y-8 bg-white">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <UploadMethod icon={Plus} title="Zelf Tekenen" desc="Polygons, punten en routes" onSelect={toggleDrawingMode} />
               <UploadMethod icon={FileJson} title="GeoJSON / JSON" desc=".geojson, .json" onSelect={() => document.getElementById('gis-upload')?.click()} />
               <UploadMethod icon={MapIcon} title="Shapefile" desc=".shp + .dbf nodig" onSelect={() => document.getElementById('gis-upload-multi')?.click()} />
               <UploadMethod icon={TableIcon} title="Spreadsheet" desc=".xlsx, .csv (met Lat/Lon)" onSelect={() => document.getElementById('gis-upload')?.click()} />
