@@ -33,7 +33,8 @@ import {
   Plus,
   Edit2,
   Palette,
-  Check
+  Check,
+  Map as MapTypeIcon
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,11 @@ import {
   DialogDescription,
   DialogClose
 } from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/components/ui/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -68,6 +74,14 @@ import {
 import { Label } from '@/components/ui/label';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+const MAP_STYLES = [
+  { id: 'streets', name: 'Straten', url: 'mapbox://styles/mapbox/streets-v12', icon: Icons.Map },
+  { id: 'satellite', name: 'Satelliet', url: 'mapbox://styles/mapbox/satellite-streets-v12', icon: Icons.Cloud },
+  { id: 'light', name: 'Licht', url: 'mapbox://styles/mapbox/light-v11', icon: Icons.Sun },
+  { id: 'dark', name: 'Donker', url: 'mapbox://styles/mapbox/dark-v11', icon: Icons.Moon },
+  { id: 'outdoors', name: 'Buiten', url: 'mapbox://styles/mapbox/outdoors-v12', icon: Icons.Trees },
+];
 
 interface GISLayer {
   id: string;
@@ -106,6 +120,9 @@ export default function GISDataPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   
+  // Base Map Style
+  const [activeMapStyle, setActiveMapStyle] = useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/light-v11');
+
   // Interaction state
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
   const [editingLayer, setEditingLayer] = useState<GISLayer | null>(null);
@@ -127,8 +144,6 @@ export default function GISDataPage() {
 
   const { data: dbFolders } = useCollection<GISFolder>(foldersQuery);
   const { data: dbLayers } = useCollection<GISLayer>(layersQuery);
-
-  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/light-v11';
 
   useEffect(() => {
     setIsHeaderVisible(false);
@@ -446,7 +461,7 @@ export default function GISDataPage() {
           ref={mapRef}
           initialViewState={initialViewState}
           style={{ width: '100%', height: '100%' }}
-          mapStyle={mapStyle}
+          mapStyle={activeMapStyle}
           mapboxAccessToken={MAPBOX_TOKEN}
         >
           <NavigationControl position="bottom-right" showCompass={false} />
@@ -500,6 +515,38 @@ export default function GISDataPage() {
 
           <div className="flex flex-col bg-white shadow-2xl border border-slate-200 w-10">
             <ToolButton icon={Layers} active={isLayersPanelOpen} onClick={() => setIsLayersPanelOpen(!isLayersPanelOpen)} />
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <button 
+                  className={cn(
+                    "h-10 w-10 flex items-center justify-center border-b border-slate-100 transition-all hover:bg-slate-50",
+                    MAP_STYLES.some(s => s.url === activeMapStyle) ? "text-primary" : "text-slate-600"
+                  )}
+                >
+                  <MapTypeIcon className="h-4 w-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="right" align="start" className="w-48 p-2 rounded-none border-none shadow-2xl">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-slate-400 px-2 py-1 mb-1 tracking-widest">Kaartstijl</p>
+                  {MAP_STYLES.map((style) => (
+                    <button
+                      key={style.id}
+                      onClick={() => setActiveMapStyle(style.url)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2 text-[11px] font-black uppercase tracking-tight rounded-none transition-colors",
+                        activeMapStyle === style.url ? "bg-primary text-white" : "hover:bg-slate-50 text-slate-700"
+                      )}
+                    >
+                      <style.icon className="h-3.5 w-3.5" />
+                      {style.name}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <ToolButton icon={MousePointer2} />
             <ToolButton icon={Pencil} />
             <ToolButton icon={Printer} />
