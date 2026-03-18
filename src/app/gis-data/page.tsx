@@ -60,9 +60,7 @@ export default function GISDataPage() {
       {/* Top Header Bar */}
       <header className="h-10 bg-[#009ee3] text-white flex items-center justify-between px-4 shrink-0 z-50 shadow-md">
         <div className="flex items-center gap-4">
-          <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest hidden sm:block">
-            Mogelijk gemaakt door BeheerHub GIS
-          </p>
+          {/* Titel en credit tekst verwijderd op verzoek van gebruiker */}
         </div>
         
         <div className="flex items-center gap-1">
