@@ -1,8 +1,7 @@
-
 'use client';
 
 import * as React from 'react';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import MapGL, { NavigationControl, ScaleControl, Source, Layer, type MapRef } from 'react-map-gl';
 import { 
   Search, 
@@ -32,8 +31,11 @@ import {
   ChevronRight,
   MoreVertical,
   Plus,
-  Edit2
+  Edit2,
+  Palette,
+  Check
 } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -52,7 +54,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/components/ui/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import * as shapefile from 'shapefile';
 import * as XLSX from 'xlsx';
 import * as turf from '@turf/turf';
@@ -63,6 +65,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { Label } from '@/components/ui/label';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -74,6 +77,7 @@ interface GISLayer {
   color: string;
   type: 'fill' | 'line' | 'circle';
   folderId?: string | null;
+  icon?: string;
 }
 
 interface GISFolder {
@@ -83,7 +87,7 @@ interface GISFolder {
 }
 
 const PRESET_COLORS = [
-  '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'
+  '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#000000', '#64748b'
 ];
 
 export default function GISDataPage() {
@@ -102,10 +106,13 @@ export default function GISDataPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   
-  // New state for interactivity
+  // Interaction state
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
   const [editingLayer, setEditingLayer] = useState<GISLayer | null>(null);
-  const [newLayerName, setNewLayerName] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [editIcon, setEditIcon] = useState('');
+  const [iconSearch, setIconSearch] = useState('');
 
   // Firestore Data
   const foldersQuery = useMemoFirebase(() => {
@@ -118,8 +125,8 @@ export default function GISDataPage() {
     return collection(firestore, 'users', user.uid, 'gisLayers');
   }, [firestore, user]);
 
-  const { data: dbFolders, isLoading: isLoadingFolders } = useCollection<GISFolder>(foldersQuery);
-  const { data: dbLayers, isLoading: isLoadingLayers } = useCollection<GISLayer>(layersQuery);
+  const { data: dbFolders } = useCollection<GISFolder>(foldersQuery);
+  const { data: dbLayers } = useCollection<GISLayer>(layersQuery);
 
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/light-v11';
 
@@ -146,7 +153,6 @@ export default function GISDataPage() {
     try {
       const layersCol = collection(firestore, 'users', user.uid, 'gisLayers');
 
-      // GeoJSON
       const geojsonFiles = fileList.filter(f => f.name.endsWith('.geojson') || f.name.endsWith('.json'));
       for (const file of geojsonFiles) {
         const text = await file.text();
@@ -154,7 +160,6 @@ export default function GISDataPage() {
         await saveLayer(file.name, data, layersCol);
       }
 
-      // Shapefile (needs .shp and .dbf)
       const shpFile = fileList.find(f => f.name.endsWith('.shp'));
       const dbfFile = fileList.find(f => f.name.endsWith('.dbf'));
       if (shpFile && dbfFile) {
@@ -164,7 +169,6 @@ export default function GISDataPage() {
         await saveLayer(shpFile.name, geojson, layersCol);
       }
 
-      // Excel / CSV
       const sheetFiles = fileList.filter(f => f.name.endsWith('.xlsx') || f.name.endsWith('.csv'));
       for (const file of sheetFiles) {
         const buffer = await file.arrayBuffer();
@@ -207,6 +211,8 @@ export default function GISDataPage() {
     if (geomType === 'Polygon' || geomType === 'MultiPolygon') type = 'fill';
     else if (geomType === 'LineString' || geomType === 'MultiLineString') type = 'line';
 
+    const defaultIcon = type === 'fill' ? 'Square' : type === 'line' ? 'Minus' : 'Circle';
+
     const newLayer = {
       name,
       data,
@@ -214,6 +220,7 @@ export default function GISDataPage() {
       color: PRESET_COLORS[(dbLayers?.length || 0) % PRESET_COLORS.length],
       type,
       folderId: null,
+      icon: defaultIcon,
       createdAt: new Date().toISOString()
     };
 
@@ -239,13 +246,16 @@ export default function GISDataPage() {
     deleteDocumentNonBlocking(layerRef);
   };
 
-  const handleRenameLayer = async () => {
-    if (!editingLayer || !newLayerName.trim() || !user || !firestore) return;
+  const handleUpdateLayer = async () => {
+    if (!editingLayer || !editName.trim() || !user || !firestore) return;
     const layerRef = doc(firestore, 'users', user.uid, 'gisLayers', editingLayer.id);
-    updateDocumentNonBlocking(layerRef, { name: newLayerName.trim() });
+    updateDocumentNonBlocking(layerRef, { 
+      name: editName.trim(),
+      color: editColor,
+      icon: editIcon
+    });
     setEditingLayer(null);
-    setNewLayerName('');
-    toast({ title: 'Laag hernoemd' });
+    toast({ title: 'Laag bijgewerkt' });
   };
 
   const handleCreateFolder = async () => {
@@ -287,7 +297,6 @@ export default function GISDataPage() {
     batch.delete(doc(firestore, 'users', user.uid, 'gisFolders', folderId));
     findChildren(folderId);
 
-    // Also move layers in this folder to root
     dbLayers?.forEach(layer => {
         if (layer.folderId === folderId) {
             batch.update(doc(firestore, 'users', user.uid, 'gisLayers', layer.id), { folderId: null });
@@ -304,6 +313,13 @@ export default function GISDataPage() {
     updateDocumentNonBlocking(layerRef, { folderId });
     toast({ title: 'Laag verplaatst' });
   };
+
+  const filteredIcons = React.useMemo(() => {
+    const all = Object.keys(Icons).filter(name => typeof (Icons as any)[name] === 'function' || typeof (Icons as any)[name] === 'object');
+    if (!iconSearch.trim()) return all.slice(0, 64);
+    const q = iconSearch.toLowerCase();
+    return all.filter(name => name.toLowerCase().includes(q)).slice(0, 64);
+  }, [iconSearch]);
 
   const renderFolderContent = (folderId: string | null, level: number = 0) => {
     const folders = dbFolders?.filter(f => f.parentId === folderId) || [];
@@ -342,49 +358,57 @@ export default function GISDataPage() {
             </div>
           );
         })}
-        {layers.map(layer => (
-          <div 
-            key={layer.id} 
-            style={{ paddingLeft: `${(level + (folderId ? 1 : 0)) * 12 + 16}px` }}
-            className="flex items-center justify-between p-2 hover:bg-slate-50 group border border-transparent hover:border-slate-100"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <button 
-                onClick={() => toggleLayerVisibility(layer)}
-                className={cn(
-                  "h-8 w-8 flex items-center justify-center rounded-none border transition-all",
-                  layer.visible ? "bg-white border-slate-200 shadow-sm" : "bg-slate-100 border-slate-100 opacity-50"
-                )}
-              >
-                {layer.visible ? <Eye className="h-3.5 w-3.5 text-primary" /> : <EyeOff className="h-3.5 w-3.5 text-slate-400" />}
-              </button>
-              <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate">{layer.name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: layer.color }} />
-                  <span className="text-[8px] font-bold text-slate-400 uppercase">{layer.type}</span>
+        {layers.map(layer => {
+          const IconComp = (Icons as any)[layer.icon || (layer.type === 'fill' ? 'Square' : layer.type === 'line' ? 'Minus' : 'Circle')] || Icons.Circle;
+          return (
+            <div 
+              key={layer.id} 
+              style={{ paddingLeft: `${(level + (folderId ? 1 : 0)) * 12 + 16}px` }}
+              className="flex items-center justify-between p-2 hover:bg-slate-50 group border border-transparent hover:border-slate-100"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <button 
+                  onClick={() => toggleLayerVisibility(layer)}
+                  className={cn(
+                    "h-8 w-8 flex items-center justify-center rounded-none border transition-all",
+                    layer.visible ? "bg-white border-slate-200 shadow-sm" : "bg-slate-100 border-slate-100 opacity-50"
+                  )}
+                >
+                  {layer.visible ? <Eye className="h-3.5 w-3.5 text-primary" /> : <EyeOff className="h-3.5 w-3.5 text-slate-400" />}
+                </button>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate">{layer.name}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <IconComp className="h-2 w-2" style={{ color: layer.color, fill: layer.type === 'fill' ? layer.color : 'none' }} />
+                    <span className="text-[8px] font-bold text-slate-400 uppercase">{layer.type}</span>
+                  </div>
                 </div>
               </div>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none"><ChevronDown className="h-3.5 w-3.5 text-slate-400" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 rounded-none shadow-xl">
+                    <DropdownMenuItem onClick={() => { 
+                      setEditingLayer(layer); 
+                      setEditName(layer.name); 
+                      setEditColor(layer.color);
+                      setEditIcon(layer.icon || (layer.type === 'fill' ? 'Square' : layer.type === 'line' ? 'Minus' : 'Circle'));
+                    }} className="text-[10px] font-black uppercase"><Edit2 className="mr-2 h-3.5 w-3.5" /> Laag Aanpassen</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => moveLayerToFolder(layer.id, null)} className="text-[10px] font-black uppercase">Naar Home (Root)</DropdownMenuItem>
+                    {dbFolders?.filter(f => f.id !== layer.folderId).map(f => (
+                      <DropdownMenuItem key={f.id} onClick={() => moveLayerToFolder(layer.id, f.id)} className="text-[10px] font-black uppercase">Naar map: {f.name}</DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => removeLayer(layer.id)} className="text-red-600 text-[10px] font-black uppercase"><Trash2 className="mr-2 h-3.5 w-3.5" /> Verwijderen</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none"><ChevronDown className="h-3.5 w-3.5 text-slate-400" /></Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-none shadow-xl">
-                  <DropdownMenuItem onClick={() => { setEditingLayer(layer); setNewLayerName(layer.name); }} className="text-[10px] font-black uppercase"><Edit2 className="mr-2 h-3.5 w-3.5" /> Hernoemen</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => moveLayerToFolder(layer.id, null)} className="text-[10px] font-black uppercase">Naar Home (Root)</DropdownMenuItem>
-                  {dbFolders?.filter(f => f.id !== layer.folderId).map(f => (
-                    <DropdownMenuItem key={f.id} onClick={() => moveLayerToFolder(layer.id, f.id)} className="text-[10px] font-black uppercase">Naar map: {f.name}</DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => removeLayer(layer.id)} className="text-red-600 text-[10px] font-black uppercase"><Trash2 className="mr-2 h-3.5 w-3.5" /> Verwijderen</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -534,26 +558,99 @@ export default function GISDataPage() {
         </div>
       </div>
 
-      {/* Layer Renaming Dialog */}
+      {/* Edit Layer Dialog */}
       <Dialog open={!!editingLayer} onOpenChange={(open) => !open && setEditingLayer(null)}>
-        <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-black uppercase tracking-tight">Laag Hernoemen</DialogTitle>
-            <DialogDescription className="font-bold text-slate-500">Voer een nieuwe naam in voor deze kaartlaag.</DialogDescription>
+        <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl flex flex-col h-[80vh] p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
+            <DialogTitle className="font-black uppercase tracking-tight text-white">Kaartlaag Aanpassen</DialogTitle>
+            <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Symbologie en eigenschappen wijzigen.</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Input 
-              placeholder="Laagnaam..." 
-              value={newLayerName} 
-              onChange={e => setNewLayerName(e.target.value)} 
-              className="h-12 font-bold rounded-none border-2 focus:ring-primary/20"
-              autoFocus
-              onKeyDown={e => e.key === 'Enter' && handleRenameLayer()}
-            />
-          </div>
-          <DialogFooter>
+          
+          <ScrollArea className="flex-1 bg-white">
+            <div className="p-6 space-y-8">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam van de laag</Label>
+                <Input 
+                  placeholder="Laagnaam..." 
+                  value={editName} 
+                  onChange={e => setEditName(e.target.value)} 
+                  className="h-12 font-bold rounded-none border-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Kleur (Symbool)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setEditColor(c)}
+                      className={cn(
+                        "h-8 w-8 rounded-none border-2 transition-all",
+                        editColor === c ? "border-slate-900 scale-110 shadow-md" : "border-transparent"
+                      )}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <div className="relative h-8 w-8 rounded-none overflow-hidden border-2 border-slate-200">
+                    <input 
+                      type="color" 
+                      value={editColor} 
+                      onChange={e => setEditColor(e.target.value)}
+                      className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
+                    />
+                    <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Icoon Selecteren</Label>
+                  <div className="h-10 w-10 bg-slate-50 border flex items-center justify-center">
+                    {editIcon && React.createElement((Icons as any)[editIcon] || Icons.Circle, { 
+                      className: "h-6 w-6",
+                      style: { color: editColor, fill: editingLayer?.type === 'fill' ? editColor : 'none' }
+                    })}
+                  </div>
+                </div>
+                
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input 
+                    placeholder="Zoek icoon..." 
+                    className="h-10 pl-9 font-bold rounded-none border-slate-200 bg-slate-50" 
+                    value={iconSearch} 
+                    onChange={e => setIconSearch(e.target.value)} 
+                  />
+                </div>
+
+                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 h-48 overflow-y-auto pr-2 custom-scrollbar p-1 border rounded-none">
+                  {filteredIcons.map(name => {
+                    const Icon = (Icons as any)[name];
+                    return (
+                      <Button 
+                        key={name} 
+                        type="button" 
+                        variant={editIcon === name ? "default" : "outline"} 
+                        size="icon" 
+                        className="h-10 w-10 p-0 rounded-none" 
+                        onClick={() => setEditIcon(name)}
+                      >
+                        <Icon className="h-5 w-5" style={{ color: editIcon === name ? undefined : editColor }} />
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
             <Button variant="ghost" onClick={() => setEditingLayer(null)} className="font-bold rounded-none">Annuleren</Button>
-            <Button onClick={handleRenameLayer} className="font-black uppercase rounded-none px-8" disabled={!newLayerName.trim()}>Opslaan</Button>
+            <Button onClick={handleUpdateLayer} className="font-black uppercase rounded-none px-8 shadow-xl shadow-primary/20" disabled={!editName.trim()}>
+              <Check className="mr-2 h-4 w-4" /> Opslaan
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
