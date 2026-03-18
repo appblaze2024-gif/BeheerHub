@@ -22,7 +22,8 @@ import {
   HelpCircle,
   ChevronDown,
   Info,
-  Map as MapIcon
+  Map as MapIcon,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,11 +60,6 @@ export default function GISDataPage() {
       {/* Top Header Bar */}
       <header className="h-10 bg-[#009ee3] text-white flex items-center justify-between px-4 shrink-0 z-50 shadow-md">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <MapIcon className="h-5 w-5 text-white/80" />
-            <h1 className="text-sm font-black uppercase tracking-tight">BeheerHub GIS | Stadsdijken Zwolle</h1>
-          </div>
-          <Separator orientation="vertical" className="h-4 bg-white/20" />
           <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest hidden sm:block">
             Mogelijk gemaakt door BeheerHub GIS
           </p>
@@ -105,7 +101,7 @@ export default function GISDataPage() {
         {/* Left Side Controls Overlay */}
         <div className="absolute top-4 left-4 z-10 flex flex-col gap-3">
           {/* Search Box */}
-          <div className="flex items-center bg-white shadow-2xl border border-slate-200 h-10 w-72 group focus-within:border-primary transition-all">
+          <div className="flex items-center bg-white shadow-2xl border border-slate-200 h-10 w-72 group focus-within:border-primary transition-all rounded-none">
             <div className="px-3 border-r border-slate-100 h-full flex items-center">
               <ChevronDown className="h-3 w-3 text-slate-400" />
             </div>
@@ -139,7 +135,7 @@ export default function GISDataPage() {
 
         {/* Legend/Info Overlay - Right Bottom */}
         <div className="absolute bottom-10 right-16 z-10 hidden md:block">
-          <div className="bg-white/90 backdrop-blur-md p-3 border border-slate-200 shadow-xl min-w-[120px] flex flex-col gap-2">
+          <div className="bg-white/90 backdrop-blur-md p-3 border border-slate-200 shadow-xl min-w-[120px] flex flex-col gap-2 rounded-none">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 bg-green-500 rounded-none border border-black/10" />
               <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">Dijkvak Noord</span>
@@ -194,25 +190,5 @@ function Separator({ orientation, className }: { orientation: 'vertical' | 'hori
       'bg-slate-200',
       className
     )} />
-  );
-}
-
-function X(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
   );
 }
