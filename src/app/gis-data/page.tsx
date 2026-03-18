@@ -41,7 +41,9 @@ import {
   Route,
   Square,
   Save,
-  Minus
+  Minus,
+  Circle,
+  Type
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -130,6 +132,7 @@ export default function GISDataPage() {
   
   // Drawing state
   const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [activeDrawMode, setActiveDrawMode] = useState<string | null>(null);
   const [isSaveDrawingOpen, setIsSaveDrawingOpen] = useState(false);
   const [drawingName, setDrawingName] = useState('Nieuwe Tekening');
 
@@ -188,10 +191,9 @@ export default function GISDataPage() {
     map.addControl(draw, 'top-right');
     drawRef.current = draw;
     
-    // Explicitly hide draw controls by default using CSS
-    const drawControl = document.querySelector('.mapboxgl-ctrl-group:last-child');
+    // Hide default draw controls
+    const drawControl = document.querySelector('.mapboxgl-ctrl-top-right .mapboxgl-ctrl-group:last-child');
     if (drawControl) {
-      (drawControl as HTMLElement).classList.add('mapbox-draw-control-group');
       (drawControl as HTMLElement).style.display = 'none';
     }
   };
@@ -200,19 +202,21 @@ export default function GISDataPage() {
     const newState = !isDrawingMode;
     setIsDrawingMode(newState);
     setIsUploadOpen(false);
-    
-    const drawControl = document.querySelector('.mapbox-draw-control-group');
-    if (drawControl) {
-      (drawControl as HTMLElement).style.display = newState ? 'block' : 'none';
-    }
+    setActiveDrawMode(null);
 
     if (!newState && drawRef.current) {
       drawRef.current.deleteAll();
     }
 
     if (newState) {
-      toast({ title: "Tekenmodus geactiveerd", description: "Gebruik de tools rechtsboven om objecten te tekenen." });
+      toast({ title: "Tekenmodus geactiveerd", description: "Kies een tool uit de balk hierboven om te beginnen." });
     }
+  };
+
+  const startDrawMode = (mode: 'draw_point' | 'draw_line_string' | 'draw_polygon') => {
+    if (!drawRef.current) return;
+    drawRef.current.changeMode(mode);
+    setActiveDrawMode(mode);
   };
 
   const handleSaveDrawing = async () => {
@@ -514,13 +518,51 @@ export default function GISDataPage() {
       <header className="h-10 bg-[#009ee3] text-white flex items-center justify-end px-4 shrink-0 z-50 shadow-md">
         <div className="flex items-center gap-1">
           {isDrawingMode && (
-            <div className="flex items-center gap-2 mr-4 bg-white/10 px-3 py-1 animate-in slide-in-from-top-2">
-              <span className="text-[9px] font-black uppercase tracking-widest text-white/80">Tekenen...</span>
-              <Button size="sm" className="h-7 px-3 text-[9px] font-black uppercase bg-green-600 hover:bg-green-700" onClick={() => setIsSaveDrawingOpen(true)}>
+            <div className="flex items-center gap-1 mr-4 bg-white/10 px-3 py-1 animate-in slide-in-from-top-2 h-8 rounded-none border border-white/20">
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/80 mr-2">Tekenen...</span>
+              <div className="flex items-center gap-1 border-r border-white/20 pr-2 mr-2">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_point' && "bg-white/30")}
+                  onClick={() => startDrawMode('draw_point')}
+                  title="Punt plaatsen"
+                >
+                  <Circle className="h-3.5 w-3.5" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_line_string' && "bg-white/30")}
+                  onClick={() => startDrawMode('draw_line_string')}
+                  title="Route tekenen"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_polygon' && "bg-white/30")}
+                  onClick={() => startDrawMode('draw_polygon')}
+                  title="Vlak tekenen"
+                >
+                  <Square className="h-3.5 w-3.5" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-7 w-7 rounded-none text-red-200 hover:bg-red-600/40 hover:text-white"
+                  onClick={() => drawRef.current?.trash()}
+                  title="Verwijderen"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <Button size="sm" className="h-6 px-3 text-[9px] font-black uppercase bg-green-600 hover:bg-green-700" onClick={() => setIsSaveDrawingOpen(true)}>
                 <Save className="mr-1.5 h-3 w-3" /> Opslaan
               </Button>
-              <Button size="sm" variant="ghost" className="h-7 px-3 text-[9px] font-black uppercase text-red-200 hover:bg-red-600/20" onClick={toggleDrawingMode}>
-                <X className="mr-1.5 h-3 w-3" /> Stoppen
+              <Button size="sm" variant="ghost" className="h-6 px-3 text-[9px] font-black uppercase text-red-200 hover:bg-red-600/20" onClick={toggleDrawingMode}>
+                <X className="mr-1.5 h-3 w-3" /> Stop
               </Button>
             </div>
           )}
