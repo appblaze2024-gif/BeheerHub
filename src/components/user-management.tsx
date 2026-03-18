@@ -278,7 +278,7 @@ function UserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-3xl rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-3xl rounded-none border-none shadow-2xl p-0 overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
           <DialogTitle className="text-xl font-black uppercase tracking-tight">
             {user ? 'Gebruiker bewerken' : 'Nieuwe gebruiker'}
@@ -292,14 +292,14 @@ function UserDialog({
                 <FormField control={form.control} name="firstName" render={({ field }) => (
                     <FormItem>
                     <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Voornaam*</FormLabel>
-                    <FormControl><Input placeholder="Jan" {...field} className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50" /></FormControl>
+                    <FormControl><Input placeholder="Jan" {...field} className="h-11 font-bold rounded-none border-slate-100 bg-slate-50" /></FormControl>
                     <FormMessage />
                     </FormItem>
                 )} />
                 <FormField control={form.control} name="lastName" render={({ field }) => (
                     <FormItem>
                     <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Achternaam*</FormLabel>
-                    <FormControl><Input placeholder="Janssen" {...field} className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50" /></FormControl>
+                    <FormControl><Input placeholder="Janssen" {...field} className="h-11 font-bold rounded-none border-slate-100 bg-slate-50" /></FormControl>
                     <FormMessage />
                     </FormItem>
                 )} />
@@ -310,7 +310,7 @@ function UserDialog({
                     <FormItem>
                         <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">E-mailadres*</FormLabel>
                         <FormControl>
-                        <Input type="email" placeholder="gebruiker@example.com" {...field} disabled={!!user} className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50" />
+                        <Input type="email" placeholder="gebruiker@example.com" {...field} disabled={!!user} className="h-11 font-bold rounded-none border-slate-100 bg-slate-50" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -321,7 +321,7 @@ function UserDialog({
                         <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rol*</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                                <SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50"><SelectValue placeholder="Selecteer een rol" /></SelectTrigger>
+                                <SelectTrigger className="h-11 font-bold rounded-none border-slate-100 bg-slate-50"><SelectValue placeholder="Selecteer een rol" /></SelectTrigger>
                             </FormControl>
                             <SelectContent>
                                 <SelectItem value="Super admin">Super admin</SelectItem>
@@ -344,9 +344,9 @@ function UserDialog({
                     <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">NFC Tag ID (Login Badge)</FormLabel>
                     <div className="flex items-center gap-2">
                         <FormControl>
-                        <Input placeholder="Scan of voer ID in" {...field} value={field.value || ''} className="h-11 font-mono font-bold rounded-xl border-slate-100 bg-slate-50" />
+                        <Input placeholder="Scan of voer ID in" {...field} value={field.value || ''} className="h-11 font-mono font-bold rounded-none border-slate-100 bg-slate-50" />
                         </FormControl>
-                        <Button type="button" variant="outline" onClick={handleNfcScan} disabled={isNfcScanning} className="h-11 rounded-xl px-4 border-slate-200">
+                        <Button type="button" variant="outline" onClick={handleNfcScan} disabled={isNfcScanning} className="h-11 rounded-none px-4 border-slate-200">
                         {isNfcScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Nfc className="h-4 w-4" />}
                         <span className="ml-2 hidden sm:inline">Scan</span>
                         </Button>
@@ -363,7 +363,7 @@ function UserDialog({
                         <FormItem>
                             <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Wijk</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || 'geen_wijk'}>
-                                <FormControl><SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50"><SelectValue placeholder="Koppel aan wijk" /></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger className="h-11 font-bold rounded-none border-slate-100 bg-slate-50"><SelectValue placeholder="Koppel aan wijk" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="geen_wijk">-- Geen wijk --</SelectItem>
                                     {wijken.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
@@ -376,7 +376,7 @@ function UserDialog({
                         <FormItem>
                             <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Veegroute</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || 'geen_veegroute'}>
-                                <FormControl><SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50"><SelectValue placeholder="Koppel aan veegroute" /></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger className="h-11 font-bold rounded-none border-slate-100 bg-slate-50"><SelectValue placeholder="Koppel aan veegroute" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="geen_veegroute">-- Geen veegroute --</SelectItem>
                                     {veegroutes.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
@@ -389,7 +389,7 @@ function UserDialog({
                         <FormItem>
                             <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Prullenbakkenroute</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || 'geen_prullenbakkenroute'}>
-                                <FormControl><SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50"><SelectValue placeholder="Koppel aan route" /></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger className="h-11 font-bold rounded-none border-slate-100 bg-slate-50"><SelectValue placeholder="Koppel aan route" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="geen_prullenbakkenroute">-- Geen prullenbakkenroute --</SelectItem>
                                     {prullenbakkenroutes.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
@@ -409,7 +409,7 @@ function UserDialog({
                             <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                                <SelectTrigger className="h-11 font-bold rounded-xl border-slate-100 bg-slate-50">
+                                <SelectTrigger className="h-11 font-bold rounded-none border-slate-100 bg-slate-50">
                                 <SelectValue placeholder="Selecteer een status" />
                                 </SelectTrigger>
                             </FormControl>
@@ -429,7 +429,7 @@ function UserDialog({
                 <div className="space-y-4">
                     <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Module Rechten</FormLabel>
                     {role === 'Super admin' && (
-                        <Alert className="bg-primary/5 border-primary/20 rounded-2xl">
+                        <Alert className="bg-primary/5 border-primary/20 rounded-none">
                             <Info className="h-4 w-4 text-primary" />
                             <AlertTitle className="text-xs font-black uppercase">Volledige toegang</AlertTitle>
                             <AlertDescription className="text-[10px] font-bold text-slate-500">
@@ -439,7 +439,7 @@ function UserDialog({
                     )}
                     <div className="space-y-4">
                     {allPermissions.map((module) => (
-                        <div key={module.module} className="bg-slate-50/50 p-4 rounded-2xl border-2 border-slate-100 space-y-4">
+                        <div key={module.module} className="bg-slate-50/50 p-4 rounded-none border-2 border-slate-100 space-y-4">
                         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
                             <ShieldCheck className="h-4 w-4 text-primary" />
                             <h4 className="font-black text-[11px] uppercase tracking-tight">{module.label}</h4>
@@ -457,7 +457,7 @@ function UserDialog({
                                         checked={field.value}
                                         onCheckedChange={field.onChange}
                                         disabled={isSubmitting || isSuperAdminEditing}
-                                        className="rounded-md"
+                                        className="rounded-none"
                                     />
                                     </FormControl>
                                     <FormLabel className="text-[11px] font-bold text-slate-600 cursor-pointer">
@@ -484,7 +484,7 @@ function UserDialog({
                                                             checked={field.value}
                                                             onCheckedChange={field.onChange}
                                                             disabled={isSubmitting || isSuperAdminEditing}
-                                                            className="rounded-md"
+                                                            className="rounded-none"
                                                         />
                                                     </FormControl>
                                                     <FormLabel className="text-[11px] font-medium text-slate-500 cursor-pointer italic">
@@ -505,7 +505,7 @@ function UserDialog({
 
             <DialogFooter className="p-6 bg-slate-50 border-t shrink-0">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting} className="font-bold">Annuleren</Button>
-              <Button type="submit" disabled={isSubmitting} className="font-black uppercase tracking-tight px-8 shadow-xl shadow-primary/20 h-11 rounded-xl">
+              <Button type="submit" disabled={isSubmitting} className="font-black uppercase tracking-tight px-8 shadow-xl shadow-primary/20 h-11 rounded-none">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {user ? 'Opslaan' : 'Gebruiker aanmaken'}
               </Button>
@@ -629,7 +629,7 @@ export function UserManagement() {
 
   if (isAdminLoading) {
     return (
-       <Card className="rounded-[2rem] border-none shadow-xl">
+       <Card className="rounded-none border-none shadow-xl">
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-xl font-black uppercase tracking-tight">Gebruikersbeheer</CardTitle>
           <CardDescription className="font-bold text-slate-400">Gebruikers laden...</CardDescription>
@@ -643,7 +643,7 @@ export function UserManagement() {
   
   if (!canManageUsers) {
       return (
-           <Card className="rounded-[2rem] border-none shadow-xl bg-red-50">
+           <Card className="rounded-none border-none shadow-xl bg-red-50">
                 <CardHeader className="p-4 sm:p-6">
                     <CardTitle className="text-xl font-black uppercase tracking-tight text-red-900">Geen Toegang</CardTitle>
                 </CardHeader>
@@ -656,7 +656,7 @@ export function UserManagement() {
 
   return (
     <div className="space-y-4">
-      <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden">
+      <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
         <CardHeader className="flex flex-col items-center justify-center gap-4 p-4 sm:p-6 border-b bg-slate-50/50 text-center">
           <div className="space-y-1">
             <CardTitle className="text-2xl font-black uppercase tracking-tight text-slate-900">Gebruikersbeheer</CardTitle>
@@ -665,7 +665,7 @@ export function UserManagement() {
             </CardDescription>
           </div>
           {canCreate && (
-            <Button onClick={handleAddNew} className="w-full sm:w-auto h-11 font-black uppercase tracking-tight px-10 shadow-xl shadow-primary/20 rounded-2xl text-sm">
+            <Button onClick={handleAddNew} className="w-full sm:w-auto h-11 font-black uppercase tracking-tight px-10 shadow-xl shadow-primary/20 rounded-none text-sm">
               <Plus className="mr-2 h-5 w-5" /> Gebruiker aanmaken
             </Button>
           )}
@@ -699,8 +699,8 @@ export function UserManagement() {
                                 className="grid grid-cols-[1.5fr_1.5fr_1fr_1.5fr_1fr] items-center px-8 py-3 hover:bg-slate-50 transition-all cursor-pointer group"
                             >
                                 <div className="flex items-center gap-4">
-                                    <Avatar className="h-9 w-9 border-2 border-white shadow-md ring-1 ring-slate-100 transition-transform group-hover:scale-110">
-                                        <AvatarFallback className="bg-slate-100 text-primary font-black text-xs uppercase">
+                                    <Avatar className="h-9 w-9 border-2 border-white shadow-md ring-1 ring-slate-100 transition-transform group-hover:scale-110 rounded-none">
+                                        <AvatarFallback className="bg-slate-100 text-primary font-black text-xs uppercase rounded-none">
                                             {getInitials(user.firstName, user.lastName)}
                                         </AvatarFallback>
                                     </Avatar>
@@ -712,16 +712,16 @@ export function UserManagement() {
                                 </div>
                                 <div>
                                     <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className={cn(
-                                        "h-6 px-3 text-[9px] font-black uppercase tracking-widest",
+                                        "h-6 px-3 text-[9px] font-black uppercase tracking-widest rounded-none",
                                         user.role === 'Super admin' ? "bg-slate-900" : "bg-slate-100 text-slate-500 border-none"
                                     )}>
                                         {user.role}
                                     </Badge>
                                 </div>
                                 <div className="flex flex-col gap-0.5 pr-4">
-                                    {user.wijk && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-primary/20 text-primary bg-primary/5">W</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.wijk}</span></div>}
-                                    {user.veegroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-green-200 text-green-600 bg-green-50">V</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.veegroute}</span></div>}
-                                    {user.prullenbakkenroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-blue-200 text-blue-600 bg-blue-50">P</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.prullenbakkenroute}</span></div>}
+                                    {user.wijk && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-primary/20 text-primary bg-primary/5 rounded-none">W</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.wijk}</span></div>}
+                                    {user.veegroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-green-200 text-green-600 bg-green-50 rounded-none">V</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.veegroute}</span></div>}
+                                    {user.prullenbakkenroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-blue-200 text-blue-600 bg-blue-50 rounded-none">P</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.prullenbakkenroute}</span></div>}
                                     {!user.wijk && !user.veegroute && !user.prullenbakkenroute && <span className="text-[10px] font-bold text-slate-300 italic">Geen toewijzingen</span>}
                                 </div>
                                 <div className="flex justify-between items-center pr-4">
@@ -729,7 +729,7 @@ export function UserManagement() {
                                         <Button 
                                             variant="outline" 
                                             size="sm"
-                                            className="h-7 font-black uppercase text-[9px] tracking-widest rounded-lg border-primary/30 text-primary hover:bg-primary/5"
+                                            className="h-7 font-black uppercase text-[9px] tracking-widest rounded-none border-primary/30 text-primary hover:bg-primary/5"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleSendInvitation(user);
@@ -740,7 +740,7 @@ export function UserManagement() {
                                     ) : (
                                         <Badge
                                             className={cn(
-                                                "h-6 px-3 text-[9px] font-black uppercase tracking-widest border-none",
+                                                "h-6 px-3 text-[9px] font-black uppercase tracking-widest border-none rounded-none",
                                                 user.status === 'Actief' ? 'bg-green-100 text-green-700'
                                                 : user.status === 'Inactief' ? 'bg-slate-100 text-slate-500'
                                                 : 'bg-orange-100 text-orange-700'
@@ -755,18 +755,18 @@ export function UserManagement() {
                         ))}
                     </div>
 
-                    {/* Mobile Card View - Optimized per Screenshot */}
+                    {/* Mobile Card View */}
                     <div className="lg:hidden p-2 space-y-3 bg-slate-50/30">
                         {users.map(user => (
                             <Card 
                                 key={user.id} 
                                 onClick={() => canEdit && handleEdit(user)} 
-                                className="rounded-[2.5rem] border-none shadow-xl bg-white active:scale-[0.98] transition-all duration-300 overflow-hidden relative"
+                                className="rounded-none border-none shadow-xl bg-white active:scale-[0.98] transition-all duration-300 overflow-hidden relative"
                             >
                                 <div className="p-4 flex flex-col gap-4">
                                     <div className="flex items-center gap-4">
-                                        <Avatar className="h-14 w-14 border-4 border-white shadow-2xl ring-1 ring-slate-100 shrink-0">
-                                            <AvatarFallback className="bg-slate-100 text-primary font-black text-base uppercase">
+                                        <Avatar className="h-14 w-14 border-4 border-white shadow-2xl ring-1 ring-slate-100 shrink-0 rounded-none">
+                                            <AvatarFallback className="bg-slate-100 text-primary font-black text-base uppercase rounded-none">
                                                 {getInitials(user.firstName, user.lastName)}
                                             </AvatarFallback>
                                         </Avatar>
@@ -775,7 +775,7 @@ export function UserManagement() {
                                                 <p className="font-black uppercase tracking-tight text-slate-900 text-base truncate leading-none">
                                                     {user.displayName || 'Geen naam'}
                                                 </p>
-                                                <Badge className="bg-primary text-white text-[8px] font-black uppercase px-2 h-5 rounded-lg border-none shrink-0 shadow-lg shadow-primary/20">
+                                                <Badge className="bg-primary text-white text-[8px] font-black uppercase px-2 h-5 rounded-none border-none shrink-0 shadow-lg shadow-primary/20">
                                                     {user.role}
                                                 </Badge>
                                             </div>
@@ -785,15 +785,15 @@ export function UserManagement() {
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-50 p-3 rounded-[2rem] space-y-2 border-2 border-slate-100 shadow-inner">
+                                    <div className="bg-slate-50 p-3 rounded-none space-y-2 border-2 border-slate-100 shadow-inner">
                                         <div className="flex items-center gap-2 mb-0.5">
                                             <MapPin className="h-3.5 w-3.5 text-slate-400" />
                                             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none">Toewijzingen</p>
                                         </div>
                                         <div className="flex flex-wrap gap-1.5 min-h-[16px]">
-                                            {user.wijk && <Badge variant="outline" className="text-[9px] font-black bg-white border-primary/20 text-primary px-2.5 py-1 rounded-xl uppercase tracking-tighter shadow-sm">W: {user.wijk}</Badge>}
-                                            {user.veegroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-green-200 text-green-600 px-2.5 py-1 rounded-xl uppercase tracking-tighter shadow-sm">V: {user.veegroute}</Badge>}
-                                            {user.prullenbakkenroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-blue-200 text-blue-600 px-2.5 py-1 rounded-xl uppercase tracking-tighter shadow-sm">P: {user.prullenbakkenroute}</Badge>}
+                                            {user.wijk && <Badge variant="outline" className="text-[9px] font-black bg-white border-primary/20 text-primary px-2.5 py-1 rounded-none uppercase tracking-tighter shadow-sm">W: {user.wijk}</Badge>}
+                                            {user.veegroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-green-200 text-green-600 px-2.5 py-1 rounded-none uppercase tracking-tighter shadow-sm">V: {user.veegroute}</Badge>}
+                                            {user.prullenbakkenroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-blue-200 text-blue-600 px-2.5 py-1 rounded-none uppercase tracking-tighter shadow-sm">P: {user.prullenbakkenroute}</Badge>}
                                             {!user.wijk && !user.veegroute && !user.prullenbakkenroute && (
                                                 <span className="text-[10px] font-bold text-slate-300 italic uppercase tracking-widest pl-1">Geen actieve gebieden</span>
                                             )}
@@ -803,7 +803,7 @@ export function UserManagement() {
                                     <div className="flex items-center justify-between pt-1">
                                         <div className="flex items-center gap-2.5">
                                             <div className={cn(
-                                                "h-2.5 w-2.5 rounded-full border-2 border-white shadow-md",
+                                                "h-2.5 w-2.5 rounded-none border-2 border-white shadow-md",
                                                 user.status === 'Actief' ? "bg-green-500 shadow-green-500/20" : "bg-orange-400 shadow-orange-400/20"
                                             )} />
                                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{user.status || 'Onbekend'}</span>
@@ -813,7 +813,7 @@ export function UserManagement() {
                                             <Button 
                                                 variant="outline" 
                                                 size="sm"
-                                                className="h-9 font-black uppercase text-[10px] rounded-2xl px-5 border-primary/30 text-primary bg-primary/5 shadow-xl shadow-primary/5 active:scale-95 transition-all"
+                                                className="h-9 font-black uppercase text-[10px] rounded-none px-5 border-primary/30 text-primary bg-primary/5 shadow-xl shadow-primary/5 active:scale-95 transition-all"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleSendInvitation(user);
