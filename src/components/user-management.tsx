@@ -629,12 +629,12 @@ export function UserManagement() {
 
   if (isAdminLoading) {
     return (
-       <Card className="rounded-none border-none shadow-xl">
+       <Card className="flex-1 rounded-none border-none shadow-none">
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-xl font-black uppercase tracking-tight">Gebruikersbeheer</CardTitle>
           <CardDescription className="font-bold text-slate-400">Gebruikers laden...</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center justify-center p-8">
+        <CardContent className="flex items-center justify-center p-8 flex-1">
             <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
         </CardContent>
       </Card>
@@ -643,7 +643,7 @@ export function UserManagement() {
   
   if (!canManageUsers) {
       return (
-           <Card className="rounded-none border-none shadow-xl bg-red-50">
+           <Card className="flex-1 rounded-none border-none shadow-none bg-red-50">
                 <CardHeader className="p-4 sm:p-6">
                     <CardTitle className="text-xl font-black uppercase tracking-tight text-red-900">Geen Toegang</CardTitle>
                 </CardHeader>
@@ -655,12 +655,12 @@ export function UserManagement() {
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
-        <CardHeader className="flex flex-col items-center justify-center gap-4 p-4 sm:p-6 border-b bg-slate-50/50 text-center">
-          <div className="space-y-1">
+    <div className="flex flex-col flex-1 h-full">
+      <Card className="flex-1 flex flex-col rounded-none border-none shadow-none bg-white overflow-hidden">
+        <CardHeader className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 sm:p-6 border-b bg-slate-50/50 shrink-0">
+          <div className="space-y-1 text-center md:text-left">
             <CardTitle className="text-2xl font-black uppercase tracking-tight text-slate-900">Gebruikersbeheer</CardTitle>
-            <CardDescription className="font-bold text-slate-400 text-sm max-w-sm mx-auto leading-relaxed">
+            <CardDescription className="font-bold text-slate-400 text-sm max-w-sm leading-relaxed">
               Voeg collega's toe en beheer hun toegang tot de BeheerHub modules.
             </CardDescription>
           </div>
@@ -670,9 +670,9 @@ export function UserManagement() {
             </Button>
           )}
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 flex-1 overflow-hidden">
             {isLoadingUsers ? (
-                <div className="flex flex-col items-center justify-center p-12 gap-4">
+                <div className="flex flex-col items-center justify-center h-full gap-4">
                     <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Synchroniseren...</p>
                 </div>
@@ -682,154 +682,156 @@ export function UserManagement() {
                     <p className="font-black text-red-600 uppercase tracking-tight">{usersError.message}</p>
                 </div>
             ) : users && users.length > 0 ? (
-                <div className="divide-y divide-slate-100">
-                    {/* Desktop Table View */}
-                    <div className="hidden lg:block">
-                        <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1.5fr_1fr] px-8 py-3 font-black uppercase tracking-[0.15em] text-[10px] text-slate-400 bg-white sticky top-0 z-10">
-                            <span>Naam</span>
-                            <span>E-mail</span>
-                            <span>Rol</span>
-                            <span>Toegewezen Gebieden</span>
-                            <span>Status / Actie</span>
-                        </div>
-                        {users.map(user => (
-                            <div 
-                                key={user.id} 
-                                onClick={() => canEdit && handleEdit(user)} 
-                                className="grid grid-cols-[1.5fr_1.5fr_1fr_1.5fr_1fr] items-center px-8 py-3 hover:bg-slate-50 transition-all cursor-pointer group"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <Avatar className="h-9 w-9 border-2 border-white shadow-md ring-1 ring-slate-100 transition-transform group-hover:scale-110 rounded-none">
-                                        <AvatarFallback className="bg-slate-100 text-primary font-black text-xs uppercase rounded-none">
-                                            {getInitials(user.firstName, user.lastName)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <span className="font-black uppercase tracking-tight text-slate-900 group-hover:text-primary transition-colors">{user.displayName || 'Geen naam'}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                                    <Mail className="h-3.5 w-3.5 opacity-30" />
-                                    <span className="truncate">{user.email}</span>
-                                </div>
-                                <div>
-                                    <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className={cn(
-                                        "h-6 px-3 text-[9px] font-black uppercase tracking-widest rounded-none",
-                                        user.role === 'Super admin' ? "bg-slate-900" : "bg-slate-100 text-slate-500 border-none"
-                                    )}>
-                                        {user.role}
-                                    </Badge>
-                                </div>
-                                <div className="flex flex-col gap-0.5 pr-4">
-                                    {user.wijk && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-primary/20 text-primary bg-primary/5 rounded-none">W</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.wijk}</span></div>}
-                                    {user.veegroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-green-200 text-green-600 bg-green-50 rounded-none">V</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.veegroute}</span></div>}
-                                    {user.prullenbakkenroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-blue-200 text-blue-600 bg-blue-50 rounded-none">P</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.prullenbakkenroute}</span></div>}
-                                    {!user.wijk && !user.veegroute && !user.prullenbakkenroute && <span className="text-[10px] font-bold text-slate-300 italic">Geen toewijzingen</span>}
-                                </div>
-                                <div className="flex justify-between items-center pr-4">
-                                    {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit ? (
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm"
-                                            className="h-7 font-black uppercase text-[9px] tracking-widest rounded-none border-primary/30 text-primary hover:bg-primary/5"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleSendInvitation(user);
-                                            }}
-                                        >
-                                            {user.status === 'Niet uitgenodigd' ? 'Uitnodigen' : 'Nieuwe link'}
-                                        </Button>
-                                    ) : (
-                                        <Badge
-                                            className={cn(
-                                                "h-6 px-3 text-[9px] font-black uppercase tracking-widest border-none rounded-none",
-                                                user.status === 'Actief' ? 'bg-green-100 text-green-700'
-                                                : user.status === 'Inactief' ? 'bg-slate-100 text-slate-500'
-                                                : 'bg-orange-100 text-orange-700'
-                                            )}
-                                        >
-                                            {user.status || 'N.v.t.'}
-                                        </Badge>
-                                    )}
-                                    <ChevronRight className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
-                                </div>
+                <ScrollArea className="h-full">
+                    <div className="divide-y divide-slate-100">
+                        {/* Desktop Table View */}
+                        <div className="hidden lg:block">
+                            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1.5fr_1fr] px-8 py-3 font-black uppercase tracking-[0.15em] text-[10px] text-slate-400 bg-white sticky top-0 z-10">
+                                <span>Naam</span>
+                                <span>E-mail</span>
+                                <span>Rol</span>
+                                <span>Toegewezen Gebieden</span>
+                                <span>Status / Actie</span>
                             </div>
-                        ))}
-                    </div>
-
-                    {/* Mobile Card View */}
-                    <div className="lg:hidden p-2 space-y-3 bg-slate-50/30">
-                        {users.map(user => (
-                            <Card 
-                                key={user.id} 
-                                onClick={() => canEdit && handleEdit(user)} 
-                                className="rounded-none border-none shadow-xl bg-white active:scale-[0.98] transition-all duration-300 overflow-hidden relative"
-                            >
-                                <div className="p-4 flex flex-col gap-4">
+                            {users.map(user => (
+                                <div 
+                                    key={user.id} 
+                                    onClick={() => canEdit && handleEdit(user)} 
+                                    className="grid grid-cols-[1.5fr_1.5fr_1fr_1.5fr_1fr] items-center px-8 py-3 hover:bg-slate-50 transition-all cursor-pointer group"
+                                >
                                     <div className="flex items-center gap-4">
-                                        <Avatar className="h-14 w-14 border-4 border-white shadow-2xl ring-1 ring-slate-100 shrink-0 rounded-none">
-                                            <AvatarFallback className="bg-slate-100 text-primary font-black text-base uppercase rounded-none">
+                                        <Avatar className="h-9 w-9 border-2 border-white shadow-md ring-1 ring-slate-100 transition-transform group-hover:scale-110 rounded-none">
+                                            <AvatarFallback className="bg-slate-100 text-primary font-black text-xs uppercase rounded-none">
                                                 {getInitials(user.firstName, user.lastName)}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center justify-between mb-0.5 gap-2">
-                                                <p className="font-black uppercase tracking-tight text-slate-900 text-base truncate leading-none">
-                                                    {user.displayName || 'Geen naam'}
-                                                </p>
-                                                <Badge className="bg-primary text-white text-[8px] font-black uppercase px-2 h-5 rounded-none border-none shrink-0 shadow-lg shadow-primary/20">
-                                                    {user.role}
-                                                </Badge>
-                                            </div>
-                                            <p className="text-[10px] font-bold text-slate-400 truncate flex items-center gap-1.5 uppercase tracking-tighter">
-                                                <Mail className="h-3 w-3 opacity-40 shrink-0" /> {user.email}
-                                            </p>
-                                        </div>
+                                        <span className="font-black uppercase tracking-tight text-slate-900 group-hover:text-primary transition-colors">{user.displayName || 'Geen naam'}</span>
                                     </div>
-
-                                    <div className="bg-slate-50 p-3 rounded-none space-y-2 border-2 border-slate-100 shadow-inner">
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                            <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none">Toewijzingen</p>
-                                        </div>
-                                        <div className="flex flex-wrap gap-1.5 min-h-[16px]">
-                                            {user.wijk && <Badge variant="outline" className="text-[9px] font-black bg-white border-primary/20 text-primary px-2.5 py-1 rounded-none uppercase tracking-tighter shadow-sm">W: {user.wijk}</Badge>}
-                                            {user.veegroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-green-200 text-green-600 px-2.5 py-1 rounded-none uppercase tracking-tighter shadow-sm">V: {user.veegroute}</Badge>}
-                                            {user.prullenbakkenroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-blue-200 text-blue-600 px-2.5 py-1 rounded-none uppercase tracking-tighter shadow-sm">P: {user.prullenbakkenroute}</Badge>}
-                                            {!user.wijk && !user.veegroute && !user.prullenbakkenroute && (
-                                                <span className="text-[10px] font-bold text-slate-300 italic uppercase tracking-widest pl-1">Geen actieve gebieden</span>
-                                            )}
-                                        </div>
+                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                                        <Mail className="h-3.5 w-3.5 opacity-30" />
+                                        <span className="truncate">{user.email}</span>
                                     </div>
-
-                                    <div className="flex items-center justify-between pt-1">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className={cn(
-                                                "h-2.5 w-2.5 rounded-none border-2 border-white shadow-md",
-                                                user.status === 'Actief' ? "bg-green-500 shadow-green-500/20" : "bg-orange-400 shadow-orange-400/20"
-                                            )} />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{user.status || 'Onbekend'}</span>
-                                        </div>
-                                        
-                                        {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit && (
+                                    <div>
+                                        <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className={cn(
+                                            "h-6 px-3 text-[9px] font-black uppercase tracking-widest rounded-none",
+                                            user.role === 'Super admin' ? "bg-slate-900" : "bg-slate-100 text-slate-500 border-none"
+                                        )}>
+                                            {user.role}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex flex-col gap-0.5 pr-4">
+                                        {user.wijk && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-primary/20 text-primary bg-primary/5 rounded-none">W</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.wijk}</span></div>}
+                                        {user.veegroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-green-200 text-green-600 bg-green-50 rounded-none">V</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.veegroute}</span></div>}
+                                        {user.prullenbakkenroute && <div className="flex items-center gap-1.5"><Badge variant="outline" className="text-[8px] h-4 font-black uppercase border-blue-200 text-blue-600 bg-blue-50 rounded-none">P</Badge><span className="text-[10px] font-bold text-slate-600 truncate">{user.prullenbakkenroute}</span></div>}
+                                        {!user.wijk && !user.veegroute && !user.prullenbakkenroute && <span className="text-[10px] font-bold text-slate-300 italic">Geen toewijzingen</span>}
+                                    </div>
+                                    <div className="flex justify-between items-center pr-4">
+                                        {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit ? (
                                             <Button 
                                                 variant="outline" 
                                                 size="sm"
-                                                className="h-9 font-black uppercase text-[10px] rounded-none px-5 border-primary/30 text-primary bg-primary/5 shadow-xl shadow-primary/5 active:scale-95 transition-all"
+                                                className="h-7 font-black uppercase text-[9px] tracking-widest rounded-none border-primary/30 text-primary hover:bg-primary/5"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleSendInvitation(user);
                                                 }}
                                             >
-                                                Verstuur Link
+                                                {user.status === 'Niet uitgenodigd' ? 'Uitnodigen' : 'Nieuwe link'}
                                             </Button>
+                                        ) : (
+                                            <Badge
+                                                className={cn(
+                                                    "h-6 px-3 text-[9px] font-black uppercase tracking-widest border-none rounded-none",
+                                                    user.status === 'Actief' ? 'bg-green-100 text-green-700'
+                                                    : user.status === 'Inactief' ? 'bg-slate-100 text-slate-500'
+                                                    : 'bg-orange-100 text-orange-700'
+                                                )}
+                                            >
+                                                {user.status || 'N.v.t.'}
+                                            </Badge>
                                         )}
+                                        <ChevronRight className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
                                     </div>
                                 </div>
-                            </Card>
-                        ))}
+                            ))}
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="lg:hidden p-2 space-y-3 bg-slate-50/30">
+                            {users.map(user => (
+                                <Card 
+                                    key={user.id} 
+                                    onClick={() => canEdit && handleEdit(user)} 
+                                    className="rounded-none border-none shadow-xl bg-white active:scale-[0.98] transition-all duration-300 overflow-hidden relative"
+                                >
+                                    <div className="p-4 flex flex-col gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-14 w-14 border-4 border-white shadow-2xl ring-1 ring-slate-100 shrink-0 rounded-none">
+                                                <AvatarFallback className="bg-slate-100 text-primary font-black text-base uppercase rounded-none">
+                                                    {getInitials(user.firstName, user.lastName)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center justify-between mb-0.5 gap-2">
+                                                    <p className="font-black uppercase tracking-tight text-slate-900 text-base truncate leading-none">
+                                                        {user.displayName || 'Geen naam'}
+                                                    </p>
+                                                    <Badge className="bg-primary text-white text-[8px] font-black uppercase px-2 h-5 rounded-none border-none shrink-0 shadow-lg shadow-primary/20">
+                                                        {user.role}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-[10px] font-bold text-slate-400 truncate flex items-center gap-1.5 uppercase tracking-tighter">
+                                                    <Mail className="h-3 w-3 opacity-40 shrink-0" /> {user.email}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-slate-50 p-3 rounded-none space-y-2 border-2 border-slate-100 shadow-inner">
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none">Toewijzingen</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5 min-h-[16px]">
+                                                {user.wijk && <Badge variant="outline" className="text-[9px] font-black bg-white border-primary/20 text-primary px-2.5 py-1 rounded-none uppercase tracking-tighter shadow-sm">W: {user.wijk}</Badge>}
+                                                {user.veegroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-green-200 text-green-600 px-2.5 py-1 rounded-none uppercase tracking-tighter shadow-sm">V: {user.veegroute}</Badge>}
+                                                {user.prullenbakkenroute && <Badge variant="outline" className="text-[9px] font-black bg-white border-blue-200 text-blue-600 px-2.5 py-1 rounded-none uppercase tracking-tighter shadow-sm">P: {user.prullenbakkenroute}</Badge>}
+                                                {!user.wijk && !user.veegroute && !user.prullenbakkenroute && (
+                                                    <span className="text-[10px] font-bold text-slate-300 italic uppercase tracking-widest pl-1">Geen actieve gebieden</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-1">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className={cn(
+                                                    "h-2.5 w-2.5 rounded-none border-2 border-white shadow-md",
+                                                    user.status === 'Actief' ? "bg-green-500 shadow-green-500/20" : "bg-orange-400 shadow-orange-400/20"
+                                                )} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{user.status || 'Onbekend'}</span>
+                                            </div>
+                                            
+                                            {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit && (
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    className="h-9 font-black uppercase text-[10px] rounded-none px-5 border-primary/30 text-primary bg-primary/5 shadow-xl shadow-primary/5 active:scale-95 transition-all"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSendInvitation(user);
+                                                    }}
+                                                >
+                                                    Verstuur Link
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                </ScrollArea>
             ) : (
-                <div className="p-16 text-center text-slate-300">
+                <div className="p-16 text-center text-slate-300 flex-1 flex flex-col justify-center">
                     <UserIcon className="h-16 w-16 mx-auto mb-4 opacity-10" />
                     <p className="font-black uppercase tracking-widest text-xs">Geen gebruikers gevonden in de database.</p>
                 </div>
