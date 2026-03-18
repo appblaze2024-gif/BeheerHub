@@ -86,7 +86,8 @@ import {
   ChevronDown,
   LayoutGrid,
   CircleHelp,
-  AlertCircle
+  AlertCircle,
+  Plus
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -449,7 +450,7 @@ function IntegratedWerkbonOverlay({
                                 </div>
                                 <div className="space-y-3">
                                     {hoeveelheden.map(h => (
-                                        <div key={h.id} className="flex justify-between items-center p-4 bg-white border-2 border-slate-100 rounded-none shadow-sm">
+                                        <div key={h.id} className="flex justify-between items-center p-4 bg-white rounded-none border-2 border-slate-100 shadow-sm">
                                             <div className="flex flex-col"><span className="text-sm font-black uppercase tracking-tight text-slate-900">{h.type}</span><span className="text-[9px] text-slate-400 uppercase font-black tracking-widest">{h.eenheid}</span></div>
                                             <div className="flex items-center gap-6"><span className="text-2xl font-black text-primary leading-none tabular-nums">{h.aantal}</span><Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-600 rounded-none h-10 w-10" onClick={() => setHoeveelheden(prev => prev.filter(x => x.id !== h.id))}><Trash2 className="h-4 w-4 lg:h-5 lg:w-5" /></Button></div>
                                         </div>
@@ -947,10 +948,10 @@ export default function StartNavigationPage() {
             )}
 
             <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex-1 relative overflow-y-auto">
-                    {isMeldingenType ? (
-                        <div className="w-full flex flex-col h-full overflow-hidden">
-                            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 px-4 py-2 flex-1 content-start">
+                {isMeldingenType ? (
+                    <div className="flex-1 flex flex-col min-h-0 h-full">
+                        <ScrollArea className="flex-1">
+                            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 px-4 py-2 content-start">
                                 {paginatedMissions.map((m, index) => {
                                     const isCompleted = m.status === 'Afgerond';
                                     const missionNumber = (currentPage - 1) * itemsPerPage + index + 1;
@@ -983,20 +984,22 @@ export default function StartNavigationPage() {
                                     );
                                 })}
                             </div>
-                            {totalPages > 1 && (
-                                <div className="flex items-center justify-center gap-4 py-4 bg-white border-t mt-auto">
-                                    <Button variant="outline" className="rounded-none font-black uppercase h-9 px-4 border-slate-200" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft className="h-4 w-4 mr-2" /> Vorige</Button>
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pagina {currentPage} / {totalPages}</span>
-                                    <Button variant="outline" className="rounded-none font-black uppercase h-9 px-4 border-slate-200" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Volgende <ChevronRight className="h-4 w-4 ml-2" /></Button>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
+                        </ScrollArea>
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-4 py-4 bg-white border-t mt-auto shrink-0">
+                                <Button variant="outline" className="rounded-none font-black uppercase h-9 px-4 border-slate-200" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft className="h-4 w-4 mr-2" /> Vorige</Button>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pagina {currentPage} / {totalPages}</span>
+                                <Button variant="outline" className="rounded-none font-black uppercase h-9 px-4 border-slate-200" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Volgende <ChevronRight className="h-4 w-4 ml-2" /></Button>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex-1 relative h-full">
                         <MapGL ref={mapRef} initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 13 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN}>
                             {allObjects?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="h-4 w-4 rounded-none bg-primary border-2 border-white shadow-md" /></Marker>))}
                         </MapGL>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {isRecalculating && (
