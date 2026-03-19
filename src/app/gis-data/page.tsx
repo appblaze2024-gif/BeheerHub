@@ -47,7 +47,8 @@ import {
   Cloud,
   Sun,
   Moon,
-  Trees
+  Trees,
+  Settings2
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,8 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -103,6 +106,8 @@ interface GISLayer {
   visible: boolean;
   color: string;
   type: 'fill' | 'line' | 'circle';
+  lineWidth?: number;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
   folderId?: string | null;
   icon?: string;
 }
@@ -148,6 +153,8 @@ export default function GISDataPage() {
   const [editingLayer, setEditingLayer] = useState<GISLayer | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [editLineWidth, setEditLineWidth] = useState(2);
+  const [editLineStyle, setEditLineStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
   const [editIcon, setEditIcon] = useState('');
   const [iconSearch, setIconSearch] = useState('');
 
@@ -374,6 +381,8 @@ export default function GISDataPage() {
       visible: true,
       color: PRESET_COLORS[(dbLayers?.length || 0) % PRESET_COLORS.length],
       type,
+      lineWidth: 2,
+      lineStyle: 'solid',
       folderId: null,
       icon: defaultIcon,
       createdAt: new Date().toISOString()
@@ -407,6 +416,8 @@ export default function GISDataPage() {
     updateDocumentNonBlocking(layerRef, { 
       name: editName.trim(),
       color: editColor,
+      lineWidth: editLineWidth,
+      lineStyle: editLineStyle,
       icon: editIcon
     });
     setEditingLayer(null);
@@ -549,6 +560,8 @@ export default function GISDataPage() {
                       setEditingLayer(layer); 
                       setEditName(layer.name); 
                       setEditColor(layer.color);
+                      setEditLineWidth(layer.lineWidth || 2);
+                      setEditLineStyle(layer.lineStyle || 'solid');
                       setEditIcon(layer.icon || (layer.type === 'fill' ? 'Square' : layer.type === 'line' ? 'Minus' : 'Circle'));
                     }} className="text-[10px] font-black uppercase"><Edit2 className="mr-2 h-3.5 w-3.5" /> Laag Aanpassen</DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -671,8 +684,17 @@ export default function GISDataPage() {
                 <Layer
                   id={`${layer.id}-line`}
                   type="line"
-                  paint={{ 'line-color': layer.color, 'line-width': 2 }}
-                  layout={{ visibility: layer.visible ? 'visible' : 'none' }}
+                  paint={{ 
+                    'line-color': layer.color, 
+                    'line-width': layer.lineWidth || 2,
+                    ...(layer.lineStyle === 'dashed' ? { 'line-dasharray': [4, 2] } : {}),
+                    ...(layer.lineStyle === 'dotted' ? { 'line-dasharray': [1, 2] } : {}),
+                  }}
+                  layout={{ 
+                    visibility: layer.visible ? 'visible' : 'none',
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                  }}
                 />
               )}
               {layer.type === 'circle' && (
@@ -824,7 +846,7 @@ export default function GISDataPage() {
 
       {/* Edit Layer Dialog */}
       <Dialog open={!!editingLayer} onOpenChange={(open) => !open && setEditingLayer(null)}>
-        <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl flex flex-col h-[80vh] p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl flex flex-col h-[85vh] p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
             <DialogTitle className="font-black uppercase tracking-tight text-white">Kaartlaag Aanpassen</DialogTitle>
             <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Symbologie en eigenschappen wijzigen.</DialogDescription>
@@ -867,6 +889,43 @@ export default function GISDataPage() {
                   </div>
                 </div>
               </div>
+
+              {(editingLayer?.type === 'line' || editingLayer?.type === 'fill') && (
+                <div className="space-y-6 bg-slate-50 p-4 rounded-none border-2 border-slate-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Settings2 className="h-4 w-4 text-primary" />
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Lijninstellingen</h4>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-[10px] font-black uppercase text-slate-400">Dikte ({editLineWidth}px)</Label>
+                    </div>
+                    <Slider 
+                      value={[editLineWidth]} 
+                      onValueChange={([val]) => setEditLineWidth(val)} 
+                      min={1} 
+                      max={10} 
+                      step={1}
+                      className="py-2"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase text-slate-400">Structuur</Label>
+                    <Select value={editLineStyle} onValueChange={(val: any) => setEditLineStyle(val)}>
+                      <SelectTrigger className="rounded-none border-slate-200 bg-white h-10 font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-none">
+                        <SelectItem value="solid">Ononderbroken (Solid)</SelectItem>
+                        <SelectItem value="dashed">Gestreept (Dashed)</SelectItem>
+                        <SelectItem value="dotted">Gestippeld (Dotted)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
