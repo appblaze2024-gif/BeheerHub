@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -48,7 +49,10 @@ import {
   Moon,
   Trees,
   FileCode,
-  BoxSelect
+  BoxSelect,
+  Share2,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -102,7 +106,7 @@ const MAP_STYLES = [
 interface GISLayer {
   id: string;
   name: string;
-  data: any; 
+  data: string; 
   visible: boolean;
   color: string;
   type: 'fill' | 'line' | 'circle';
@@ -159,6 +163,9 @@ export default function GISDataPage() {
   const [editIcon, setEditIcon] = useState('');
   const [iconSearch, setIconSearch] = useState('');
 
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+
   const foldersQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return collection(firestore, 'users', user.uid, 'gisFolders');
@@ -177,6 +184,7 @@ export default function GISDataPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
+  // Real-time styling update for active drawing
   useEffect(() => {
     if (!mapRef.current || !isDrawingMode) return;
     const map = mapRef.current.getMap();
@@ -234,6 +242,42 @@ export default function GISDataPage() {
       map.once('style.load', updateDrawStyles);
     }
   }, [drawingColor, drawingLineWidth, isDrawingMode]);
+
+  // Real-time styling update for existing layer being edited
+  useEffect(() => {
+    if (!mapRef.current || !editingLayer) return;
+    const map = mapRef.current.getMap();
+    if (!map) return;
+
+    const layerId = editingLayer.id;
+    
+    const updateProps = () => {
+      if (map.getLayer(`${layerId}-line`)) {
+        map.setPaintProperty(`${layerId}-line`, 'line-color', editColor);
+        map.setPaintProperty(`${layerId}-line`, 'line-width', editLineWidth);
+        
+        if (editLineStyle === 'dashed') {
+          map.setPaintProperty(`${layerId}-line`, 'line-dasharray', [4, 2]);
+        } else if (editLineStyle === 'dotted') {
+          map.setPaintProperty(`${layerId}-line`, 'line-dasharray', [1, 2]);
+        } else {
+          map.setPaintProperty(`${layerId}-line`, 'line-dasharray', [1, 0]);
+        }
+      }
+      if (map.getLayer(`${layerId}-fill`)) {
+        map.setPaintProperty(`${layerId}-fill`, 'fill-color', editColor);
+      }
+      if (map.getLayer(`${layerId}-point`)) {
+        map.setPaintProperty(`${layerId}-point`, 'circle-color', editColor);
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      updateProps();
+    } else {
+      map.once('style.load', updateProps);
+    }
+  }, [editingLayer, editColor, editLineWidth, editLineStyle]);
 
   const initialViewState = {
     longitude: 6.083,
@@ -340,7 +384,7 @@ export default function GISDataPage() {
 
     if (drawRef.current) {
       drawRef.current.deleteAll();
-      const layerData = typeof layer.data === 'string' ? JSON.parse(layer.data) : layer.data;
+      const layerData = JSON.parse(layer.data);
       drawRef.current.add(layerData);
       
       const map = mapRef.current?.getMap();
@@ -376,7 +420,6 @@ export default function GISDataPage() {
       const cleanDataString = JSON.stringify(features);
 
       if (editingLayerId) {
-        // UPDATE EXISTING LAYER
         const layerRef = doc(firestore, 'users', user.uid, 'gisLayers', editingLayerId);
         await updateDocumentNonBlocking(layerRef, {
           data: cleanDataString,
@@ -387,7 +430,6 @@ export default function GISDataPage() {
         });
         toast({ title: "Laag bijgewerkt", description: "De geometrie is succesvol opgeslagen." });
       } else {
-        // CREATE NEW LAYER
         const layersCol = collection(firestore, 'users', user.uid, 'gisLayers');
         
         let type: 'fill' | 'line' | 'circle' = 'circle';
@@ -548,12 +590,10 @@ export default function GISDataPage() {
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
     try {
-      const layerData = typeof layer.data === 'string' ? JSON.parse(layer.data) : layer.data;
+      const layerData = JSON.parse(layer.data);
       if (!layerData) return;
       
       const bbox = turf.bbox(layerData);
-      
-      // Validation: Check if coordinates are within geographic bounds
       const isGeographic = 
         bbox[0] >= -180 && bbox[0] <= 180 && 
         bbox[2] >= -180 && bbox[2] <= 180 && 
@@ -561,7 +601,7 @@ export default function GISDataPage() {
         bbox[3] >= -90 && bbox[3] <= 90;
 
       if (bbox[0] !== Infinity && isGeographic) {
-        map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 1000 });
+        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
       } else if (!isGeographic) {
         toast({ 
           variant: 'destructive', 
@@ -643,6 +683,50 @@ export default function GISDataPage() {
     const layerRef = doc(firestore, 'users', user.uid, 'gisLayers', layerId);
     updateDocumentNonBlocking(layerRef, { folderId });
     toast({ title: 'Laag verplaatst' });
+  };
+
+  const handleShareMap = async () => {
+    if (!mapRef.current || !user || !firestore || !dbLayers) return;
+    const map = mapRef.current.getMap();
+    const visibleLayerIds = dbLayers.filter(l => l.visible).map(l => l.id);
+    
+    if (visibleLayerIds.length === 0) {
+        toast({ variant: 'destructive', title: "Geen zichtbare lagen", description: "Zet tenminste één laag aan om te kunnen delen." });
+        return;
+    }
+
+    setIsProcessing(true);
+    try {
+        const viewState = {
+            center: map.getCenter(),
+            zoom: map.getZoom(),
+            pitch: map.getPitch(),
+            bearing: map.getBearing()
+        };
+
+        const shareDoc = {
+            name: `Gedeelde Kaart ${formatDate(new Date(), 'dd-MM-yyyy HH:mm')}`,
+            viewState,
+            visibleLayerIds,
+            creatorId: user.uid,
+            createdAt: new Date().toISOString()
+        };
+
+        const docRef = await addDocumentNonBlocking(collection(firestore, 'shared_maps'), shareDoc);
+        const url = `${window.location.origin}/gis-data/shared/${docRef.id}`;
+        setShareUrl(url);
+        setIsShareDialogOpen(true);
+    } catch (err) {
+        console.error("Share error:", err);
+        toast({ variant: 'destructive', title: "Fout bij delen" });
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  const copyShareUrl = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast({ title: "Link gekopieerd" });
   };
 
   const filteredIcons = React.useMemo(() => {
@@ -840,8 +924,8 @@ export default function GISDataPage() {
               </div>
             </div>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 rounded-none">
-            <List className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 rounded-none" onClick={handleShareMap}>
+            <Share2 className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost" 
@@ -877,10 +961,9 @@ export default function GISDataPage() {
           <ScaleControl position="bottom-left" />
 
           {dbLayers?.map(layer => {
-            const layerData = typeof layer.data === 'string' ? JSON.parse(layer.data) : layer.data;
+            const layerData = JSON.parse(layer.data);
             if (!layerData) return null;
 
-            // Hide original layer if we are editing its geometry
             const isVisible = layer.visible && editingLayerId !== layer.id;
 
             return (
@@ -981,7 +1064,6 @@ export default function GISDataPage() {
           </div>
 
           <div className="flex flex-col bg-white shadow-2xl border border-slate-200 w-10">
-            <ToolButton icon={Home} onClick={() => mapRef.current?.flyTo({ center: [initialViewState.longitude, initialViewState.latitude], zoom: initialViewState.zoom })} />
             <ToolButton icon={Home} onClick={() => mapRef.current?.flyTo({ center: [initialViewState.longitude, initialViewState.latitude], zoom: initialViewState.zoom })} />
             <ToolButton icon={Maximize2} />
           </div>
@@ -1311,6 +1393,34 @@ export default function GISDataPage() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="font-bold rounded-none">Annuleren</Button>
             <Button onClick={handleCreateFolder} className="font-black uppercase rounded-none px-8" disabled={!newFolderName.trim()}>Aanmaken</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
+            <div className="flex items-center gap-3">
+                <Share2 className="h-6 w-6 text-primary" />
+                <DialogTitle className="text-lg font-black uppercase tracking-tight text-white">Kaart Gedeeld!</DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="p-6 space-y-6">
+            <p className="text-sm font-medium text-slate-600 leading-relaxed">
+                Iedereen met deze link kan de huidige kaartweergave en zichtbare lagen bekijken.
+            </p>
+            <div className="flex items-center gap-2 p-3 bg-slate-50 border-2 border-slate-100 rounded-none">
+                <Input value={shareUrl} readOnly className="h-9 border-none bg-transparent shadow-none focus-visible:ring-0 text-xs font-mono" />
+                <Button size="icon" variant="ghost" className="h-8 w-8 rounded-none text-primary" onClick={copyShareUrl}><Copy className="h-4 w-4" /></Button>
+            </div>
+            <div className="flex justify-center pt-2">
+                <Button asChild variant="link" className="text-[10px] font-black uppercase tracking-widest text-primary">
+                    <a href={shareUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-3.5 w-3.5" /> Bekijk Voorbeeld</a>
+                </Button>
+            </div>
+          </div>
+          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
+            <Button onClick={() => setIsShareDialogOpen(false)} className="w-full font-black uppercase">Sluiten</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

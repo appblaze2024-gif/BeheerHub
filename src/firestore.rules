@@ -31,10 +31,11 @@ service cloud.firestore {
 
     // --- RULES ---
 
-    // Route assignments
-    match /route_assignments/{assignmentId} {
-      allow read, get, list: if isSignedIn();
-      allow write: if isPrivileged();
+    // Gedeelde kaarten - Publiek toegankelijk
+    match /shared_maps/{mapId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.creatorId == request.auth.uid;
     }
 
     // Objecten (GIS)
@@ -58,11 +59,13 @@ service cloud.firestore {
       }
 
       match /gisFolders/{folderId} {
-        allow read, write: if isOwner(userId);
+        allow read: if true;
+        allow write: if isOwner(userId);
       }
 
       match /gisLayers/{layerId} {
-        allow read, write: if isOwner(userId);
+        allow read: if true;
+        allow write: if isOwner(userId);
       }
 
       match /messages/{messageId} {
@@ -77,7 +80,7 @@ service cloud.firestore {
       }
     }
 
-    // Projecten - Eenvoudige regels om permissiefouten te voorkomen
+    // Projecten
     match /projects/{projectId} {
       allow read, get, list: if isSignedIn();
       allow write: if isPrivileged();

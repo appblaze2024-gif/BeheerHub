@@ -45,13 +45,30 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "folderId": { "type": "string", "description": "ID van de map waarin deze laag staat (of null voor root)." },
-        "data": { "type": "object", "description": "GeoJSON data van de laag." },
+        "data": { "type": "string", "description": "Geserialiseerde GeoJSON data van de laag." },
         "visible": { "type": "boolean" },
         "color": { "type": "string" },
         "type": { "type": "string", "enum": ["fill", "line", "circle"] },
+        "lineWidth": { "type": "number" },
+        "lineStyle": { "type": "string", "enum": ["solid", "dashed", "dotted"] },
+        "icon": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "data", "visible", "color", "type", "createdAt"]
+    },
+    "SharedMap": {
+      "title": "SharedMap",
+      "description": "Een configuratie van de kaart die gedeeld is met anderen.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "viewState": { "type": "object" },
+        "visibleLayerIds": { "type": "array", "items": { "type": "string" } },
+        "creatorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "viewState", "visibleLayerIds", "creatorId", "createdAt"]
     },
     "UserFolder": {
       "title": "UserFolder",
@@ -64,111 +81,6 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "taskIds", "createdAt"]
-    },
-    "Message": {
-      "title": "Message",
-      "description": "Bericht of notificatie tussen gebruikers.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "fromUserId": { "type": "string" },
-        "fromName": { "type": "string" },
-        "toUserId": { "type": "string" },
-        "content": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "read": { "type": "boolean" }
-      },
-      "required": ["fromUserId", "toUserId", "content", "createdAt"]
-    },
-    "Project": {
-      "title": "Project",
-      "description": "Beheer van infra- en reinigingsprojecten.",
-      "type": "object",
-      "properties": {
-        "projectnummer": { "type": "string" },
-        "projectnaam": { "type": "string" },
-        "locatie": { "type": "string" },
-        "opdrachtgever": { "type": "string" },
-        "startdatum": { "type": "string" },
-        "einddatum": { "type": "string" },
-        "bestek": { "type": "string" },
-        "besteknummer": { "type": "string" },
-        "versie": { "type": "string" },
-        "datum": { "type": "string" },
-        "omschrijving": { "type": "string" },
-        "materieelIds": { "type": "array", "items": { "type": "string" } },
-        "vehicleAvailability": { "type": "object" },
-        "wijken": { "type": "array" },
-        "veegroutes": { "type": "array" },
-        "prullenbakkenroutes": { "type": "array" },
-        "objectFilter": { "type": "string" }
-      },
-      "required": ["projectnummer", "projectnaam"]
-    },
-    "Contractor": {
-      "title": "Contractor",
-      "description": "Een aannemer of externe partij gekoppeld aan een project.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "projectId": { "type": "string" },
-        "name": { "type": "string" },
-        "contactPerson": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "phone": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["projectId", "name"]
-    },
-    "MeetingMinute": {
-      "title": "MeetingMinute",
-      "description": "Notulen of een verslag van een vergadering met een aannemer.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "contractorId": { "type": "string" },
-        "projectId": { "type": "string" },
-        "title": { "type": "string" },
-        "date": { "type": "string", "format": "date" },
-        "attendees": { "type": "string" },
-        "content": { "type": "string" },
-        "actionPoints": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "createdBy": { "type": "string" }
-      },
-      "required": ["contractorId", "projectId", "title", "date"]
-    },
-    "Voertuig": {
-      "title": "Voertuig",
-      "description": "Gegevens van een voertuig in het wagenpark.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "voertuignummer": { "type": "string" },
-        "merk": { "type": "string" },
-        "model": { "type": "string" },
-        "status": { "type": "string" }
-      },
-      "required": ["id", "merk", "model"]
-    },
-    "Object": {
-      "title": "Object",
-      "description": "GIS objecten (prullenbakken, containers, etc).",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "idNummer": { "type": "string" },
-        "latitude": { "type": "number" },
-        "longitude": { "type": "number" },
-        "locatieType": { "type": "string" },
-        "locatieSubType": { "type": "string" },
-        "straatnaam": { "type": "string" },
-        "huisnummer": { "type": "string" },
-        "postcode": { "type": "string" },
-        "plaats": { "type": "string" },
-        "locatieWerkgebieden": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["id", "latitude", "longitude", "locatieType"]
     }
   },
   "auth": {
@@ -187,77 +99,9 @@
       "schema": { "$ref": "#/entities/GisLayer" },
       "description": "Geüploade GIS-lagen."
     },
-    "/users/{userId}/folders/{folderId}": {
-      "schema": { "$ref": "#/entities/UserFolder" },
-      "description": "Gebruikersspecifieke mappen voor taken."
-    },
-    "/users/{userId}/messages/{messageId}": {
-      "schema": { "$ref": "#/entities/Message" },
-      "description": "Ontvangen berichten per gebruiker."
-    },
-    "/projects/{projectId}": {
-      "schema": { "$ref": "#/entities/Project" },
-      "description": "Projectgegevens."
-    },
-    "/contractors/{contractorId}": {
-      "schema": { "$ref": "#/entities/Contractor" },
-      "description": "Aannemersgegevens."
-    },
-    "/contractors/{contractorId}/minutes/{minuteId}": {
-      "schema": { "$ref": "#/entities/MeetingMinute" },
-      "description": "Notulen per aannemer."
-    },
-    "/voertuigen/{voertuigId}": {
-      "schema": { "$ref": "#/entities/Voertuig" },
-      "description": "Voertuiggegevens."
-    },
-    "/objects/{objectId}": {
-      "schema": { "$ref": "#/entities/Object" },
-      "description": "GIS objecten (prullenbakken, containers, etc)."
-    },
-    "/voertuigen/{voertuigId}/maintenance/{id}": {
-      "schema": { "type": "object" },
-      "description": "Onderhoudshistorie."
-    },
-    "/voertuigen/{voertuigId}/damages/{id}": {
-      "schema": { "type": "object" },
-      "description": "Schadehistorie."
-    },
-    "/voertuigen/{voertuigId}/documents/{id}": {
-      "schema": { "type": "object" },
-      "description": "Documenten voertuig."
-    },
-    "/machines/{machineId}": {
-      "schema": { "type": "object" },
-      "description": "Machinegegevens."
-    },
-    "/machines/{machineId}/maintenance/{id}": {
-      "schema": { "type": "object" },
-      "description": "Onderhoudshistorie machine."
-    },
-    "/machines/{machineId}/damages/{id}": {
-      "schema": { "type": "object" },
-      "description": "Schadehistorie machine."
-    },
-    "/machines/{machineId}/documents/{id}": {
-      "schema": { "type": "object" },
-      "description": "Documenten machine."
-    },
-    "/annual_planning_sections/{id}": {
-      "schema": { "type": "object" },
-      "description": "Secties van de jaarplanning."
-    },
-    "/annual_planning_configs/{id}": {
-      "schema": { "type": "object" },
-      "description": "Configuratie van de jaarplanning."
-    },
-    "/annual_planning/{id}": {
-      "schema": { "type": "object" },
-      "description": "Planning regels."
-    },
-    "/annual_milestones/{id}": {
-      "schema": { "type": "object" },
-      "description": "Jaarplanning mijlpalen."
+    "/shared_maps/{mapId}": {
+      "schema": { "$ref": "#/entities/SharedMap" },
+      "description": "Gedeelde kaartconfiguraties."
     }
   }
 }
