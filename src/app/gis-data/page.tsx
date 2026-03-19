@@ -46,7 +46,8 @@ import {
   Cloud,
   Sun,
   Moon,
-  Trees
+  Trees,
+  LineChart
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -143,7 +144,7 @@ export default function GISDataPage() {
   const [isSaveDrawingOpen, setIsSaveDrawingOpen] = useState(false);
   const [drawingName, setDrawingName] = useState('Nieuwe Tekening');
   const [drawingColor, setDrawingColor] = useState('#3b82f6');
-  const [drawingLineWidth, setDrawingLineWidth] = useState(2);
+  const [drawingLineWidth, setDrawingLineWidth] = useState(3);
   const [drawingLineStyle, setDrawingLineStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
 
   // Base Map Style
@@ -260,7 +261,7 @@ export default function GISDataPage() {
       drawRef.current.deleteAll();
     }
     if (newState) {
-      toast({ title: "Tekenmodus geactiveerd", description: "Kies een tool uit de balk hierboven om te beginnen." });
+      toast({ title: "Tekenmodus geactiveerd", description: "Gebruik de toolbar bovenin om de stijl en tools te kiezen." });
     }
   };
 
@@ -597,13 +598,17 @@ export default function GISDataPage() {
       <header className="h-10 bg-[#009ee3] text-white flex items-center justify-end px-4 shrink-0 z-50 shadow-md">
         <div className="flex items-center gap-1">
           {isDrawingMode && (
-            <div className="flex items-center gap-1 mr-4 bg-white/10 px-3 py-1 animate-in slide-in-from-top-2 h-8 rounded-none border border-white/20">
-              <span className="text-[9px] font-black uppercase tracking-widest text-white/80 mr-2">Tekenen...</span>
+            <div className="flex items-center gap-1 mr-4 bg-slate-900/90 px-3 py-1 animate-in slide-in-from-top-2 h-8 rounded-none border border-white/20 shadow-2xl">
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/80 mr-2 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                Tekenen...
+              </span>
+              
               <div className="flex items-center gap-1 border-r border-white/20 pr-2 mr-2">
                 <Button 
                   size="icon" 
                   variant="ghost" 
-                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_point' && "bg-white/30")}
+                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_point' && "bg-primary text-white")}
                   onClick={() => startDrawMode('draw_point')}
                   title="Punt plaatsen"
                 >
@@ -612,7 +617,7 @@ export default function GISDataPage() {
                 <Button 
                   size="icon" 
                   variant="ghost" 
-                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_line_string' && "bg-white/30")}
+                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_line_string' && "bg-primary text-white")}
                   onClick={() => startDrawMode('draw_line_string')}
                   title="Route tekenen (Volgt de weg)"
                 >
@@ -621,28 +626,59 @@ export default function GISDataPage() {
                 <Button 
                   size="icon" 
                   variant="ghost" 
-                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_polygon' && "bg-white/30")}
+                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_polygon' && "bg-primary text-white")}
                   onClick={() => startDrawMode('draw_polygon')}
                   title="Vlak tekenen"
                 >
                   <Square className="h-3.5 w-3.5" />
                 </Button>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-7 w-7 rounded-none text-red-200 hover:bg-red-600/40 hover:text-white"
-                  onClick={() => drawRef.current?.trash()}
-                  title="Verwijderen"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
               </div>
-              <Button size="sm" className="h-6 px-3 text-[9px] font-black uppercase bg-green-600 hover:bg-green-700" onClick={() => setIsSaveDrawingOpen(true)}>
-                <Save className="mr-1.5 h-3 w-3" /> Opslaan
-              </Button>
-              <Button size="sm" variant="ghost" className="h-6 px-3 text-[9px] font-black uppercase text-red-200 hover:bg-red-600/20" onClick={toggleDrawingMode}>
-                <X className="mr-1.5 h-3 w-3" /> Stop
-              </Button>
+
+              {/* LIVE STYLING CONTROLS */}
+              <div className="flex items-center gap-2 border-r border-white/20 pr-2 mr-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="h-6 w-10 rounded-none border border-white/20 shadow-inner flex items-center justify-center hover:bg-white/10" style={{ backgroundColor: drawingColor }}>
+                      <Palette className="h-3 w-3 text-white mix-blend-difference opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" className="w-48 p-3 rounded-none border-none shadow-2xl bg-slate-900 text-white">
+                    <p className="text-[9px] font-black uppercase text-slate-400 mb-2">Kleur</p>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {PRESET_COLORS.map(c => (
+                        <button key={c} onClick={() => setDrawingColor(c)} className={cn("h-6 w-full rounded-none border", drawingColor === c ? "border-white" : "border-transparent")} style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/10 rounded-none border border-white/10">
+                      <Settings2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" className="w-56 p-4 rounded-none border-none shadow-2xl bg-slate-900 text-white space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black uppercase text-slate-400">Dikte ({drawingLineWidth}px)</Label>
+                      <Slider value={[drawingLineWidth]} onValueChange={([v]) => setDrawingLineWidth(v)} min={1} max={10} step={1} className="py-2" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black uppercase text-slate-400">Lijnstructuur</Label>
+                      <Select value={drawingLineStyle} onValueChange={(v: any) => setDrawingLineStyle(v)}>
+                        <SelectTrigger className="h-8 text-[10px] font-bold bg-white/10 border-none rounded-none text-white"><SelectValue /></SelectTrigger>
+                        <SelectContent className="rounded-none"><SelectItem value="solid">Solid</SelectItem><SelectItem value="dashed">Dashed</SelectItem><SelectItem value="dotted">Dotted</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-none text-red-200 hover:bg-red-600/40" onClick={() => drawRef.current?.trash()}><Trash2 className="h-3.5 w-3.5" /></Button>
+                <Button size="sm" className="h-6 px-3 text-[9px] font-black uppercase bg-green-600 hover:bg-green-700 rounded-none" onClick={() => setIsSaveDrawingOpen(true)}><Save className="mr-1.5 h-3 w-3" /> Opslaan</Button>
+                <Button size="sm" variant="ghost" className="h-6 px-3 text-[9px] font-black uppercase text-red-200 hover:bg-red-600/20 rounded-none" onClick={toggleDrawingMode}><X className="mr-1.5 h-3 w-3" /> Stop</Button>
+              </div>
             </div>
           )}
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 rounded-none">
@@ -833,7 +869,7 @@ export default function GISDataPage() {
         <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
             <DialogTitle className="font-black uppercase tracking-tight text-white">Tekening Opslaan</DialogTitle>
-            <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Geef de nieuwe laag een naam en kies de styling.</DialogDescription>
+            <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Geef de nieuwe laag een naam en bevestig de stijl.</DialogDescription>
           </DialogHeader>
           
           <ScrollArea className="max-h-[60vh] bg-white">
@@ -850,7 +886,10 @@ export default function GISDataPage() {
               </div>
 
               <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Kleur</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Gekozen Kleur</Label>
+                  <div className="h-8 w-8 rounded-none border-2 border-slate-200" style={{ backgroundColor: drawingColor }} />
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {PRESET_COLORS.map(c => (
                     <button
@@ -863,22 +902,13 @@ export default function GISDataPage() {
                       style={{ backgroundColor: c }}
                     />
                   ))}
-                  <div className="relative h-8 w-8 rounded-none overflow-hidden border-2 border-slate-200">
-                    <input 
-                      type="color" 
-                      value={drawingColor} 
-                      onChange={e => setDrawingColor(e.target.value)}
-                      className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
-                    />
-                    <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
-                  </div>
                 </div>
               </div>
 
               <div className="space-y-6 bg-slate-50 p-4 rounded-none border-2 border-slate-100">
                 <div className="flex items-center gap-2 mb-2">
                   <Settings2 className="h-4 w-4 text-primary" />
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Lijninstellingen</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Definitieve Lijnstijl</h4>
                 </div>
                 
                 <div className="space-y-4">
@@ -914,7 +944,7 @@ export default function GISDataPage() {
             <Button variant="ghost" onClick={() => setIsSaveDrawingOpen(false)} className="font-bold rounded-none">Annuleren</Button>
             <Button onClick={handleSaveDrawing} className="font-black uppercase rounded-none px-8 shadow-xl shadow-primary/20" disabled={!drawingName.trim() || isProcessing}>
               {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Opslaan
+              Opslaan in Backend
             </Button>
           </DialogFooter>
         </DialogContent>
