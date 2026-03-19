@@ -54,7 +54,8 @@ import {
   ExternalLink,
   Car,
   Bike,
-  Footprints
+  Footprints,
+  Link as LinkIcon
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -80,7 +81,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/components/ui/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, query, where } from 'firebase/firestore';
 import * as shapefile from 'shapefile';
 import * as XLSX from 'xlsx';
 import * as turf from '@turf/turf';
@@ -95,6 +96,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatDate } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -123,6 +125,15 @@ interface GISFolder {
   id: string;
   name: string;
   parentId?: string | null;
+}
+
+interface SharedMap {
+  id: string;
+  name: string;
+  viewState: any;
+  visibleLayerIds: string[];
+  creatorId: string;
+  createdAt: string;
 }
 
 const PRESET_COLORS = [
@@ -158,7 +169,7 @@ export default function GISDataPage() {
 
   const [activeMapStyle, setActiveMapStyle] = useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
 
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root', 'shared-links']));
   const [editingLayer, setEditingLayer] = useState<GISLayer | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
@@ -167,8 +178,12 @@ export default function GISDataPage() {
   const [editIcon, setEditIcon] = useState('');
   const [iconSearch, setIconSearch] = useState('');
 
-  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  // Share Wizard State
+  const [isShareWizardOpen, setIsShareWizardOpen] = useState(false);
+  const [shareName, setShareName] = useState('');
+  const [shareLayerIds, setShareLayerIds] = useState<string[]>([]);
   const [shareUrl, setShareUrl] = useState('');
+  const [isShareSuccessOpen, setIsShareSuccessOpen] = useState(false);
 
   const foldersQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -180,8 +195,14 @@ export default function GISDataPage() {
     return collection(firestore, 'users', user.uid, 'gisLayers');
   }, [firestore, user]);
 
+  const sharedMapsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'shared_maps'), where('creatorId', '==', user.uid));
+  }, [firestore, user]);
+
   const { data: dbFolders } = useCollection<GISFolder>(foldersQuery);
   const { data: dbLayers } = useCollection<GISLayer>(layersQuery);
+  const { data: dbSharedMaps } = useCollection<SharedMap>(sharedMapsQuery);
 
   useEffect(() => {
     setIsHeaderVisible(false);
@@ -381,7 +402,6 @@ export default function GISDataPage() {
 
   const updateDrawingProfile = (profile: 'driving' | 'walking' | 'cycling') => {
     setDrawingProfile(profile);
-    // Use a global window variable to communicate with the MapboxDraw event handler
     (window as any)._drawingProfile = profile;
   };
 
@@ -715,18 +735,19 @@ export default function GISDataPage() {
     toast({ title: 'Laag verplaatst' });
   };
 
-  const handleShareMap = async () => {
-    if (!mapRef.current || !user || !firestore || !dbLayers) return;
-    const map = mapRef.current.getMap();
-    const visibleLayerIds = dbLayers.filter(l => l.visible).map(l => l.id);
-    
-    if (visibleLayerIds.length === 0) {
-        toast({ variant: 'destructive', title: "Geen zichtbare lagen", description: "Zet tenminste één laag aan om te kunnen delen." });
-        return;
-    }
+  const handleOpenShareWizard = () => {
+    if (!dbLayers) return;
+    setShareName(`Gedeelde Kaart ${formatDate(new Date(), 'dd-MM-yyyy')}`);
+    setShareLayerIds(dbLayers.filter(l => l.visible).map(l => l.id));
+    setIsShareWizardOpen(true);
+  };
 
+  const handleCreateShareMap = async () => {
+    if (!mapRef.current || !user || !firestore || shareLayerIds.length === 0) return;
+    
     setIsProcessing(true);
     try {
+        const map = mapRef.current.getMap();
         const center = map.getCenter();
         const viewState = {
             center: { lng: center.lng, lat: center.lat },
@@ -736,9 +757,9 @@ export default function GISDataPage() {
         };
 
         const shareDoc = {
-            name: `Gedeelde Kaart ${formatDate(new Date(), 'dd-MM-yyyy HH:mm')}`,
+            name: shareName.trim(),
             viewState,
-            visibleLayerIds,
+            visibleLayerIds: shareLayerIds,
             creatorId: user.uid,
             createdAt: new Date().toISOString()
         };
@@ -746,7 +767,8 @@ export default function GISDataPage() {
         const docRef = await addDocumentNonBlocking(collection(firestore, 'shared_maps'), shareDoc);
         const url = `${window.location.origin}/gis-data/shared/${docRef.id}`;
         setShareUrl(url);
-        setIsShareDialogOpen(true);
+        setIsShareWizardOpen(false);
+        setIsShareSuccessOpen(true);
     } catch (err) {
         console.error("Share error:", err);
         toast({ variant: 'destructive', title: "Fout bij delen" });
@@ -755,9 +777,16 @@ export default function GISDataPage() {
     }
   };
 
-  const copyShareUrl = () => {
-    navigator.clipboard.writeText(shareUrl);
+  const copyShareUrl = (urlOverride?: string) => {
+    const targetUrl = urlOverride || shareUrl;
+    navigator.clipboard.writeText(targetUrl);
     toast({ title: "Link gekopieerd" });
+  };
+
+  const deleteSharedMap = async (id: string) => {
+    if (!firestore) return;
+    await deleteDocumentNonBlocking(doc(firestore, 'shared_maps', id));
+    toast({ title: "Gedeelde link verwijderd" });
   };
 
   const filteredIcons = React.useMemo(() => {
@@ -857,7 +886,7 @@ export default function GISDataPage() {
                       <DropdownMenuItem key={f.id} onClick={() => moveLayerToFolder(layer.id, f.id)} className="text-[10px] font-black uppercase">Naar map: {f.name}</DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => removeLayer(id)} className="text-red-600 text-[10px] font-black uppercase"><Trash2 className="mr-2 h-3.5 w-3.5" /> Verwijderen</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => removeLayer(layer.id)} className="text-red-600 text-[10px] font-black uppercase"><Trash2 className="mr-2 h-3.5 w-3.5" /> Verwijderen</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -988,7 +1017,12 @@ export default function GISDataPage() {
               </div>
             </div>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 rounded-none" onClick={handleShareMap}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-white hover:bg-white/10 rounded-none" 
+            onClick={handleOpenShareWizard}
+          >
             <Share2 className="h-4 w-4" />
           </Button>
           <Button 
@@ -1159,8 +1193,48 @@ export default function GISDataPage() {
             </div>
 
             <ScrollArea className="flex-1">
-              <div className="p-2">
-                {renderFolderContent(null)}
+              <div className="p-2 space-y-4">
+                <div className="space-y-1">
+                  {renderFolderContent(null)}
+                </div>
+
+                {/* Shared Links Section */}
+                <div className="pt-2 border-t">
+                  <div 
+                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-slate-50 group"
+                    onClick={() => toggleFolderExpansion('shared-links')}
+                  >
+                    {expandedFolders.has('shared-links') ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
+                    <LinkIcon className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate">Gedeelde Links</span>
+                    <Badge variant="secondary" className="ml-auto h-4 px-1.5 text-[8px] font-black rounded-none">{dbSharedMaps?.length || 0}</Badge>
+                  </div>
+                  
+                  {expandedFolders.has('shared-links') && (
+                    <div className="pl-6 space-y-1 mt-1">
+                      {dbSharedMaps?.map(share => (
+                        <div key={share.id} className="flex items-center justify-between p-2 hover:bg-slate-50 group border border-transparent">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-tight text-slate-700 truncate">{share.name}</p>
+                            <p className="text-[8px] font-bold text-slate-400 uppercase">{share.visibleLayerIds.length} Lagen</p>
+                          </div>
+                          <div className="flex items-center opacity-0 group-hover:opacity-100">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-none" onClick={() => copyShareUrl(`${window.location.origin}/gis-data/shared/${share.id}`)}>
+                              <Copy className="h-3.5 w-3.5 text-primary" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-none text-red-400 hover:text-red-600" onClick={() => deleteSharedMap(share.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      {(!dbSharedMaps || dbSharedMaps.length === 0) && (
+                        <p className="text-[9px] font-bold text-slate-300 uppercase py-2 italic">Geen gedeelde kaarten</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {(!dbLayers || dbLayers.length === 0) && (!dbFolders || dbFolders.length === 0) && (
                   <div className="py-12 text-center">
                     <Layers className="h-8 w-8 mx-auto mb-2 text-slate-200" />
@@ -1177,6 +1251,102 @@ export default function GISDataPage() {
           <img src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png" alt="BeheerHub" className="h-2 opacity-50" />
         </div>
       </div>
+
+      {/* Share Wizard Dialog */}
+      <Dialog open={isShareWizardOpen} onOpenChange={setIsShareWizardOpen}>
+        <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary p-2 rounded-none"><Share2 className="h-5 w-5 text-white" /></div>
+              <div>
+                <DialogTitle className="font-black uppercase tracking-tight text-white">Kaart Delen</DialogTitle>
+                <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Maak een publieke link voor aannemers of partners.</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[60vh] bg-white">
+            <div className="p-6 space-y-8">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam van de link</Label>
+                <Input 
+                  placeholder="Bv. Aannemer X - Project West..." 
+                  value={shareName} 
+                  onChange={e => setShareName(e.target.value)} 
+                  className="h-12 font-bold rounded-none border-2 focus:ring-primary/20"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Zichtbare Lagen</Label>
+                  <span className="text-[9px] font-black text-primary uppercase">{shareLayerIds.length} geselecteerd</span>
+                </div>
+                <div className="grid gap-2">
+                  {dbLayers?.map(layer => (
+                    <div 
+                      key={layer.id} 
+                      className={cn(
+                        "flex items-center space-x-3 p-3 rounded-none transition-all cursor-pointer border-2",
+                        shareLayerIds.includes(layer.id) ? "bg-primary/5 border-primary/20 shadow-sm" : "hover:bg-slate-50 border-transparent"
+                      )} 
+                      onClick={() => setShareLayerIds(prev => prev.includes(layer.id) ? prev.filter(id => id !== layer.id) : [...prev, layer.id])}
+                    >
+                      <Checkbox
+                        checked={shareLayerIds.includes(layer.id)}
+                        onCheckedChange={() => {}} // Handled by div onClick
+                        className="rounded-none border-slate-300"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-black uppercase tracking-tight text-slate-700 truncate">{layer.name}</p>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase">{layer.type}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
+            <Button variant="ghost" onClick={() => setIsShareWizardOpen(false)} className="font-bold rounded-none">Annuleren</Button>
+            <Button onClick={handleCreateShareMap} className="font-black uppercase rounded-none px-8 shadow-xl shadow-primary/20" disabled={!shareName.trim() || shareLayerIds.length === 0 || isProcessing}>
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LinkIcon className="mr-2 h-4 w-4" />}
+              Link Genereren
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Success Dialog */}
+      <Dialog open={isShareSuccessOpen} onOpenChange={setIsShareSuccessOpen}>
+        <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
+            <div className="flex items-center gap-3">
+                <Check className="h-6 w-6 text-green-500" />
+                <DialogTitle className="text-lg font-black uppercase tracking-tight text-white">Kaart Gedeeld!</DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="p-6 space-y-6">
+            <p className="text-sm font-medium text-slate-600 leading-relaxed">
+                Iedereen met deze link kan de huidige kaartweergave en de geselecteerde lagen bekijken.
+            </p>
+            <div className="flex items-center gap-2 p-3 bg-slate-50 border-2 border-slate-100 rounded-none">
+                <Input value={shareUrl} readOnly className="h-9 border-none bg-transparent shadow-none focus-visible:ring-0 text-xs font-mono" />
+                <Button size="icon" variant="ghost" className="h-8 w-8 rounded-none text-primary" onClick={() => copyShareUrl()}><Icons.Copy className="h-4 w-4" /></Button>
+            </div>
+            <div className="flex justify-center pt-2">
+                <Button asChild variant="link" className="text-[10px] font-black uppercase tracking-widest text-primary">
+                    <a href={shareUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-3.5 w-3.5" /> Bekijk Voorbeeld</a>
+                </Button>
+            </div>
+          </div>
+          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
+            <Button onClick={() => setIsShareSuccessOpen(false)} className="w-full font-black uppercase rounded-none">Sluiten</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isSaveDrawingOpen} onOpenChange={setIsSaveDrawingOpen}>
         <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl p-0 overflow-hidden">
@@ -1457,34 +1627,6 @@ export default function GISDataPage() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="font-bold rounded-none">Annuleren</Button>
             <Button onClick={handleCreateFolder} className="font-black uppercase rounded-none px-8" disabled={!newFolderName.trim()}>Aanmaken</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl p-0 overflow-hidden">
-          <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
-            <div className="flex items-center gap-3">
-                <Share2 className="h-6 w-6 text-primary" />
-                <DialogTitle className="text-lg font-black uppercase tracking-tight text-white">Kaart Gedeeld!</DialogTitle>
-            </div>
-          </DialogHeader>
-          <div className="p-6 space-y-6">
-            <p className="text-sm font-medium text-slate-600 leading-relaxed">
-                Iedereen met deze link kan de huidige kaartweergave en zichtbare lagen bekijken.
-            </p>
-            <div className="flex items-center gap-2 p-3 bg-slate-50 border-2 border-slate-100 rounded-none">
-                <Input value={shareUrl} readOnly className="h-9 border-none bg-transparent shadow-none focus-visible:ring-0 text-xs font-mono" />
-                <Button size="icon" variant="ghost" className="h-8 w-8 rounded-none text-primary" onClick={copyShareUrl}><Icons.Copy className="h-4 w-4" /></Button>
-            </div>
-            <div className="flex justify-center pt-2">
-                <Button asChild variant="link" className="text-[10px] font-black uppercase tracking-widest text-primary">
-                    <a href={shareUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-3.5 w-3.5" /> Bekijk Voorbeeld</a>
-                </Button>
-            </div>
-          </div>
-          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
-            <Button onClick={() => setIsShareDialogOpen(false)} className="w-full font-black uppercase">Sluiten</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
