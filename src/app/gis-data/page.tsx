@@ -347,8 +347,14 @@ export default function GISDataPage() {
       if (map) {
         try {
           const bbox = turf.bbox(layerData);
-          if (bbox[0] !== Infinity) {
-            map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+          const isValid = 
+            bbox[0] >= -180 && bbox[0] <= 180 && 
+            bbox[2] >= -180 && bbox[2] <= 180 && 
+            bbox[1] >= -90 && bbox[1] <= 90 && 
+            bbox[3] >= -90 && bbox[3] <= 90;
+
+          if (bbox[0] !== Infinity && isValid) {
+            map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 1000 });
           }
         } catch (e) {}
       }
@@ -520,8 +526,14 @@ export default function GISDataPage() {
 
     try {
       const bbox = turf.bbox(data);
-      if (bbox[0] !== Infinity && mapRef.current) {
-        mapRef.current.fitBounds([bbox[0], bbox[1], bbox[2], bbox[3]], { padding: 40, duration: 1000 });
+      const isValid = 
+        bbox[0] >= -180 && bbox[0] <= 180 && 
+        bbox[2] >= -180 && bbox[2] <= 180 && 
+        bbox[1] >= -90 && bbox[1] <= 90 && 
+        bbox[3] >= -90 && bbox[3] <= 90;
+
+      if (bbox[0] !== Infinity && isValid && mapRef.current) {
+        mapRef.current.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 1000 });
       }
     } catch (e) {}
   };
@@ -540,8 +552,22 @@ export default function GISDataPage() {
       if (!layerData) return;
       
       const bbox = turf.bbox(layerData);
-      if (bbox[0] !== Infinity) {
-        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+      
+      // Validation: Check if coordinates are within geographic bounds
+      const isGeographic = 
+        bbox[0] >= -180 && bbox[0] <= 180 && 
+        bbox[2] >= -180 && bbox[2] <= 180 && 
+        bbox[1] >= -90 && bbox[1] <= 90 && 
+        bbox[3] >= -90 && bbox[3] <= 90;
+
+      if (bbox[0] !== Infinity && isGeographic) {
+        map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 1000 });
+      } else if (!isGeographic) {
+        toast({ 
+          variant: 'destructive', 
+          title: "Inzoomen mislukt", 
+          description: "De coördinaten van deze laag zijn ongeldig of niet in GPS-formaat (WGS84)." 
+        });
       }
     } catch (e) {
       console.error("Zoom to layer failed:", e);
@@ -1055,7 +1081,7 @@ export default function GISDataPage() {
                 </div>
                 
                 <div className="space-y-4">
-                  <Label className="text-[10px] font-black uppercase text-slate-400">Dikte ({drawingLineWidth}px)</Label>
+                  <Label className="text-[9px] font-black uppercase text-slate-400">Dikte ({drawingLineWidth}px)</Label>
                   <Slider 
                     value={[drawingLineWidth]} 
                     onValueChange={([val]) => setDrawingLineWidth(val)} 
