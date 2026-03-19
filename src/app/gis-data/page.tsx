@@ -1288,7 +1288,7 @@ export default function GISDataPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam van de nieuwe link</Label>
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam van de link</Label>
                   <Input 
                     placeholder="Bv. Aannemer X - Project West..." 
                     value={shareName} 
@@ -1706,3 +1706,4 @@ function ToolButton({ icon: Icon, active = false, onClick }: { icon: any, active
     </button>
   );
 }
+
