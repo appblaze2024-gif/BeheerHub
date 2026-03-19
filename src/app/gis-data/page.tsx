@@ -131,7 +131,7 @@ export default function GISDataPage() {
   const mapRef = useRef<MapRef>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   
-  const [searchQuery, setSearchQuery] = setSearchQuery('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
