@@ -47,7 +47,8 @@ import {
   Sun,
   Moon,
   Trees,
-  FileCode
+  FileCode,
+  BoxSelect
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -130,7 +131,7 @@ export default function GISDataPage() {
   const mapRef = useRef<MapRef>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = setSearchQuery('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -139,6 +140,7 @@ export default function GISDataPage() {
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   
   const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [activeDrawMode, setActiveDrawMode] = useState<string | null>(null);
   const [isSaveDrawingOpen, setIsSaveDrawingOpen] = useState(false);
   const [drawingName, setDrawingName] = useState('Nieuwe Tekening');
@@ -311,8 +313,9 @@ export default function GISDataPage() {
     setIsDrawingMode(newState);
     setIsUploadOpen(false);
     setActiveDrawMode(null);
-    if (!newState && drawRef.current) {
-      drawRef.current.deleteAll();
+    if (!newState) {
+      setEditingLayerId(null);
+      if (drawRef.current) drawRef.current.deleteAll();
     }
     if (newState) {
       toast({ title: "Tekenmodus geactiveerd", description: "Gebruik de toolbar bovenin om de stijl en tools te kiezen." });
@@ -325,6 +328,35 @@ export default function GISDataPage() {
     setActiveDrawMode(mode);
   };
 
+  const startEditingGeometry = (layer: GISLayer) => {
+    setEditingLayerId(layer.id);
+    setIsDrawingMode(true);
+    setIsLayersPanelOpen(false);
+    
+    setDrawingColor(layer.color);
+    setDrawingLineWidth(layer.lineWidth || 3);
+    setDrawingLineStyle(layer.lineStyle || 'solid');
+    setDrawingName(layer.name);
+
+    if (drawRef.current) {
+      drawRef.current.deleteAll();
+      const layerData = typeof layer.data === 'string' ? JSON.parse(layer.data) : layer.data;
+      drawRef.current.add(layerData);
+      
+      const map = mapRef.current?.getMap();
+      if (map) {
+        try {
+          const bbox = turf.bbox(layerData);
+          if (bbox[0] !== Infinity) {
+            map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+          }
+        } catch (e) {}
+      }
+    }
+    
+    toast({ title: "Geometrie bewerken", description: `Je bewerkt nu de laag: ${layer.name}` });
+  };
+
   const handleSaveDrawing = async () => {
     if (!drawRef.current || !user || !firestore) return;
     const features = drawRef.current.getAll();
@@ -335,38 +367,52 @@ export default function GISDataPage() {
 
     setIsProcessing(true);
     try {
-      const layersCol = collection(firestore, 'users', user.uid, 'gisLayers');
-      
-      let type: 'fill' | 'line' | 'circle' = 'circle';
-      const firstFeature = features.features[0];
-      const geomType = firstFeature.geometry?.type;
-      
-      if (geomType === 'Polygon' || geomType === 'MultiPolygon') type = 'fill';
-      else if (geomType === 'LineString' || geomType === 'MultiLineString') type = 'line';
-
-      const defaultIcon = type === 'fill' ? 'Square' : type === 'line' ? 'Minus' : 'Circle';
-
       const cleanDataString = JSON.stringify(features);
 
-      const newLayer = {
-        name: drawingName,
-        data: cleanDataString,
-        visible: true,
-        color: drawingColor,
-        type,
-        lineWidth: drawingLineWidth,
-        lineStyle: drawingLineStyle,
-        folderId: null,
-        icon: defaultIcon,
-        createdAt: new Date().toISOString()
-      };
+      if (editingLayerId) {
+        // UPDATE EXISTING LAYER
+        const layerRef = doc(firestore, 'users', user.uid, 'gisLayers', editingLayerId);
+        await updateDocumentNonBlocking(layerRef, {
+          data: cleanDataString,
+          color: drawingColor,
+          lineWidth: drawingLineWidth,
+          lineStyle: drawingLineStyle,
+          name: drawingName
+        });
+        toast({ title: "Laag bijgewerkt", description: "De geometrie is succesvol opgeslagen." });
+      } else {
+        // CREATE NEW LAYER
+        const layersCol = collection(firestore, 'users', user.uid, 'gisLayers');
+        
+        let type: 'fill' | 'line' | 'circle' = 'circle';
+        const firstFeature = features.features[0];
+        const geomType = firstFeature.geometry?.type;
+        
+        if (geomType === 'Polygon' || geomType === 'MultiPolygon') type = 'fill';
+        else if (geomType === 'LineString' || geomType === 'MultiLineString') type = 'line';
 
-      await addDocumentNonBlocking(layersCol, newLayer);
+        const defaultIcon = type === 'fill' ? 'Square' : type === 'line' ? 'Minus' : 'Circle';
+
+        const newLayer = {
+          name: drawingName,
+          data: cleanDataString,
+          visible: true,
+          color: drawingColor,
+          type,
+          lineWidth: drawingLineWidth,
+          lineStyle: drawingLineStyle,
+          folderId: null,
+          icon: defaultIcon,
+          createdAt: new Date().toISOString()
+        };
+
+        await addDocumentNonBlocking(layersCol, newLayer);
+        toast({ title: "Laag opgeslagen", description: "De handmatige laag is toegevoegd aan je lijst." });
+      }
       
       setIsSaveDrawingOpen(false);
       toggleDrawingMode();
       setDrawingName('Nieuwe Tekening');
-      toast({ title: "Laag opgeslagen", description: "De handmatige laag is toegevoegd aan je lijst." });
     } catch (err) {
       console.error("Save drawing error:", err);
       toast({ variant: 'destructive', title: "Fout", description: "Kon de tekening niet opslaan in de database." });
@@ -646,6 +692,7 @@ export default function GISDataPage() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48 rounded-none shadow-xl">
                     <DropdownMenuItem onClick={() => openEditDialog(layer)} className="text-[10px] font-black uppercase"><Edit2 className="mr-2 h-3.5 w-3.5" /> Laag Aanpassen</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => startEditingGeometry(layer)} className="text-[10px] font-black uppercase text-primary"><MapIcon className="mr-2 h-3.5 w-3.5" /> Geometrie Aanpassen</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => moveLayerToFolder(layer.id, null)} className="text-[10px] font-black uppercase">Naar Home (Root)</DropdownMenuItem>
                     {dbFolders?.filter(f => f.id !== layer.folderId).map(f => (
@@ -671,7 +718,7 @@ export default function GISDataPage() {
             <div className="flex items-center gap-1 mr-4 bg-slate-900/90 px-3 py-1 animate-in slide-in-from-top-2 h-8 rounded-none border border-white/20 shadow-2xl">
               <span className="text-[9px] font-black uppercase tracking-widest text-white/80 mr-2 flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                Tekenen...
+                {editingLayerId ? 'Bewerken...' : 'Tekenen...'}
               </span>
               
               <div className="flex items-center gap-1 border-r border-white/20 pr-2 mr-2">
@@ -790,6 +837,9 @@ export default function GISDataPage() {
             const layerData = typeof layer.data === 'string' ? JSON.parse(layer.data) : layer.data;
             if (!layerData) return null;
 
+            // Hide original layer if we are editing its geometry
+            const isVisible = layer.visible && editingLayerId !== layer.id;
+
             return (
               <Source key={layer.id} id={layer.id} type="geojson" data={layerData}>
                 {layer.type === 'fill' && (
@@ -797,7 +847,7 @@ export default function GISDataPage() {
                     id={`${layer.id}-fill`}
                     type="fill"
                     paint={{ 'fill-color': layer.color, 'fill-opacity': 0.4 }}
-                    layout={{ visibility: layer.visible ? 'visible' : 'none' }}
+                    layout={{ visibility: isVisible ? 'visible' : 'none' }}
                   />
                 )}
                 {(layer.type === 'line' || layer.type === 'fill') && (
@@ -811,7 +861,7 @@ export default function GISDataPage() {
                       ...(layer.lineStyle === 'dotted' ? { 'line-dasharray': [1, 2] } : {}),
                     }}
                     layout={{ 
-                      visibility: layer.visible ? 'visible' : 'none',
+                      visibility: isVisible ? 'visible' : 'none',
                       'line-join': 'round',
                       'line-cap': 'round'
                     }}
@@ -822,7 +872,7 @@ export default function GISDataPage() {
                     id={`${layer.id}-point`}
                     type="circle"
                     paint={{ 'circle-color': layer.color, 'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' }}
-                    layout={{ visibility: layer.visible ? 'visible' : 'none' }}
+                    layout={{ visibility: isVisible ? 'visible' : 'none' }}
                   />
                 )}
               </Source>
@@ -941,8 +991,10 @@ export default function GISDataPage() {
       <Dialog open={isSaveDrawingOpen} onOpenChange={setIsSaveDrawingOpen}>
         <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
-            <DialogTitle className="font-black uppercase tracking-tight text-white">Tekening Opslaan</DialogTitle>
-            <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Geef de nieuwe laag een naam en bevestig de stijl.</DialogDescription>
+            <DialogTitle className="font-black uppercase tracking-tight text-white">
+              {editingLayerId ? 'Bewerkingen Opslaan' : 'Tekening Opslaan'}
+            </DialogTitle>
+            <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Bevestig de naam en de stijl van de kaartlaag.</DialogDescription>
           </DialogHeader>
           
           <ScrollArea className="max-h-[60vh] bg-white">
@@ -981,7 +1033,7 @@ export default function GISDataPage() {
               <div className="space-y-6 bg-slate-50 p-4 rounded-none border-2 border-slate-100">
                 <div className="flex items-center gap-2 mb-2">
                   <Settings2 className="h-4 w-4 text-primary" />
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Definitieve Lijnstijl</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Lijninstellingen</h4>
                 </div>
                 
                 <div className="space-y-4">
@@ -1017,7 +1069,7 @@ export default function GISDataPage() {
             <Button variant="ghost" onClick={() => setIsSaveDrawingOpen(false)} className="font-bold rounded-none">Annuleren</Button>
             <Button onClick={handleSaveDrawing} className="font-black uppercase rounded-none px-8 shadow-xl shadow-primary/20" disabled={!drawingName.trim() || isProcessing}>
               {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Opslaan in Backend
+              {editingLayerId ? 'Bijwerken in Backend' : 'Opslaan in Backend'}
             </Button>
           </DialogFooter>
         </DialogContent>
