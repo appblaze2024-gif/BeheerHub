@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -6,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import MapGL, { NavigationControl, ScaleControl, Source, Layer, type MapRef } from 'react-map-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import { kml } from '@tmcw/togeojson';
 import { 
   Search, 
   Layers, 
@@ -46,7 +46,8 @@ import {
   Cloud,
   Sun,
   Moon,
-  Trees
+  Trees,
+  FileCode
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -100,7 +101,7 @@ const MAP_STYLES = [
 interface GISLayer {
   id: string;
   name: string;
-  data: any; // Saved as string in Firestore, parsed locally
+  data: any; 
   visible: boolean;
   color: string;
   type: 'fill' | 'line' | 'circle';
@@ -137,7 +138,6 @@ export default function GISDataPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   
-  // Drawing state
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [activeDrawMode, setActiveDrawMode] = useState<string | null>(null);
   const [isSaveDrawingOpen, setIsSaveDrawingOpen] = useState(false);
@@ -146,10 +146,8 @@ export default function GISDataPage() {
   const [drawingLineWidth, setDrawingLineWidth] = useState(3);
   const [drawingLineStyle, setDrawingLineStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
 
-  // Base Map Style
   const [activeMapStyle, setActiveMapStyle] = useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
 
-  // Interaction state
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
   const [editingLayer, setEditingLayer] = useState<GISLayer | null>(null);
   const [editName, setEditName] = useState('');
@@ -159,7 +157,6 @@ export default function GISDataPage() {
   const [editIcon, setEditIcon] = useState('');
   const [iconSearch, setIconSearch] = useState('');
 
-  // Firestore Data
   const foldersQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return collection(firestore, 'users', user.uid, 'gisFolders');
@@ -178,7 +175,6 @@ export default function GISDataPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
-  // EFFECT: Update Mapbox Draw styles in real-time
   useEffect(() => {
     if (!mapRef.current || !isDrawingMode) return;
     const map = mapRef.current.getMap();
@@ -350,7 +346,6 @@ export default function GISDataPage() {
 
       const defaultIcon = type === 'fill' ? 'Square' : type === 'line' ? 'Minus' : 'Circle';
 
-      // IMPORTANT: Stringify data to avoid Firestore "Nested arrays" error
       const cleanDataString = JSON.stringify(features);
 
       const newLayer = {
@@ -390,15 +385,26 @@ export default function GISDataPage() {
     try {
       const layersCol = collection(firestore, 'users', user.uid, 'gisLayers');
 
-      const geojsonFiles = fileList.filter(f => f.name.endsWith('.geojson') || f.name.endsWith('.json'));
+      const kmlFiles = fileList.filter(f => f.name.toLowerCase().endsWith('.kml'));
+      for (const file of kmlFiles) {
+        const text = await file.text();
+        const parser = new DOMParser();
+        const kmlDom = parser.parseFromString(text, 'text/xml');
+        const geojson = kml(kmlDom);
+        if (geojson && geojson.features && geojson.features.length > 0) {
+            await saveLayerFromFile(file.name, geojson, layersCol);
+        }
+      }
+
+      const geojsonFiles = fileList.filter(f => f.name.toLowerCase().endsWith('.geojson') || f.name.toLowerCase().endsWith('.json'));
       for (const file of geojsonFiles) {
         const text = await file.text();
         const data = JSON.parse(text);
         await saveLayerFromFile(file.name, data, layersCol);
       }
 
-      const shpFile = fileList.find(f => f.name.endsWith('.shp'));
-      const dbfFile = fileList.find(f => f.name.endsWith('.dbf'));
+      const shpFile = fileList.find(f => f.name.toLowerCase().endsWith('.shp'));
+      const dbfFile = fileList.find(f => f.name.toLowerCase().endsWith('.dbf'));
       if (shpFile && dbfFile) {
         const shpBuffer = await shpFile.arrayBuffer();
         const dbfBuffer = await dbfFile.arrayBuffer();
@@ -406,7 +412,7 @@ export default function GISDataPage() {
         await saveLayerFromFile(shpFile.name, geojson, layersCol);
       }
 
-      const sheetFiles = fileList.filter(f => f.name.endsWith('.xlsx') || f.name.endsWith('.csv'));
+      const sheetFiles = fileList.filter(f => f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.csv'));
       for (const file of sheetFiles) {
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer);
@@ -449,7 +455,6 @@ export default function GISDataPage() {
 
     const defaultIcon = type === 'fill' ? 'Square' : type === 'line' ? 'Minus' : 'Circle';
 
-    // IMPORTANT: Stringify data to avoid Firestore "Nested arrays" error
     const dataString = JSON.stringify(data);
 
     const newLayer = {
@@ -782,7 +787,6 @@ export default function GISDataPage() {
           <ScaleControl position="bottom-left" />
 
           {dbLayers?.map(layer => {
-            // IMPORTANT: Parse data from string back to GeoJSON object
             const layerData = typeof layer.data === 'string' ? JSON.parse(layer.data) : layer.data;
             if (!layerData) return null;
 
@@ -1170,6 +1174,7 @@ export default function GISDataPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <UploadMethod icon={Plus} title="Zelf Tekenen" desc="Polygons, punten en routes" onSelect={toggleDrawingMode} />
               <UploadMethod icon={FileJson} title="GeoJSON / JSON" desc=".geojson, .json" onSelect={() => document.getElementById('gis-upload')?.click()} />
+              <UploadMethod icon={FileCode} title="KML" desc=".kml (Google Earth)" onSelect={() => document.getElementById('gis-upload')?.click()} />
               <UploadMethod icon={MapIcon} title="Shapefile" desc=".shp + .dbf nodig" onSelect={() => document.getElementById('gis-upload-multi')?.click()} />
               <UploadMethod icon={TableIcon} title="Spreadsheet" desc=".xlsx, .csv (met Lat/Lon)" onSelect={() => document.getElementById('gis-upload')?.click()} />
             </div>
@@ -1181,7 +1186,7 @@ export default function GISDataPage() {
               </div>
             )}
 
-            <input type="file" id="gis-upload" className="hidden" accept=".geojson,.json,.xlsx,.csv" onChange={handleFileUpload} />
+            <input type="file" id="gis-upload" className="hidden" accept=".geojson,.json,.xlsx,.csv,.kml" onChange={handleFileUpload} />
             <input type="file" id="gis-upload-multi" className="hidden" multiple accept=".shp,.dbf" onChange={handleFileUpload} />
           </div>
 
