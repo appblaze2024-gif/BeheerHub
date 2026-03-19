@@ -92,6 +92,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatDate } from 'date-fns';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -372,7 +373,25 @@ export default function GISDataPage() {
     setActiveDrawMode(mode);
   };
 
+  const parseLayerData = (data: any) => {
+    if (!data) return null;
+    if (typeof data === 'object') return data;
+    if (data === "[object Object]") return null;
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      console.error("Failed to parse GIS layer data:", e);
+      return null;
+    }
+  };
+
   const startEditingGeometry = (layer: GISLayer) => {
+    const layerData = parseLayerData(layer.data);
+    if (!layerData) {
+      toast({ variant: 'destructive', title: "Fout", description: "Kon laagdata niet laden voor bewerking." });
+      return;
+    }
+
     setEditingLayerId(layer.id);
     setIsDrawingMode(true);
     setIsLayersPanelOpen(false);
@@ -384,7 +403,6 @@ export default function GISDataPage() {
 
     if (drawRef.current) {
       drawRef.current.deleteAll();
-      const layerData = JSON.parse(layer.data);
       drawRef.current.add(layerData);
       
       const map = mapRef.current?.getMap();
@@ -590,7 +608,7 @@ export default function GISDataPage() {
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
     try {
-      const layerData = JSON.parse(layer.data);
+      const layerData = parseLayerData(layer.data);
       if (!layerData) return;
       
       const bbox = turf.bbox(layerData);
@@ -886,7 +904,7 @@ export default function GISDataPage() {
                     </button>
                   </PopoverTrigger>
                   <PopoverContent side="bottom" className="w-48 p-3 rounded-none border-none shadow-2xl bg-slate-900 text-white">
-                    <p className="text-[9px] font-black uppercase text-slate-400 mb-2">Kleur</p>
+                    <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Kleur</p>
                     <div className="grid grid-cols-5 gap-1.5">
                       {PRESET_COLORS.map(c => (
                         <button key={c} onClick={() => setDrawingColor(c)} className={cn("h-6 w-full rounded-none border", drawingColor === c ? "border-white" : "border-transparent")} style={{ backgroundColor: c }} />
@@ -961,7 +979,7 @@ export default function GISDataPage() {
           <ScaleControl position="bottom-left" />
 
           {dbLayers?.map(layer => {
-            const layerData = JSON.parse(layer.data);
+            const layerData = parseLayerData(layer.data);
             if (!layerData) return null;
 
             const isVisible = layer.visible && editingLayerId !== layer.id;
@@ -1411,7 +1429,7 @@ export default function GISDataPage() {
             </p>
             <div className="flex items-center gap-2 p-3 bg-slate-50 border-2 border-slate-100 rounded-none">
                 <Input value={shareUrl} readOnly className="h-9 border-none bg-transparent shadow-none focus-visible:ring-0 text-xs font-mono" />
-                <Button size="icon" variant="ghost" className="h-8 w-8 rounded-none text-primary" onClick={copyShareUrl}><Copy className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 rounded-none text-primary" onClick={copyShareUrl}><Icons.Copy className="h-4 w-4" /></Button>
             </div>
             <div className="flex justify-center pt-2">
                 <Button asChild variant="link" className="text-[10px] font-black uppercase tracking-widest text-primary">

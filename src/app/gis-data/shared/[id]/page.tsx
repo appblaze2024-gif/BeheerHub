@@ -60,6 +60,18 @@ export default function PublicSharedMapPage() {
     return allCreatorLayers.filter(l => sharedMap.visibleLayerIds.includes(l.id));
   }, [allCreatorLayers, sharedMap]);
 
+  const parseLayerData = (data: any) => {
+    if (!data) return null;
+    if (typeof data === 'object') return data;
+    if (data === "[object Object]") return null;
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      console.error("Failed to parse GIS layer data:", e);
+      return null;
+    }
+  };
+
   if (isLoadingMap) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
@@ -116,7 +128,7 @@ export default function PublicSharedMapPage() {
           <ScaleControl position="bottom-left" />
 
           {visibleLayers.map(layer => {
-            const layerData = JSON.parse(layer.data);
+            const layerData = parseLayerData(layer.data);
             if (!layerData) return null;
 
             return (
