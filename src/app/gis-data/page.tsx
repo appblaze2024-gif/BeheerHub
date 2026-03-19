@@ -42,12 +42,10 @@ import {
   Circle,
   Square,
   Save,
-  Type,
   Cloud,
   Sun,
   Moon,
-  Trees,
-  LineChart
+  Trees
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -181,13 +179,12 @@ export default function GISDataPage() {
 
   // EFFECT: Update Mapbox Draw styles in real-time
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !isDrawingMode) return;
     const map = mapRef.current.getMap();
     if (!map) return;
 
-    // Wait for style to be loaded
     const updateDrawStyles = () => {
-      const layers = [
+      const lineLayers = [
         'gl-draw-line-active.cold',
         'gl-draw-line-active.hot',
         'gl-draw-line-inactive.cold',
@@ -212,7 +209,7 @@ export default function GISDataPage() {
         'gl-draw-point-inactive.hot'
       ];
 
-      layers.forEach(layerId => {
+      lineLayers.forEach(layerId => {
         if (map.getLayer(layerId)) {
           map.setPaintProperty(layerId, 'line-color', drawingColor);
           map.setPaintProperty(layerId, 'line-width', drawingLineWidth);
@@ -352,9 +349,12 @@ export default function GISDataPage() {
 
       const defaultIcon = type === 'fill' ? 'Square' : type === 'line' ? 'Minus' : 'Circle';
 
+      // CLEAN JSON: Firestore rejects undefined values which MapboxDraw features often contain
+      const cleanData = JSON.parse(JSON.stringify(features));
+
       const newLayer = {
         name: drawingName,
-        data: features,
+        data: cleanData,
         visible: true,
         color: drawingColor,
         type,
@@ -367,12 +367,13 @@ export default function GISDataPage() {
 
       await addDocumentNonBlocking(layersCol, newLayer);
       
-      toggleDrawingMode();
       setIsSaveDrawingOpen(false);
+      toggleDrawingMode();
       setDrawingName('Nieuwe Tekening');
       toast({ title: "Laag opgeslagen", description: "De handmatige laag is toegevoegd aan je lijst." });
     } catch (err) {
-      toast({ variant: 'destructive', title: "Fout", description: "Kon de tekening niet opslaan." });
+      console.error("Save drawing error:", err);
+      toast({ variant: 'destructive', title: "Fout", description: "Kon de tekening niet opslaan in de database." });
     } finally {
       setIsProcessing(false);
     }
@@ -694,7 +695,6 @@ export default function GISDataPage() {
                 </Button>
               </div>
 
-              {/* LIVE STYLING CONTROLS */}
               <div className="flex items-center gap-2 border-r border-white/20 pr-2 mr-2">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -924,7 +924,6 @@ export default function GISDataPage() {
         </div>
       </div>
 
-      {/* Save Drawing Dialog */}
       <Dialog open={isSaveDrawingOpen} onOpenChange={setIsSaveDrawingOpen}>
         <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
@@ -1010,7 +1009,6 @@ export default function GISDataPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Layer Dialog */}
       <Dialog open={!!editingLayer} onOpenChange={(open) => !open && setEditingLayer(null)}>
         <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl flex flex-col h-[85vh] p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
