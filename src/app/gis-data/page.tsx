@@ -532,6 +532,22 @@ export default function GISDataPage() {
     updateDocumentNonBlocking(layerRef, { visible: !layer.visible });
   };
 
+  const zoomToLayer = (layer: GISLayer) => {
+    if (!mapRef.current) return;
+    const map = mapRef.current.getMap();
+    try {
+      const layerData = typeof layer.data === 'string' ? JSON.parse(layer.data) : layer.data;
+      if (!layerData) return;
+      
+      const bbox = turf.bbox(layerData);
+      if (bbox[0] !== Infinity) {
+        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+      }
+    } catch (e) {
+      console.error("Zoom to layer failed:", e);
+    }
+  };
+
   const removeLayer = (id: string) => {
     if (!user || !firestore) return;
     const layerRef = doc(firestore, 'users', user.uid, 'gisLayers', id);
@@ -662,11 +678,12 @@ export default function GISDataPage() {
             <div 
               key={layer.id} 
               style={{ paddingLeft: `${(level + (folderId ? 1 : 0)) * 12 + 16}px` }}
-              className="flex items-center justify-between p-2 hover:bg-slate-50 group border border-transparent hover:border-slate-100"
+              className="flex items-center justify-between p-2 hover:bg-slate-50 group border border-transparent hover:border-slate-100 cursor-pointer"
+              onClick={() => zoomToLayer(layer)}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <button 
-                  onClick={() => toggleLayerVisibility(layer)}
+                  onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(layer); }}
                   className={cn(
                     "h-8 w-8 flex items-center justify-center rounded-none border transition-all",
                     layer.visible ? "bg-white border-slate-200 shadow-sm" : "bg-slate-100 border-slate-100 opacity-50"
@@ -682,7 +699,7 @@ export default function GISDataPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100" onClick={e => e.stopPropagation()}>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-slate-400 hover:text-primary" onClick={() => openEditDialog(layer)}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -938,6 +955,7 @@ export default function GISDataPage() {
           </div>
 
           <div className="flex flex-col bg-white shadow-2xl border border-slate-200 w-10">
+            <ToolButton icon={Home} onClick={() => mapRef.current?.flyTo({ center: [initialViewState.longitude, initialViewState.latitude], zoom: initialViewState.zoom })} />
             <ToolButton icon={Home} onClick={() => mapRef.current?.flyTo({ center: [initialViewState.longitude, initialViewState.latitude], zoom: initialViewState.zoom })} />
             <ToolButton icon={Maximize2} />
           </div>
