@@ -172,7 +172,7 @@ export default function GISDataPage() {
 
   const [activeMapStyle, setActiveMapStyle] = useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
 
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root', 'shared-links']));
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
   const [editingLayer, setEditingLayer] = useState<GISLayer | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
@@ -1222,46 +1222,6 @@ export default function GISDataPage() {
                   {renderFolderContent(null)}
                 </div>
 
-                {/* Shared Links Section */}
-                <div className="pt-2 border-t">
-                  <div 
-                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-slate-50 group"
-                    onClick={() => toggleFolderExpansion('shared-links')}
-                  >
-                    {expandedFolders.has('shared-links') ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
-                    <LinkIcon className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate">Gedeelde Links</span>
-                    <Badge variant="secondary" className="ml-auto h-4 px-1.5 text-[8px] font-black rounded-none">{dbSharedMaps?.length || 0}</Badge>
-                  </div>
-                  
-                  {expandedFolders.has('shared-links') && (
-                    <div className="pl-6 space-y-1 mt-1">
-                      {dbSharedMaps?.map(share => (
-                        <div key={share.id} className="flex items-center justify-between p-2 hover:bg-slate-50 group border border-transparent">
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-tight text-slate-700 truncate">{share.name}</p>
-                            <p className="text-[8px] font-bold text-slate-400 uppercase">{share.visibleLayerIds.length} Lagen</p>
-                          </div>
-                          <div className="flex items-center opacity-0 group-hover:opacity-100">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-none" onClick={() => handleOpenShareWizard(share)}>
-                              <Pencil className="h-3.5 w-3.5 text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-none" onClick={() => copyShareUrl(`${window.location.origin}/gis-data/shared/${share.id}`)}>
-                              <Copy className="h-3.5 w-3.5 text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-none text-red-400 hover:text-red-600" onClick={() => deleteSharedMap(share.id)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      {(!dbSharedMaps || dbSharedMaps.length === 0) && (
-                        <p className="text-[9px] font-bold text-slate-300 uppercase py-2 italic">Geen gedeelde kaarten</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
                 {(!dbLayers || dbLayers.length === 0) && (!dbFolders || dbFolders.length === 0) && (
                   <div className="py-12 text-center">
                     <Layers className="h-8 w-8 mx-auto mb-2 text-slate-200" />
@@ -1536,7 +1496,7 @@ export default function GISDataPage() {
                       onChange={e => setEditColor(e.target.value)}
                       className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
                     />
-                    <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+                    <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-none mix-blend-difference text-white opacity-50" />
                   </div>
                 </div>
               </div>
