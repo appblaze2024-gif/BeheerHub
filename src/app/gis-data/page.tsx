@@ -43,7 +43,11 @@ import {
   Save,
   Minus,
   Circle,
-  Type
+  Type,
+  Cloud,
+  Sun,
+  Moon,
+  Trees
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -174,6 +178,27 @@ export default function GISDataPage() {
     bearing: 0
   };
 
+  const snapToRoad = async (coordinates: number[][]) => {
+    if (coordinates.length < 2) return null;
+    
+    // Mapbox Directions API limit is 25 waypoints
+    const limitedCoords = coordinates.slice(0, 25);
+    const coordsStr = limitedCoords.map(c => `${c[0]},${c[1]}`).join(';');
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsStr}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+    
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        return data.routes[0].geometry.coordinates;
+      }
+    } catch (e) {
+      console.error("Road snapping failed:", e);
+    }
+    return null;
+  };
+
   const handleMapLoad = () => {
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
@@ -190,6 +215,36 @@ export default function GISDataPage() {
     
     map.addControl(draw, 'top-right');
     drawRef.current = draw;
+    
+    // Snap to road logic
+    const handleDrawEvent = async (e: any) => {
+      const features = e.features;
+      if (!features || features.length === 0) return;
+
+      for (const feature of features) {
+        if (feature.geometry.type === 'LineString') {
+          const originalCoords = feature.geometry.coordinates;
+          if (originalCoords.length < 2) continue;
+
+          toast({ title: "Route optimaliseren...", description: "De lijn wordt aangepast aan het wegennet." });
+          
+          const snappedCoords = await snapToRoad(originalCoords);
+          if (snappedCoords) {
+            draw.add({
+              ...feature,
+              geometry: {
+                ...feature.geometry,
+                coordinates: snappedCoords
+              }
+            });
+            toast({ title: "Route voltooid", description: "De lijn volgt nu de weg." });
+          }
+        }
+      }
+    };
+
+    map.on('draw.create', handleDrawEvent);
+    map.on('draw.update', handleDrawEvent);
     
     // Hide default draw controls
     const drawControl = document.querySelector('.mapboxgl-ctrl-top-right .mapboxgl-ctrl-group:last-child');
@@ -535,7 +590,7 @@ export default function GISDataPage() {
                   variant="ghost" 
                   className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_line_string' && "bg-white/30")}
                   onClick={() => startDrawMode('draw_line_string')}
-                  title="Route tekenen"
+                  title="Route tekenen (Volgt de weg)"
                 >
                   <Minus className="h-3.5 w-3.5" />
                 </Button>
