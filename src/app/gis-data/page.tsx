@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -715,8 +714,9 @@ export default function GISDataPage() {
 
     setIsProcessing(true);
     try {
+        const center = map.getCenter();
         const viewState = {
-            center: map.getCenter(),
+            center: { lng: center.lng, lat: center.lat },
             zoom: map.getZoom(),
             pitch: map.getPitch(),
             bearing: map.getBearing()
