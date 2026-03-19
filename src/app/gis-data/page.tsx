@@ -51,7 +51,10 @@ import {
   BoxSelect,
   Share2,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Car,
+  Bike,
+  Footprints
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -146,6 +149,7 @@ export default function GISDataPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [activeDrawMode, setActiveDrawMode] = useState<string | null>(null);
+  const [drawingProfile, setDrawingProfile] = useState<'driving' | 'walking' | 'cycling'>('driving');
   const [isSaveDrawingOpen, setIsSaveDrawingOpen] = useState(false);
   const [drawingName, setDrawingName] = useState('Nieuwe Tekening');
   const [drawingColor, setDrawingColor] = useState('#3b82f6');
@@ -287,11 +291,11 @@ export default function GISDataPage() {
     bearing: 0
   };
 
-  const snapToRoad = async (coordinates: number[][]) => {
+  const snapToRoad = async (coordinates: number[][], profile: 'driving' | 'walking' | 'cycling' = 'driving') => {
     if (coordinates.length < 2) return null;
     const limitedCoords = coordinates.slice(0, 25);
     const coordsStr = limitedCoords.map(c => `${c[0]},${c[1]}`).join(';');
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsStr}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+    const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${coordsStr}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
     
     try {
       const response = await fetch(url);
@@ -330,14 +334,17 @@ export default function GISDataPage() {
         if (feature.geometry.type === 'LineString') {
           const originalCoords = feature.geometry.coordinates;
           if (originalCoords.length < 2) continue;
-          toast({ title: "Route optimaliseren...", description: "De lijn wordt aangepast aan het wegennet." });
-          const snappedCoords = await snapToRoad(originalCoords);
+          
+          const profile = (window as any)._drawingProfile || 'driving';
+          toast({ title: "Traject optimaliseren...", description: `De lijn wordt aangepast aan het netwerk (${profile}).` });
+          
+          const snappedCoords = await snapToRoad(originalCoords, profile);
           if (snappedCoords) {
             draw.add({
               ...feature,
               geometry: { ...feature.geometry, coordinates: snappedCoords }
             });
-            toast({ title: "Route voltooid", description: "De lijn volgt nu de weg." });
+            toast({ title: "Traject voltooid", description: "De lijn volgt nu het geselecteerde type weg." });
           }
         }
       }
@@ -370,6 +377,12 @@ export default function GISDataPage() {
     if (!drawRef.current) return;
     drawRef.current.changeMode(mode);
     setActiveDrawMode(mode);
+  };
+
+  const updateDrawingProfile = (profile: 'driving' | 'walking' | 'cycling') => {
+    setDrawingProfile(profile);
+    // Use a global window variable to communicate with the MapboxDraw event handler
+    (window as any)._drawingProfile = profile;
   };
 
   const parseLayerData = (data: any) => {
@@ -844,7 +857,7 @@ export default function GISDataPage() {
                       <DropdownMenuItem key={f.id} onClick={() => moveLayerToFolder(layer.id, f.id)} className="text-[10px] font-black uppercase">Naar map: {f.name}</DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => removeLayer(layer.id)} className="text-red-600 text-[10px] font-black uppercase"><Trash2 className="mr-2 h-3.5 w-3.5" /> Verwijderen</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => removeLayer(id)} className="text-red-600 text-[10px] font-black uppercase"><Trash2 className="mr-2 h-3.5 w-3.5" /> Verwijderen</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -876,15 +889,48 @@ export default function GISDataPage() {
                 >
                   <Circle className="h-3.5 w-3.5" />
                 </Button>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className={cn("h-7 w-7 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_line_string' && "bg-primary text-white")}
-                  onClick={() => startDrawMode('draw_line_string')}
-                  title="Route tekenen (Volgt de weg)"
-                >
-                  <Minus className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center bg-white/10 rounded-none h-7 px-1 mx-1 gap-1">
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className={cn("h-6 w-6 rounded-none text-white hover:bg-white/20", activeDrawMode === 'draw_line_string' && "bg-primary text-white")}
+                    onClick={() => startDrawMode('draw_line_string')}
+                    title="Lijn tekenen"
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </Button>
+                  {activeDrawMode === 'draw_line_string' && (
+                    <div className="flex items-center gap-0.5 border-l border-white/20 pl-1 ml-1">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className={cn("h-6 w-6 rounded-none text-white hover:bg-white/20", drawingProfile === 'driving' && "bg-primary text-white")}
+                        onClick={() => updateDrawingProfile('driving')}
+                        title="Auto netwerk"
+                      >
+                        <Car className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className={cn("h-6 w-6 rounded-none text-white hover:bg-white/20", drawingProfile === 'cycling' && "bg-primary text-white")}
+                        onClick={() => updateDrawingProfile('cycling')}
+                        title="Fietspaden"
+                      >
+                        <Bike className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className={cn("h-6 w-6 rounded-none text-white hover:bg-white/20", drawingProfile === 'walking' && "bg-primary text-white")}
+                        onClick={() => updateDrawingProfile('walking')}
+                        title="Voetpaden"
+                      >
+                        <Footprints className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 <Button 
                   size="icon" 
                   variant="ghost" 
