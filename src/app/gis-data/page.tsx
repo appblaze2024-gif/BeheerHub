@@ -1608,7 +1608,7 @@ export default function GISDataPage() {
               <UploadMethod icon={Plus} title="Zelf Tekenen" desc="Polygons, punten en routes" onSelect={toggleDrawingMode} />
               <UploadMethod icon={FileJson} title="GeoJSON / JSON" desc=".geojson, .json" onSelect={() => document.getElementById('gis-upload')?.click()} />
               <UploadMethod icon={FileCode} title="KML" desc=".kml (Google Earth)" onSelect={() => document.getElementById('gis-upload')?.click()} />
-              <UploadMethod icon={MapIcon} title="Shapefile" desc=".shp + .dbf nodig" onSelect={() => document.getElementById('gis-upload-multi')?.click()} />
+              <UploadMethod icon={MapIcon} title="GIS Bundel" desc=".shp, .dbf, .shx, .prj, .cpg, .fld, .three" onSelect={() => document.getElementById('gis-upload-multi')?.click()} />
               <UploadMethod icon={TableIcon} title="Spreadsheet" desc=".xlsx, .csv (met Lat/Lon)" onSelect={() => document.getElementById('gis-upload')?.click()} />
             </div>
 
@@ -1620,7 +1620,7 @@ export default function GISDataPage() {
             )}
 
             <input type="file" id="gis-upload" className="hidden" accept=".geojson,.json,.xlsx,.csv,.kml" onChange={handleFileUpload} />
-            <input type="file" id="gis-upload-multi" className="hidden" multiple accept=".shp,.dbf" onChange={handleFileUpload} />
+            <input type="file" id="gis-upload-multi" className="hidden" multiple accept=".shp,.dbf,.shx,.prj,.cpg,.fld,.three" onChange={handleFileUpload} />
           </div>
 
           <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
@@ -1706,4 +1706,3 @@ function ToolButton({ icon: Icon, active = false, onClick }: { icon: any, active
     </button>
   );
 }
-

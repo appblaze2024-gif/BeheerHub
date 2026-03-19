@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -394,14 +395,14 @@ export function ObjectImportDialog({
                         <Input
                             id="csv-file"
                             type="file"
-                            accept=".csv,.xlsx,.xls,.dbf,.prj,.shp,.shx"
+                            accept=".csv,.xlsx,.xls,.dbf,.prj,.shp,.shx,.cpg,.fld,.three"
                             onChange={handleFileChange}
                             ref={fileInputRef}
                             className="w-full h-12 text-base"
                             multiple
                         />
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
-                            Ondersteunt: .csv, .xlsx, of .shp + .dbf
+                            Ondersteunt: .csv, .xlsx, of .shp + .dbf + extra's
                         </p>
                     </div>
                      {error && <p className="text-red-500 text-sm font-bold text-center">{error}</p>}
