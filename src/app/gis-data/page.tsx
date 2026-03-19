@@ -180,6 +180,7 @@ export default function GISDataPage() {
 
   // Share Wizard State
   const [isShareWizardOpen, setIsShareWizardOpen] = useState(false);
+  const [editingSharedMapId, setEditingSharedMapId] = useState<string | null>(null);
   const [shareName, setShareName] = useState('');
   const [shareLayerIds, setShareLayerIds] = useState<string[]>([]);
   const [shareUrl, setShareUrl] = useState('');
@@ -735,10 +736,19 @@ export default function GISDataPage() {
     toast({ title: 'Laag verplaatst' });
   };
 
-  const handleOpenShareWizard = () => {
+  const handleOpenShareWizard = (existingMap?: SharedMap) => {
     if (!dbLayers) return;
-    setShareName(`Gedeelde Kaart ${formatDate(new Date(), 'dd-MM-yyyy')}`);
-    setShareLayerIds(dbLayers.filter(l => l.visible).map(l => l.id));
+    
+    if (existingMap) {
+        setEditingSharedMapId(existingMap.id);
+        setShareName(existingMap.name);
+        setShareLayerIds(existingMap.visibleLayerIds || []);
+    } else {
+        setEditingSharedMapId(null);
+        setShareName(`Gedeelde Kaart ${formatDate(new Date(), 'dd-MM-yyyy')}`);
+        setShareLayerIds(dbLayers.filter(l => l.visible).map(l => l.id));
+    }
+    
     setIsShareWizardOpen(true);
   };
 
@@ -756,7 +766,7 @@ export default function GISDataPage() {
             bearing: map.getBearing()
         };
 
-        const shareDoc = {
+        const shareDoc: any = {
             name: shareName.trim(),
             viewState,
             visibleLayerIds: shareLayerIds,
@@ -764,11 +774,22 @@ export default function GISDataPage() {
             createdAt: new Date().toISOString()
         };
 
-        const docRef = await addDocumentNonBlocking(collection(firestore, 'shared_maps'), shareDoc);
-        const url = `${window.location.origin}/gis-data/shared/${docRef.id}`;
-        setShareUrl(url);
-        setIsShareWizardOpen(false);
-        setIsShareSuccessOpen(true);
+        if (editingSharedMapId) {
+            const docRef = doc(firestore, 'shared_maps', editingSharedMapId);
+            await updateDocumentNonBlocking(docRef, {
+                name: shareName.trim(),
+                visibleLayerIds: shareLayerIds,
+                viewState
+            });
+            toast({ title: "Deellink bijgewerkt" });
+            setIsShareWizardOpen(false);
+        } else {
+            const docRef = await addDocumentNonBlocking(collection(firestore, 'shared_maps'), shareDoc);
+            const url = `${window.location.origin}/gis-data/shared/${docRef.id}`;
+            setShareUrl(url);
+            setIsShareWizardOpen(false);
+            setIsShareSuccessOpen(true);
+        }
     } catch (err) {
         console.error("Share error:", err);
         toast({ variant: 'destructive', title: "Fout bij delen" });
@@ -1021,7 +1042,7 @@ export default function GISDataPage() {
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 text-white hover:bg-white/10 rounded-none" 
-            onClick={handleOpenShareWizard}
+            onClick={() => handleOpenShareWizard()}
           >
             <Share2 className="h-4 w-4" />
           </Button>
@@ -1219,6 +1240,9 @@ export default function GISDataPage() {
                             <p className="text-[8px] font-bold text-slate-400 uppercase">{share.visibleLayerIds.length} Lagen</p>
                           </div>
                           <div className="flex items-center opacity-0 group-hover:opacity-100">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-none" onClick={() => handleOpenShareWizard(share)}>
+                              <Pencil className="h-3.5 w-3.5 text-primary" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-none" onClick={() => copyShareUrl(`${window.location.origin}/gis-data/shared/${share.id}`)}>
                               <Copy className="h-3.5 w-3.5 text-primary" />
                             </Button>
@@ -1253,14 +1277,14 @@ export default function GISDataPage() {
       </div>
 
       {/* Share Wizard Dialog */}
-      <Dialog open={isShareWizardOpen} onOpenChange={setIsShareWizardOpen}>
+      <Dialog open={isShareWizardOpen} onOpenChange={(open) => { setIsShareWizardOpen(open); if(!open) setEditingSharedMapId(null); }}>
         <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
             <div className="flex items-center gap-3">
               <div className="bg-primary p-2 rounded-none"><Share2 className="h-5 w-5 text-white" /></div>
               <div>
-                <DialogTitle className="font-black uppercase tracking-tight text-white">Kaart Delen</DialogTitle>
-                <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Maak een publieke link voor aannemers of partners.</DialogDescription>
+                <DialogTitle className="font-black uppercase tracking-tight text-white">{editingSharedMapId ? 'Deellink Aanpassen' : 'Kaart Delen'}</DialogTitle>
+                <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Maak of bewerk een publieke link voor aannemers.</DialogDescription>
               </div>
             </div>
           </DialogHeader>
@@ -1312,8 +1336,8 @@ export default function GISDataPage() {
           <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
             <Button variant="ghost" onClick={() => setIsShareWizardOpen(false)} className="font-bold rounded-none">Annuleren</Button>
             <Button onClick={handleCreateShareMap} className="font-black uppercase rounded-none px-8 shadow-xl shadow-primary/20" disabled={!shareName.trim() || shareLayerIds.length === 0 || isProcessing}>
-              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LinkIcon className="mr-2 h-4 w-4" />}
-              Link Genereren
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : editingSharedMapId ? <Check className="mr-2 h-4 w-4" /> : <LinkIcon className="mr-2 h-4 w-4" />}
+              {editingSharedMapId ? 'Wijzigingen Opslaan' : 'Link Genereren'}
             </Button>
           </DialogFooter>
         </DialogContent>
