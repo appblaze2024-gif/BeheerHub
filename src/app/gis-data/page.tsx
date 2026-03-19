@@ -179,6 +179,66 @@ export default function GISDataPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible]);
 
+  // EFFECT: Update Mapbox Draw styles in real-time
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current.getMap();
+    if (!map) return;
+
+    // Wait for style to be loaded
+    const updateDrawStyles = () => {
+      const layers = [
+        'gl-draw-line-active.cold',
+        'gl-draw-line-active.hot',
+        'gl-draw-line-inactive.cold',
+        'gl-draw-line-inactive.hot',
+        'gl-draw-polygon-stroke-active.cold',
+        'gl-draw-polygon-stroke-active.hot',
+        'gl-draw-polygon-stroke-inactive.cold',
+        'gl-draw-polygon-stroke-inactive.hot'
+      ];
+
+      const fillLayers = [
+        'gl-draw-polygon-fill-active.cold',
+        'gl-draw-polygon-fill-active.hot',
+        'gl-draw-polygon-fill-inactive.cold',
+        'gl-draw-polygon-fill-inactive.hot'
+      ];
+
+      const pointLayers = [
+        'gl-draw-point-active.cold',
+        'gl-draw-point-active.hot',
+        'gl-draw-point-inactive.cold',
+        'gl-draw-point-inactive.hot'
+      ];
+
+      layers.forEach(layerId => {
+        if (map.getLayer(layerId)) {
+          map.setPaintProperty(layerId, 'line-color', drawingColor);
+          map.setPaintProperty(layerId, 'line-width', drawingLineWidth);
+        }
+      });
+
+      fillLayers.forEach(layerId => {
+        if (map.getLayer(layerId)) {
+          map.setPaintProperty(layerId, 'fill-color', drawingColor);
+        }
+      });
+
+      pointLayers.forEach(layerId => {
+        if (map.getLayer(layerId)) {
+          map.setPaintProperty(layerId, 'circle-color', drawingColor);
+        }
+      });
+    };
+
+    if (map.isStyleLoaded()) {
+      updateDrawStyles();
+    } else {
+      map.once('style.load', updateDrawStyles);
+    }
+  }, [drawingColor, drawingLineWidth, isDrawingMode]);
+
   const initialViewState = {
     longitude: 6.083,
     latitude: 52.516,
