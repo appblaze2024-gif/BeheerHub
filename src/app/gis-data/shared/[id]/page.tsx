@@ -7,15 +7,15 @@ import MapGL, { NavigationControl, ScaleControl, Source, Layer, type MapRef } fr
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useParams } from 'next/navigation';
 import { useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
-import { Layers, Loader2, Info, Map as MapIcon, Calendar, User } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { doc, collection } from 'firebase/firestore';
+import { Layers, Loader2, Info, Map as MapIcon, Calendar } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as Icons from 'lucide-react';
 import { cn } from '@/lib/utils';
+import * as turf from '@turf/turf';
+import { useToast } from '@/components/ui/use-toast';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -43,6 +43,7 @@ export default function PublicSharedMapPage() {
   const params = useParams();
   const id = params.id as string;
   const firestore = useFirestore();
+  const { toast } = useToast();
   const mapRef = useRef<MapRef>(null);
 
   const sharedMapRef = useMemoFirebase(() => (firestore && id) ? doc(firestore, 'shared_maps', id) : null, [firestore, id]);
@@ -72,6 +73,36 @@ export default function PublicSharedMapPage() {
     }
   };
 
+  const zoomToLayer = (layer: GISLayer) => {
+    if (!mapRef.current) return;
+    const map = mapRef.current.getMap();
+    try {
+      const layerData = parseLayerData(layer.data);
+      if (!layerData) return;
+      
+      const bbox = turf.bbox(layerData);
+      
+      // Valideer of de coördinaten binnen het geografische bereik vallen
+      const isGeographic = 
+        bbox[0] >= -180 && bbox[0] <= 180 && 
+        bbox[2] >= -180 && bbox[2] <= 180 && 
+        bbox[1] >= -90 && bbox[1] <= 90 && 
+        bbox[3] >= -90 && bbox[3] <= 90;
+
+      if (bbox[0] !== Infinity && isGeographic) {
+        map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 1000 });
+      } else if (!isGeographic) {
+        toast({ 
+          variant: 'destructive', 
+          title: "Inzoomen mislukt", 
+          description: "De coördinaten van deze laag vallen buiten het bereik van de kaart." 
+        });
+      }
+    } catch (e) {
+      console.error("Zoom to layer failed:", e);
+    }
+  };
+
   if (isLoadingMap) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
@@ -84,7 +115,7 @@ export default function PublicSharedMapPage() {
   if (!sharedMap) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 p-8 text-center">
-        <div className="bg-white p-8 rounded-3xl shadow-xl mb-6">
+        <div className="bg-white p-8 rounded-none shadow-xl mb-6 border border-slate-100">
             <Info className="h-12 w-12 text-slate-200" />
         </div>
         <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">Link niet geldig</h1>
@@ -94,13 +125,13 @@ export default function PublicSharedMapPage() {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-white">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-white font-sans">
       <header className="h-16 bg-slate-900 text-white flex items-center justify-between px-6 shrink-0 z-50 shadow-2xl">
         <div className="flex items-center gap-4 min-w-0">
-            <div className="bg-primary p-2 rounded-xl shrink-0"><MapIcon className="h-5 w-5 text-white" /></div>
+            <div className="bg-primary p-2 rounded-none shrink-0"><MapIcon className="h-5 w-5 text-white" /></div>
             <div className="min-w-0">
-                <h1 className="text-lg font-black uppercase tracking-tight truncate">{sharedMap.name}</h1>
-                <div className="flex items-center gap-3 text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mt-0.5">
+                <h1 className="text-lg font-black uppercase tracking-tight truncate leading-none">{sharedMap.name}</h1>
+                <div className="flex items-center gap-3 text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mt-1.5">
                     <span className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {format(new Date(sharedMap.createdAt), 'd MMM yyyy', { locale: nl })}</span>
                     <span>•</span>
                     <span className="text-primary flex items-center gap-1.5"><Layers className="h-3 w-3" /> {visibleLayers.length} Lagen</span>
@@ -165,22 +196,29 @@ export default function PublicSharedMapPage() {
           })}
         </MapGL>
 
-        <div className="absolute top-6 left-6 z-10 w-64 max-h-[70vh] flex flex-col bg-white/95 backdrop-blur-md shadow-2xl rounded-3xl border border-white overflow-hidden animate-in slide-in-from-left-4 duration-500">
+        <div className="absolute top-6 left-6 z-10 w-64 max-h-[70vh] flex flex-col bg-white/95 backdrop-blur-md shadow-2xl rounded-none border-2 border-slate-100 overflow-hidden animate-in slide-in-from-left-4 duration-500">
             <div className="p-4 bg-slate-50 border-b flex items-center gap-3">
                 <Layers className="h-4 w-4 text-primary" />
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Legenda</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Kaartlegenda</h3>
             </div>
             <ScrollArea className="flex-1">
-                <div className="p-4 space-y-3">
+                <div className="p-2 space-y-1">
                     {visibleLayers.map(layer => {
                         const IconComp = (Icons as any)[layer.icon || (layer.type === 'fill' ? 'Square' : layer.type === 'line' ? 'Minus' : 'Circle')] || Icons.Circle;
                         return (
-                            <div key={layer.id} className="flex items-center gap-3 group">
-                                <div className="h-8 w-8 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm shrink-0">
+                            <button 
+                                key={layer.id} 
+                                onClick={() => zoomToLayer(layer)}
+                                className="w-full flex items-center gap-3 p-2 group hover:bg-slate-100 transition-colors text-left border border-transparent hover:border-slate-200"
+                            >
+                                <div className="h-8 w-8 flex items-center justify-center rounded-none bg-white border border-slate-100 shadow-sm shrink-0">
                                     <IconComp className="h-4 w-4" style={{ color: layer.color, fill: layer.type === 'fill' ? layer.color : 'none' }} />
                                 </div>
-                                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-tight truncate">{layer.name}</span>
-                            </div>
+                                <div className="min-w-0 flex-1">
+                                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight truncate block">{layer.name}</span>
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Klik om te focussen</span>
+                                </div>
+                            </button>
                         );
                     })}
                 </div>
@@ -190,8 +228,8 @@ export default function PublicSharedMapPage() {
             </div>
         </div>
 
-        <div className="absolute bottom-4 right-16 z-10 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-[8px] font-black text-slate-500 uppercase flex items-center gap-2 border border-slate-200">
-          <span>Gedeeld door BeheerHub Gebruiker</span>
+        <div className="absolute bottom-4 right-16 z-10 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-none text-[8px] font-black text-slate-500 uppercase flex items-center gap-2 border border-slate-200 shadow-sm">
+          <span>Gedeeld via BeheerHub</span>
         </div>
       </div>
     </div>
