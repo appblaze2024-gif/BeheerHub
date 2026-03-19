@@ -153,7 +153,7 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 
   useEffect(() => setMounted(true), []);
 
-  const isPublicPage = pathname === '/login' || pathname.startsWith('/reset-password');
+  const isPublicPage = pathname === '/login' || pathname.startsWith('/reset-password') || pathname.startsWith('/gis-data/shared/');
 
   useEffect(() => {
     if (mounted && !isUserLoading) {
