@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -30,11 +31,11 @@ service cloud.firestore {
 
     // --- RULES ---
 
-    // Gedeelde kaarten - Publiek toegankelijk voor reads
+    // Gedeelde kaarten - Publiek toegankelijk voor reads en eigenaarbeheer
     match /shared_maps/{mapId} {
-      allow read: if true;
+      allow read, get, list: if true;
       allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() && resource.data.creatorId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.creatorId == request.auth.uid || isAdmin());
     }
 
     // Objecten (GIS)
@@ -58,13 +59,13 @@ service cloud.firestore {
       }
 
       match /gisFolders/{folderId} {
-        allow read: if true; // Toestaan voor gedeelde weergave
-        allow write: if isOwner(userId);
+        allow read, get, list: if true; 
+        allow write: if isOwner(userId) || isAdmin();
       }
 
       match /gisLayers/{layerId} {
-        allow read: if true; // Toestaan voor gedeelde weergave
-        allow write: if isOwner(userId);
+        allow read, get, list: if true; 
+        allow write: if isOwner(userId) || isAdmin();
       }
 
       match /messages/{messageId} {

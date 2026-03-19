@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -55,7 +56,8 @@ import {
   Car,
   Bike,
   Footprints,
-  Link as LinkIcon
+  Link as LinkIcon,
+  History
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -97,6 +99,7 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatDate } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -187,19 +190,19 @@ export default function GISDataPage() {
   const [isShareSuccessOpen, setIsShareSuccessOpen] = useState(false);
 
   const foldersQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'gisFolders');
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const layersQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'gisLayers');
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const sharedMapsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return query(collection(firestore, 'shared_maps'), where('creatorId', '==', user.uid));
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: dbFolders } = useCollection<GISFolder>(foldersQuery);
   const { data: dbLayers } = useCollection<GISLayer>(layersQuery);
@@ -1278,7 +1281,7 @@ export default function GISDataPage() {
 
       {/* Share Wizard Dialog */}
       <Dialog open={isShareWizardOpen} onOpenChange={(open) => { setIsShareWizardOpen(open); if(!open) setEditingSharedMapId(null); }}>
-        <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-2xl h-[90vh] rounded-none border-none shadow-2xl p-0 overflow-hidden flex flex-col">
           <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
             <div className="flex items-center gap-3">
               <div className="bg-primary p-2 rounded-none"><Share2 className="h-5 w-5 text-white" /></div>
@@ -1289,49 +1292,83 @@ export default function GISDataPage() {
             </div>
           </DialogHeader>
           
-          <ScrollArea className="max-h-[60vh] bg-white">
-            <div className="p-6 space-y-8">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam van de link</Label>
-                <Input 
-                  placeholder="Bv. Aannemer X - Project West..." 
-                  value={shareName} 
-                  onChange={e => setShareName(e.target.value)} 
-                  className="h-12 font-bold rounded-none border-2 focus:ring-primary/20"
-                  autoFocus
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Zichtbare Lagen</Label>
-                  <span className="text-[9px] font-black text-primary uppercase">{shareLayerIds.length} geselecteerd</span>
-                </div>
-                <div className="grid gap-2">
-                  {dbLayers?.map(layer => (
-                    <div 
-                      key={layer.id} 
-                      className={cn(
-                        "flex items-center space-x-3 p-3 rounded-none transition-all cursor-pointer border-2",
-                        shareLayerIds.includes(layer.id) ? "bg-primary/5 border-primary/20 shadow-sm" : "hover:bg-slate-50 border-transparent"
-                      )} 
-                      onClick={() => setShareLayerIds(prev => prev.includes(layer.id) ? prev.filter(id => id !== layer.id) : [...prev, layer.id])}
-                    >
-                      <Checkbox
-                        checked={shareLayerIds.includes(layer.id)}
-                        onCheckedChange={() => {}} // Handled by div onClick
-                        className="rounded-none border-slate-300"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-black uppercase tracking-tight text-slate-700 truncate">{layer.name}</p>
-                        <p className="text-[8px] font-bold text-slate-400 uppercase">{layer.type}</p>
-                      </div>
+          <div className="flex-1 overflow-hidden flex flex-col bg-white">
+            <ScrollArea className="flex-1">
+              <div className="p-6 space-y-8">
+                
+                {/* Existing Links Section within Wizard */}
+                {!editingSharedMapId && dbSharedMaps && dbSharedMaps.length > 0 && (
+                  <div className="space-y-4">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1 flex items-center gap-2">
+                      <History className="h-3 w-3" /> Bestaande Deellinks
+                    </Label>
+                    <div className="grid gap-2">
+                      {dbSharedMaps.map(share => (
+                        <div key={share.id} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 rounded-none group hover:border-primary/20 transition-all shadow-sm">
+                          <div className="min-w-0" onClick={() => handleOpenShareWizard(share)}>
+                            <p className="text-[11px] font-black uppercase tracking-tight text-slate-700 truncate cursor-pointer hover:text-primary">{share.name}</p>
+                            <p className="text-[8px] font-bold text-slate-400 uppercase">{share.visibleLayerIds.length} Lagen • {formatDate(new Date(share.createdAt), 'dd-MM-yy')}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-primary" onClick={() => handleOpenShareWizard(share)} title="Bewerken">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-primary" onClick={() => copyShareUrl(`${window.location.origin}/gis-data/shared/${share.id}`)} title="Kopieer URL">
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-red-400 hover:text-red-600" onClick={() => deleteSharedMap(share.id)} title="Verwijderen">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                    <Separator />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam van de nieuwe link</Label>
+                  <Input 
+                    placeholder="Bv. Aannemer X - Project West..." 
+                    value={shareName} 
+                    onChange={e => setShareName(e.target.value)} 
+                    className="h-12 font-bold rounded-none border-2 focus:ring-primary/20"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Zichtbare Lagen</Label>
+                    <span className="text-[9px] font-black text-primary uppercase">{shareLayerIds.length} geselecteerd</span>
+                  </div>
+                  <div className="grid gap-2">
+                    {dbLayers?.map(layer => (
+                      <div 
+                        key={layer.id} 
+                        className={cn(
+                          "flex items-center space-x-3 p-3 rounded-none transition-all cursor-pointer border-2",
+                          shareLayerIds.includes(layer.id) ? "bg-primary/5 border-primary/20 shadow-sm" : "hover:bg-slate-50 border-transparent"
+                        )} 
+                        onClick={() => setShareLayerIds(prev => prev.includes(layer.id) ? prev.filter(id => id !== layer.id) : [...prev, layer.id])}
+                      >
+                        <Checkbox
+                          checked={shareLayerIds.includes(layer.id)}
+                          onCheckedChange={() => {}} // Handled by div onClick
+                          className="rounded-none border-slate-300"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-black uppercase tracking-tight text-slate-700 truncate">{layer.name}</p>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase">{layer.type}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </ScrollArea>
+            </ScrollArea>
+          </div>
 
           <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
             <Button variant="ghost" onClick={() => setIsShareWizardOpen(false)} className="font-bold rounded-none">Annuleren</Button>
