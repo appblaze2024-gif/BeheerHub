@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -99,7 +100,7 @@ const MAP_STYLES = [
 interface GISLayer {
   id: string;
   name: string;
-  data: any;
+  data: any; // Saved as string in Firestore, parsed locally
   visible: boolean;
   color: string;
   type: 'fill' | 'line' | 'circle';
@@ -349,12 +350,12 @@ export default function GISDataPage() {
 
       const defaultIcon = type === 'fill' ? 'Square' : type === 'line' ? 'Minus' : 'Circle';
 
-      // CLEAN JSON: Firestore rejects undefined values which MapboxDraw features often contain
-      const cleanData = JSON.parse(JSON.stringify(features));
+      // IMPORTANT: Stringify data to avoid Firestore "Nested arrays" error
+      const cleanDataString = JSON.stringify(features);
 
       const newLayer = {
         name: drawingName,
-        data: cleanData,
+        data: cleanDataString,
         visible: true,
         color: drawingColor,
         type,
@@ -448,9 +449,12 @@ export default function GISDataPage() {
 
     const defaultIcon = type === 'fill' ? 'Square' : type === 'line' ? 'Minus' : 'Circle';
 
+    // IMPORTANT: Stringify data to avoid Firestore "Nested arrays" error
+    const dataString = JSON.stringify(data);
+
     const newLayer = {
       name,
-      data,
+      data: dataString,
       visible: true,
       color: PRESET_COLORS[(dbLayers?.length || 0) % PRESET_COLORS.length],
       type,
@@ -777,43 +781,49 @@ export default function GISDataPage() {
           <NavigationControl position="bottom-right" showCompass={false} />
           <ScaleControl position="bottom-left" />
 
-          {dbLayers?.map(layer => (
-            <Source key={layer.id} id={layer.id} type="geojson" data={layer.data}>
-              {layer.type === 'fill' && (
-                <Layer
-                  id={`${layer.id}-fill`}
-                  type="fill"
-                  paint={{ 'fill-color': layer.color, 'fill-opacity': 0.4 }}
-                  layout={{ visibility: layer.visible ? 'visible' : 'none' }}
-                />
-              )}
-              {(layer.type === 'line' || layer.type === 'fill') && (
-                <Layer
-                  id={`${layer.id}-line`}
-                  type="line"
-                  paint={{ 
-                    'line-color': layer.color, 
-                    'line-width': layer.lineWidth || 2,
-                    ...(layer.lineStyle === 'dashed' ? { 'line-dasharray': [4, 2] } : {}),
-                    ...(layer.lineStyle === 'dotted' ? { 'line-dasharray': [1, 2] } : {}),
-                  }}
-                  layout={{ 
-                    visibility: layer.visible ? 'visible' : 'none',
-                    'line-join': 'round',
-                    'line-cap': 'round'
-                  }}
-                />
-              )}
-              {layer.type === 'circle' && (
-                <Layer
-                  id={`${layer.id}-point`}
-                  type="circle"
-                  paint={{ 'circle-color': layer.color, 'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' }}
-                  layout={{ visibility: layer.visible ? 'visible' : 'none' }}
-                />
-              )}
-            </Source>
-          ))}
+          {dbLayers?.map(layer => {
+            // IMPORTANT: Parse data from string back to GeoJSON object
+            const layerData = typeof layer.data === 'string' ? JSON.parse(layer.data) : layer.data;
+            if (!layerData) return null;
+
+            return (
+              <Source key={layer.id} id={layer.id} type="geojson" data={layerData}>
+                {layer.type === 'fill' && (
+                  <Layer
+                    id={`${layer.id}-fill`}
+                    type="fill"
+                    paint={{ 'fill-color': layer.color, 'fill-opacity': 0.4 }}
+                    layout={{ visibility: layer.visible ? 'visible' : 'none' }}
+                  />
+                )}
+                {(layer.type === 'line' || layer.type === 'fill') && (
+                  <Layer
+                    id={`${layer.id}-line`}
+                    type="line"
+                    paint={{ 
+                      'line-color': layer.color, 
+                      'line-width': layer.lineWidth || 2,
+                      ...(layer.lineStyle === 'dashed' ? { 'line-dasharray': [4, 2] } : {}),
+                      ...(layer.lineStyle === 'dotted' ? { 'line-dasharray': [1, 2] } : {}),
+                    }}
+                    layout={{ 
+                      visibility: layer.visible ? 'visible' : 'none',
+                      'line-join': 'round',
+                      'line-cap': 'round'
+                    }}
+                  />
+                )}
+                {layer.type === 'circle' && (
+                  <Layer
+                    id={`${layer.id}-point`}
+                    type="circle"
+                    paint={{ 'circle-color': layer.color, 'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' }}
+                    layout={{ visibility: layer.visible ? 'visible' : 'none' }}
+                  />
+                )}
+              </Source>
+            );
+          })}
         </MapGL>
 
         <div className="absolute top-4 left-4 z-10 flex flex-col gap-3">
