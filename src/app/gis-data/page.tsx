@@ -37,18 +37,16 @@ import {
   Palette,
   Check,
   Map as MapTypeIcon,
-  MousePointer,
-  Route,
-  Square,
-  Save,
+  Settings2,
   Minus,
   Circle,
+  Square,
+  Save,
   Type,
   Cloud,
   Sun,
   Moon,
-  Trees,
-  Settings2
+  Trees
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -144,6 +142,9 @@ export default function GISDataPage() {
   const [activeDrawMode, setActiveDrawMode] = useState<string | null>(null);
   const [isSaveDrawingOpen, setIsSaveDrawingOpen] = useState(false);
   const [drawingName, setDrawingName] = useState('Nieuwe Tekening');
+  const [drawingColor, setDrawingColor] = useState('#3b82f6');
+  const [drawingLineWidth, setDrawingLineWidth] = useState(2);
+  const [drawingLineStyle, setDrawingLineStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
 
   // Base Map Style
   const [activeMapStyle, setActiveMapStyle] = useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
@@ -187,8 +188,6 @@ export default function GISDataPage() {
 
   const snapToRoad = async (coordinates: number[][]) => {
     if (coordinates.length < 2) return null;
-    
-    // Mapbox Directions API limit is 25 waypoints
     const limitedCoords = coordinates.slice(0, 25);
     const coordsStr = limitedCoords.map(c => `${c[0]},${c[1]}`).join(';');
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsStr}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
@@ -196,7 +195,6 @@ export default function GISDataPage() {
     try {
       const response = await fetch(url);
       const data = await response.json();
-      
       if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
         return data.routes[0].geometry.coordinates;
       }
@@ -223,7 +221,6 @@ export default function GISDataPage() {
     map.addControl(draw, 'top-right');
     drawRef.current = draw;
     
-    // Snap to road logic
     const handleDrawEvent = async (e: any) => {
       const features = e.features;
       if (!features || features.length === 0) return;
@@ -232,17 +229,12 @@ export default function GISDataPage() {
         if (feature.geometry.type === 'LineString') {
           const originalCoords = feature.geometry.coordinates;
           if (originalCoords.length < 2) continue;
-
           toast({ title: "Route optimaliseren...", description: "De lijn wordt aangepast aan het wegennet." });
-          
           const snappedCoords = await snapToRoad(originalCoords);
           if (snappedCoords) {
             draw.add({
               ...feature,
-              geometry: {
-                ...feature.geometry,
-                coordinates: snappedCoords
-              }
+              geometry: { ...feature.geometry, coordinates: snappedCoords }
             });
             toast({ title: "Route voltooid", description: "De lijn volgt nu de weg." });
           }
@@ -253,7 +245,6 @@ export default function GISDataPage() {
     map.on('draw.create', handleDrawEvent);
     map.on('draw.update', handleDrawEvent);
     
-    // Hide default draw controls
     const drawControl = document.querySelector('.mapboxgl-ctrl-top-right .mapboxgl-ctrl-group:last-child');
     if (drawControl) {
       (drawControl as HTMLElement).style.display = 'none';
@@ -265,11 +256,9 @@ export default function GISDataPage() {
     setIsDrawingMode(newState);
     setIsUploadOpen(false);
     setActiveDrawMode(null);
-
     if (!newState && drawRef.current) {
       drawRef.current.deleteAll();
     }
-
     if (newState) {
       toast({ title: "Tekenmodus geactiveerd", description: "Kies een tool uit de balk hierboven om te beginnen." });
     }
@@ -292,7 +281,30 @@ export default function GISDataPage() {
     setIsProcessing(true);
     try {
       const layersCol = collection(firestore, 'users', user.uid, 'gisLayers');
-      await saveLayer(drawingName, features, layersCol);
+      
+      let type: 'fill' | 'line' | 'circle' = 'circle';
+      const firstFeature = features.features[0];
+      const geomType = firstFeature.geometry?.type;
+      
+      if (geomType === 'Polygon' || geomType === 'MultiPolygon') type = 'fill';
+      else if (geomType === 'LineString' || geomType === 'MultiLineString') type = 'line';
+
+      const defaultIcon = type === 'fill' ? 'Square' : type === 'line' ? 'Minus' : 'Circle';
+
+      const newLayer = {
+        name: drawingName,
+        data: features,
+        visible: true,
+        color: drawingColor,
+        type,
+        lineWidth: drawingLineWidth,
+        lineStyle: drawingLineStyle,
+        folderId: null,
+        icon: defaultIcon,
+        createdAt: new Date().toISOString()
+      };
+
+      await addDocumentNonBlocking(layersCol, newLayer);
       
       toggleDrawingMode();
       setIsSaveDrawingOpen(false);
@@ -319,7 +331,7 @@ export default function GISDataPage() {
       for (const file of geojsonFiles) {
         const text = await file.text();
         const data = JSON.parse(text);
-        await saveLayer(file.name, data, layersCol);
+        await saveLayerFromFile(file.name, data, layersCol);
       }
 
       const shpFile = fileList.find(f => f.name.endsWith('.shp'));
@@ -328,7 +340,7 @@ export default function GISDataPage() {
         const shpBuffer = await shpFile.arrayBuffer();
         const dbfBuffer = await dbfFile.arrayBuffer();
         const geojson = await shapefile.read(shpBuffer, dbfBuffer);
-        await saveLayer(shpFile.name, geojson, layersCol);
+        await saveLayerFromFile(shpFile.name, geojson, layersCol);
       }
 
       const sheetFiles = fileList.filter(f => f.name.endsWith('.xlsx') || f.name.endsWith('.csv'));
@@ -341,7 +353,6 @@ export default function GISDataPage() {
         const features = json.map(row => {
           const latKey = Object.keys(row).find(k => k.toLowerCase().includes('lat') || k.toLowerCase().includes('breedte') || k.toLowerCase() === 'y');
           const lonKey = Object.keys(row).find(k => k.toLowerCase().includes('lon') || k.toLowerCase().includes('lng') || k.toLowerCase().includes('lengte') || k.toLowerCase() === 'x');
-          
           if (latKey && lonKey) {
             return turf.point([parseFloat(row[lonKey]), parseFloat(row[latKey])], row);
           }
@@ -349,7 +360,7 @@ export default function GISDataPage() {
         }).filter(Boolean);
 
         if (features.length > 0) {
-          await saveLayer(file.name, turf.featureCollection(features as any), layersCol);
+          await saveLayerFromFile(file.name, turf.featureCollection(features as any), layersCol);
         }
       }
 
@@ -365,7 +376,7 @@ export default function GISDataPage() {
     }
   };
 
-  const saveLayer = async (name: string, data: any, col: any) => {
+  const saveLayerFromFile = async (name: string, data: any, col: any) => {
     let type: 'fill' | 'line' | 'circle' = 'circle';
     const firstFeature = data.features?.[0] || data;
     const geomType = firstFeature.geometry?.type || firstFeature.type;
@@ -449,9 +460,7 @@ export default function GISDataPage() {
 
   const deleteFolder = async (folderId: string) => {
     if (!user || !firestore || !dbFolders) return;
-    
     const batch = writeBatch(firestore);
-    
     const findChildren = (pid: string) => {
         const children = dbFolders.filter(f => f.parentId === pid);
         children.forEach(c => {
@@ -459,16 +468,13 @@ export default function GISDataPage() {
             findChildren(c.id);
         });
     };
-
     batch.delete(doc(firestore, 'users', user.uid, 'gisFolders', folderId));
     findChildren(folderId);
-
     dbLayers?.forEach(layer => {
         if (layer.folderId === folderId) {
             batch.update(doc(firestore, 'users', user.uid, 'gisLayers', layer.id), { folderId: null });
         }
     });
-
     await batch.commit();
     toast({ title: 'Map verwijderd' });
   };
@@ -486,6 +492,15 @@ export default function GISDataPage() {
     const q = iconSearch.toLowerCase();
     return all.filter(name => name.toLowerCase().includes(q)).slice(0, 64);
   }, [iconSearch]);
+
+  const openEditDialog = (layer: GISLayer) => {
+    setEditingLayer(layer); 
+    setEditName(layer.name); 
+    setEditColor(layer.color);
+    setEditLineWidth(layer.lineWidth || 2);
+    setEditLineStyle(layer.lineStyle || 'solid');
+    setEditIcon(layer.icon || (layer.type === 'fill' ? 'Square' : layer.type === 'line' ? 'Minus' : 'Circle'));
+  };
 
   const renderFolderContent = (folderId: string | null, level: number = 0) => {
     const folders = dbFolders?.filter(f => f.parentId === folderId) || [];
@@ -551,19 +566,15 @@ export default function GISDataPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none text-slate-400 hover:text-primary" onClick={() => openEditDialog(layer)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none"><ChevronDown className="h-3.5 w-3.5 text-slate-400" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48 rounded-none shadow-xl">
-                    <DropdownMenuItem onClick={() => { 
-                      setEditingLayer(layer); 
-                      setEditName(layer.name); 
-                      setEditColor(layer.color);
-                      setEditLineWidth(layer.lineWidth || 2);
-                      setEditLineStyle(layer.lineStyle || 'solid');
-                      setEditIcon(layer.icon || (layer.type === 'fill' ? 'Square' : layer.type === 'line' ? 'Minus' : 'Circle'));
-                    }} className="text-[10px] font-black uppercase"><Edit2 className="mr-2 h-3.5 w-3.5" /> Laag Aanpassen</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openEditDialog(layer)} className="text-[10px] font-black uppercase"><Edit2 className="mr-2 h-3.5 w-3.5" /> Laag Aanpassen</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => moveLayerToFolder(layer.id, null)} className="text-[10px] font-black uppercase">Naar Home (Root)</DropdownMenuItem>
                     {dbFolders?.filter(f => f.id !== layer.folderId).map(f => (
@@ -819,24 +830,89 @@ export default function GISDataPage() {
 
       {/* Save Drawing Dialog */}
       <Dialog open={isSaveDrawingOpen} onOpenChange={setIsSaveDrawingOpen}>
-        <DialogContent className="sm:max-w-md rounded-none border-none shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-black uppercase tracking-tight">Tekening Opslaan</DialogTitle>
-            <DialogDescription className="font-bold text-slate-500">Geef de nieuwe laag een naam om deze permanent te bewaren.</DialogDescription>
+        <DialogContent className="sm:max-w-lg rounded-none border-none shadow-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
+            <DialogTitle className="font-black uppercase tracking-tight text-white">Tekening Opslaan</DialogTitle>
+            <DialogDescription className="font-bold text-slate-400 uppercase text-[10px]">Geef de nieuwe laag een naam en kies de styling.</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Naam van de laag</Label>
-            <Input 
-              placeholder="Bv. Gebiedsafbakening..." 
-              value={drawingName} 
-              onChange={e => setDrawingName(e.target.value)} 
-              className="h-12 font-bold rounded-none border-2 focus:ring-primary/20"
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
+          
+          <ScrollArea className="max-h-[60vh] bg-white">
+            <div className="p-6 space-y-8">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Naam van de laag</Label>
+                <Input 
+                  placeholder="Bv. Gebiedsafbakening..." 
+                  value={drawingName} 
+                  onChange={e => setDrawingName(e.target.value)} 
+                  className="h-12 font-bold rounded-none border-2 focus:ring-primary/20"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Kleur</Label>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setDrawingColor(c)}
+                      className={cn(
+                        "h-8 w-8 rounded-none border-2 transition-all",
+                        drawingColor === c ? "border-slate-900 scale-110 shadow-md" : "border-transparent"
+                      )}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <div className="relative h-8 w-8 rounded-none overflow-hidden border-2 border-slate-200">
+                    <input 
+                      type="color" 
+                      value={drawingColor} 
+                      onChange={e => setDrawingColor(e.target.value)}
+                      className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
+                    />
+                    <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6 bg-slate-50 p-4 rounded-none border-2 border-slate-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Settings2 className="h-4 w-4 text-primary" />
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Lijninstellingen</h4>
+                </div>
+                
+                <div className="space-y-4">
+                  <Label className="text-[10px] font-black uppercase text-slate-400">Dikte ({drawingLineWidth}px)</Label>
+                  <Slider 
+                    value={[drawingLineWidth]} 
+                    onValueChange={([val]) => setDrawingLineWidth(val)} 
+                    min={1} 
+                    max={10} 
+                    step={1}
+                    className="py-2"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase text-slate-400">Structuur</Label>
+                  <Select value={drawingLineStyle} onValueChange={(val: any) => setDrawingLineStyle(val)}>
+                    <SelectTrigger className="rounded-none border-slate-200 bg-white h-10 font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-none">
+                      <SelectItem value="solid">Ononderbroken (Solid)</SelectItem>
+                      <SelectItem value="dashed">Gestreept (Dashed)</SelectItem>
+                      <SelectItem value="dotted">Gestippeld (Dotted)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
             <Button variant="ghost" onClick={() => setIsSaveDrawingOpen(false)} className="font-bold rounded-none">Annuleren</Button>
-            <Button onClick={handleSaveDrawing} className="font-black uppercase rounded-none px-8" disabled={!drawingName.trim() || isProcessing}>
+            <Button onClick={handleSaveDrawing} className="font-black uppercase rounded-none px-8 shadow-xl shadow-primary/20" disabled={!drawingName.trim() || isProcessing}>
               {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Opslaan
             </Button>
