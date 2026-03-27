@@ -1,10 +1,10 @@
-
 'use client';
 
 import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
   Link2, 
@@ -28,7 +28,8 @@ import {
   Copy,
   Terminal,
   Server,
-  Zap
+  Zap,
+  Info
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, doc, query, orderBy, getDocs } from 'firebase/firestore';
@@ -41,6 +42,7 @@ import { ApiIntegrationDialog } from '@/components/api-integration-dialog';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LoadingScreen } from '@/components/loading-screen';
 
 export default function ApiIntegrationsPage() {
   const firestore = useFirestore();
