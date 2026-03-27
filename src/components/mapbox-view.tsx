@@ -229,7 +229,7 @@ export function MapboxView({
             }}>
               <div className={cn(
                 "relative flex items-center justify-center w-10 h-10 rounded-full border-2 border-black shadow-xl transition-all",
-                isCompleted ? "bg-green-500" : "bg-primary",
+                isCompleted ? "bg-green-50" : "bg-primary",
                 isHighlighted && "ring-4 ring-black/20 scale-125",
                 interactive && "cursor-pointer hover:scale-110"
               )}>

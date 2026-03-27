@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1111,18 +1110,10 @@ export default function NewIssuePage() {
 
   const renderCategoryIcon = (category: string, subcategory?: string) => {
     let iconVal = null;
-    
-    // Check subtype first if provided
-    if (category && subcategory) {
-        iconVal = subtypeIcons[`${category}:${subcategory}`];
-    }
-    
-    // Fallback to hoofdtype icon
-    if (!iconVal) {
-        iconVal = categoryIcons[category];
-    }
+    if (category && subcategory) iconVal = subtypeIcons[`${category}:${subcategory}`];
+    if (!iconVal) iconVal = categoryIcons[category];
 
-    if (!iconVal) return null;
+    if (!iconVal) return <CircleHelp className="h-8 w-8 text-slate-300" />;
     
     if (isCustomHtml(iconVal)) {
         return (
@@ -1604,7 +1595,7 @@ export default function NewIssuePage() {
                           </div>
                           <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
                             <FormField control={form.control} name="aangenomen_door" render={({ field, fieldState }) => (
-                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-none" /></FormControl><FormMessage /></FormItem>
                             )} />
                           </FormRow>
                           <div className="grid grid-cols-2 gap-3">

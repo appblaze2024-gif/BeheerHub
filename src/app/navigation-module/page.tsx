@@ -642,7 +642,8 @@ export default function StartNavigationPage() {
     let iconVal = null;
     if (category && subcategory) iconVal = subtypeIcons[`${category}:${subcategory}`];
     if (!iconVal) iconVal = categoryIcons[category];
-    if (!iconVal) return null;
+    
+    if (!iconVal) return <CircleHelp className="h-full w-full text-slate-300" />;
     
     if (isCustomHtml(iconVal)) {
         return (
