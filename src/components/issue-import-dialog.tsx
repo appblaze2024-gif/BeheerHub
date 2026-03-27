@@ -36,7 +36,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { collection, serverTimestamp, doc, getDoc, getDocs, query, where, limit } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, CheckCircle, Loader2, FileSpreadsheet, Sparkles, Palette, Search as SearchIcon, CircleHelp } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, FileSpreadsheet, Sparkles, Palette, Search as SearchIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ScrollArea } from './ui/scroll-area';
@@ -356,13 +356,13 @@ export function IssueImportDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[650px] rounded-none border-none shadow-2xl p-0 overflow-hidden">
-        <DialogHeader className="p-6 bg-slate-900 text-white rounded-none">
+      <DialogContent className="sm:max-w-[650px] h-[80vh] rounded-none border-none shadow-2xl p-0 overflow-hidden flex flex-col">
+        <DialogHeader className="p-6 bg-slate-900 text-white rounded-none shrink-0">
           <DialogTitle className="text-xl font-black uppercase tracking-tight">CSV / EXCEL Import</DialogTitle>
           <DialogDescription className="text-slate-400 font-bold">Importeer meldingen vanaf de kopregel (regel 2 onwards).</DialogDescription>
         </DialogHeader>
 
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto p-6 min-h-0 bg-white">
             {step === 1 && (
                 <div className="py-8 space-y-4">
                     <div className="p-12 border-2 border-dashed border-slate-200 rounded-none flex flex-col items-center gap-4 bg-slate-50/50">
@@ -376,27 +376,25 @@ export function IssueImportDialog({
 
             {step === 2 && (
                 <div className="space-y-6">
-                    <ScrollArea className="max-h-[350px] pr-4">
-                        <div className="grid gap-4">
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Koppel kolommen (* = verplicht)</p>
-                            {issueFields.map(f => (
-                                <div key={f.id} className="grid grid-cols-2 items-center gap-4 border-b border-slate-100 pb-2">
-                                    <Label className={cn("text-xs font-black uppercase", f.required ? "text-slate-900" : "text-slate-400")}>
-                                        {f.label}{f.required && <span className="text-red-500 ml-1">*</span>}
-                                    </Label>
-                                    <Select value={mapping[f.id]} onValueChange={v => setMapping(prev => ({...prev, [f.id]: v}))}>
-                                        <SelectTrigger className={cn("h-9 text-xs font-bold rounded-none", f.required && (!mapping[f.id] || mapping[f.id] === '--ignore--') ? "border-red-200 bg-red-50/30" : "border-slate-200")}>
-                                            <SelectValue placeholder="Koppel kolom..." />
-                                        </SelectTrigger>
-                                        <SelectContent className="rounded-none">
-                                            <SelectItem value="--ignore--" className="rounded-none text-slate-400 italic">-- Overslaan --</SelectItem>
-                                            {headers.filter(h => !!h).map((h, idx) => <SelectItem key={`${h}-${idx}`} value={h} className="rounded-none">{h}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
+                    <div className="grid gap-4">
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Koppel kolommen (* = verplicht)</p>
+                        {issueFields.map(f => (
+                            <div key={f.id} className="grid grid-cols-2 items-center gap-4 border-b border-slate-100 pb-2">
+                                <Label className={cn("text-xs font-black uppercase", f.required ? "text-slate-900" : "text-slate-400")}>
+                                    {f.label}{f.required && <span className="text-red-500 ml-1">*</span>}
+                                </Label>
+                                <Select value={mapping[f.id]} onValueChange={v => setMapping(prev => ({...prev, [f.id]: v}))}>
+                                    <SelectTrigger className={cn("h-9 text-xs font-bold rounded-none", f.required && (!mapping[f.id] || mapping[f.id] === '--ignore--') ? "border-red-200 bg-red-50/30" : "border-slate-200")}>
+                                        <SelectValue placeholder="Koppel kolom..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-none">
+                                        <SelectItem value="--ignore--" className="rounded-none text-slate-400 italic">-- Overslaan --</SelectItem>
+                                        {headers.filter(h => !!h).map((h, idx) => <SelectItem key={`${h}-${idx}`} value={h} className="rounded-none">{h}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        ))}
+                    </div>
                     {error && <Alert variant="destructive" className="rounded-none"><AlertCircle className="h-4 w-4" /><AlertDescription className="text-xs font-bold">{error}</AlertDescription></Alert>}
                 </div>
             )}
@@ -407,70 +405,68 @@ export function IssueImportDialog({
                         <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Nieuwe Fracties Gevonden</h3>
                         <p className="text-xs font-bold text-slate-400 uppercase italic">Stel hier direct de iconen in voor de nieuwe subcategorieën.</p>
                     </div>
-                    <ScrollArea className="max-h-[350px] pr-4">
-                        <div className="grid gap-3">
-                            {newCategoriesToConfig.map((cfg, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border-2 border-slate-100 rounded-none shadow-sm">
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{cfg.parentCategory}</p>
-                                        <p className="text-sm font-black text-slate-900 truncate uppercase tracking-tight">{cfg.subcategory}</p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="outline" className="h-12 w-12 p-0 rounded-none border-2 border-primary/20 shadow-sm flex items-center justify-center bg-white overflow-hidden group">
-                                                    {(() => {
-                                                        const parts = cfg.icon.split(':');
-                                                        const IconComp = (Icons as any)[parts[1] || 'AlertCircle'] || Icons.AlertCircle;
-                                                        return <IconComp className="h-6 w-6" style={{ color: parts[2] || '#3b82f6' }} />;
-                                                    })()}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-80 p-0 rounded-none border-none shadow-2xl bg-white overflow-hidden">
-                                                <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">Kies Icoon & Kleur</span>
-                                                </div>
-                                                <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {PRESET_COLORS.map(c => (
-                                                            <button 
-                                                                key={c.value} 
-                                                                type="button"
-                                                                className={cn("h-6 w-6 rounded-none border-2 transition-all", cfg.color === c.value ? "border-primary scale-110 shadow-md" : "border-transparent")}
-                                                                style={{ backgroundColor: c.value }}
-                                                                onClick={() => updateConfigIcon(idx, cfg.icon.split(':')[1], c.value)}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                    <div className="relative">
-                                                        <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                                                        <Input placeholder="Zoek..." className="h-8 pl-8 text-[10px] font-bold rounded-none border-slate-200" value={iconSearch} onChange={e => setIconSearch(e.target.value)} />
-                                                    </div>
-                                                    <div className="grid grid-cols-6 gap-2">
-                                                        {filteredIcons.map(name => {
-                                                            const Icon = (Icons as any)[name];
-                                                            const isSelected = cfg.icon.split(':')[1] === name;
-                                                            return (
-                                                                <Button 
-                                                                    key={name} 
-                                                                    variant={isSelected ? "default" : "outline"}
-                                                                    size="icon" 
-                                                                    className="h-8 w-8 p-0 rounded-none shrink-0" 
-                                                                    onClick={() => updateConfigIcon(idx, name, cfg.color)}
-                                                                >
-                                                                    <Icon className="h-4 w-4" style={{ color: isSelected ? undefined : cfg.color }} />
-                                                                </Button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
+                    <div className="grid gap-3">
+                        {newCategoriesToConfig.map((cfg, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border-2 border-slate-100 rounded-none shadow-sm">
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{cfg.parentCategory}</p>
+                                    <p className="text-sm font-black text-slate-900 truncate uppercase tracking-tight">{cfg.subcategory}</p>
                                 </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
+                                <div className="flex items-center gap-3">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className="h-12 w-12 p-0 rounded-none border-2 border-primary/20 shadow-sm flex items-center justify-center bg-white overflow-hidden group">
+                                                {(() => {
+                                                    const parts = cfg.icon.split(':');
+                                                    const IconComp = (Icons as any)[parts[1] || 'AlertCircle'] || Icons.AlertCircle;
+                                                    return <IconComp className="h-6 w-6" style={{ color: parts[2] || '#3b82f6' }} />;
+                                                })()}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-80 p-0 rounded-none border-none shadow-2xl bg-white overflow-hidden">
+                                            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Kies Icoon & Kleur</span>
+                                            </div>
+                                            <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {PRESET_COLORS.map(c => (
+                                                        <button 
+                                                            key={c.value} 
+                                                            type="button"
+                                                            className={cn("h-6 w-6 rounded-none border-2 transition-all", cfg.color === c.value ? "border-primary scale-110 shadow-md" : "border-transparent")}
+                                                            style={{ backgroundColor: c.value }}
+                                                            onClick={() => updateConfigIcon(idx, cfg.icon.split(':')[1], c.value)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <div className="relative">
+                                                    <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                                    <Input placeholder="Zoek..." className="h-8 pl-8 text-[10px] font-bold rounded-none border-slate-200" value={iconSearch} onChange={e => setIconSearch(e.target.value)} />
+                                                </div>
+                                                <div className="grid grid-cols-6 gap-2">
+                                                    {filteredIcons.map(name => {
+                                                        const Icon = (Icons as any)[name];
+                                                        const isSelected = cfg.icon.split(':')[1] === name;
+                                                        return (
+                                                            <Button 
+                                                                key={name} 
+                                                                variant={isSelected ? "default" : "outline"}
+                                                                size="icon" 
+                                                                className="h-8 w-8 p-0 rounded-none shrink-0" 
+                                                                onClick={() => updateConfigIcon(idx, name, cfg.color)}
+                                                            >
+                                                                <Icon className="h-4 w-4" style={{ color: isSelected ? undefined : cfg.color }} />
+                                                            </Button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
@@ -494,7 +490,7 @@ export function IssueImportDialog({
             )}
         </div>
 
-        <DialogFooter className="p-6 border-t bg-slate-50 rounded-none">
+        <DialogFooter className="p-6 border-t bg-slate-50 rounded-none shrink-0">
             {step === 2 && (
                 <>
                     <Button variant="ghost" onClick={() => setStep(1)} className="font-bold rounded-none">Terug</Button>
