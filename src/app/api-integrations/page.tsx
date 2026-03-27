@@ -176,8 +176,8 @@ export default function ApiIntegrationsPage() {
                                     <Zap className="h-4 w-4 text-primary" />
                                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Webhooks</h3>
                                 </div>
-                                <Button size="sm" variant="outline" onClick={() => { setSelectedId(null); setIsDialogOpen(true); }} className="h-7 text-[9px] font-black uppercase border-primary/20 text-primary bg-primary/5 rounded-none">
-                                    <Plus className="mr-1 h-3 w-3" /> Nieuw
+                                <Button size="sm" variant="outline" onClick={() => { setSelectedId(null); setIsDialogOpen(true); }} className="h-8 text-[10px] font-black uppercase border-primary/30 text-primary bg-primary/5 rounded-none shadow-sm hover:bg-primary hover:text-white transition-all">
+                                    <Plus className="mr-1.5 h-3.5 w-3.5" /> Nieuw
                                 </Button>
                             </div>
                             <div className="relative">
@@ -241,14 +241,14 @@ export default function ApiIntegrationsPage() {
                                 </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                <Button variant="outline" onClick={() => setIsDialogOpen(true)} className="font-bold h-9 border-slate-200 rounded-none">
+                                <Button variant="outline" onClick={() => setIsDialogOpen(true)} className="font-black uppercase text-[10px] h-10 border-slate-200 rounded-none shadow-sm hover:bg-slate-50">
                                     <Settings2 className="mr-2 h-4 w-4" /> Aanpassen
                                 </Button>
-                                <Button onClick={() => handleRunSync(selectedIntegration)} disabled={isProcessing} className="h-9 font-black uppercase shadow-lg shadow-primary/20 rounded-none bg-primary text-white">
+                                <Button onClick={() => handleRunSync(selectedIntegration)} disabled={isProcessing} className="h-10 px-6 font-black uppercase text-[10px] shadow-xl shadow-primary/20 rounded-none bg-primary text-white hover:bg-primary/90 transition-all active:scale-95">
                                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
                                     Sync Nu
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDelete(selectedIntegration.id)} className="text-slate-300 hover:text-red-600">
+                                <Button variant="ghost" size="icon" onClick={() => handleDelete(selectedIntegration.id)} className="h-10 w-10 text-slate-300 hover:text-red-600 rounded-none">
                                     <Trash2 className="h-5 w-5" />
                                 </Button>
                                 </div>
@@ -332,7 +332,7 @@ export default function ApiIntegrationsPage() {
                         <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
                             <CardHeader className="bg-slate-900 text-white p-8">
                                 <div className="flex items-center gap-4">
-                                    <div className="bg-primary p-3 rounded-none">
+                                    <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20">
                                         <ShieldCheck className="h-6 w-6 text-white" />
                                     </div>
                                     <div>
@@ -342,8 +342,8 @@ export default function ApiIntegrationsPage() {
                                 </div>
                             </CardHeader>
                             <CardContent className="p-8 space-y-10">
-                                <div className="bg-blue-50 border-2 border-blue-100 p-6 rounded-none flex items-start gap-4">
-                                    <Info className="h-5 w-5 text-primary shrink-0 mt-1" />
+                                <div className="bg-blue-50 border-2 border-blue-100 p-6 rounded-none flex items-start gap-4 shadow-inner">
+                                    <div className="bg-white p-2 rounded-none shadow-sm"><Info className="h-5 w-5 text-primary shrink-0" /></div>
                                     <div className="space-y-2">
                                         <p className="text-sm font-black uppercase text-slate-900">Hoe werkt het?</p>
                                         <p className="text-xs font-medium text-slate-600 leading-relaxed italic">
@@ -354,54 +354,67 @@ export default function ApiIntegrationsPage() {
                                 </div>
 
                                 <div className="space-y-6">
-                                    <div className="flex items-center justify-between border-b-2 border-slate-100 pb-2">
+                                    <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                                         <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                            <Key className="h-3.5 w-3.5" /> Authenticatie & Sleutelbeheer
+                                            <Key className="h-3.5 w-3.5 text-primary" /> Authenticatie & Sleutelbeheer
                                         </h3>
                                         <Button 
                                             onClick={handleGenerateKey} 
-                                            className="h-8 px-4 text-[10px] font-black uppercase shadow-lg shadow-primary/20 rounded-none"
+                                            className="h-9 px-6 text-[10px] font-black uppercase shadow-xl shadow-primary/20 rounded-none bg-primary text-white hover:bg-primary/90 transition-all active:scale-95"
                                         >
                                             <RefreshCw className="mr-2 h-3.5 w-3.5" /> Nieuwe sleutel genereren
                                         </Button>
                                     </div>
 
                                     {apiSettings?.publicKey ? (
-                                        <div className="grid gap-6">
-                                            <div className="space-y-2">
+                                        <div className="grid gap-8">
+                                            <div className="space-y-3">
                                                 <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Uw Geheime API Key</Label>
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-0 shadow-xl">
                                                     <Input 
                                                         value={apiSettings.publicKey} 
                                                         readOnly 
-                                                        className="h-12 font-mono text-sm bg-slate-50 border-2 border-slate-100 rounded-none font-bold"
+                                                        className="h-14 font-mono text-sm bg-slate-50 border-2 border-slate-200 rounded-none font-bold focus:ring-0"
                                                     />
-                                                    <Button variant="outline" size="icon" className="h-12 w-12 rounded-none border-2" onClick={() => { navigator.clipboard.writeText(apiSettings.publicKey); toast({ title: "Gekopieerd" }); }}>
-                                                        <Copy className="h-4 w-4" />
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="icon" 
+                                                        className="h-14 w-14 rounded-none border-2 border-l-0 border-slate-200 bg-white hover:bg-slate-50 text-primary transition-colors" 
+                                                        onClick={() => { navigator.clipboard.writeText(apiSettings.publicKey); toast({ title: "Gekopieerd" }); }}
+                                                    >
+                                                        <Copy className="h-5 w-5" />
                                                     </Button>
                                                 </div>
-                                                <p className="text-[9px] font-bold text-red-500 uppercase tracking-tighter">Deel deze sleutel nooit met onbevoegden.</p>
+                                                <p className="text-[9px] font-black text-red-500 uppercase tracking-widest ml-1 animate-pulse">Let op: Deel deze sleutel nooit met onbevoegden.</p>
                                             </div>
 
-                                            <div className="space-y-4">
+                                            <div className="space-y-3">
                                                 <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Webhook Endpoint URL</Label>
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-0 shadow-xl">
                                                     <Input 
                                                         value={webhookExampleUrl} 
                                                         readOnly 
-                                                        className="h-12 font-mono text-xs bg-slate-50 border-2 border-slate-100 rounded-none font-bold text-primary"
+                                                        className="h-14 font-mono text-xs bg-slate-50 border-2 border-slate-200 rounded-none font-bold text-primary focus:ring-0"
                                                     />
-                                                    <Button variant="outline" size="icon" className="h-12 w-12 rounded-none border-2" onClick={() => { navigator.clipboard.writeText(webhookExampleUrl); toast({ title: "URL Gekopieerd" }); }}>
-                                                        <Copy className="h-4 w-4" />
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="icon" 
+                                                        className="h-14 w-14 rounded-none border-2 border-l-0 border-slate-200 bg-white hover:bg-slate-50 text-primary transition-colors" 
+                                                        onClick={() => { navigator.clipboard.writeText(webhookExampleUrl); toast({ title: "URL Gekopieerd" }); }}
+                                                    >
+                                                        <Copy className="h-5 w-5" />
                                                     </Button>
                                                 </div>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Tip: Wijzig de "type" parameter naar "objects" of "voertuigen" voor andere data.</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic ml-1">Tip: Wijzig de "type" parameter naar "objects" of "voertuigen" voor andere data.</p>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="py-12 text-center border-2 border-dashed border-slate-100 bg-slate-50/50">
-                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Er is nog geen API Key geconfigureerd.</p>
-                                            <Button onClick={handleGenerateKey} variant="outline" className="font-black uppercase h-10 border-slate-300">
+                                        <div className="py-16 text-center border-2 border-dashed border-slate-200 bg-slate-50/50 rounded-none">
+                                            <div className="bg-white p-6 rounded-none inline-flex items-center justify-center mb-6 shadow-md border border-slate-100">
+                                                <Key className="h-10 w-10 text-slate-200" />
+                                            </div>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-6">Er is nog geen API Key geconfigureerd.</p>
+                                            <Button onClick={handleGenerateKey} className="font-black uppercase tracking-widest h-12 px-10 shadow-xl shadow-primary/20 rounded-none bg-primary text-white">
                                                 Activeer Inbound Webhook
                                             </Button>
                                         </div>
@@ -409,13 +422,13 @@ export default function ApiIntegrationsPage() {
                                 </div>
 
                                 {apiSettings?.publicKey && (
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-3 border-b-2 border-slate-900 pb-2">
+                                    <div className="space-y-6 pt-4">
+                                        <div className="flex items-center gap-3 border-b-2 border-slate-900 pb-3">
                                             <Terminal className="h-5 w-5 text-primary" />
                                             <h3 className="text-sm font-black uppercase tracking-tight">Test Verzoek (cURL)</h3>
                                         </div>
-                                        <div className="bg-slate-900 p-6 rounded-none relative group">
-                                            <pre className="text-[10px] font-mono text-blue-400 whitespace-pre-wrap leading-relaxed font-bold">
+                                        <div className="bg-slate-900 p-8 rounded-none relative group shadow-2xl border border-white/5">
+                                            <pre className="text-[11px] font-mono text-blue-400 whitespace-pre-wrap leading-relaxed font-bold">
 {`curl -X POST "${webhookExampleUrl}" \\
   -H "x-api-key: ${apiSettings.publicKey}" \\
   -H "Content-Type: application/json" \\
@@ -425,8 +438,12 @@ export default function ApiIntegrationsPage() {
     "extra_informatie": "Automatisch aangemaakt via Webhook"
   }'`}
                                             </pre>
-                                            <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-white/40 hover:text-white" onClick={() => { navigator.clipboard.writeText(`curl -X POST "${webhookExampleUrl}" -H "x-api-key: ${apiSettings.publicKey}" -H "Content-Type: application/json" -d '{"intakenummer": "WEB-12345", "subcategorie": "Zwerfvuil"}'`); toast({ title: "Script gekopieerd" }); }}>
-                                                <Copy className="h-4 w-4" />
+                                            <Button 
+                                                variant="ghost" 
+                                                className="absolute top-4 right-4 h-10 px-4 font-black uppercase text-[10px] text-white/40 hover:text-white hover:bg-white/10 rounded-none border border-white/10 transition-all" 
+                                                onClick={() => { navigator.clipboard.writeText(`curl -X POST "${webhookExampleUrl}" -H "x-api-key: ${apiSettings.publicKey}" -H "Content-Type: application/json" -d '{"intakenummer": "WEB-12345", "subcategorie": "Zwerfvuil"}'`); toast({ title: "Script gekopieerd" }); }}
+                                            >
+                                                <Copy className="h-3.5 w-3.5 mr-2" /> Kopiëren
                                             </Button>
                                         </div>
                                     </div>
