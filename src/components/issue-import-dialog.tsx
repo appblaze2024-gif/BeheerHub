@@ -23,7 +23,15 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, setDocumentNonBlocking } from '@/firebase';
+import { 
+  useFirestore, 
+  addDocumentNonBlocking, 
+  updateDocumentNonBlocking, 
+  useUser, 
+  setDocumentNonBlocking,
+  useDoc,
+  useMemoFirebase
+} from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, serverTimestamp, doc, getDoc, getDocs, query, where, limit } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
@@ -477,7 +485,7 @@ export function IssueImportDialog({
 
             {step === 5 && (
                 <div className="py-12 flex flex-col items-center gap-4">
-                    <div className="h-20 w-20 rounded-none bg-green-100 flex items-center justify-center">
+                    <div className="h-20 w-20 rounded-none bg-green-100 flex items-center justify-center mb-4">
                         <CheckCircle className="h-12 w-12 text-green-600" />
                     </div>
                     <p className="font-black uppercase text-xl">Import Voltooid!</p>
