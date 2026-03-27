@@ -9,6 +9,7 @@ import {
   DialogFooter,
   DialogDescription,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,15 +20,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectGroup,
-  SelectLabel,
 } from '@/components/ui/select';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useMemoFirebase } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, serverTimestamp, doc, getDoc, getDocs, query, where, limit } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, CheckCircle, Loader2, Table as TableIcon, FileSpreadsheet } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -108,13 +107,23 @@ export function IssueImportDialog({
                 return;
             }
 
-            const fileHeaders = json[0].map(String);
-            const fileData = json.slice(1).map(row => row.map(val => val !== null && val !== undefined ? String(val) : ''));
+            // Headers are expected on the first row (index 0)
+            const fileHeaders = json[0].map(h => h !== null && h !== undefined ? String(h).trim() : '');
+            
+            // Data rows start from the second row (index 1 onwards)
+            const fileData = json.slice(1)
+                .map(row => row.map(val => val !== null && val !== undefined ? String(val).trim() : ''))
+                .filter(row => row.some(cell => cell !== '')); // Skip rows where all cells are empty
+
+            if (fileData.length === 0) {
+                setError("Geen data gevonden onder de kopregel.");
+                return;
+            }
 
             setHeaders(fileHeaders);
             setData(fileData);
 
-            // Auto-map logic
+            // Auto-map logic based on header names
             const newMapping: Record<string, string> = {};
             issueFields.forEach(field => {
                 const found = fileHeaders.find(h => 
@@ -128,7 +137,7 @@ export function IssueImportDialog({
             setMapping(newMapping);
             setStep(2);
         } catch (err) {
-            setError("Fout bij inlezen bestand.");
+            setError("Fout bij inlezen bestand. Controleer of het een geldig Excel of CSV bestand is.");
         }
     };
     reader.readAsArrayBuffer(file);
@@ -158,7 +167,7 @@ export function IssueImportDialog({
     setIsImporting(true);
     
     const headerMap: Record<string, number> = {};
-    headers.forEach((h, i) => headerMap[h] = i);
+    headers.forEach((h, i) => { if(h) headerMap[h] = i; });
 
     try {
         const optionsRef = doc(firestore, 'settings', 'issue_options');
@@ -190,7 +199,7 @@ export function IssueImportDialog({
                 }
             });
 
-            // generation of intakenummer
+            // Generation of unique intakenummer if missing
             if (!issueData.intakenummer) {
                 issueData.intakenummer = `IMP-${timestamp}-${i + 1}`;
             }
@@ -217,7 +226,7 @@ export function IssueImportDialog({
                 }
             }
 
-            // Automatic Subtype (Fractie) logic
+            // Automatic Subtype (Fractie) registration
             const hc = issueData.hoofdcategorie || 'Afval'; 
             const sc = issueData.subcategorie;
             
@@ -229,7 +238,7 @@ export function IssueImportDialog({
                 }
             }
 
-            // Geocode if latitude/longitude still missing
+            // Geocode if location is still missing
             if (!issueData.latitude || !issueData.longitude) {
                 const address = `${issueData.straatnaam || ''} ${issueData.huisnummer || ''}, ${issueData.plaats || ''}`.trim();
                 if (address.length > 5) {
@@ -254,7 +263,7 @@ export function IssueImportDialog({
         onSuccess();
     } catch (err) {
         console.error("Import error:", err);
-        setError("Import mislukt.");
+        setError("Er is een fout opgetreden tijdens het importeren van de meldingen.");
     } finally {
         setIsImporting(false);
     }
@@ -272,24 +281,25 @@ export function IssueImportDialog({
       <DialogContent className="sm:max-w-[600px] rounded-none border-none shadow-2xl p-0 overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white rounded-none">
           <DialogTitle className="text-xl font-black uppercase tracking-tight">CSV / EXCEL Import</DialogTitle>
-          <DialogDescription className="text-slate-400 font-bold">Importeer meldingen met alleen containernummers en fracties.</DialogDescription>
+          <DialogDescription className="text-slate-400 font-bold">Importeer meldingen vanaf de kopregel (regel 2 onwards).</DialogDescription>
         </DialogHeader>
 
         <div className="p-6">
             {isImporting ? (
                 <div className="py-12 flex flex-col items-center gap-4">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <p className="font-black uppercase text-sm">Opdrachten verwerken...</p>
-                    <Progress value={importProgress} className="w-full h-2" />
+                    <p className="font-black uppercase text-sm">Meldingen verwerken...</p>
+                    <Progress value={importProgress} className="w-full h-2 rounded-none" />
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">{Math.round(importProgress)}%</p>
                 </div>
             ) : step === 1 ? (
                 <div className="py-8 space-y-4">
                     <div className="p-12 border-2 border-dashed border-slate-200 rounded-none flex flex-col items-center gap-4 bg-slate-50/50">
                         <FileSpreadsheet className="h-12 w-12 text-slate-300" />
                         <Input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} className="max-w-xs" />
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selecteer uw CSV of Excel bestand</p>
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Data wordt vanaf regel 2 ingelezen</p>
                     </div>
-                    {error && <Alert variant="destructive" className="rounded-none"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+                    {error && <Alert variant="destructive" className="rounded-none"><AlertCircle className="h-4 w-4" /><AlertDescription className="text-xs font-bold">{error}</AlertDescription></Alert>}
                 </div>
             ) : step === 2 ? (
                 <div className="space-y-6">
@@ -320,13 +330,13 @@ export function IssueImportDialog({
                             ))}
                         </div>
                     </ScrollArea>
-                    {error && <Alert variant="destructive" className="rounded-none"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+                    {error && <Alert variant="destructive" className="rounded-none"><AlertCircle className="h-4 w-4" /><AlertDescription className="text-xs font-bold">{error}</AlertDescription></Alert>}
                     {!error && (
                         <Alert className="rounded-none border-primary/20 bg-primary/5">
                             <CheckCircle className="h-4 w-4 text-primary" />
-                            <AlertTitle className="text-xs font-black uppercase">Slimme herkenning</AlertTitle>
+                            <AlertTitle className="text-xs font-black uppercase">Start vanaf regel 2</AlertTitle>
                             <AlertDescription className="text-[10px] font-bold text-slate-500">
-                                Op basis van het Containernummer worden adres, wijk en GPS-locatie automatisch opgezocht.
+                                Het systeem herkent {data.length} meldingen onder de kopregel.
                             </AlertDescription>
                         </Alert>
                     )}
@@ -337,7 +347,7 @@ export function IssueImportDialog({
                         <CheckCircle className="h-12 w-12 text-green-600" />
                     </div>
                     <p className="font-black uppercase text-xl">Import Voltooid!</p>
-                    <p className="text-slate-500 font-medium text-center">De opdrachten zijn toegevoegd aan het portaal.</p>
+                    <p className="text-slate-500 font-medium text-center">{data.length} meldingen succesvol verwerkt.</p>
                 </div>
             )}
         </div>
@@ -346,7 +356,7 @@ export function IssueImportDialog({
             {step === 2 && (
                 <>
                     <Button variant="ghost" onClick={() => setStep(1)} className="font-bold rounded-none">Terug</Button>
-                    <Button onClick={handleImport} disabled={!isMappingValid()} className="font-black uppercase tracking-tight px-8 rounded-none shadow-xl shadow-primary/20">
+                    <Button onClick={handleImport} disabled={!isMappingValid() || isImporting} className="font-black uppercase tracking-tight px-8 rounded-none shadow-xl shadow-primary/20">
                         {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Importeer {data.length} regels
                     </Button>
