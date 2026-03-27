@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -15,6 +16,7 @@ import {
   Cpu,
   ShieldCheck,
   Layers,
+  Link2,
 } from 'lucide-react';
 import { ElementType } from 'react';
 
@@ -115,6 +117,7 @@ export const allMenuItems: MenuItem[] = [
       ]
     },
     { href: '/iot', label: 'Internet of Things', icon: Cpu, module: 'iot' },
+    { href: '/api-integrations', label: 'API Koppelingen', icon: Link2, module: 'apiIntegrations' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
     { href: '/users', label: 'Gebruikers', icon: ShieldCheck, module: 'users' },
     { href: '/profile', label: 'Mijn Profiel', icon: User },

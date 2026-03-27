@@ -413,3 +413,17 @@ export interface MinuteTemplate {
   agendaItems: { id: string; title: string; content: string }[];
   updatedAt: string;
 }
+
+export interface ApiIntegration {
+  id: string;
+  name: string;
+  endpoint: string;
+  method: 'POST' | 'PUT' | 'GET';
+  headers: { key: string; value: string }[];
+  sourceModule: 'meldingen' | 'users' | 'objects' | 'projects' | 'voertuigen' | 'machines';
+  mapping: Record<string, string>;
+  active: boolean;
+  lastRun?: string;
+  lastStatus?: 'success' | 'error';
+  lastResponse?: string;
+}

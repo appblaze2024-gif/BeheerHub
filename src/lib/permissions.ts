@@ -1,3 +1,4 @@
+
 export const permissionConfig = [
     { 
         module: 'projects', 
@@ -80,6 +81,7 @@ export const permissionConfig = [
         ]
     },
     { module: 'iot', label: 'Internet of Things Integratie', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'use', label: 'Gebruiken' }] },
+    { module: 'apiIntegrations', label: 'API Koppelingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'edit', label: 'Bewerken' }] },
     { module: 'mail', label: 'Mail', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { 
         module: 'users', 
