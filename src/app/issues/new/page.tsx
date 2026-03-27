@@ -463,7 +463,7 @@ function ManageHoofdtypeDialog({ open, onOpenChange, currentOptions, categoryIco
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setEditTarget(null); }}>
       <DialogContent className="sm:max-w-2xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-none">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
-          <DialogTitle className="font-black uppercase tracking-tight">
+          <DialogTitle className="text-xl font-black uppercase tracking-tight">
             {editTarget ? `Bewerken: ${editTarget}` : 'Hoofdtypes Beheren'}
           </DialogTitle>
           <DialogDescription className="text-slate-400 font-bold">Voeg types toe of wijzig namen en iconen.</DialogDescription>
@@ -968,6 +968,7 @@ export default function NewIssuePage() {
   const [isImporting, setIsImporting] = React.useState(false);
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
+  const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [containerSuggestions, setContainerSuggestions] = React.useState<MapObject[]>([]);
   const [nearbyObjects, setNearbyObjects] = React.useState<MapObject[]>([]);
@@ -1050,6 +1051,7 @@ export default function NewIssuePage() {
       });
       setUploadedFiles(existingMelding.files || []);
       setUploadedPhotos(existingMelding.fotos || []);
+      setAfhandelingFotos(existingMelding.afhandeling_fotos || []);
       setLocation({ latitude: existingMelding.latitude, longitude: existingMelding.longitude });
       
       const fullId = existingMelding.intakenummer || '';
@@ -1336,6 +1338,7 @@ export default function NewIssuePage() {
       longitude: location?.longitude || 0,
       files: uploadedFiles,
       fotos: uploadedPhotos,
+      afhandeling_fotos: afhandelingFotos,
       updatedAt: serverTimestamp(),
     };
 
@@ -1372,6 +1375,7 @@ export default function NewIssuePage() {
         setIdSuffix('');
         setUploadedFiles([]);
         setUploadedPhotos([]);
+        setAfhandelingFotos([]);
         setLocation(null);
         setIsSubmitting(false);
       }).catch(() => {
@@ -1409,51 +1413,72 @@ export default function NewIssuePage() {
           <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Media & Bijlagen</CardTitle>
         </CardHeader>
         <CardContent className="p-4 space-y-4">
-          {uploadedPhotos.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2">
-              {uploadedPhotos.map((p, i) => (
-                <div key={i} className="relative aspect-square rounded-none overflow-hidden border group">
-                  <Image src={p.url} alt="foto" fill className="object-cover" />
-                  <Button 
-                    variant="destructive" 
-                    size="icon" 
-                    className="absolute top-1 right-1 h-6 w-6 rounded-none opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-4 text-center opacity-20">
-              <Camera className="h-6 w-6 mx-auto mb-1 text-slate-400" />
-              <p className="text-[8px] font-black uppercase tracking-widest">Geen foto's</p>
+          <div className="space-y-2">
+            <Label className="text-[8px] font-black uppercase text-slate-400">Bronfoto's</Label>
+            {uploadedPhotos.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {uploadedPhotos.map((p, i) => (
+                  <div key={i} className="relative aspect-square rounded-none overflow-hidden border group">
+                    <Image src={p.url} alt="foto" fill className="object-cover" />
+                    {!isReadOnly && (
+                      <Button 
+                        variant="destructive" 
+                        size="icon" 
+                        className="absolute top-1 right-1 h-6 w-6 rounded-none opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-2 text-center opacity-20">
+                <p className="text-[8px] font-black uppercase tracking-widest">Geen bronfoto's</p>
+              </div>
+            )}
+          </div>
+
+          {afhandelingFotos.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-[8px] font-black uppercase text-slate-400">Foto's Uitvoering</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {afhandelingFotos.map((p, i) => (
+                  <div key={i} className="relative aspect-square rounded-none overflow-hidden border group">
+                    <Image src={p.url} alt="uitvoering" fill className="object-cover" />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           
           <Separator className="bg-slate-100" />
 
-          {uploadedFiles.length > 0 ? (
-            <div className="space-y-2">
-              {uploadedFiles.map((f, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded-none bg-slate-50 border border-slate-100">
-                  <div className="flex items-center gap-2 truncate">
-                    <FileIcon className="h-4 w-4 text-blue-500 shrink-0" />
-                    <span className="text-xs font-bold truncate">{f.name}</span>
+          <div className="space-y-2">
+            <Label className="text-[8px] font-black uppercase text-slate-400">Documenten</Label>
+            {uploadedFiles.length > 0 ? (
+              <div className="space-y-2">
+                {uploadedFiles.map((f, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-none bg-slate-50 border border-slate-100">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileIcon className="h-4 w-4 text-blue-500 shrink-0" />
+                      <span className="text-xs font-bold truncate">{f.name}</span>
+                    </div>
+                    {!isReadOnly && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 rounded-none" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 rounded-none" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-4 text-center opacity-20">
-              <FileIcon className="h-6 w-6 mx-auto mb-1 text-slate-400" />
-              <p className="text-[8px] font-black uppercase tracking-widest">Geen documenten</p>
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="py-2 text-center opacity-20">
+                <p className="text-[8px] font-black uppercase tracking-widest">Geen documenten</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -1697,16 +1722,16 @@ export default function NewIssuePage() {
                               <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[120px] font-bold rounded-none" placeholder="Aanvullende info..." /></FormControl></FormItem>
                             )} />
                           </FormRow>
-                          {isReadOnly && existingMelding?.afhandeling_bijzonderheden && (
+                          {(isReadOnly || existingMelding?.afhandeling_bijzonderheden) && (
                             <FormRow label="Afhandeling (Medewerker)">
                                 <div className="p-3 bg-white rounded-none border-2 border-slate-100 shadow-inner min-h-[100px]">
                                     <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                        {existingMelding.afhandeling_bijzonderheden}
+                                        {existingMelding?.afhandeling_bijzonderheden || 'Geen toelichting.'}
                                     </p>
                                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200">
                                         <UserIcon className="h-3 w-3 text-primary" />
                                         <span className="text-[9px] font-black uppercase text-slate-400">
-                                            Door: {existingMelding.afgehandeld_door || existingMelding.behandelaar || 'Onbekend'}
+                                            Door: {existingMelding?.afgehandeld_door || existingMelding?.behandelaar || 'Onbekend'}
                                         </span>
                                     </div>
                                 </div>
@@ -1743,7 +1768,7 @@ export default function NewIssuePage() {
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <Button variant="outline" size="icon" className="h-10 w-10 rounded-none border-slate-200 shrink-0">
-                                      <CalendarIcon className="h-4 w-4 text-slate-500" />
+                                      <CalendarIcon className="h-5 w-5 text-slate-500" />
                                     </Button>
                                   </PopoverTrigger>
                                   <PopoverContent className="w-auto p-0 rounded-none border-none shadow-2xl" align="end">
@@ -1914,16 +1939,16 @@ export default function NewIssuePage() {
                               <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[100px] text-xs font-medium border-slate-100 bg-slate-50/30 rounded-none" placeholder="Aanvullende info..." /></FormControl></FormItem>
                             )} />
                           </FormRow>
-                          {isReadOnly && existingMelding?.afhandeling_bijzonderheden && (
+                          {(isReadOnly || existingMelding?.afhandeling_bijzonderheden) && (
                             <FormRow label="Afhandeling (Medewerker)">
                                 <div className="p-3 bg-white rounded-none border-2 border-slate-100 shadow-inner min-h-[100px]">
                                     <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                        {existingMelding.afhandeling_bijzonderheden}
+                                        {existingMelding?.afhandeling_bijzonderheden || 'Geen toelichting.'}
                                     </p>
                                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200">
                                         <UserIcon className="h-3 w-3 text-primary" />
                                         <span className="text-[9px] font-black uppercase text-slate-400">
-                                            Door: {existingMelding.afgehandeld_door || existingMelding.behandelaar || 'Onbekend'}
+                                            Door: {existingMelding?.afgehandeld_door || existingMelding?.behandelaar || 'Onbekend'}
                                         </span>
                                     </div>
                                 </div>
