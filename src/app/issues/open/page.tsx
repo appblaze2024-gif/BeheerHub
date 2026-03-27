@@ -365,9 +365,9 @@ export default function OpenIssuesPage() {
         {/* Floating Bulk Action Bar */}
         {selectedIds.size > 0 && isPrivileged && (
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-300">
-            <div className="bg-slate-900 text-white rounded-full px-6 py-3 shadow-2xl flex items-center gap-6 border-2 border-slate-800">
+            <div className="bg-slate-900 text-white rounded-none px-6 py-3 shadow-2xl flex items-center gap-6 border-2 border-slate-800">
               <div className="flex items-center gap-3 border-r border-white/20 pr-6">
-                <div className="bg-primary h-8 w-8 rounded-full flex items-center justify-center font-black text-xs">
+                <div className="bg-primary h-8 w-8 rounded-none flex items-center justify-center font-black text-xs">
                   {selectedIds.size}
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest">Geselecteerd</span>
@@ -375,14 +375,14 @@ export default function OpenIssuesPage() {
               <div className="flex items-center gap-2">
                 <Button 
                   onClick={handleOpenBulkAssign}
-                  className="h-10 px-6 font-black uppercase text-xs tracking-tight bg-primary hover:bg-primary/90 rounded-full shadow-lg"
+                  className="h-10 px-6 font-black uppercase text-xs tracking-tight bg-primary hover:bg-primary/90 rounded-none shadow-lg"
                 >
                   <Users className="mr-2 h-4 w-4" /> Toewijzen
                 </Button>
                 <Button 
                   variant="ghost" 
                   onClick={() => setSelectedIds(new Set())}
-                  className="h-10 text-white hover:bg-white/10 rounded-full font-bold text-xs"
+                  className="h-10 text-white hover:bg-white/10 rounded-none font-bold text-xs"
                 >
                   Annuleren
                 </Button>
