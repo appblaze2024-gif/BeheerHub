@@ -20,6 +20,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
@@ -39,13 +41,13 @@ interface IssueImportDialogProps {
 }
 
 const issueFields = [
-    { id: 'intakenummer', label: 'Meldingsnummer', required: true },
+    { id: 'intakenummer', label: 'Meldingsnummer', required: false },
     { id: 'extern_meldingsnummer', label: 'Extern Nummer', required: false },
-    { id: 'containernummer', label: 'Containernummer', required: false },
-    { id: 'hoofdcategorie', label: 'Hoofdcategorie', required: true },
+    { id: 'containernummer', label: 'Containernummer', required: true },
+    { id: 'hoofdcategorie', label: 'Hoofdcategorie', required: false },
     { id: 'subcategorie', label: 'Subcategorie / Fractie', required: true },
-    { id: 'straatnaam', label: 'Straatnaam', required: true },
-    { id: 'huisnummer', label: 'Huisnummer', required: true },
+    { id: 'straatnaam', label: 'Straatnaam', required: false },
+    { id: 'huisnummer', label: 'Huisnummer', required: false },
     { id: 'plaats', label: 'Plaats', required: false },
     { id: 'extra_informatie', label: 'Omschrijving / Memo', required: false },
     { id: 'melder', label: 'Naam Melder', required: false },
@@ -74,6 +76,15 @@ export function IssueImportDialog({
   const [error, setError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Category selection state
+  const [selectedCategory, setSelectedCategory] = React.useState<string>('Afval');
+  const [newCategoryName, setNewCategoryName] = React.useState('');
+  const [showNewCategoryInput, setShowNewCategoryInput] = React.useState(false);
+
+  const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
+  const { data: filtersData } = useDoc<{ custom: string[] }>(filtersRef);
+  const customFilters = filtersData?.custom || [];
+
   React.useEffect(() => {
     if (!open) {
       setTimeout(() => {
@@ -84,6 +95,9 @@ export function IssueImportDialog({
         setIsImporting(false);
         setImportProgress(0);
         setError(null);
+        setSelectedCategory('Afval');
+        setNewCategoryName('');
+        setShowNewCategoryInput(false);
       }, 300);
     }
   }, [open]);
@@ -143,7 +157,7 @@ export function IssueImportDialog({
   const handleImport = async () => {
     if (!firestore || data.length === 0) return;
 
-    // Validate required fields are mapped
+    // Validate required fields are mapped (containernummer and subcategorie)
     const requiredFields = issueFields.filter(f => f.required).map(f => f.id);
     const missingMappings = requiredFields.filter(id => !mapping[id] || mapping[id] === '--ignore--');
     
@@ -159,7 +173,6 @@ export function IssueImportDialog({
     headers.forEach((h, i) => headerMap[h] = i);
 
     try {
-        // Fetch current options to check for new subtypes
         const optionsRef = doc(firestore, 'settings', 'issue_options');
         const optionsSnap = await getDoc(optionsRef);
         const currentOptions = optionsSnap.exists() ? optionsSnap.data() : { hoofdcategorieen: [], subcategorieen: {} };
@@ -167,13 +180,16 @@ export function IssueImportDialog({
         let optionsChanged = false;
 
         const creatorName = profile?.displayName || profile?.email || user?.email || 'Import Systeem';
+        const timestamp = format(new Date(), 'yyyyMMdd');
 
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
             const issueData: any = {
                 status: 'Nieuw',
                 aangenomen_door: creatorName,
-                soort_melder: 'Inwoner', // Default
+                soort_melder: 'Inwoner', 
+                datum: format(new Date(), 'yyyy-MM-dd'),
+                tijdstip: format(new Date(), 'HH:mm'),
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             };
@@ -186,8 +202,13 @@ export function IssueImportDialog({
                 }
             });
 
+            // If intakenummer is missing, generate one
+            if (!issueData.intakenummer) {
+                issueData.intakenummer = `IMP-${timestamp}-${i + 1}`;
+            }
+
             // Automatic Subtype (Fractie) logic
-            const hc = issueData.hoofdcategorie || 'Afval'; // Default to Afval if hoofdcategorie is not provided
+            const hc = issueData.hoofdcategorie || 'Afval'; 
             const sc = issueData.subcategorie;
             
             if (sc && hc) {
@@ -203,13 +224,15 @@ export function IssueImportDialog({
                 const coords = await geocode(address);
                 issueData.latitude = coords.lat;
                 issueData.longitude = coords.lng;
+            } else {
+                issueData.latitude = 0;
+                issueData.longitude = 0;
             }
 
             await addDocumentNonBlocking(collection(firestore, 'meldingen'), issueData);
             setImportProgress(((i + 1) / data.length) * 100);
         }
 
-        // Save updated options if new subtypes were added
         if (optionsChanged) {
             updateDocumentNonBlocking(optionsRef, { subcategorieen });
         }
@@ -236,7 +259,7 @@ export function IssueImportDialog({
       <DialogContent className="sm:max-w-[600px] rounded-none border-none shadow-2xl p-0 overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white rounded-none">
           <DialogTitle className="text-xl font-black uppercase tracking-tight">CSV / EXCEL Import</DialogTitle>
-          <DialogDescription className="text-slate-400 font-bold">Importeer meldingen met containernummers en fracties.</DialogDescription>
+          <DialogDescription className="text-slate-400 font-bold">Importeer meldingen met alleen containernummers en fracties.</DialogDescription>
         </DialogHeader>
 
         <div className="p-6">
@@ -288,9 +311,9 @@ export function IssueImportDialog({
                     {!error && (
                         <Alert className="rounded-none border-primary/20 bg-primary/5">
                             <CheckCircle className="h-4 w-4 text-primary" />
-                            <AlertTitle className="text-xs font-black uppercase">Data Validatie</AlertTitle>
+                            <AlertTitle className="text-xs font-black uppercase">Minimale Eisen</AlertTitle>
                             <AlertDescription className="text-[10px] font-bold text-slate-500">
-                                Onbekende fracties worden automatisch toegevoegd. Ontbrekende adressen worden geprobeerd te geocoderen.
+                                Alleen Containernummer en Fractie zijn nu verplicht. Als het meldingsnummer ontbreekt, genereert het systeem deze zelf.
                             </AlertDescription>
                         </Alert>
                     )}
@@ -301,7 +324,7 @@ export function IssueImportDialog({
                         <CheckCircle className="h-12 w-12 text-green-600" />
                     </div>
                     <p className="font-black uppercase text-xl">Import Voltooid!</p>
-                    <p className="text-slate-500 font-medium text-center">De opdrachten zijn toegevoegd aan het portaal en eventuele nieuwe fracties zijn geregistreerd.</p>
+                    <p className="text-slate-500 font-medium text-center">De opdrachten zijn toegevoegd aan het portaal.</p>
                 </div>
             )}
         </div>
