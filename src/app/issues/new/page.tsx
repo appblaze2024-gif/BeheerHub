@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -1514,7 +1515,7 @@ export default function NewIssuePage() {
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-none h-10 cursor-pointer font-bold text-green-600">
                                     <IssueImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
                                         <div className="flex items-center w-full">
-                                            <FileSpreadsheet className="mr-2 h-4 w-4" /> EXCEL Import
+                                            <FileSpreadsheet className="mr-2 h-4 w-4" /> CSV / EXCEL Import
                                         </div>
                                     </IssueImportDialog>
                                 </DropdownMenuItem>
