@@ -11,7 +11,7 @@ if (admin.apps.length === 0) {
 /**
  * webhookHandler - Verwerkt inkomende meldingen van externe partners of interne sync.
  * 
- * Ondersteunt nu zowel een enkel object als een array van objecten (batch sync).
+ * Deze versie is extra flexibel met veldnamen (case-insensitive) en stopt niet bij één fout.
  */
 exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
   cors(req, res, async () => {
@@ -33,7 +33,6 @@ exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
 
     try {
       const payload = req.body;
-      // Zorg dat we altijd met een array werken
       const items = Array.isArray(payload) ? payload : [payload];
       
       if (items.length === 0) {
@@ -43,34 +42,46 @@ exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
       const db = admin.firestore();
       const batch = db.batch();
       const processedIds = [];
+      const errors = [];
 
       for (const item of items) {
-        const { 
-          INT, HFDCAT, SUBCAT, LAT, LON, STR, HNR, PLA, DTM 
-        } = item;
+        // Helper om velden op te zoeken ongeacht hoofdletters (LAT, lat, Latitude, etc.)
+        const getVal = (prefixes) => {
+            const key = Object.keys(item).find(k => prefixes.some(p => k.toLowerCase() === p.toLowerCase()));
+            return key ? item[key] : undefined;
+        };
 
-        const latNum = parseFloat(LAT);
-        const lonNum = parseFloat(LON);
+        const intakenummer = getVal(['INT', 'Innamenummer', 'id', 'ticket_id', 'intakenummer']);
+        const hoofdcategorie = getVal(['HFDCAT', 'Hoofdcategorie', 'category', 'hoofdcategorie']) || "Overig";
+        const subcategorie = getVal(['SUBCAT', 'Subcategorie', 'type', 'subcategorie']) || "N.v.t.";
+        const straat = getVal(['STR', 'Straat', 'street', 'straatnaam']) || "";
+        const huisnummer = getVal(['HNR', 'Huisnummer', 'number', 'nr']) || "";
+        const plaats = getVal(['PLA', 'Plaats', 'city', 'plaatsnaam']) || "";
+        const datum = getVal(['DTM', 'Datum', 'date', 'tijdstip']) || new Date().toISOString();
+        
+        // Flexibele locatie lookup
+        const lat = getVal(['LAT', 'Latitude', 'y', 'lat']);
+        const lon = getVal(['LON', 'Longitude', 'x', 'lon', 'lng']);
 
-        // Validatie van coördinaten
+        const latNum = parseFloat(String(lat).replace(',', '.'));
+        const lonNum = parseFloat(String(lon).replace(',', '.'));
+
+        // Validatie: Sla over indien geen coördinaten, maar breek de rest niet af
         if (isNaN(latNum) || isNaN(lonNum)) {
-          return res.status(400).json({ 
-            error: "Missing Location Data (LAT/LON)",
-            message: `Melding ${INT || 'onbekend'} mist geldige coördinaten.`,
-            received: { LAT, LON }
-          });
+          errors.push({ id: intakenummer || 'onbekend', error: "Ongeldige locatiegegevens (LAT/LON)", received: { lat, lon } });
+          continue;
         }
 
         const mappedData = {
-          Innamenummer: INT ? String(INT) : "N.B.",
-          Hoofdcategorie: HFDCAT ? String(HFDCAT) : "Overig",
-          Subcategorie: SUBCAT ? String(SUBCAT) : "N.v.t.",
+          Innamenummer: intakenummer ? String(intakenummer) : "N.B.",
+          Hoofdcategorie: String(hoofdcategorie),
+          Subcategorie: String(subcategorie),
           Latitude: latNum,
           Longitude: lonNum,
-          Straat: STR ? String(STR) : "",
-          Huisnummer: HNR ? String(HNR) : "",
-          Plaats: PLA ? String(PLA) : "",
-          "Datum/Tijd": DTM ? String(DTM) : new Date().toISOString(),
+          Straat: String(straat),
+          Huisnummer: String(huisnummer),
+          Plaats: String(plaats),
+          "Datum/Tijd": String(datum),
           server_timestamp: admin.firestore.FieldValue.serverTimestamp()
         };
 
@@ -79,12 +90,15 @@ exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
         processedIds.push(newDocRef.id);
       }
 
-      await batch.commit();
+      if (processedIds.length > 0) {
+        await batch.commit();
+      }
 
       return res.status(200).json({
-        status: "success",
-        message: `${processedIds.length} melding(en) succesvol opgeslagen.`,
-        ids: processedIds
+        status: processedIds.length > 0 ? "success" : "partial_success",
+        message: `${processedIds.length} melding(en) succesvol opgeslagen. ${errors.length} overgeslagen door fouten.`,
+        ids: processedIds,
+        skipped: errors.length > 0 ? errors : undefined
       });
 
     } catch (error) {

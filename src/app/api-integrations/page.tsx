@@ -109,13 +109,13 @@ export default function ApiIntegrationsPage() {
         const snapshot = await getDocs(q);
         const sourceData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // 2. Map de data naar het gewenste formaat met case-insensitive matching
+        // 2. Map de data naar het gewenste formaat met extra robuuste veld-checking
         const payload = sourceData.map(item => {
             const mappedItem: Record<string, any> = {};
             const itemKeys = Object.keys(item);
 
             Object.entries(integration.mapping).forEach(([fsKey, apiKey]) => {
-                // Zoek case-insensitive naar de sleutel in de brondata
+                // Zoek case-insensitive naar de sleutel in de brondata (bijv. "latitude" vindt ook "Latitude")
                 const realKey = itemKeys.find(k => k.toLowerCase() === fsKey.toLowerCase());
                 if (realKey && (item as any)[realKey] !== undefined) {
                     mappedItem[apiKey] = (item as any)[realKey];
@@ -123,23 +123,23 @@ export default function ApiIntegrationsPage() {
             });
             return mappedItem;
         }).filter(item => {
-            // Filter items die verplichte velden missen (zoals LAT/LON als ze gemapped zijn)
-            // Dit voorkomt dat de API de hele batch afkeurt
-            if (integration.mapping['latitude'] || integration.mapping['LATITUDE']) {
-                const latKey = integration.mapping['latitude'] || integration.mapping['LATITUDE'];
-                const lonKey = integration.mapping['longitude'] || integration.mapping['LONGITUDE'];
-                if (item[latKey] === undefined || item[lonKey] === undefined) return false;
-            }
-            return Object.keys(item).length > 0;
+            // Check of er locatiegegevens in de gemapte data zitten
+            // We zoeken naar keys die lijken op LAT/LON of LATITUDE/LONGITUDE
+            const hasLat = Object.keys(item).some(k => ['lat', 'latitude', 'y'].includes(k.toLowerCase())) && 
+                           item[Object.keys(item).find(k => ['lat', 'latitude', 'y'].includes(k.toLowerCase()))!] !== undefined;
+            const hasLon = Object.keys(item).some(k => ['lon', 'lng', 'longitude', 'x'].includes(k.toLowerCase())) && 
+                           item[Object.keys(item).find(k => ['lon', 'lng', 'longitude', 'x'].includes(k.toLowerCase()))!] !== undefined;
+            
+            return hasLat && hasLon;
         });
 
         if (payload.length === 0) {
-            toast({ variant: 'destructive', title: "Geen data verzonden", description: "Geen records gevonden die voldoen aan de mapping criteria." });
+            toast({ variant: 'destructive', title: "Geen data verzonden", description: "Geen records gevonden met geldige locatiegegevens (check uw mapping)." });
             setIsProcessing(false);
             return;
         }
 
-        // 3. Verzend via Server Action om CORS te vermijden
+        // 3. Verzend via Server Action
         const result = await triggerWebhookSync(
             integration.endpoint,
             integration.method,
@@ -158,7 +158,7 @@ export default function ApiIntegrationsPage() {
         if (result.success) {
             toast({ title: "Synchronisatie geslaagd", description: `${payload.length} items verzonden.` });
         } else {
-            toast({ variant: 'destructive', title: "Fout bij verzenden", description: result.responseText });
+            toast({ variant: 'destructive', title: "Fout bij verzenden", description: "Zie laatste respons voor details." });
         }
     } catch (err: any) {
         console.error("Sync error:", err);
