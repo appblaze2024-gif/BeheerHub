@@ -156,39 +156,42 @@ export function ApiIntegrationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-none">
         <DialogHeader className="p-6 border-b bg-slate-900 text-white shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary p-2 rounded-none"><Link2 className="h-5 w-5 text-white" /></div>
+          <div className="flex items-center gap-4">
+            <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20">
+              <Link2 className="h-6 w-6 text-white" />
+            </div>
             <div>
-              <DialogTitle className="text-xl font-black uppercase tracking-tight">
+              <DialogTitle className="text-xl font-black uppercase tracking-tight text-white leading-none mb-1">
                 {integration ? 'Koppeling Bewerken' : 'Nieuwe API Koppeling'}
               </DialogTitle>
-              <DialogDescription className="text-slate-400 font-bold uppercase text-[10px]">Stel de interface parameters in om data naar een ander systeem te sturen.</DialogDescription>
+              <DialogDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Stel de interface parameters in om data naar een ander systeem te sturen.</DialogDescription>
             </div>
           </div>
         </DialogHeader>
         
         <ScrollArea className="flex-1 bg-white">
           <Form {...form}>
-            <form id="integration-form" onSubmit={form.handleSubmit(onSubmit)} className="p-8 space-y-10">
+            <form id="integration-form" onSubmit={form.handleSubmit(onSubmit)} className="p-8 space-y-12">
               {/* Basic Settings */}
               <div className="space-y-6">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
                   <Globe className="h-3.5 w-3.5 text-primary" /> Bestemming (Waar gaat de data heen?)
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[10px] font-black uppercase text-slate-500">Interne Naam</FormLabel>
-                      <FormControl><Input placeholder="Bv. Koppeling Gemeente CRM..." {...field} className="h-11 font-bold rounded-none border-2 border-slate-200 focus:ring-primary/20" /></FormControl>
-                      <FormDescription className="text-[9px] font-bold text-slate-400 uppercase">Geef deze koppeling een herkenbare naam in BeheerHub.</FormDescription>
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-[10px] font-black uppercase text-slate-500 ml-1">Interne Naam</FormLabel>
+                      <FormControl><Input placeholder="Bv. Koppeling Gemeente CRM..." {...field} className="h-11 font-bold rounded-none border-2 border-slate-200 bg-white focus:ring-primary/20 shadow-sm" /></FormControl>
+                      <FormDescription className="text-[9px] font-bold text-slate-400 uppercase ml-1">Geef deze koppeling een herkenbare naam.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="sourceModule" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[10px] font-black uppercase text-slate-500">Welke data verzenden?</FormLabel>
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-[10px] font-black uppercase text-slate-500 ml-1">Welke data verzenden?</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger className="h-11 font-bold rounded-none border-2 border-slate-200 focus:ring-primary/20"><SelectValue placeholder="Selecteer een bron" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger className="h-11 font-bold rounded-none border-2 border-slate-200 bg-white focus:ring-primary/20 shadow-sm"><SelectValue placeholder="Selecteer een bron" /></SelectTrigger></FormControl>
                         <SelectContent className="rounded-none shadow-2xl border-slate-100">
                           <SelectItem value="meldingen" className="text-xs font-bold uppercase">Meldingen (Klantvragen)</SelectItem>
                           <SelectItem value="users" className="text-xs font-bold uppercase">Personeel (Collega's)</SelectItem>
@@ -198,17 +201,18 @@ export function ApiIntegrationDialog({
                           <SelectItem value="machines" className="text-xs font-bold uppercase">Machines</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormDescription className="text-[9px] font-bold text-slate-400 uppercase">Kies welke gegevens uit BeheerHub worden doorgestuurd.</FormDescription>
+                      <FormDescription className="text-[9px] font-bold text-slate-400 uppercase ml-1">Kies de gegevensbron uit BeheerHub.</FormDescription>
                     </FormItem>
                   )} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                  <div className="md:col-span-1">
+
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="w-full md:w-32">
                     <FormField control={form.control} name="method" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase text-slate-500">Methode</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className="text-[10px] font-black uppercase text-slate-500 ml-1">Methode</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger className="h-11 font-bold rounded-none border-2 border-slate-200 focus:ring-primary/20"><SelectValue /></SelectTrigger></FormControl>
+                          <FormControl><SelectTrigger className="h-11 font-black rounded-none border-2 border-slate-200 bg-white focus:ring-primary/20 shadow-sm"><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent className="rounded-none shadow-2xl border-slate-100">
                             <SelectItem value="POST" className="text-xs font-black">POST</SelectItem>
                             <SelectItem value="PUT" className="text-xs font-black">PUT</SelectItem>
@@ -218,12 +222,12 @@ export function ApiIntegrationDialog({
                       </FormItem>
                     )} />
                   </div>
-                  <div className="md:col-span-3">
+                  <div className="flex-1">
                     <FormField control={form.control} name="endpoint" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase text-slate-500">Webhook URL (Het adres van het andere systeem)</FormLabel>
-                        <FormControl><Input placeholder="https://api.partner.nl/v1/ontvanger" {...field} className="h-11 font-mono text-xs rounded-none border-2 border-slate-200 focus:ring-primary/20" /></FormControl>
-                        <FormDescription className="text-[9px] font-bold text-slate-400 uppercase">Voer hier de URL in waar de externe partner op luistert.</FormDescription>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className="text-[10px] font-black uppercase text-slate-500 ml-1">Webhook URL (Ontvanger)</FormLabel>
+                        <FormControl><Input placeholder="https://api.partner.nl/v1/ontvanger" {...field} className="h-11 font-mono text-xs rounded-none border-2 border-slate-200 bg-white focus:ring-primary/20 shadow-sm" /></FormControl>
+                        <FormDescription className="text-[9px] font-bold text-slate-400 uppercase ml-1">Het URL-adres van de externe partner.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -237,16 +241,16 @@ export function ApiIntegrationDialog({
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                     <Key className="h-3.5 w-3.5 text-primary" /> Authenticatie & Headers
                   </h3>
-                  <Button type="button" variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase rounded-none border-slate-200" onClick={() => appendHeader({ key: '', value: '' })}>
-                    <Plus className="h-3 w-3 mr-1" /> Header toevoegen
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase rounded-none border-slate-200 hover:bg-slate-50" onClick={() => appendHeader({ key: '', value: '' })}>
+                    <Plus className="h-3 w-3 mr-1" /> Toevoegen
                   </Button>
                 </div>
                 <div className="grid gap-3">
                   {headerFields.map((field, index) => (
-                    <div key={field.id} className="flex gap-3 animate-in fade-in slide-in-from-left-2">
-                      <Input {...form.register(`headers.${index}.key`)} placeholder="Header (bv. Authorization)" className="h-10 text-xs font-mono rounded-none border-2 border-slate-200" />
-                      <Input {...form.register(`headers.${index}.value`)} placeholder="Waarde (bv. Bearer TOKEN...)" className="h-10 text-xs font-mono rounded-none border-2 border-slate-200" />
-                      <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 rounded-none shrink-0" onClick={() => removeHeader(index)}>
+                    <div key={field.id} className="grid grid-cols-[1fr_1fr_44px] gap-3 animate-in fade-in slide-in-from-left-2">
+                      <Input {...form.register(`headers.${index}.key`)} placeholder="Header (bv. X-API-KEY)" className="h-11 text-xs font-mono font-bold rounded-none border-2 border-slate-200 bg-white" />
+                      <Input {...form.register(`headers.${index}.value`)} placeholder="Waarde" className="h-11 text-xs font-mono font-bold rounded-none border-2 border-slate-200 bg-white" />
+                      <Button type="button" variant="ghost" size="icon" className="h-11 w-11 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-none shrink-0" onClick={() => removeHeader(index)}>
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -261,13 +265,13 @@ export function ApiIntegrationDialog({
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                     <Database className="h-3.5 w-3.5 text-primary" /> Veld Mapping (Vertaling)
                   </h3>
-                  <Button type="button" variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase rounded-none border-slate-200" onClick={() => appendMapping({ fsKey: '', apiKey: '' })}>
-                    <Plus className="h-3 w-3 mr-1" /> Regel toevoegen
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase rounded-none border-slate-200 hover:bg-slate-50" onClick={() => appendMapping({ fsKey: '', apiKey: '' })}>
+                    <Plus className="h-3 w-3 mr-1" /> Toevoegen
                   </Button>
                 </div>
                 
-                <div className="bg-blue-50/50 p-5 rounded-none border-2 border-blue-100 flex items-start gap-4 mb-4">
-                    <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div className="bg-blue-50 border-2 border-blue-100 p-5 rounded-none flex items-start gap-4">
+                    <div className="bg-white p-2 rounded-none shadow-sm"><Info className="h-4 w-4 text-primary" /></div>
                     <div className="space-y-1">
                         <p className="text-[10px] font-black uppercase text-slate-900 tracking-tight leading-none mb-1">Hoe werkt mapping?</p>
                         <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase tracking-tight">
@@ -279,10 +283,10 @@ export function ApiIntegrationDialog({
 
                 <div className="grid gap-3">
                   {mappingFields.map((field, index) => (
-                    <div key={field.id} className="flex gap-4 items-center animate-in fade-in slide-in-from-left-2 p-2 bg-slate-50/50 border border-slate-100">
+                    <div key={field.id} className="grid grid-cols-[1fr_auto_1fr_44px] gap-4 items-center animate-in fade-in slide-in-from-left-2 p-2.5 bg-slate-50/50 border-2 border-slate-100">
                       <div className="flex-1">
                         <Select onValueChange={(val) => form.setValue(`mapping.${index}.fsKey`, val)} value={form.watch(`mapping.${index}.fsKey`)}>
-                            <FormControl><SelectTrigger className="h-10 text-xs font-black uppercase rounded-none border-2 border-slate-200 bg-white"><SelectValue placeholder="Bron (BeheerHub)..." /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger className="h-11 text-xs font-black uppercase rounded-none border-2 border-slate-200 bg-white shadow-sm"><SelectValue placeholder="BeheerHub veld..." /></SelectTrigger></FormControl>
                             <SelectContent className="rounded-none shadow-2xl border-slate-100">
                                 {FS_FIELDS[sourceModule]?.map(f => <SelectItem key={f} value={f} className="text-xs font-bold">{f}</SelectItem>)}
                             </SelectContent>
@@ -290,9 +294,9 @@ export function ApiIntegrationDialog({
                       </div>
                       <div className="text-slate-300 font-black text-xl leading-none">&rarr;</div>
                       <div className="flex-1">
-                        <Input {...form.register(`mapping.${index}.apiKey`)} placeholder="Bestemmingsveld..." className="h-10 text-xs font-black uppercase rounded-none border-2 border-slate-200 bg-white" />
+                        <Input {...form.register(`mapping.${index}.apiKey`)} placeholder="Extern veld..." className="h-11 text-xs font-black uppercase rounded-none border-2 border-slate-200 bg-white shadow-sm" />
                       </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 rounded-none shrink-0" onClick={() => removeMapping(index)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-11 w-11 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-none shrink-0" onClick={() => removeMapping(index)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -305,10 +309,12 @@ export function ApiIntegrationDialog({
         </ScrollArea>
 
         <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="font-bold rounded-none h-12">Annuleren</Button>
-          <Button type="submit" form="integration-form" disabled={isSubmitting} className="font-black uppercase tracking-tight h-12 px-12 shadow-xl shadow-primary/20 rounded-none text-xs">
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Instellingen Opslaan'}
-          </Button>
+          <div className="flex items-center justify-between w-full">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="font-bold text-slate-500 px-8 h-12">Annuleren</Button>
+            <Button type="submit" form="integration-form" disabled={isSubmitting} className="font-black uppercase tracking-tight h-12 px-12 shadow-xl shadow-primary/20 rounded-none text-sm min-w-[200px]">
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Instellingen Opslaan'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
