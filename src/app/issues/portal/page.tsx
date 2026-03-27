@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where, orderBy } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail, Info, CheckCircle2, XCircle, MessageSquare, LayoutGrid, Tag } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail, Info, CheckCircle2, XCircle, MessageSquare, LayoutGrid, Tag, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
@@ -29,6 +29,8 @@ import { AcceptAssignDialog } from '@/components/accept-assign-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 export default function MeldingenportaalPage() {
   const firestore = useFirestore();
@@ -36,12 +38,17 @@ export default function MeldingenportaalPage() {
   const router = useRouter();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
 
   const [isForwardDialogOpen, setIsForwardDialogOpen] = React.useState(false);
   const [isAcceptDialogOpen, setIsAcceptDialogOpen] = React.useState(false);
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
+  
+  // Selection state
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [selectedMeldingenForAssign, setSelectedMeldingenForAssign] = React.useState<Melding[]>([]);
 
   const portalQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -105,8 +112,31 @@ export default function MeldingenportaalPage() {
     }
   };
 
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredMeldingen.length && filteredMeldingen.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredMeldingen.map(m => m.id)));
+    }
+  };
+
   const handleOpenAccept = (melding: Melding) => {
-    setSelectedMelding(melding);
+    setSelectedMeldingenForAssign([melding]);
+    setIsAcceptDialogOpen(true);
+  };
+
+  const handleOpenBulkAccept = () => {
+    const selected = filteredMeldingen.filter(m => selectedIds.has(m.id));
+    setSelectedMeldingenForAssign(selected);
     setIsAcceptDialogOpen(true);
   };
 
@@ -142,10 +172,17 @@ export default function MeldingenportaalPage() {
             </div>
         ) : (
             <div className="border rounded-none overflow-hidden shadow-sm bg-white overflow-x-auto custom-scrollbar">
-                <Table className="min-w-[1200px]">
+                <Table className="min-w-[1300px]">
                     <TableHeader className="bg-slate-100 sticky top-0 z-10">
                         <TableRow>
-                            <TableHead className="font-black uppercase text-[10px] text-slate-500 sticky left-0 bg-slate-100 z-20">Intakenr.</TableHead>
+                            <TableHead className="w-[50px] p-2 border-r border-slate-200 text-center sticky left-0 bg-slate-100 z-30">
+                                <Checkbox 
+                                    checked={selectedIds.size === filteredMeldingen.length && filteredMeldingen.length > 0} 
+                                    onCheckedChange={handleSelectAll}
+                                    className="h-5 w-5 rounded-md"
+                                />
+                            </TableHead>
+                            <TableHead className="font-black uppercase text-[10px] text-slate-500 sticky left-[50px] bg-slate-100 z-20">Intakenr.</TableHead>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500">Adres</TableHead>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500">Omschrijving</TableHead>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500">Categorie</TableHead>
@@ -158,9 +195,24 @@ export default function MeldingenportaalPage() {
                     <TableBody>
                         {filteredMeldingen.map((melding) => {
                             const meldDatum = melding.datum || melding.meldingsdatum;
+                            const isSelected = selectedIds.has(melding.id);
+                            
                             return (
-                                <TableRow key={melding.id} className="cursor-pointer hover:bg-slate-50 transition-colors h-14">
-                                    <TableCell className="font-black text-xs sticky left-0 bg-white group-hover:bg-slate-50 z-10" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.intakenummer}</TableCell>
+                                <TableRow 
+                                    key={melding.id} 
+                                    className={cn(
+                                        "cursor-pointer hover:bg-slate-50 transition-colors h-14",
+                                        isSelected && "bg-blue-50/50"
+                                    )}
+                                >
+                                    <TableCell className="p-2 border-r border-slate-100 text-center sticky left-0 bg-white group-hover:bg-slate-50 z-20" onClick={(e) => e.stopPropagation()}>
+                                        <Checkbox 
+                                            checked={isSelected} 
+                                            onCheckedChange={() => handleToggleSelect(melding.id)}
+                                            className="h-5 w-5 rounded-md"
+                                        />
+                                    </TableCell>
+                                    <TableCell className="font-black text-xs sticky left-[50px] bg-white group-hover:bg-slate-50 z-10" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.intakenummer}</TableCell>
                                     <TableCell className="text-xs font-bold" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
                                         <div className="flex flex-col">
                                             <span className="truncate max-w-[200px]">{[melding.straatnaam, melding.huisnummer].filter(Boolean).join(' ')}</span>
@@ -226,13 +278,45 @@ export default function MeldingenportaalPage() {
         )}
       </div>
 
+      {/* Floating Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-300">
+          <div className="bg-slate-900 text-white rounded-full px-6 py-3 shadow-2xl flex items-center gap-6 border-2 border-slate-800">
+            <div className="flex items-center gap-3 border-r border-white/20 pr-6">
+              <div className="bg-primary h-8 w-8 rounded-full flex items-center justify-center font-black text-xs">
+                {selectedIds.size}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest">Geselecteerd</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={handleOpenBulkAccept}
+                className="h-10 px-6 font-black uppercase text-xs tracking-tight bg-primary hover:bg-primary/90 rounded-full shadow-lg"
+              >
+                <Users className="mr-2 h-4 w-4" /> Bulk Toewijzen
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => setSelectedIds(new Set())}
+                className="h-10 text-white hover:bg-white/10 rounded-full font-bold text-xs"
+              >
+                Annuleren
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ForwardExternalDialog open={isForwardDialogOpen} onOpenChange={setIsForwardDialogOpen} melding={selectedMelding} onSuccess={() => {}} />
       <AcceptAssignDialog 
-        key={selectedMelding?.id || 'none'}
+        key={selectedMeldingenForAssign.length || 'none'}
         open={isAcceptDialogOpen} 
         onOpenChange={setIsAcceptDialogOpen} 
-        meldingen={selectedMelding ? [selectedMelding] : []} 
-        onSuccess={() => {}} 
+        meldingen={selectedMeldingenForAssign} 
+        onSuccess={() => {
+          setSelectedIds(new Set());
+          setSelectedMeldingenForAssign([]);
+        }} 
       />
     </div>
   );
