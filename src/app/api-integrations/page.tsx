@@ -137,7 +137,7 @@ export default function ApiIntegrationsPage() {
         if (result.success) {
             toast({ title: "Synchronisatie geslaagd", description: "De externe server heeft de data ontvangen." });
         } else {
-            toast({ variant: 'destructive', title: "Fout bij verzenden", description: `Server antwoordde met status ${result.status}` });
+            toast({ variant: 'destructive', title: "Fout bij verzenden", description: result.status === 0 ? "Netwerkfout: De externe server kon niet worden bereikt." : `Server antwoordde met status ${result.status}` });
         }
     } catch (err: any) {
         console.error("Sync error:", err);
@@ -418,7 +418,7 @@ export default function ApiIntegrationsPage() {
                                                         <Copy className="h-5 w-5" />
                                                     </Button>
                                                 </div>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic ml-1">Tip: Wijzig de "type" parameter naar "objects" of "voertuigen" voor andere data.</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic ml-1">Tip: Wijzig de "type" parameter naar "objects" of "voertuigen" for andere data.</p>
                                             </div>
                                         </div>
                                     ) : (

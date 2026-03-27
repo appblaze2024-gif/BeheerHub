@@ -6,6 +6,11 @@
  */
 export async function triggerWebhookSync(endpoint: string, method: string, headers: Record<string, string>, payload: any) {
     try {
+        // Valideer URL formaat
+        if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+            throw new Error('Ongeldige URL: Moet beginnen met http:// of https://');
+        }
+
         const response = await fetch(endpoint, {
             method,
             headers: {
@@ -23,14 +28,24 @@ export async function triggerWebhookSync(endpoint: string, method: string, heade
         return {
             success: response.ok,
             status,
-            responseText: responseText.slice(0, 1000)
+            responseText: responseText.slice(0, 1000) || '(Geen respons van server)'
         };
     } catch (err: any) {
         console.error("Webhook Dispatch Error:", err);
+        
+        let message = 'De externe server is onbereikbaar.';
+        if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+            message = 'De verbinding is verbroken (Timeout na 15s).';
+        } else if (err.message?.includes('ENOTFOUND')) {
+            message = 'Het domein van de URL kon niet worden gevonden (DNS fout).';
+        } else if (err.message?.includes('ECONNREFUSED')) {
+            message = 'De externe server weigert de verbinding op deze poort.';
+        }
+
         return {
             success: false,
             status: 0,
-            responseText: `Netwerkfout: ${err.message || 'De externe server is onbereikbaar of weigert de verbinding.'}`
+            responseText: `Netwerkfout: ${message} (${err.message || 'fetch failed'})`
         };
     }
 }
