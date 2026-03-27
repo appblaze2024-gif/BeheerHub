@@ -261,24 +261,32 @@ export default function ArchiveIssuesPage() {
   const handleExport = () => {
     if (filteredMeldingen.length === 0) return;
 
-    const exportData = filteredMeldingen.map(m => ({
-      'Intakenummer': m.intakenummer,
-      'Extern Nummer': m.extern_meldingsnummer || '',
-      'Datum Melding': m.datum,
-      'Tijd Melding': m.tijdstip,
-      'Hoofdcategorie': m.hoofdcategorie,
-      'Subcategorie': m.subcategorie,
-      'Adres': `${m.straatnaam || ''} ${m.huisnummer || ''}`.trim(),
-      'Postcode': m.postcode || '',
-      'Plaats': m.plaats || '',
-      'Melder': m.melder || '',
-      'Status': m.status,
-      'Afgehandeld door': m.afgehandeld_door || m.behandelaar || '',
-      'Datum Afhandeling': m.afhandeling_datum || '',
-      'Tijd Afhandeling': m.afhandeling_tijdstip || '',
-      'Minuten gewerkt': m.gewerkteMinuten || 0,
-      'Bijzonderheden': m.afhandeling_bijzonderheden || ''
-    }));
+    const exportData = filteredMeldingen.map(m => {
+      const photoUrls = [
+        ...(m.fotos || []).map(f => f.url),
+        ...(m.afhandeling_fotos || []).map(f => f.url)
+      ].join(', ');
+
+      return {
+        'Intakenummer': m.intakenummer,
+        'Extern Nummer': m.extern_meldingsnummer || '',
+        'Datum Melding': m.datum,
+        'Tijd Melding': m.tijdstip,
+        'Hoofdcategorie': m.hoofdcategorie,
+        'Subcategorie': m.subcategorie,
+        'Adres': `${m.straatnaam || ''} ${m.huisnummer || ''}`.trim(),
+        'Postcode': m.postcode || '',
+        'Plaats': m.plaats || '',
+        'Melder': m.melder || '',
+        'Status': m.status,
+        'Afgehandeld door': m.afgehandeld_door || m.behandelaar || '',
+        'Datum Afhandeling': m.afhandeling_datum || '',
+        'Tijd Afhandeling': m.afhandeling_tijdstip || '',
+        'Minuten gewerkt': m.gewerkteMinuten || 0,
+        'Bijzonderheden': m.afhandeling_bijzonderheden || '',
+        'Foto URLs': photoUrls
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
