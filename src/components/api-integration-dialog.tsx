@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -20,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { Loader2, Link2, Plus, Trash2, ShieldCheck, Globe, Key, Database } from 'lucide-react';
+import { Loader2, Link2, Plus, Trash2, ShieldCheck, Globe, Key, Database, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import type { ApiIntegration } from '@/lib/types';
@@ -187,7 +186,7 @@ export function ApiIntegrationDialog({
                     <FormItem>
                       <FormLabel className="text-[10px] font-black uppercase">Bron Gegevens</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger className="h-11 font-bold rounded-none border-2"><SelectValue /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger className="h-11 font-bold rounded-none border-2"><SelectValue placeholder="Selecteer een bron" /></SelectTrigger></FormControl>
                         <SelectContent className="rounded-none">
                           <SelectItem value="meldingen">Meldingen (Klantvragen)</SelectItem>
                           <SelectItem value="users">Personeel (Collega's)</SelectItem>
