@@ -29,7 +29,7 @@ interface AcceptAssignDialogProps {
   onSuccess: () => void;
 }
 
-export function AcceptAssignDialog({ open, onOpenChange, meldingen, onSuccess }: AcceptAssignDialogProps) {
+export function AcceptAssignDialog({ open, onOpenChange, meldingen = [], onSuccess }: AcceptAssignDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
@@ -45,7 +45,7 @@ export function AcceptAssignDialog({ open, onOpenChange, meldingen, onSuccess }:
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 
   React.useEffect(() => {
-    if (open && meldingen.length === 1) {
+    if (open && meldingen?.length === 1) {
       const assignedUser = users?.find(u => (u.displayName || u.email) === meldingen[0].behandelaar);
       setSelectedUserId(assignedUser?.id || null);
       setSearchTerm('');
@@ -69,7 +69,7 @@ export function AcceptAssignDialog({ open, onOpenChange, meldingen, onSuccess }:
   }, [users, searchTerm, user?.uid]);
 
   const handleConfirm = async () => {
-    if (!firestore || meldingen.length === 0 || !selectedUserId) return;
+    if (!firestore || !meldingen || meldingen.length === 0 || !selectedUserId) return;
     
     const selectedUser = users?.find(u => u.id === selectedUserId);
     if (!selectedUser) return;
@@ -131,10 +131,10 @@ export function AcceptAssignDialog({ open, onOpenChange, meldingen, onSuccess }:
             </div>
             <div>
               <DialogTitle className="text-xl font-black uppercase tracking-tight">
-                {meldingen.length === 1 ? `Toewijzen: ${meldingen[0].intakenummer}` : `Toewijzen (${meldingen.length} items)`}
+                {meldingen?.length === 1 ? `Toewijzen: ${meldingen[0].intakenummer}` : `Toewijzen (${meldingen?.length || 0} items)`}
               </DialogTitle>
               <DialogDescription className="text-slate-400 font-bold">
-                Selecteer een collega die deze {meldingen.length === 1 ? 'opdracht' : 'opdrachten'} gaat uitvoeren.
+                Selecteer een collega die deze {meldingen?.length === 1 ? 'opdracht' : 'opdrachten'} gaat uitvoeren.
               </DialogDescription>
             </div>
           </div>

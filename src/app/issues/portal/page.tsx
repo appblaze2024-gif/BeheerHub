@@ -231,7 +231,7 @@ export default function MeldingenportaalPage() {
         key={selectedMelding?.id || 'none'}
         open={isAcceptDialogOpen} 
         onOpenChange={setIsAcceptDialogOpen} 
-        melding={selectedMelding} 
+        meldingen={selectedMelding ? [selectedMelding] : []} 
         onSuccess={() => {}} 
       />
     </div>
