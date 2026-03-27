@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -43,7 +42,7 @@ import { ApiIntegrationDialog } from '@/components/api-integration-dialog';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { LoadingScreen } from '@/components/loading-screen';
-import { Separator } from '@/components/ui/separator';
+import { triggerWebhookSync } from './actions';
 
 export default function ApiIntegrationsPage() {
   const firestore = useFirestore();
@@ -100,13 +99,15 @@ export default function ApiIntegrationsPage() {
   const handleRunSync = async (integration: ApiIntegration) => {
     if (!firestore) return;
     setIsProcessing(true);
-    toast({ title: "Synchronisatie gestart", description: `Data uit ${integration.sourceModule} wordt verzonden.` });
+    toast({ title: "Synchronisatie gestart", description: `Data uit ${integration.sourceModule} wordt voorbereid.` });
     
     try {
+        // 1. Haal de data op uit Firestore
         const sourceCol = collection(firestore, integration.sourceModule);
         const snapshot = await getDocs(sourceCol);
         const sourceData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
+        // 2. Map de data naar het gewenste formaat
         const payload = sourceData.map(item => {
             const mappedItem: Record<string, any> = {};
             Object.entries(integration.mapping).forEach(([fsKey, apiKey]) => {
@@ -117,32 +118,30 @@ export default function ApiIntegrationsPage() {
             return mappedItem;
         });
 
-        const response = await fetch(integration.endpoint, {
-            method: integration.method,
-            headers: {
-                'Content-Type': 'application/json',
-                ...integration.headers.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {})
-            },
-            body: JSON.stringify(payload)
-        });
+        // 3. Verzend via Server Action om CORS te vermijden
+        const result = await triggerWebhookSync(
+            integration.endpoint,
+            integration.method,
+            integration.headers.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+            payload
+        );
 
-        const status = response.ok ? 'success' : 'error';
-        const responseText = await response.text();
-
+        // 4. Update de status in Firestore
+        const status = result.success ? 'success' : 'error';
         await updateDocumentNonBlocking(doc(firestore, 'api_integrations', integration.id), {
             lastRun: new Date().toISOString(),
             lastStatus: status,
-            lastResponse: responseText.slice(0, 500)
+            lastResponse: result.responseText.slice(0, 1000)
         });
 
-        if (response.ok) {
+        if (result.success) {
             toast({ title: "Synchronisatie geslaagd", description: "De externe server heeft de data ontvangen." });
         } else {
-            toast({ variant: 'destructive', title: "Fout bij verzenden", description: `Status: ${response.status}` });
+            toast({ variant: 'destructive', title: "Fout bij verzenden", description: `Server antwoordde met status ${result.status}` });
         }
     } catch (err: any) {
         console.error("Sync error:", err);
-        toast({ variant: 'destructive', title: "Kritieke fout", description: err.message });
+        toast({ variant: 'destructive', title: "Kritieke fout", description: "Er is een onverwachte fout opgetreden tijdens de synchronisatie." });
     } finally {
         setIsProcessing(false);
     }
