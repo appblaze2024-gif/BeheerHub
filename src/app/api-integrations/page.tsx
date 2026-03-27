@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -31,7 +32,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, doc, query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -102,21 +103,41 @@ export default function ApiIntegrationsPage() {
     toast({ title: "Synchronisatie gestart", description: `Data uit ${integration.sourceModule} wordt voorbereid.` });
     
     try {
-        // 1. Haal de data op uit Firestore
+        // 1. Haal de data op uit Firestore (beperk tot 500 items voor webhook stabiliteit)
         const sourceCol = collection(firestore, integration.sourceModule);
-        const snapshot = await getDocs(sourceCol);
+        const q = query(sourceCol, limit(500));
+        const snapshot = await getDocs(q);
         const sourceData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // 2. Map de data naar het gewenste formaat
+        // 2. Map de data naar het gewenste formaat met case-insensitive matching
         const payload = sourceData.map(item => {
             const mappedItem: Record<string, any> = {};
+            const itemKeys = Object.keys(item);
+
             Object.entries(integration.mapping).forEach(([fsKey, apiKey]) => {
-                if ((item as any)[fsKey] !== undefined) {
-                    mappedItem[apiKey] = (item as any)[fsKey];
+                // Zoek case-insensitive naar de sleutel in de brondata
+                const realKey = itemKeys.find(k => k.toLowerCase() === fsKey.toLowerCase());
+                if (realKey && (item as any)[realKey] !== undefined) {
+                    mappedItem[apiKey] = (item as any)[realKey];
                 }
             });
             return mappedItem;
+        }).filter(item => {
+            // Filter items die verplichte velden missen (zoals LAT/LON als ze gemapped zijn)
+            // Dit voorkomt dat de API de hele batch afkeurt
+            if (integration.mapping['latitude'] || integration.mapping['LATITUDE']) {
+                const latKey = integration.mapping['latitude'] || integration.mapping['LATITUDE'];
+                const lonKey = integration.mapping['longitude'] || integration.mapping['LONGITUDE'];
+                if (item[latKey] === undefined || item[lonKey] === undefined) return false;
+            }
+            return Object.keys(item).length > 0;
         });
+
+        if (payload.length === 0) {
+            toast({ variant: 'destructive', title: "Geen data verzonden", description: "Geen records gevonden die voldoen aan de mapping criteria." });
+            setIsProcessing(false);
+            return;
+        }
 
         // 3. Verzend via Server Action om CORS te vermijden
         const result = await triggerWebhookSync(
@@ -135,13 +156,13 @@ export default function ApiIntegrationsPage() {
         });
 
         if (result.success) {
-            toast({ title: "Synchronisatie geslaagd", description: "De externe server heeft de data ontvangen." });
+            toast({ title: "Synchronisatie geslaagd", description: `${payload.length} items verzonden.` });
         } else {
-            toast({ variant: 'destructive', title: "Fout bij verzenden", description: result.status === 0 ? "Netwerkfout: De externe server kon niet worden bereikt." : `Server antwoordde met status ${result.status}` });
+            toast({ variant: 'destructive', title: "Fout bij verzenden", description: result.responseText });
         }
     } catch (err: any) {
         console.error("Sync error:", err);
-        toast({ variant: 'destructive', title: "Kritieke fout", description: "Er is een onverwachte fout opgetreden tijdens de synchronisatie." });
+        toast({ variant: 'destructive', title: "Kritieke fout", description: err.message });
     } finally {
         setIsProcessing(false);
     }
