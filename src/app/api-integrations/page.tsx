@@ -32,7 +32,8 @@ import {
   Zap,
   Info,
   HelpCircle,
-  ArrowDown
+  ArrowDown,
+  ChevronDown
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, doc, query, orderBy, getDocs } from 'firebase/firestore';
