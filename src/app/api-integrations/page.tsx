@@ -115,21 +115,21 @@ export default function ApiIntegrationsPage() {
             const itemKeys = Object.keys(item);
 
             Object.entries(integration.mapping).forEach(([fsKey, apiKey]) => {
+                const cleanFsKey = fsKey.trim().toLowerCase();
+                const cleanApiKey = apiKey.trim();
+                
                 // Zoek case-insensitive naar de sleutel in de brondata (bijv. "latitude" vindt ook "Latitude")
-                const realKey = itemKeys.find(k => k.toLowerCase() === fsKey.toLowerCase());
+                const realKey = itemKeys.find(k => k.toLowerCase() === cleanFsKey);
                 if (realKey && (item as any)[realKey] !== undefined) {
-                    mappedItem[apiKey] = (item as any)[realKey];
+                    mappedItem[cleanApiKey] = (item as any)[realKey];
                 }
             });
             return mappedItem;
         }).filter(item => {
             // Check of er locatiegegevens in de gemapte data zitten
-            // We zoeken naar keys die lijken op LAT/LON of LATITUDE/LONGITUDE
-            const hasLat = Object.keys(item).some(k => ['lat', 'latitude', 'y'].includes(k.toLowerCase())) && 
-                           item[Object.keys(item).find(k => ['lat', 'latitude', 'y'].includes(k.toLowerCase()))!] !== undefined;
-            const hasLon = Object.keys(item).some(k => ['lon', 'lng', 'longitude', 'x'].includes(k.toLowerCase())) && 
-                           item[Object.keys(item).find(k => ['lon', 'lng', 'longitude', 'x'].includes(k.toLowerCase()))!] !== undefined;
-            
+            const keys = Object.keys(item).map(k => k.toLowerCase());
+            const hasLat = keys.includes('lat') || keys.includes('latitude') || keys.includes('y');
+            const hasLon = keys.includes('lon') || keys.includes('lng') || keys.includes('longitude') || keys.includes('x');
             return hasLat && hasLon;
         });
 
@@ -149,10 +149,12 @@ export default function ApiIntegrationsPage() {
 
         // 4. Update de status in Firestore
         const status = result.success ? 'success' : 'error';
+        const responseText = typeof result.responseText === 'string' ? result.responseText : JSON.stringify(result.responseText);
+        
         await updateDocumentNonBlocking(doc(firestore, 'api_integrations', integration.id), {
             lastRun: new Date().toISOString(),
             lastStatus: status,
-            lastResponse: result.responseText.slice(0, 1000)
+            lastResponse: responseText.slice(0, 5000)
         });
 
         if (result.success) {
@@ -202,7 +204,6 @@ export default function ApiIntegrationsPage() {
         <Tabs value={activeTab} className="h-full">
             <TabsContent value="outbound" className="h-full m-0 animate-in fade-in slide-in-from-left-2 duration-300">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden">
-                    {/* Sidebar List */}
                     <Card className="lg:col-span-4 flex flex-col rounded-none border-none shadow-xl bg-white overflow-hidden">
                         <CardHeader className="p-4 border-b bg-slate-50/50 space-y-4">
                             <div className="flex items-center justify-between">
@@ -260,7 +261,6 @@ export default function ApiIntegrationsPage() {
                         </ScrollArea>
                     </Card>
 
-                    {/* Detail View */}
                     <Card className="lg:col-span-8 flex flex-col rounded-none border-none shadow-xl bg-white overflow-hidden">
                         {selectedIntegration ? (
                             <div className="flex flex-col h-full">

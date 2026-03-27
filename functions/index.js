@@ -47,13 +47,13 @@ exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
       for (const item of items) {
         // Helper om velden op te zoeken ongeacht hoofdletters (LAT, lat, Latitude, etc.)
         const getVal = (prefixes) => {
-            const key = Object.keys(item).find(k => prefixes.some(p => k.toLowerCase() === p.toLowerCase()));
+            const key = Object.keys(item).find(k => prefixes.some(p => k.toLowerCase() === p.trim().toLowerCase()));
             return key ? item[key] : undefined;
         };
 
-        const intakenummer = getVal(['INT', 'Innamenummer', 'id', 'ticket_id', 'intakenummer']);
-        const hoofdcategorie = getVal(['HFDCAT', 'Hoofdcategorie', 'category', 'hoofdcategorie']) || "Overig";
-        const subcategorie = getVal(['SUBCAT', 'Subcategorie', 'type', 'subcategorie']) || "N.v.t.";
+        const intakenummer = getVal(['INT', 'Innamenummer', 'id', 'ticket_id', 'intakenummer', 'nummer']);
+        const hoofdcategorie = getVal(['HFDCAT', 'Hoofdcategorie', 'category', 'hoofdcategorie', 'type']) || "Overig";
+        const subcategorie = getVal(['SUBCAT', 'Subcategorie', 'type', 'subcategorie', 'fractie']) || "N.v.t.";
         const straat = getVal(['STR', 'Straat', 'street', 'straatnaam']) || "";
         const huisnummer = getVal(['HNR', 'Huisnummer', 'number', 'nr']) || "";
         const plaats = getVal(['PLA', 'Plaats', 'city', 'plaatsnaam']) || "";
@@ -68,7 +68,12 @@ exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
 
         // Validatie: Sla over indien geen coördinaten, maar breek de rest niet af
         if (isNaN(latNum) || isNaN(lonNum)) {
-          errors.push({ id: intakenummer || 'onbekend', error: "Ongeldige locatiegegevens (LAT/LON)", received: { lat, lon } });
+          errors.push({ 
+            id: intakenummer || 'onbekend', 
+            error: "Missing Location Data (LAT/LON)", 
+            received: { lat, lon },
+            keys_received: Object.keys(item)
+          });
           continue;
         }
 
@@ -94,11 +99,12 @@ exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
         await batch.commit();
       }
 
-      return res.status(200).json({
-        status: processedIds.length > 0 ? "success" : "partial_success",
-        message: `${processedIds.length} melding(en) succesvol opgeslagen. ${errors.length} overgeslagen door fouten.`,
+      const statusCode = processedIds.length > 0 ? 200 : 400;
+      return res.status(statusCode).json({
+        status: processedIds.length > 0 ? "success" : "error",
+        message: processedIds.length > 0 ? `${processedIds.length} melding(en) succesvol opgeslagen.` : "Geen meldingen konden worden opgeslagen wegens ontbrekende data.",
         ids: processedIds,
-        skipped: errors.length > 0 ? errors : undefined
+        failed: errors.length > 0 ? errors : undefined
       });
 
     } catch (error) {
