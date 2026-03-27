@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, Info, User, Pencil, LayoutGrid, Calendar, MapPin, Tag } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, Info, User, Pencil, LayoutGrid, Calendar, MapPin, Tag, Check, X, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LoadingScreen } from '@/components/loading-screen';
 import { AcceptAssignDialog } from '@/components/accept-assign-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const openStatuses = [
   "Intern doorgezet",
@@ -43,8 +44,9 @@ export default function OpenIssuesPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
   
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = React.useState(false);
-  const [selectedMeldingForAssign, setSelectedMeldingForAssign] = React.useState<Melding | null>(null);
+  const [selectedMeldingenForAssign, setSelectedMeldingenForAssign] = React.useState<Melding[]>([]);
 
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
 
@@ -81,8 +83,12 @@ export default function OpenIssuesPage() {
 
     const lowercasedFilter = debouncedSearchTerm.toLowerCase();
     return visibleMeldingen.filter(melding => {
-      return Object.values(melding).some(value =>
-        String(value).toLowerCase().includes(lowercasedFilter)
+      return (
+        melding.intakenummer?.toLowerCase().includes(lowercasedFilter) ||
+        melding.straatnaam?.toLowerCase().includes(lowercasedFilter) ||
+        melding.plaats?.toLowerCase().includes(lowercasedFilter) ||
+        melding.subcategorie?.toLowerCase().includes(lowercasedFilter) ||
+        melding.behandelaar?.toLowerCase().includes(lowercasedFilter)
       );
     });
   }, [openMeldingen, debouncedSearchTerm, isPrivileged, profile]);
@@ -96,10 +102,34 @@ export default function OpenIssuesPage() {
     "Gepland op langere termijn": "bg-indigo-500",
   };
 
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredMeldingen.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredMeldingen.map(m => m.id)));
+    }
+  };
+
+  const handleOpenBulkAssign = () => {
+    if (!isPrivileged || selectedIds.size === 0) return;
+    const toAssign = filteredMeldingen.filter(m => selectedIds.has(m.id));
+    setSelectedMeldingenForAssign(toAssign);
+    setAssignDialogOpen(true);
+  };
+
   const handleOpenAssign = (e: React.MouseEvent, melding: Melding) => {
     if (!isPrivileged) return;
     e.stopPropagation();
-    setSelectedMeldingForAssign(melding);
+    setSelectedMeldingenForAssign([melding]);
     setAssignDialogOpen(true);
   };
 
@@ -129,7 +159,7 @@ export default function OpenIssuesPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-4 relative">
         {isLoadingMeldingen ? (
             <LoadingScreen message="Meldingen laden..." />
         ) : filteredMeldingen.length === 0 ? (
@@ -139,20 +169,33 @@ export default function OpenIssuesPage() {
                 <p className="text-sm text-slate-500 mt-1">Alle actieve meldingen zijn verwerkt of voldoen niet aan de zoekterm.</p>
             </div>
         ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 pb-20">
                 {/* Mobile View: Card List */}
                 <div className="grid grid-cols-1 gap-4 md:hidden">
                     {filteredMeldingen.map((melding) => (
                         <Card 
                             key={melding.id} 
-                            onClick={() => router.push(`/issues/new?id=${melding.id}`)}
-                            className="overflow-hidden border-none shadow-lg active:scale-[0.98] transition-transform"
+                            className={cn(
+                              "overflow-hidden border-none shadow-lg active:scale-[0.98] transition-all relative",
+                              selectedIds.has(melding.id) && "ring-2 ring-primary"
+                            )}
+                            onClick={() => selectedIds.size > 0 ? handleToggleSelect(melding.id) : router.push(`/issues/new?id=${melding.id}`)}
                         >
                             <CardContent className="p-0">
                                 <div className="p-4 bg-slate-50 border-b flex justify-between items-start">
-                                    <div className="space-y-0.5">
-                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Intakenummer</p>
-                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{melding.intakenummer}</p>
+                                    <div className="flex items-center gap-3">
+                                      {isPrivileged && (
+                                        <Checkbox 
+                                          checked={selectedIds.has(melding.id)} 
+                                          onCheckedChange={() => handleToggleSelect(melding.id)}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="h-5 w-5 rounded-md"
+                                        />
+                                      )}
+                                      <div className="space-y-0.5">
+                                          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Intakenummer</p>
+                                          <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{melding.intakenummer}</p>
+                                      </div>
                                     </div>
                                     <Badge
                                         className={cn(
@@ -221,6 +264,15 @@ export default function OpenIssuesPage() {
                         <Table className="border-collapse w-full">
                             <TableHeader className="sticky top-0 bg-slate-100 z-10">
                             <TableRow className="hover:bg-transparent border-b-2 border-slate-200">
+                                {isPrivileged && (
+                                  <TableHead className="w-[50px] p-2 border-r border-slate-200 text-center">
+                                    <Checkbox 
+                                      checked={selectedIds.size === filteredMeldingen.length && filteredMeldingen.length > 0} 
+                                      onCheckedChange={handleSelectAll}
+                                      className="h-5 w-5 rounded-md"
+                                    />
+                                  </TableHead>
+                                )}
                                 <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Intakenr.</TableHead>
                                 <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 hidden lg:table-cell">Extern nr.</TableHead>
                                 <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Datum</TableHead>
@@ -244,7 +296,23 @@ export default function OpenIssuesPage() {
                                 }
                                 
                                 return (
-                                    <TableRow key={melding.id} onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer h-12 hover:bg-blue-50/50 transition-colors border-b border-slate-100">
+                                    <TableRow 
+                                      key={melding.id} 
+                                      onClick={() => router.push(`/issues/new?id=${melding.id}`)} 
+                                      className={cn(
+                                        "cursor-pointer h-12 hover:bg-blue-50/50 transition-colors border-b border-slate-100",
+                                        selectedIds.has(melding.id) && "bg-blue-50/80"
+                                      )}
+                                    >
+                                        {isPrivileged && (
+                                          <TableCell className="p-2 border-r border-slate-100 text-center" onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox 
+                                              checked={selectedIds.has(melding.id)} 
+                                              onCheckedChange={() => handleToggleSelect(melding.id)}
+                                              className="h-5 w-5 rounded-md"
+                                            />
+                                          </TableCell>
+                                        )}
                                         <TableCell className="font-black py-2 px-4 border-r border-slate-100">{melding.intakenummer || '-'}</TableCell>
                                         <TableCell className="py-2 px-4 border-r border-slate-100 hidden lg:table-cell text-slate-400 font-bold">{melding.extern_meldingsnummer || '-'}</TableCell>
                                         <TableCell className="py-2 px-4 border-r border-slate-100 text-xs font-bold text-slate-600">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</TableCell>
@@ -293,14 +361,52 @@ export default function OpenIssuesPage() {
                 </div>
             </div>
         )}
+
+        {/* Floating Bulk Action Bar */}
+        {selectedIds.size > 0 && isPrivileged && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-300">
+            <div className="bg-slate-900 text-white rounded-full px-6 py-3 shadow-2xl flex items-center gap-6 border-2 border-slate-800">
+              <div className="flex items-center gap-3 border-r border-white/20 pr-6">
+                <div className="bg-primary h-8 w-8 rounded-full flex items-center justify-center font-black text-xs">
+                  {selectedIds.size}
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest">Geselecteerd</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={handleOpenBulkAssign}
+                  className="h-10 px-6 font-black uppercase text-xs tracking-tight bg-primary hover:bg-primary/90 rounded-full shadow-lg"
+                >
+                  <Users className="mr-2 h-4 w-4" /> Toewijzen
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setSelectedIds(new Set())}
+                  className="h-10 text-white hover:bg-white/10 rounded-full font-bold text-xs"
+                >
+                  Annuleren
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <AcceptAssignDialog 
-        key={selectedMeldingForAssign?.id || 'none'}
+        key={selectedMeldingenForAssign.length || 'none'}
         open={assignDialogOpen} 
-        onOpenChange={setAssignDialogOpen} 
-        melding={selectedMeldingForAssign} 
-        onSuccess={() => {}} 
+        onOpenChange={(open) => {
+          setAssignDialogOpen(open);
+          if (!open) {
+            setSelectedIds(new Set());
+            setSelectedMeldingenForAssign([]);
+          }
+        }} 
+        meldingen={selectedMeldingenForAssign} 
+        onSuccess={() => {
+          setSelectedIds(new Set());
+          setSelectedMeldingenForAssign([]);
+        }} 
       />
     </div>
   );

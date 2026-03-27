@@ -13,8 +13,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
-import { Loader2, User, Search, Check, X } from 'lucide-react';
+import { doc, collection, writeBatch } from 'firebase/firestore';
+import { Loader2, User, Search, Check, X, Users } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,11 +25,11 @@ import { cn } from '@/lib/utils';
 interface AcceptAssignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  melding: Melding | null;
+  meldingen: Melding[];
   onSuccess: () => void;
 }
 
-export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: AcceptAssignDialogProps) {
+export function AcceptAssignDialog({ open, onOpenChange, meldingen, onSuccess }: AcceptAssignDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
@@ -44,18 +44,16 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 
-  // Reset state when the dialog is opened for a specific melding to prevent "state bleed"
   React.useEffect(() => {
-    if (open && melding) {
-      // Try to find the currently assigned user to pre-select them
-      const assignedUser = users?.find(u => (u.displayName || u.email) === melding.behandelaar);
+    if (open && meldingen.length === 1) {
+      const assignedUser = users?.find(u => (u.displayName || u.email) === meldingen[0].behandelaar);
       setSelectedUserId(assignedUser?.id || null);
       setSearchTerm('');
     } else if (!open) {
       setSelectedUserId(null);
       setSearchTerm('');
     }
-  }, [open, melding?.id, users]);
+  }, [open, meldingen, users]);
 
   const filteredUsers = React.useMemo(() => {
     if (!users) return [];
@@ -71,40 +69,47 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
   }, [users, searchTerm, user?.uid]);
 
   const handleConfirm = async () => {
-    if (!firestore || !melding || !selectedUserId) return;
+    if (!firestore || meldingen.length === 0 || !selectedUserId) return;
     
     const selectedUser = users?.find(u => u.id === selectedUserId);
     if (!selectedUser) return;
 
     setIsSubmitting(true);
     try {
-      const meldingRef = doc(firestore, 'meldingen', melding.id);
+      const batch = writeBatch(firestore);
       const behandelaarName = selectedUser.displayName || selectedUser.email || 'Onbekend';
       
-      const updateData: any = {
-        behandelaar: behandelaarName,
-        updatedAt: new Date().toISOString()
-      };
+      meldingen.forEach(m => {
+        const meldingRef = doc(firestore, 'meldingen', m.id);
+        const updateData: any = {
+          behandelaar: behandelaarName,
+          updatedAt: new Date().toISOString()
+        };
 
-      if (melding.status === 'Nieuw') {
-        updateData.status = 'In behandeling';
-      }
-      
-      updateDocumentNonBlocking(meldingRef, updateData);
+        if (m.status === 'Nieuw') {
+          updateData.status = 'In behandeling';
+        }
+        
+        batch.update(meldingRef, updateData);
+      });
+
+      await batch.commit();
 
       toast({
-        title: 'Toewijzing bijgewerkt',
-        description: `Melding ${melding.intakenummer} is toegewezen aan ${behandelaarName}.`,
+        title: meldingen.length === 1 ? 'Toewijzing bijgewerkt' : 'Bulk toewijzing voltooid',
+        description: meldingen.length === 1 
+          ? `Melding ${meldingen[0].intakenummer} is toegewezen aan ${behandelaarName}.`
+          : `${meldingen.length} meldingen zijn toegewezen aan ${behandelaarName}.`,
       });
       
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      console.error("Error assigning melding:", error);
+      console.error("Error assigning meldingen:", error);
       toast({
         variant: 'destructive',
         title: 'Fout bij toewijzen',
-        description: 'Kon de melding niet toewijzen aan de geselecteerde gebruiker.',
+        description: 'Kon de melding(en) niet toewijzen aan de geselecteerde gebruiker.',
       });
     } finally {
       setIsSubmitting(false);
@@ -120,12 +125,19 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md rounded-none border-none shadow-2xl p-0 overflow-hidden">
         <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
-          <DialogTitle className="text-xl font-black uppercase tracking-tight">
-            {melding ? `Toewijzen: ${melding.intakenummer}` : 'Melding Toewijzen'}
-          </DialogTitle>
-          <DialogDescription className="text-slate-400 font-bold">
-            Selecteer een collega die deze specifieke opdracht gaat uitvoeren.
-          </DialogDescription>
+          <div className="flex items-center gap-3">
+            <div className="bg-primary p-2 rounded-lg">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-black uppercase tracking-tight">
+                {meldingen.length === 1 ? `Toewijzen: ${meldingen[0].intakenummer}` : `Toewijzen (${meldingen.length} items)`}
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 font-bold">
+                Selecteer een collega die deze {meldingen.length === 1 ? 'opdracht' : 'opdrachten'} gaat uitvoeren.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="p-4 border-b bg-white">
@@ -199,7 +211,7 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
               disabled={!selectedUserId || isSubmitting}
               className="flex-1 font-black uppercase tracking-tight h-11 shadow-xl shadow-primary/20 rounded-none"
             >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Toewijzen'}
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Bevestigen'}
             </Button>
           </div>
         </DialogFooter>
