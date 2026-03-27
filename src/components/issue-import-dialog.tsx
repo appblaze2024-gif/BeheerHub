@@ -21,13 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { useProfile } from '@/firebase/profile-provider';
 import { collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertCircle, CheckCircle, Loader2, Table as TableIcon, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ScrollArea } from './ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface IssueImportDialogProps {
   children: React.ReactNode;
@@ -37,18 +39,19 @@ interface IssueImportDialogProps {
 }
 
 const issueFields = [
-    { id: 'intakenummer', label: 'Meldingsnummer' },
-    { id: 'extern_meldingsnummer', label: 'Extern Nummer' },
-    { id: 'containernummer', label: 'Containernummer' },
-    { id: 'hoofdcategorie', label: 'Hoofdcategorie' },
-    { id: 'subcategorie', label: 'Subcategorie / Fractie' },
-    { id: 'straatnaam', label: 'Straatnaam' },
-    { id: 'huisnummer', label: 'Huisnummer' },
-    { id: 'plaats', label: 'Plaats' },
-    { id: 'extra_informatie', label: 'Omschrijving / Memo' },
-    { id: 'melder', label: 'Naam Melder' },
-    { id: 'datum', label: 'Datum (JJJJ-MM-DD)' },
-    { id: 'tijdstip', label: 'Tijdstip (UU:MM)' },
+    { id: 'intakenummer', label: 'Meldingsnummer', required: true },
+    { id: 'extern_meldingsnummer', label: 'Extern Nummer', required: false },
+    { id: 'containernummer', label: 'Containernummer', required: false },
+    { id: 'hoofdcategorie', label: 'Hoofdcategorie', required: true },
+    { id: 'subcategorie', label: 'Subcategorie / Fractie', required: true },
+    { id: 'straatnaam', label: 'Straatnaam', required: true },
+    { id: 'huisnummer', label: 'Huisnummer', required: true },
+    { id: 'plaats', label: 'Plaats', required: false },
+    { id: 'extra_informatie', label: 'Omschrijving / Memo', required: false },
+    { id: 'melder', label: 'Naam Melder', required: false },
+    { id: 'soort_melder', label: 'Soort Melder', required: false },
+    { id: 'datum', label: 'Datum (JJJJ-MM-DD)', required: false },
+    { id: 'tijdstip', label: 'Tijdstip (UU:MM)', required: false },
 ];
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -60,6 +63,8 @@ export function IssueImportDialog({
   onSuccess,
 }: IssueImportDialogProps) {
   const firestore = useFirestore();
+  const { user } = useUser();
+  const { profile } = useProfile();
   const [step, setStep] = React.useState(1);
   const [headers, setHeaders] = React.useState<string[]>([]);
   const [data, setData] = React.useState<string[][]>([]);
@@ -137,6 +142,17 @@ export function IssueImportDialog({
 
   const handleImport = async () => {
     if (!firestore || data.length === 0) return;
+
+    // Validate required fields are mapped
+    const requiredFields = issueFields.filter(f => f.required).map(f => f.id);
+    const missingMappings = requiredFields.filter(id => !mapping[id] || mapping[id] === '--ignore--');
+    
+    if (missingMappings.length > 0) {
+        const labels = missingMappings.map(id => issueFields.find(f => f.id === id)?.label).join(', ');
+        setError(`Niet alle verplichte velden zijn gekoppeld: ${labels}`);
+        return;
+    }
+
     setIsImporting(true);
     
     const headerMap: Record<string, number> = {};
@@ -150,10 +166,14 @@ export function IssueImportDialog({
         const subcategorieen = currentOptions.subcategorieen || {};
         let optionsChanged = false;
 
+        const creatorName = profile?.displayName || profile?.email || user?.email || 'Import Systeem';
+
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
             const issueData: any = {
                 status: 'Nieuw',
+                aangenomen_door: creatorName,
+                soort_melder: 'Inwoner', // Default
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             };
@@ -161,7 +181,8 @@ export function IssueImportDialog({
             issueFields.forEach(f => {
                 const colName = mapping[f.id];
                 if (colName && headerMap[colName] !== undefined) {
-                    issueData[f.id] = row[headerMap[colName]];
+                    const value = row[headerMap[colName]];
+                    if (value) issueData[f.id] = value;
                 }
             });
 
@@ -203,6 +224,12 @@ export function IssueImportDialog({
     }
   };
 
+  const isMappingValid = () => {
+    return !issueFields
+        .filter(f => f.required)
+        .some(f => !mapping[f.id] || mapping[f.id] === '--ignore--');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -226,33 +253,47 @@ export function IssueImportDialog({
                         <Input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} className="max-w-xs" />
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selecteer uw CSV of Excel bestand</p>
                     </div>
-                    {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+                    {error && <Alert variant="destructive" className="rounded-none"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
                 </div>
             ) : step === 2 ? (
                 <div className="space-y-6">
                     <ScrollArea className="max-h-[350px] pr-4">
                         <div className="grid gap-4">
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Koppel kolommen (* = verplicht)</p>
                             {issueFields.map(f => (
                                 <div key={f.id} className="grid grid-cols-2 items-center gap-4 border-b border-slate-100 pb-2">
-                                    <Label className="text-xs font-black uppercase text-slate-500">{f.label}</Label>
+                                    <Label className={cn(
+                                        "text-xs font-black uppercase",
+                                        f.required ? "text-slate-900" : "text-slate-400"
+                                    )}>
+                                        {f.label}{f.required && <span className="text-red-500 ml-1">*</span>}
+                                    </Label>
                                     <Select value={mapping[f.id]} onValueChange={v => setMapping(prev => ({...prev, [f.id]: v}))}>
-                                        <SelectTrigger className="h-9 text-xs font-bold rounded-none"><SelectValue placeholder="Koppel kolom..." /></SelectTrigger>
+                                        <SelectTrigger className={cn(
+                                            "h-9 text-xs font-bold rounded-none",
+                                            f.required && (!mapping[f.id] || mapping[f.id] === '--ignore--') ? "border-red-200 bg-red-50/30" : "border-slate-200"
+                                        )}>
+                                            <SelectValue placeholder="Koppel kolom..." />
+                                        </SelectTrigger>
                                         <SelectContent className="rounded-none">
-                                            <SelectItem value="--ignore--" className="rounded-none">-- Overslaan --</SelectItem>
-                                            {headers.filter(h => !!h).map(h => <SelectItem key={h} value={h} className="rounded-none">{h}</SelectItem>)}
+                                            <SelectItem value="--ignore--" className="rounded-none text-slate-400 italic">-- Overslaan --</SelectItem>
+                                            {headers.filter(h => !!h).map((h, idx) => <SelectItem key={`${h}-${idx}`} value={h} className="rounded-none">{h}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
                             ))}
                         </div>
                     </ScrollArea>
-                    <Alert className="rounded-none border-primary/20 bg-primary/5">
-                        <CheckCircle className="h-4 w-4 text-primary" />
-                        <AlertTitle className="text-xs font-black uppercase">Nieuwe Fracties</AlertTitle>
-                        <AlertDescription className="text-[10px] font-bold text-slate-500">
-                            Onbekende fracties worden automatisch toegevoegd aan de subtypes.
-                        </AlertDescription>
-                    </Alert>
+                    {error && <Alert variant="destructive" className="rounded-none"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+                    {!error && (
+                        <Alert className="rounded-none border-primary/20 bg-primary/5">
+                            <CheckCircle className="h-4 w-4 text-primary" />
+                            <AlertTitle className="text-xs font-black uppercase">Data Validatie</AlertTitle>
+                            <AlertDescription className="text-[10px] font-bold text-slate-500">
+                                Onbekende fracties worden automatisch toegevoegd. Ontbrekende adressen worden geprobeerd te geocoderen.
+                            </AlertDescription>
+                        </Alert>
+                    )}
                 </div>
             ) : (
                 <div className="py-12 flex flex-col items-center gap-4">
@@ -269,7 +310,10 @@ export function IssueImportDialog({
             {step === 2 && (
                 <>
                     <Button variant="ghost" onClick={() => setStep(1)} className="font-bold rounded-none">Terug</Button>
-                    <Button onClick={handleImport} className="font-black uppercase tracking-tight px-8 rounded-none">Importeer {data.length} regels</Button>
+                    <Button onClick={handleImport} disabled={!isMappingValid()} className="font-black uppercase tracking-tight px-8 rounded-none shadow-xl shadow-primary/20">
+                        {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Importeer {data.length} regels
+                    </Button>
                 </>
             )}
             {step === 3 && <Button onClick={() => onOpenChange(false)} className="w-full font-black uppercase rounded-none">Sluiten</Button>}
