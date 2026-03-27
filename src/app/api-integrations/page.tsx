@@ -156,17 +156,31 @@ export default function ApiIntegrationsPage() {
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
       <PageHeader title="API & Koppelingen" description="Beheer hoe BeheerHub communiceert met de buitenwereld.">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white border rounded-none p-1 shadow-sm h-10 flex">
-            <TabsList className="bg-transparent border-none gap-1">
-                <TabsTrigger value="outbound" className="text-[10px] font-black uppercase tracking-widest rounded-none data-[state=active]:bg-primary data-[state=active]:text-white">Uitgaand</TabsTrigger>
-                <TabsTrigger value="inbound" className="text-[10px] font-black uppercase tracking-widest rounded-none data-[state=active]:bg-primary data-[state=active]:text-white">Inkomend</TabsTrigger>
-            </TabsList>
-        </Tabs>
+        <div className="bg-slate-100 p-1 rounded-none border-2 border-slate-200 shadow-inner flex h-11 w-64 shrink-0">
+            <button 
+                onClick={() => setActiveTab('outbound')}
+                className={cn(
+                    "flex-1 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 rounded-none",
+                    activeTab === 'outbound' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                )}
+            >
+                Uitgaand
+            </button>
+            <button 
+                onClick={() => setActiveTab('inbound')}
+                className={cn(
+                    "flex-1 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 rounded-none",
+                    activeTab === 'inbound' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                )}
+            >
+                Inkomend
+            </button>
+        </div>
       </PageHeader>
 
       <div className="flex-1 p-4 md:p-6 min-h-0 overflow-hidden">
         <Tabs value={activeTab} className="h-full">
-            <TabsContent value="outbound" className="h-full m-0">
+            <TabsContent value="outbound" className="h-full m-0 animate-in fade-in slide-in-from-left-2 duration-300">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden">
                     {/* Sidebar List */}
                     <Card className="lg:col-span-4 flex flex-col rounded-none border-none shadow-xl bg-white overflow-hidden">
@@ -326,11 +340,11 @@ export default function ApiIntegrationsPage() {
                 </div>
             </TabsContent>
 
-            <TabsContent value="inbound" className="h-full m-0">
+            <TabsContent value="inbound" className="h-full m-0 animate-in fade-in slide-in-from-right-2 duration-300">
                 <ScrollArea className="h-full">
                     <div className="max-w-4xl mx-auto space-y-10 pb-20">
                         <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
-                            <CardHeader className="bg-slate-900 text-white p-8">
+                            <CardHeader className="bg-slate-900 text-white p-8 shrink-0">
                                 <div className="flex items-center gap-4">
                                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20">
                                         <ShieldCheck className="h-6 w-6 text-white" />
@@ -360,7 +374,7 @@ export default function ApiIntegrationsPage() {
                                         </h3>
                                         <Button 
                                             onClick={handleGenerateKey} 
-                                            className="h-9 px-6 text-[10px] font-black uppercase shadow-xl shadow-primary/20 rounded-none bg-primary text-white hover:bg-primary/90 transition-all active:scale-95"
+                                            className="h-10 px-6 text-[10px] font-black uppercase shadow-xl shadow-primary/20 rounded-none bg-primary text-white hover:bg-primary/90 transition-all active:scale-95"
                                         >
                                             <RefreshCw className="mr-2 h-3.5 w-3.5" /> Nieuwe sleutel genereren
                                         </Button>
