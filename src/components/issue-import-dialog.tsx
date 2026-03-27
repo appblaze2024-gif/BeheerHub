@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -23,15 +22,16 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
-import { collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, getDoc, getDocs, query, where, limit } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertCircle, CheckCircle, Loader2, Table as TableIcon, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface IssueImportDialogProps {
   children: React.ReactNode;
@@ -76,15 +76,6 @@ export function IssueImportDialog({
   const [error, setError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Category selection state
-  const [selectedCategory, setSelectedCategory] = React.useState<string>('Afval');
-  const [newCategoryName, setNewCategoryName] = React.useState('');
-  const [showNewCategoryInput, setShowNewCategoryInput] = React.useState(false);
-
-  const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
-  const { data: filtersData } = useDoc<{ custom: string[] }>(filtersRef);
-  const customFilters = filtersData?.custom || [];
-
   React.useEffect(() => {
     if (!open) {
       setTimeout(() => {
@@ -95,9 +86,6 @@ export function IssueImportDialog({
         setIsImporting(false);
         setImportProgress(0);
         setError(null);
-        setSelectedCategory('Afval');
-        setNewCategoryName('');
-        setShowNewCategoryInput(false);
       }, 300);
     }
   }, [open]);
@@ -132,7 +120,8 @@ export function IssueImportDialog({
                 const found = fileHeaders.find(h => 
                   h.toLowerCase().includes(field.id.toLowerCase()) || 
                   h.toLowerCase().includes(field.label.toLowerCase()) ||
-                  (field.id === 'subcategorie' && h.toLowerCase().includes('fractie'))
+                  (field.id === 'subcategorie' && h.toLowerCase().includes('fractie')) ||
+                  (field.id === 'containernummer' && h.toLowerCase().includes('baknr'))
                 );
                 if (found) newMapping[field.id] = found;
             });
@@ -157,7 +146,6 @@ export function IssueImportDialog({
   const handleImport = async () => {
     if (!firestore || data.length === 0) return;
 
-    // Validate required fields are mapped (containernummer and subcategorie)
     const requiredFields = issueFields.filter(f => f.required).map(f => f.id);
     const missingMappings = requiredFields.filter(id => !mapping[id] || mapping[id] === '--ignore--');
     
@@ -202,9 +190,31 @@ export function IssueImportDialog({
                 }
             });
 
-            // If intakenummer is missing, generate one
+            // generation of intakenummer
             if (!issueData.intakenummer) {
                 issueData.intakenummer = `IMP-${timestamp}-${i + 1}`;
+            }
+
+            // Lookup address data from containernummer
+            if (issueData.containernummer) {
+                const q = query(
+                    collection(firestore, 'objects'),
+                    where('idNummer', '==', issueData.containernummer.toUpperCase()),
+                    limit(1)
+                );
+                const objSnap = await getDocs(q);
+                if (!objSnap.empty) {
+                    const objData = objSnap.docs[0].data();
+                    // Override with data from DB if row data is missing
+                    if (!issueData.straatnaam) issueData.straatnaam = objData.straatnaam || '';
+                    if (!issueData.huisnummer) issueData.huisnummer = objData.huisnummer || '';
+                    if (!issueData.plaats) issueData.plaats = objData.plaats || '';
+                    if (!issueData.postcode) issueData.postcode = objData.postcode || '';
+                    if (!issueData.werkgebied) issueData.werkgebied = objData.wijk || (objData.locatieWerkgebieden?.[0] || '');
+                    
+                    issueData.latitude = objData.latitude || 0;
+                    issueData.longitude = objData.longitude || 0;
+                }
             }
 
             // Automatic Subtype (Fractie) logic
@@ -219,14 +229,17 @@ export function IssueImportDialog({
                 }
             }
 
-            const address = `${issueData.straatnaam || ''} ${issueData.huisnummer || ''}, ${issueData.plaats || ''}`.trim();
-            if (address.length > 5) {
-                const coords = await geocode(address);
-                issueData.latitude = coords.lat;
-                issueData.longitude = coords.lng;
-            } else {
-                issueData.latitude = 0;
-                issueData.longitude = 0;
+            // Geocode if latitude/longitude still missing
+            if (!issueData.latitude || !issueData.longitude) {
+                const address = `${issueData.straatnaam || ''} ${issueData.huisnummer || ''}, ${issueData.plaats || ''}`.trim();
+                if (address.length > 5) {
+                    const coords = await geocode(address);
+                    issueData.latitude = coords.lat;
+                    issueData.longitude = coords.lng;
+                } else {
+                    issueData.latitude = 0;
+                    issueData.longitude = 0;
+                }
             }
 
             await addDocumentNonBlocking(collection(firestore, 'meldingen'), issueData);
@@ -311,9 +324,9 @@ export function IssueImportDialog({
                     {!error && (
                         <Alert className="rounded-none border-primary/20 bg-primary/5">
                             <CheckCircle className="h-4 w-4 text-primary" />
-                            <AlertTitle className="text-xs font-black uppercase">Minimale Eisen</AlertTitle>
+                            <AlertTitle className="text-xs font-black uppercase">Slimme herkenning</AlertTitle>
                             <AlertDescription className="text-[10px] font-bold text-slate-500">
-                                Alleen Containernummer en Fractie zijn nu verplicht. Als het meldingsnummer ontbreekt, genereert het systeem deze zelf.
+                                Op basis van het Containernummer worden adres, wijk en GPS-locatie automatisch opgezocht.
                             </AlertDescription>
                         </Alert>
                     )}
