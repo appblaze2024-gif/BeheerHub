@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -29,7 +30,9 @@ import {
   Terminal,
   Server,
   Zap,
-  Info
+  Info,
+  HelpCircle,
+  ArrowDown
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, doc, query, orderBy, getDocs } from 'firebase/firestore';
@@ -43,6 +46,7 @@ import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingScreen } from '@/components/loading-screen';
+import { Separator } from '@/components/ui/separator';
 
 export default function ApiIntegrationsPage() {
   const firestore = useFirestore();
@@ -52,7 +56,6 @@ export default function ApiIntegrationsPage() {
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
 
-  // Public API Settings State
   const apiSettingsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'api_settings') : null, [firestore]);
   const { data: apiSettings, isLoading: isLoadingSettings } = useDoc<any>(apiSettingsRef);
 
@@ -312,7 +315,7 @@ export default function ApiIntegrationsPage() {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black uppercase tracking-tight text-white leading-none mb-1">Public Data API</h2>
-                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Stel externe partijen in staat om BeheerHub data op te vragen.</p>
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Stel externe partijen in staat om BeheerHub data op te vragen of te sturen.</p>
                             </div>
                         </div>
                         <Button onClick={handleGenerateKey} className="h-11 px-8 font-black uppercase tracking-widest rounded-none shadow-xl shadow-primary/20">
@@ -323,10 +326,29 @@ export default function ApiIntegrationsPage() {
 
                 <ScrollArea className="flex-1">
                     <div className="p-8 max-w-4xl space-y-12 pb-20">
+                        {/* Explanation Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <Card className="rounded-none border-2 border-slate-100 p-6 space-y-3">
+                                <Globe className="h-6 w-6 text-primary" />
+                                <h4 className="text-xs font-black uppercase">URL Endpoint</h4>
+                                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">Het digitale adres van BeheerHub waar de data wordt opgehaald of afgeleverd.</p>
+                            </Card>
+                            <Card className="rounded-none border-2 border-slate-100 p-6 space-y-3">
+                                <Key className="h-6 w-6 text-primary" />
+                                <h4 className="text-xs font-black uppercase">Authenticatie</h4>
+                                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">Jouw unieke API Key dient als wachtwoord. Zonder deze code krijgt niemand toegang.</p>
+                            </Card>
+                            <Card className="rounded-none border-2 border-slate-100 p-6 space-y-3">
+                                <HelpCircle className="h-6 w-6 text-primary" />
+                                <h4 className="text-xs font-black uppercase">Headers</h4>
+                                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">Dit zijn extra labels bij het bericht die de sleutel en het type data bevatten.</p>
+                            </Card>
+                        </div>
+
                         {/* Credentials */}
                         <div className="space-y-6">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b pb-2 flex items-center gap-2">
-                                <Key className="h-3.5 w-3.5" /> Authenticatie Gegevens
+                                <ShieldCheck className="h-3.5 w-3.5" /> Authenticatie Gegevens
                             </h3>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -342,11 +364,11 @@ export default function ApiIntegrationsPage() {
                                             <Copy className="h-4 w-4" />
                                         </Button>
                                     </div>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Houd deze sleutel geheim. Iedereen met deze sleutel heeft toegang tot de data.</p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Header naam: <span className="text-slate-900">x-api-key</span></p>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Base Endpoint URL</Label>
+                                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Basis URL Endpoint</Label>
                                     <div className="flex gap-2">
                                         <Input 
                                             readOnly 
@@ -364,37 +386,40 @@ export default function ApiIntegrationsPage() {
                         {/* Usage Guide */}
                         <div className="space-y-6">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b pb-2 flex items-center gap-2">
-                                <Terminal className="h-3.5 w-3.5" /> Hoe te gebruiken
+                                <Terminal className="h-3.5 w-3.5" /> Implementatie Voorbeelden
                             </h3>
                             
-                            <div className="grid gap-6">
-                                <Card className="rounded-none border-2 bg-slate-50 overflow-hidden">
-                                    <CardHeader className="py-3 px-4 bg-slate-900">
-                                        <CardTitle className="text-[10px] font-black uppercase text-white">Voorbeeld verzoek (cURL)</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-4 font-mono text-[11px] text-blue-600 font-bold leading-relaxed">
-                                        curl -X GET "{publicApiUrl}" \<br/>
-                                        &nbsp;&nbsp;-H "x-api-key: {apiSettings?.publicKey || 'UW_API_KEY'}"
-                                    </CardContent>
-                                </Card>
+                            <div className="grid gap-8">
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-black uppercase flex items-center gap-2">
+                                        <ArrowDown className="h-4 w-4 text-green-600" /> Data Versturen (Inkomende Webhook)
+                                    </h4>
+                                    <Card className="rounded-none border-2 bg-slate-50 overflow-hidden">
+                                        <CardHeader className="py-3 px-4 bg-slate-900">
+                                            <CardTitle className="text-[10px] font-black uppercase text-white">Voorbeeld: Nieuwe melding aanmaken (POST)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 font-mono text-[11px] text-blue-600 font-bold leading-relaxed">
+                                            curl -X POST "{publicApiUrl}" \<br/>
+                                            &nbsp;&nbsp;-H "x-api-key: {apiSettings?.publicKey || 'UW_API_KEY'}" \<br/>
+                                            &nbsp;&nbsp;-H "Content-Type: application/json" \<br/>
+                                            &nbsp;&nbsp;-d '{"{"} "intakenummer": "API-123", "subcategorie": "Losse tegel", "hoofdcategorie": "Wegonderhoud" {"}"}'
+                                        </CardContent>
+                                    </Card>
+                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-3">
-                                        <h4 className="text-xs font-black uppercase text-slate-900">Beschikbare Types</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {['meldingen', 'objects', 'users', 'voertuigen', 'machines'].map(t => (
-                                                <Badge key={t} className="bg-white border-2 border-slate-200 text-slate-600 font-black uppercase text-[9px] rounded-none px-3 py-1">
-                                                    ?type={t}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="bg-blue-50 p-4 border-2 border-blue-100 rounded-none flex gap-3">
-                                        <Info className="h-5 w-5 text-blue-600 shrink-0" />
-                                        <p className="text-[10px] font-bold text-blue-700 leading-relaxed uppercase">
-                                            De API retourneert de data in JSON formaat. Er is een limiet van 500 records per aanvraag voor optimale stabiliteit.
-                                        </p>
-                                    </div>
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-black uppercase flex items-center gap-2">
+                                        <ArrowRight className="h-4 w-4 text-primary" /> Data Ophalen (GET)
+                                    </h4>
+                                    <Card className="rounded-none border-2 bg-slate-50 overflow-hidden">
+                                        <CardHeader className="py-3 px-4 bg-slate-900">
+                                            <CardTitle className="text-[10px] font-black uppercase text-white">Voorbeeld: Alle objecten opvragen (GET)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 font-mono text-[11px] text-blue-600 font-bold leading-relaxed">
+                                            curl -X GET "{publicApiUrl.replace('meldingen', 'objects')}" \<br/>
+                                            &nbsp;&nbsp;-H "x-api-key: {apiSettings?.publicKey || 'UW_API_KEY'}"
+                                        </CardContent>
+                                    </Card>
                                 </div>
                             </div>
                         </div>
