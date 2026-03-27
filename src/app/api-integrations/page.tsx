@@ -1,9 +1,9 @@
-
 'use client';
 
 import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
   Link2, 
@@ -20,9 +20,10 @@ import {
   Globe,
   Search,
   MoreVertical,
-  History
+  History,
+  ChevronRight
 } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, orderBy, getDocs } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -114,11 +115,13 @@ export default function ApiIntegrationsPage() {
         }
     } catch (err: any) {
         console.error("Sync error:", err);
-        await updateDocumentNonBlocking(doc(firestore!, 'api_integrations', integration.id), {
-            lastRun: new Date().toISOString(),
-            lastStatus: 'error',
-            lastResponse: err.message
-        });
+        if (firestore) {
+            await updateDocumentNonBlocking(doc(firestore, 'api_integrations', integration.id), {
+                lastRun: new Date().toISOString(),
+                lastStatus: 'error',
+                lastResponse: err.message
+            });
+        }
         toast({ variant: 'destructive', title: "Kritieke fout", description: err.message });
     } finally {
         setIsProcessing(false);
@@ -227,7 +230,7 @@ export default function ApiIntegrationsPage() {
                       <CardContent className="p-4">
                         <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">Laatste Run</p>
                         <p className="text-sm font-black text-slate-900">
-                          {selectedIntegration.lastRun ? format(new Date(selectedIntegration.lastRun), 'dd MMM HH:mm', { nl }) : 'Nooit'}
+                          {selectedIntegration.lastRun ? format(new Date(selectedIntegration.lastRun), 'dd MMM HH:mm', { locale: nl }) : 'Nooit'}
                         </p>
                       </CardContent>
                     </Card>
