@@ -206,8 +206,8 @@ export function IssueImportDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
-        <DialogHeader className="p-6 bg-slate-900 text-white rounded-t-3xl">
+      <DialogContent className="sm:max-w-[600px] rounded-none border-none shadow-2xl p-0 overflow-hidden">
+        <DialogHeader className="p-6 bg-slate-900 text-white rounded-none">
           <DialogTitle className="text-xl font-black uppercase tracking-tight">CSV / EXCEL Import</DialogTitle>
           <DialogDescription className="text-slate-400 font-bold">Importeer meldingen met containernummers en fracties.</DialogDescription>
         </DialogHeader>
@@ -221,7 +221,7 @@ export function IssueImportDialog({
                 </div>
             ) : step === 1 ? (
                 <div className="py-8 space-y-4">
-                    <div className="p-12 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center gap-4 bg-slate-50/50">
+                    <div className="p-12 border-2 border-dashed border-slate-200 rounded-none flex flex-col items-center gap-4 bg-slate-50/50">
                         <FileSpreadsheet className="h-12 w-12 text-slate-300" />
                         <Input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} className="max-w-xs" />
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selecteer uw CSV of Excel bestand</p>
@@ -236,17 +236,17 @@ export function IssueImportDialog({
                                 <div key={f.id} className="grid grid-cols-2 items-center gap-4 border-b border-slate-100 pb-2">
                                     <Label className="text-xs font-black uppercase text-slate-500">{f.label}</Label>
                                     <Select value={mapping[f.id]} onValueChange={v => setMapping(prev => ({...prev, [f.id]: v}))}>
-                                        <SelectTrigger className="h-9 text-xs font-bold"><SelectValue placeholder="Koppel kolom..." /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="--ignore--">-- Overslaan --</SelectItem>
-                                            {headers.filter(h => !!h).map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                        <SelectTrigger className="h-9 text-xs font-bold rounded-none"><SelectValue placeholder="Koppel kolom..." /></SelectTrigger>
+                                        <SelectContent className="rounded-none">
+                                            <SelectItem value="--ignore--" className="rounded-none">-- Overslaan --</SelectItem>
+                                            {headers.filter(h => !!h).map(h => <SelectItem key={h} value={h} className="rounded-none">{h}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
                             ))}
                         </div>
                     </ScrollArea>
-                    <Alert className="rounded-2xl border-primary/20 bg-primary/5">
+                    <Alert className="rounded-none border-primary/20 bg-primary/5">
                         <CheckCircle className="h-4 w-4 text-primary" />
                         <AlertTitle className="text-xs font-black uppercase">Nieuwe Fracties</AlertTitle>
                         <AlertDescription className="text-[10px] font-bold text-slate-500">
@@ -256,7 +256,7 @@ export function IssueImportDialog({
                 </div>
             ) : (
                 <div className="py-12 flex flex-col items-center gap-4">
-                    <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
+                    <div className="h-20 w-20 rounded-none bg-green-100 flex items-center justify-center">
                         <CheckCircle className="h-12 w-12 text-green-600" />
                     </div>
                     <p className="font-black uppercase text-xl">Import Voltooid!</p>
@@ -265,14 +265,14 @@ export function IssueImportDialog({
             )}
         </div>
 
-        <DialogFooter className="p-6 border-t bg-slate-50 rounded-b-3xl">
+        <DialogFooter className="p-6 border-t bg-slate-50 rounded-none">
             {step === 2 && (
                 <>
-                    <Button variant="ghost" onClick={() => setStep(1)} className="font-bold">Terug</Button>
-                    <Button onClick={handleImport} className="font-black uppercase tracking-tight px-8">Importeer {data.length} regels</Button>
+                    <Button variant="ghost" onClick={() => setStep(1)} className="font-bold rounded-none">Terug</Button>
+                    <Button onClick={handleImport} className="font-black uppercase tracking-tight px-8 rounded-none">Importeer {data.length} regels</Button>
                 </>
             )}
-            {step === 3 && <Button onClick={() => onOpenChange(false)} className="w-full font-black uppercase">Sluiten</Button>}
+            {step === 3 && <Button onClick={() => onOpenChange(false)} className="w-full font-black uppercase rounded-none">Sluiten</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
