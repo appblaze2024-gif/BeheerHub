@@ -48,7 +48,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ForwardExternalDialog } from '@/components/forward-external-dialog';
 import { AcceptAssignDialog } from '@/components/accept-assign-dialog';
@@ -72,7 +71,9 @@ export default function MeldingenportaalPage() {
 
   const [isForwardDialogOpen, setIsForwardDialogOpen] = React.useState(false);
   const [isAcceptDialogOpen, setIsAcceptDialogOpen] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
+  const [meldingToDelete, setMeldingToDelete] = React.useState<Melding | null>(null);
   
   // Selection state
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
@@ -173,6 +174,11 @@ export default function MeldingenportaalPage() {
   const handleOpenForward = (melding: Melding) => {
     setSelectedMelding(melding);
     setIsForwardDialogOpen(true);
+  };
+
+  const handleDeleteClick = (melding: Melding) => {
+    setMeldingToDelete(melding);
+    setIsDeleteDialogOpen(true);
   };
 
   const handleDeleteMelding = async (melding: Melding) => {
@@ -308,30 +314,9 @@ export default function MeldingenportaalPage() {
                                                     {isSuperAdmin && (
                                                         <>
                                                             <DropdownMenuSeparator />
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="font-bold rounded-none h-11 text-red-600 cursor-pointer">
-                                                                        <Trash2 className="mr-2 h-4 w-4" /> Verwijderen uit database
-                                                                    </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent className="rounded-none border-none shadow-2xl">
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle className="font-black uppercase">Melding definitief verwijderen?</AlertDialogTitle>
-                                                                        <AlertDialogDescription className="font-bold text-slate-500">
-                                                                            Deze actie verwijdert melding {melding.intakenummer} permanent uit de database. Dit kan niet ongedaan worden gemaakt.
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter className="p-0 gap-2">
-                                                                        <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
-                                                                        <AlertDialogAction 
-                                                                            onClick={() => handleDeleteMelding(melding)} 
-                                                                            className="bg-red-600 hover:bg-red-700 rounded-none font-black uppercase"
-                                                                        >
-                                                                            Definitief Verwijderen
-                                                                        </AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
+                                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(melding); }} className="font-bold rounded-none h-11 text-red-600 cursor-pointer">
+                                                                <Trash2 className="mr-2 h-4 w-4" /> Verwijderen uit database
+                                                            </DropdownMenuItem>
                                                         </>
                                                     )}
                                                 </DropdownMenuContent>
@@ -375,6 +360,27 @@ export default function MeldingenportaalPage() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog for Deletion */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-none border-none shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black uppercase tracking-tight">Melding definitief verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription className="font-bold text-slate-500">
+              Weet u zeker dat u melding <strong>{meldingToDelete?.intakenummer}</strong> permanent wilt verwijderen uit de database? Deze actie kan niet ongedaan worden gemaakt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="p-0 gap-2">
+            <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => meldingToDelete && handleDeleteMelding(meldingToDelete)} 
+              className="bg-red-600 hover:bg-red-700 rounded-none font-black uppercase px-8"
+            >
+              Definitief Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ForwardExternalDialog open={isForwardDialogOpen} onOpenChange={setIsForwardDialogOpen} melding={selectedMelding} onSuccess={() => {}} />
       <AcceptAssignDialog 

@@ -74,7 +74,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -124,6 +123,10 @@ export default function ArchiveIssuesPage() {
   const [filters, setFilters] = React.useState<ArchiveFilters>(INITIAL_FILTERS);
   const [previewImage, setPreviewImage] = React.useState<string | null>(null);
   
+  // State for deletion
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [meldingToDelete, setMeldingToDelete] = React.useState<Melding | null>(null);
+
   const [sortConfig, setSortConfig] = React.useState<{ field: string; order: 'asc' | 'desc' }>({ 
     field: 'afhandeling_datum', 
     order: 'desc' 
@@ -521,25 +524,18 @@ export default function ArchiveIssuesPage() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {isSuperAdmin && (
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-none shrink-0">
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent className="rounded-none">
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle className="font-black uppercase">Permanent verwijderen?</AlertDialogTitle>
-                                                            <AlertDialogDescription className="font-bold">
-                                                                Weet u zeker dat u melding {melding.intakenummer} definitief wilt verwijderen uit de database?
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel className="rounded-none">Annuleren</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDeleteMelding(melding)} className="bg-red-600 rounded-none font-black uppercase">Verwijderen</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-none shrink-0"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setMeldingToDelete(melding);
+                                                        setIsDeleteDialogOpen(true);
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             )}
                                             <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-tighter h-5 px-2 bg-slate-200 text-slate-600 border-none rounded-none">
                                                 {melding.status}
@@ -728,25 +724,18 @@ export default function ArchiveIssuesPage() {
                                             </TableCell>
                                             {isSuperAdmin && (
                                                 <TableCell className="py-2 px-4">
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-300 hover:text-red-600 rounded-none">
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent className="rounded-none">
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle className="font-black uppercase">Definitief verwijderen?</AlertDialogTitle>
-                                                                <AlertDialogDescription className="font-bold">
-                                                                    Melding {melding.intakenummer} wordt permanent verwijderd. Dit kan niet ongedaan worden gemaakt.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel className="rounded-none">Annuleren</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDeleteMelding(melding)} className="bg-red-600 rounded-none font-black uppercase">Permanent Verwijderen</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-8 w-8 text-red-300 hover:text-red-600 rounded-none"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setMeldingToDelete(melding);
+                                                            setIsDeleteDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </TableCell>
                                             )}
                                         </TableRow>
@@ -783,6 +772,27 @@ export default function ArchiveIssuesPage() {
             </div>
         </div>
       )}
+
+      {/* Confirmation Dialog for Deletion */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-none border-none shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black uppercase tracking-tight">Melding definitief verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription className="font-bold text-slate-500">
+              Weet u zeker dat u melding <strong>{meldingToDelete?.intakenummer}</strong> permanent wilt verwijderen uit de database? Deze actie kan niet ongedaan worden gemaakt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => meldingToDelete && handleDeleteMelding(meldingToDelete)} 
+              className="bg-red-600 hover:bg-red-700 rounded-none font-black uppercase px-8"
+            >
+              Permanent Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
