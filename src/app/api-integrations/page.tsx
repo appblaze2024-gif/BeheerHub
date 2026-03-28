@@ -32,7 +32,8 @@ import {
   Download,
   Share2,
   ShieldCheck,
-  Webhook
+  Webhook,
+  AlertTriangle
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, orderBy, getDocs, limit } from 'firebase/firestore';
@@ -92,13 +93,20 @@ export default function ApiIntegrationsPage() {
         const sourceData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
         const payload = sourceData.map(item => {
-            const mappedItem: Record<string, any> = {};
+            // We sturen de VOLLEDIGE data mee
+            const fullPayload = { ...item };
+            
+            // We passen de mappings toe als extra velden (aliasing)
+            // zodat het doelsysteem ook de veldnamen krijgt die het verwacht
             Object.entries(integration.mapping).forEach(([fsKey, apiKey]) => {
-                const val = (item as any)[fsKey];
-                if (val !== undefined) mappedItem[apiKey] = val;
+                const val = (item as any)[fsKey.trim()];
+                if (val !== undefined) {
+                    fullPayload[apiKey.trim()] = val;
+                }
             });
-            return Object.keys(mappedItem).length > 0 ? mappedItem : null;
-        }).filter(item => item !== null);
+            
+            return fullPayload;
+        });
 
         if (payload.length === 0) {
             toast({ variant: 'destructive', title: "Geen data" });
@@ -128,6 +136,7 @@ export default function ApiIntegrationsPage() {
     }
   };
 
+  const isLocalEnv = typeof window !== 'undefined' && window.location.hostname.includes('cloudworkstations.dev');
   const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/v1/data` : '';
 
   if (isLoading || isLoadingSettings) return <LoadingScreen message="REST HUB laden..." />;
@@ -224,17 +233,28 @@ export default function ApiIntegrationsPage() {
                         </div>
                       </div>
                       <div className="space-y-4">
-                        <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2">Veld Mapping (JSON Payload)</h3>
+                        <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2">Veld Mapping & Aliasing</h3>
+                        <div className="bg-blue-50 p-4 border-l-4 border-blue-500 mb-4">
+                            <p className="text-[10px] font-bold text-blue-700 uppercase">INFO: De volledige dataset wordt meegestuurd. De onderstaande mapping wordt gebruikt om specifieke velden herkenbaar te maken voor het ontvangende systeem.</p>
+                        </div>
                         <div className="grid gap-2">
                           {Object.entries(selectedIntegration.mapping).map(([fs, api]) => (
                             <div key={fs} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-tighter">
                               <span>SOURCE: <b className="text-slate-900">{fs}</b></span>
                               <ArrowRight className="h-4 w-4 text-slate-300" />
-                              <span>TARGET: <b className="text-primary">{api}</b></span>
+                              <span>ALIAS: <b className="text-primary">{api}</b></span>
                             </div>
                           ))}
                         </div>
                       </div>
+                      {selectedIntegration.lastResponse && (
+                        <div className="space-y-2">
+                            <h3 className="text-[10px] font-black uppercase text-slate-400">Laatste Respons</h3>
+                            <pre className="p-4 bg-slate-900 text-blue-400 text-[10px] font-mono rounded-none overflow-x-auto">
+                                {selectedIntegration.lastResponse}
+                            </pre>
+                        </div>
+                      )}
                     </div>
                   </ScrollArea>
                 </div>
@@ -248,7 +268,17 @@ export default function ApiIntegrationsPage() {
           </div>
         ) : (
           <ScrollArea className="h-full">
-            <div className="max-w-5xl mx-auto space-y-6 pb-10">
+            <div className="max-w-5xl mx-auto space-y-6 pb-20">
+              {isLocalEnv && (
+                <Alert className="rounded-none border-2 border-orange-200 bg-orange-50/50">
+                    <AlertTriangle className="h-4 w-4 text-orange-600" />
+                    <AlertTitle className="text-xs font-black uppercase text-orange-900">Privé Omgeving (Studio)</AlertTitle>
+                    <AlertDescription className="text-[10px] font-bold text-orange-700 leading-relaxed uppercase">
+                        Let op: Je werkt momenteel in een afgeschermde ontwikkelomgeving. De onderstaande URL's zijn voor partners pas bereikbaar zodra de applicatie is gepubliceerd op een publiek domein (bijv. .web.app).
+                    </AlertDescription>
+                </Alert>
+              )}
+
               <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
                 <CardHeader className="bg-slate-900 text-white p-8">
                   <div className="flex items-center gap-4">
@@ -279,7 +309,7 @@ export default function ApiIntegrationsPage() {
                   <div className="space-y-6">
                     <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Beschikbare Datasets (GET)</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {['meldingen', 'objects', 'projects', 'voertuigen'].map(type => (
+                      {['meldingen', 'objects', 'projects', 'voertuigen', 'machines'].map(type => (
                         <div key={type} className="p-5 bg-white border-2 border-slate-100 rounded-none hover:border-primary/20 transition-all group">
                           <div className="flex justify-between items-center mb-4">
                             <span className="text-sm font-black uppercase tracking-tight">{type}</span>

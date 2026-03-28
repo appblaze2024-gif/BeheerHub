@@ -9,7 +9,7 @@ if (admin.apps.length === 0) {
 
 /**
  * webhookHandler - Ontvangt meldingen van externe partners.
- * Geoptimaliseerd voor stabiliteit en batch-verwerking.
+ * Geoptimaliseerd voor stabiliteit en verwerking van volledige datasets.
  */
 exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
     // 1. Alleen POST toestaan
@@ -55,11 +55,12 @@ exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
             const getVal = (prefixes) => {
                 const keys = Object.keys(item);
                 const foundKey = keys.find(k => 
-                    prefixes.some(p => k.toLowerCase() === p.trim().toLowerCase())
+                    prefixes.some(p => k.toLowerCase().trim() === p.toLowerCase().trim())
                 );
                 return foundKey ? item[foundKey] : undefined;
             };
 
+            // Mapping van standaardvelden voor compatibiliteit met interne BeheerHub overzichten
             const intakenummer = getVal(['INT', 'Innamenummer', 'id', 'ticket_id', 'intakenummer', 'nummer']);
             const hoofdcategorie = getVal(['HFDCAT', 'Hoofdcategorie', 'category', 'hoofdcategorie', 'type']) || "Overig";
             const subcategorie = getVal(['SUBCAT', 'Subcategorie', 'type', 'subcategorie', 'fractie']) || "N.v.t.";
@@ -85,8 +86,11 @@ exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
                 continue;
             }
 
+            // Bouw de melding op: We behouden ALLE inkomende data (...item)
+            // en voegen de gestandaardiseerde velden toe voor BeheerHub overzichten.
             const mappedData = {
-                Innamenummer: intakenummer ? String(intakenummer) : "N.B.",
+                ...item, // BEHOUD ALLE DATA
+                Innamenummer: intakenummer ? String(intakenummer) : (item.Innamenummer || "N.B."),
                 Hoofdcategorie: String(hoofdcategorie),
                 Subcategorie: String(subcategorie),
                 Latitude: latNum,
@@ -96,7 +100,7 @@ exports.webhookHandler = onRequest({ cors: true }, async (req, res) => {
                 Plaats: String(plaats),
                 "Datum/Tijd": String(datum),
                 server_timestamp: admin.firestore.FieldValue.serverTimestamp(),
-                source: 'WEBHOOK_INBOUND'
+                source: 'REST_INBOUND'
             };
 
             const newDocRef = db.collection('api_meldingen').doc();
