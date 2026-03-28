@@ -281,8 +281,8 @@ export default function ApiIntegrationsPage() {
                   <div className="flex items-center gap-4">
                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
                     <div>
-                      <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (REST Pull)</CardTitle>
-                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Laat externe systemen live data uit BeheerHub ophalen.</CardDescription>
+                      <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (Full CRUD)</CardTitle>
+                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Laat externe systemen live data uit BeheerHub ophalen én bijwerken.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -304,13 +304,17 @@ export default function ApiIntegrationsPage() {
                   </div>
 
                   <div className="space-y-6">
-                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Beschikbare Datasets (GET)</h3>
+                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Endpoints & Datasets</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {['meldingen', 'objects', 'projects', 'voertuigen', 'machines'].map(type => (
                         <div key={type} className="p-5 bg-white border-2 border-slate-100 rounded-none hover:border-primary/20 transition-all group">
                           <div className="flex justify-between items-center mb-4">
                             <span className="text-sm font-black uppercase tracking-tight">{type}</span>
-                            <Download className="h-4 w-4 text-slate-200 group-hover:text-primary" />
+                            <div className="flex gap-1">
+                                <Badge className="bg-blue-100 text-blue-700 text-[8px] font-black rounded-none">GET</Badge>
+                                <Badge className="bg-green-100 text-green-700 text-[8px] font-black rounded-none">POST</Badge>
+                                <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black rounded-none">PATCH</Badge>
+                            </div>
                           </div>
                           <div className="flex gap-0">
                             <Input value={`${baseUrl}?type=${type}`} readOnly className="h-9 font-mono text-[9px] bg-slate-50 border-none rounded-none text-blue-600 font-bold" />
@@ -322,13 +326,26 @@ export default function ApiIntegrationsPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Test Request (cURL)</h3>
-                    <div className="bg-slate-900 p-6 rounded-none relative border-l-4 border-primary shadow-inner">
-                      <pre className="text-[11px] font-mono text-blue-400 font-bold leading-relaxed whitespace-pre-wrap break-all">
+                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Ontwikkelaar Documentatie</h3>
+                    
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-black uppercase text-slate-400">Uitlezen (GET)</p>
+                            <pre className="p-4 bg-slate-900 text-blue-400 text-[10px] font-mono rounded-none overflow-x-auto">
 {`curl -X GET "${baseUrl}?type=meldingen" \\
+  -H "x-api-key: ${apiSettings?.publicKey || 'JOUW_SLEUTEL'}"`}
+                            </pre>
+                        </div>
+
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-black uppercase text-slate-400">Bijwerken (PATCH)</p>
+                            <pre className="p-4 bg-slate-900 text-purple-400 text-[10px] font-mono rounded-none overflow-x-auto">
+{`curl -X PATCH "${baseUrl}?type=meldingen&id=RECORD_ID" \\
   -H "x-api-key: ${apiSettings?.publicKey || 'JOUW_SLEUTEL'}" \\
-  -H "Content-Type: application/json"`}
-                      </pre>
+  -H "Content-Type: application/json" \\
+  -d '{"status": "In behandeling", "notities": "Bijgewerkt via API"}'`}
+                            </pre>
+                        </div>
                     </div>
                   </div>
                 </CardContent>

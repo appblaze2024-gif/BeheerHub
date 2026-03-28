@@ -3,8 +3,8 @@ import admin from 'firebase-admin';
 
 /**
  * Universeel REST API Eindpunt voor BeheerHub.
+ * Ondersteunt volledige CRUD (Create, Read, Update, Delete).
  * Geoptimaliseerd voor GeoBeheer en andere externe partners.
- * Inclusief volledige CORS ondersteuning.
  */
 
 if (!admin.apps.length) {
@@ -27,7 +27,7 @@ function corsResponse(data: any, status: number = 200) {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY, Authorization',
       'Access-Control-Max-Age': '86400',
     },
@@ -42,7 +42,7 @@ export async function OPTIONS() {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY, Authorization',
     },
   });
@@ -50,7 +50,6 @@ export async function OPTIONS() {
 
 /**
  * Helper om de API Key te valideren tegen de database.
- * Controleert zowel X-API-KEY als Authorization: Bearer headers.
  */
 async function validateAuth(request: Request): Promise<{ authorized: boolean; error?: string }> {
   const xApiKey = request.headers.get('x-api-key')?.trim();
@@ -80,7 +79,7 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
 
     const isMatch = candidateKeys.some(key => key === validKey);
     if (!isMatch) {
-      return { authorized: false, error: 'De opgegeven API Key is ongeldig.' };
+      return { authorized: false, error: 'De opgegeven API Key is ongeldig of verlopen.' };
     }
 
     return { authorized: true };
@@ -89,24 +88,20 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
   }
 }
 
+/**
+ * GET - Data ophalen (Lezen)
+ */
 export async function GET(request: Request) {
   try {
+    const auth = await validateAuth(request);
+    if (!auth.authorized) return corsResponse({ error: 'Niet geautoriseerd', message: auth.error }, 401);
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
+    const id = searchParams.get('id');
 
     if (!type) {
-      return corsResponse({ 
-        error: 'Onvolledig verzoek', 
-        message: 'Geef een "type" parameter op (bijv. type=meldingen).' 
-      }, 400);
-    }
-
-    const auth = await validateAuth(request);
-    if (!auth.authorized) {
-      return corsResponse({ 
-        error: 'Niet geautoriseerd', 
-        message: auth.error 
-      }, 401);
+      return corsResponse({ error: 'Onvolledig verzoek', message: 'Geef een "type" parameter op.' }, 400);
     }
 
     const allowedCollections: Record<string, string> = {
@@ -118,57 +113,108 @@ export async function GET(request: Request) {
     };
 
     const targetCollection = allowedCollections[type];
-    if (!targetCollection) {
-      return corsResponse({ error: 'Verboden', message: 'Dataset niet toegankelijk.' }, 403);
+    if (!targetCollection) return corsResponse({ error: 'Verboden', message: 'Dataset niet toegankelijk.' }, 403);
+
+    if (id) {
+      const docSnap = await db.collection(targetCollection).doc(id).get();
+      if (!docSnap.exists) return corsResponse({ error: 'Niet gevonden', message: 'Record niet gevonden.' }, 404);
+      return corsResponse({ success: true, data: { id: docSnap.id, ...docSnap.data() } });
     }
 
     const snapshot = await db.collection(targetCollection).limit(1000).get();
-    const data = snapshot.docs.map(d => ({
-      id: d.id,
-      ...d.data(),
-    }));
+    const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
     return corsResponse({
       success: true,
-      source: `BeheerHub ${type}`,
       count: data.length,
       timestamp: new Date().toISOString(),
       data: data
     });
-
   } catch (error: any) {
     return corsResponse({ error: 'Server fout', message: error.message }, 500);
   }
 }
 
+/**
+ * POST - Nieuwe data aanmaken
+ */
 export async function POST(request: Request) {
   try {
     const auth = await validateAuth(request);
-    if (!auth.authorized) {
-      return corsResponse({ 
-        error: 'Niet geautoriseerd', 
-        message: auth.error 
-      }, 401);
-    }
+    if (!auth.authorized) return corsResponse({ error: 'Niet geautoriseerd', message: auth.error }, 401);
 
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type') || 'meldingen';
     const body = await request.json();
     const items = Array.isArray(body) ? body : [body];
-    const colRef = db.collection('meldingen');
+    const colRef = db.collection(type);
 
     const batch = db.batch();
     for (const item of items) {
         const newDocRef = colRef.doc();
         batch.set(newDocRef, {
             ...item,
-            status: item.status || 'Nieuw',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            source: 'REST_INBOUND'
+            source: 'REST_API_IMPORT'
         });
     }
     await batch.commit();
 
-    return corsResponse({ success: true, message: `${items.length} records succesvol opgeslagen.` });
+    return corsResponse({ success: true, message: `${items.length} records succesvol aangemaakt.` });
+  } catch (error: any) {
+    return corsResponse({ error: 'Server fout', message: error.message }, 500);
+  }
+}
+
+/**
+ * PATCH - Data bijwerken (Update)
+ */
+export async function PATCH(request: Request) {
+  try {
+    const auth = await validateAuth(request);
+    if (!auth.authorized) return corsResponse({ error: 'Niet geautoriseerd', message: auth.error }, 401);
+
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type');
+    const id = searchParams.get('id');
+    
+    if (!type || !id) {
+      return corsResponse({ error: 'Onvolledig verzoek', message: 'Geef "type" en "id" op.' }, 400);
+    }
+
+    const body = await request.json();
+    const docRef = db.collection(type).doc(id);
+    
+    await docRef.update({
+      ...body,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    return corsResponse({ success: true, message: 'Record succesvol bijgewerkt.' });
+  } catch (error: any) {
+    return corsResponse({ error: 'Server fout', message: error.message }, 500);
+  }
+}
+
+/**
+ * DELETE - Data verwijderen
+ */
+export async function DELETE(request: Request) {
+  try {
+    const auth = await validateAuth(request);
+    if (!auth.authorized) return corsResponse({ error: 'Niet geautoriseerd', message: auth.error }, 401);
+
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type');
+    const id = searchParams.get('id');
+
+    if (!type || !id) {
+      return corsResponse({ error: 'Onvolledig verzoek', message: 'Geef "type" en "id" op.' }, 400);
+    }
+
+    await db.collection(type).doc(id).delete();
+    return corsResponse({ success: true, message: 'Record succesvol verwijderd.' });
   } catch (error: any) {
     return corsResponse({ error: 'Server fout', message: error.message }, 500);
   }
