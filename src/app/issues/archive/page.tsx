@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch } from 'firebase/firestore';
 import { 
   Search, 
   ListFilter, 
@@ -85,6 +85,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/components/ui/use-toast';
 import Image from 'next/image';
@@ -123,9 +124,14 @@ export default function ArchiveIssuesPage() {
   const [filters, setFilters] = React.useState<ArchiveFilters>(INITIAL_FILTERS);
   const [previewImage, setPreviewImage] = React.useState<string | null>(null);
   
+  // Selection state
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  
   // State for deletion
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = React.useState(false);
   const [meldingToDelete, setMeldingToDelete] = React.useState<Melding | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const [sortConfig, setSortConfig] = React.useState<{ field: string; order: 'asc' | 'desc' }>({ 
     field: 'afhandeling_datum', 
@@ -244,6 +250,23 @@ export default function ArchiveIssuesPage() {
     return result;
   }, [archivedMeldingen, debouncedSearchTerm, filters, sortConfig]);
 
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredMeldingen.length && filteredMeldingen.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredMeldingen.map(m => m.id)));
+    }
+  };
+
   const handleQuickDateFilter = (type: 'today' | 'week' | 'month' | 'year') => {
     const now = new Date();
     let start: Date;
@@ -327,6 +350,29 @@ export default function ArchiveIssuesPage() {
         toast({ title: "Melding verwijderd", description: "De melding is permanent gewist uit de database." });
     } catch (e) {
         toast({ variant: 'destructive', title: "Fout bij verwijderen" });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!firestore || !isSuperAdmin || selectedIds.size === 0) return;
+    
+    setIsDeleting(true);
+    try {
+        const batch = writeBatch(firestore);
+        selectedIds.forEach(id => {
+            batch.delete(doc(firestore, 'meldingen', id));
+        });
+        await batch.commit();
+        toast({ 
+            title: "Bulk verwijdering voltooid", 
+            description: `${selectedIds.size} meldingen zijn permanent verwijderd.` 
+        });
+        setSelectedIds(new Set());
+        setIsBulkDeleteDialogOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij bulk verwijderen" });
+    } finally {
+        setIsDeleting(false);
     }
   };
 
@@ -491,7 +537,7 @@ export default function ArchiveIssuesPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-4 relative">
         {isLoadingMeldingen ? (
             <LoadingScreen message="Archief laden..." />
         ) : filteredMeldingen.length === 0 ? (
@@ -508,22 +554,34 @@ export default function ArchiveIssuesPage() {
                 <div className="grid grid-cols-1 gap-4 md:hidden">
                     {filteredMeldingen.map((melding, index) => {
                         const allPhotos = [...(melding.fotos || []), ...(melding.afhandeling_fotos || [])];
+                        const isSelected = selectedIds.has(melding.id);
                         return (
                             <Card 
                                 key={melding.id} 
-                                className="overflow-hidden border-none shadow-lg active:scale-[0.98] transition-transform rounded-none"
+                                className={cn(
+                                    "overflow-hidden border-none shadow-lg active:scale-[0.98] transition-transform rounded-none relative",
+                                    isSelected && "ring-2 ring-primary"
+                                )}
+                                onClick={() => selectedIds.size > 0 ? handleToggleSelect(melding.id) : router.push(`/issues/new?id=${melding.id}`)}
                             >
                                 <CardContent className="p-0">
                                     <div className="p-4 bg-slate-50 border-b flex justify-between items-start">
-                                        <div className="flex items-center gap-3" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
-                                            <span className="text-xs font-black text-slate-300">{index + 1}</span>
+                                        <div className="flex items-center gap-3">
+                                            {isSuperAdmin && (
+                                                <Checkbox 
+                                                    checked={isSelected}
+                                                    onCheckedChange={() => handleToggleSelect(melding.id)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="h-5 w-5 rounded-md"
+                                                />
+                                            )}
                                             <div className="space-y-0.5">
                                                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Intakenummer</p>
                                                 <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{melding.intakenummer}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {isSuperAdmin && (
+                                            {isSuperAdmin && selectedIds.size === 0 && (
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
@@ -542,7 +600,7 @@ export default function ArchiveIssuesPage() {
                                             </Badge>
                                         </div>
                                     </div>
-                                    <div className="p-4 space-y-3" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
+                                    <div className="p-4 space-y-3">
                                         <div className="flex items-start gap-3">
                                             <div className="bg-primary/10 p-2 rounded-none shrink-0">
                                                 <MapPin className="h-4 w-4 text-primary" />
@@ -619,7 +677,13 @@ export default function ArchiveIssuesPage() {
                         <Table className="border-collapse w-full">
                             <TableHeader className="sticky top-0 bg-slate-100 z-10">
                             <TableRow className="hover:bg-transparent border-b-2 border-slate-200">
-                                <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 w-[50px]">Nr.</TableHead>
+                                <TableHead className="w-[50px] p-2 border-r border-slate-200 text-center">
+                                    <Checkbox 
+                                        checked={selectedIds.size === filteredMeldingen.length && filteredMeldingen.length > 0} 
+                                        onCheckedChange={handleSelectAll}
+                                        className="h-5 w-5 rounded-md"
+                                    />
+                                </TableHead>
                                 <TableHead onClick={() => handleSort('intakenummer')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
                                     <div className="flex items-center justify-between gap-1">
                                         Intakenr.
@@ -669,9 +733,22 @@ export default function ArchiveIssuesPage() {
                             <TableBody>
                                 {filteredMeldingen.map((melding, index) => {
                                     const allPhotos = [...(melding.fotos || []), ...(melding.afhandeling_fotos || [])];
+                                    const isSelected = selectedIds.has(melding.id);
                                     return (
-                                        <TableRow key={melding.id} className="group h-12 hover:bg-slate-50 transition-colors border-b border-slate-100">
-                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer font-bold py-2 px-4 border-r border-slate-100 text-slate-400 text-[10px] w-[50px]">{index + 1}</TableCell>
+                                        <TableRow 
+                                            key={melding.id} 
+                                            className={cn(
+                                                "group h-12 hover:bg-slate-50 transition-colors border-b border-slate-100",
+                                                isSelected && "bg-blue-50/50"
+                                            )}
+                                        >
+                                            <TableCell className="p-2 border-r border-slate-100 text-center" onClick={(e) => e.stopPropagation()}>
+                                                <Checkbox 
+                                                    checked={isSelected} 
+                                                    onCheckedChange={() => handleToggleSelect(melding.id)}
+                                                    className="h-5 w-5 rounded-md"
+                                                />
+                                            </TableCell>
                                             <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer font-black py-2 px-4 border-r border-slate-100">{melding.intakenummer || '-'}</TableCell>
                                             <TableCell className="py-2 px-4 border-r border-slate-100 w-[80px]">
                                                 <div className="flex items-center gap-1">
@@ -749,6 +826,35 @@ export default function ArchiveIssuesPage() {
         )}
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && isSuperAdmin && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-300">
+          <div className="bg-slate-900 text-white rounded-none px-6 py-3 shadow-2xl flex items-center gap-6 border-2 border-slate-800">
+            <div className="flex items-center gap-3 border-r border-white/20 pr-6">
+              <div className="bg-primary h-8 w-8 rounded-none flex items-center justify-center font-black text-xs">
+                {selectedIds.size}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest">Geselecteerd</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => setIsBulkDeleteDialogOpen(true)}
+                className="h-10 px-6 font-black uppercase text-xs tracking-tight bg-red-600 hover:bg-red-700 rounded-none shadow-lg"
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Verwijder Selectie
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => setSelectedIds(new Set())}
+                className="h-10 text-white hover:bg-white/10 rounded-none font-bold text-xs"
+              >
+                Annuleren
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {previewImage && (
         <div 
             className="fixed inset-0 z-[200] bg-black/90 flex flex-col animate-in fade-in duration-200" 
@@ -773,7 +879,7 @@ export default function ArchiveIssuesPage() {
         </div>
       )}
 
-      {/* Confirmation Dialog for Deletion */}
+      {/* Confirmation Dialog for Single Deletion */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="rounded-none border-none shadow-2xl">
           <AlertDialogHeader>
@@ -789,6 +895,31 @@ export default function ArchiveIssuesPage() {
               className="bg-red-600 hover:bg-red-700 rounded-none font-black uppercase px-8"
             >
               Permanent Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation Dialog for Bulk Deletion */}
+      <AlertDialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-none border-none shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black uppercase tracking-tight">
+                {selectedIds.size} Meldingen definitief verwijderen?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-bold text-slate-500">
+              U staat op het punt om <strong>{selectedIds.size} meldingen</strong> permanent te verwijderen uit het archief. Deze actie kan niet ongedaan worden gemaakt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDelete} 
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 rounded-none font-black uppercase px-8"
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Selectie Verwijderen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
