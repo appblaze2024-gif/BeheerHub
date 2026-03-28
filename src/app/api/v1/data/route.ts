@@ -4,7 +4,7 @@ import admin from 'firebase-admin';
 /**
  * Universeel REST API Eindpunt voor BeheerHub.
  * Geoptimaliseerd voor GeoBeheer en andere externe partners.
- * Inclusief volledige CORS ondersteuning om 'Failed to fetch' te voorkomen.
+ * Inclusief volledige CORS ondersteuning.
  */
 
 if (!admin.apps.length) {
@@ -19,14 +19,17 @@ const db = admin.firestore();
 
 /**
  * Helper om CORS-headers toe te voegen aan de respons.
+ * Essentieel om 'Failed to fetch' in browser-omgevingen te voorkomen.
  */
 function corsResponse(data: any, status: number = 200) {
-  return NextResponse.json(data, {
+  return new NextResponse(JSON.stringify(data), {
     status,
     headers: {
+      'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY, Authorization',
+      'Access-Control-Max-Age': '86400',
     },
   });
 }
@@ -47,69 +50,65 @@ export async function OPTIONS() {
 
 /**
  * Helper om de API Key te valideren tegen de database.
+ * Controleert zowel X-API-KEY als Authorization: Bearer headers.
  */
 async function validateAuth(request: Request): Promise<{ authorized: boolean; error?: string }> {
-  const xApiKey = request.headers.get('x-api-key');
-  const authHeader = request.headers.get('authorization');
+  const xApiKey = request.headers.get('x-api-key')?.trim();
+  const authHeader = request.headers.get('authorization')?.trim();
   
   const candidateKeys: string[] = [];
-  
-  if (xApiKey) candidateKeys.push(xApiKey.trim());
+  if (xApiKey) candidateKeys.push(xApiKey);
   if (authHeader) {
-    const trimmedAuth = authHeader.trim();
-    if (trimmedAuth.toLowerCase().startsWith('bearer ')) {
-      candidateKeys.push(trimmedAuth.substring(7).trim());
+    if (authHeader.toLowerCase().startsWith('bearer ')) {
+      candidateKeys.push(authHeader.substring(7).trim());
     } else {
-      candidateKeys.push(trimmedAuth);
+      candidateKeys.push(authHeader);
     }
   }
 
   if (candidateKeys.length === 0) {
-    return { authorized: false, error: 'Geen API Key gevonden in de headers (X-API-KEY of Authorization).' };
+    return { authorized: false, error: 'Geen API Key gevonden in de headers.' };
   }
 
   try {
     const settingsSnap = await db.collection('settings').doc('api_settings').get();
-    if (!settingsSnap.exists) {
-      return { authorized: false, error: 'API instellingen niet gevonden.' };
-    }
+    const validKey = settingsSnap.data()?.publicKey?.trim();
 
-    const validKey = settingsSnap.data()?.publicKey;
     if (!validKey) {
-      return { authorized: false, error: 'Geen actieve API sleutel geconfigureerd.' };
+      return { authorized: false, error: 'API Hub is nog niet geconfigureerd in BeheerHub.' };
     }
 
-    const isMatch = candidateKeys.some(key => key === String(validKey).trim());
+    const isMatch = candidateKeys.some(key => key === validKey);
     if (!isMatch) {
-      return { authorized: false, error: 'De opgegeven API Key is ongeldig of verlopen.' };
+      return { authorized: false, error: 'De opgegeven API Key is ongeldig.' };
     }
 
     return { authorized: true };
   } catch (err: any) {
-    return { authorized: false, error: 'Interne fout bij validatie.' };
+    return { authorized: false, error: 'Database validatie fout.' };
   }
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type');
-
-  if (!type) {
-    return corsResponse({ 
-      error: 'Onvolledig verzoek', 
-      message: 'Geef een "type" parameter op (bijv. type=meldingen).' 
-    }, 400);
-  }
-
-  const auth = await validateAuth(request);
-  if (!auth.authorized) {
-    return corsResponse({ 
-      error: 'Niet geautoriseerd', 
-      message: auth.error 
-    }, 401);
-  }
-
   try {
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type');
+
+    if (!type) {
+      return corsResponse({ 
+        error: 'Onvolledig verzoek', 
+        message: 'Geef een "type" parameter op (bijv. type=meldingen).' 
+      }, 400);
+    }
+
+    const auth = await validateAuth(request);
+    if (!auth.authorized) {
+      return corsResponse({ 
+        error: 'Niet geautoriseerd', 
+        message: auth.error 
+      }, 401);
+    }
+
     const allowedCollections: Record<string, string> = {
       'meldingen': 'meldingen',
       'objects': 'objects',
@@ -120,7 +119,7 @@ export async function GET(request: Request) {
 
     const targetCollection = allowedCollections[type];
     if (!targetCollection) {
-      return corsResponse({ error: 'Verboden', message: 'Dataset niet toegankelijk via de API.' }, 403);
+      return corsResponse({ error: 'Verboden', message: 'Dataset niet toegankelijk.' }, 403);
     }
 
     const snapshot = await db.collection(targetCollection).limit(1000).get();
@@ -143,25 +142,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type');
-
-  if (type !== 'meldingen') {
-    return corsResponse({ 
-      error: 'Niet toegestaan', 
-      message: 'Alleen POST op "meldingen" is momenteel ondersteund.' 
-    }, 400);
-  }
-
-  const auth = await validateAuth(request);
-  if (!auth.authorized) {
-    return corsResponse({ 
-      error: 'Niet geautoriseerd', 
-      message: auth.error 
-    }, 401);
-  }
-
   try {
+    const auth = await validateAuth(request);
+    if (!auth.authorized) {
+      return corsResponse({ 
+        error: 'Niet geautoriseerd', 
+        message: auth.error 
+      }, 401);
+    }
+
     const body = await request.json();
     const items = Array.isArray(body) ? body : [body];
     const colRef = db.collection('meldingen');
