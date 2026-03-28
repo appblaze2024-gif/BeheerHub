@@ -41,6 +41,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import type { ApiIntegration } from '@/lib/types';
 import { ApiIntegrationDialog } from '@/components/api-integration-dialog';
 import { format } from 'date-fns';
@@ -106,7 +107,7 @@ export default function ApiIntegrationsPage() {
             });
             
             return fullPayload;
-        });
+        }).filter(item => Object.keys(item).length > 1); // Filter out empty or id-only objects
 
         if (payload.length === 0) {
             toast({ variant: 'destructive', title: "Geen data" });
