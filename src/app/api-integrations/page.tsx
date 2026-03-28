@@ -94,20 +94,15 @@ export default function ApiIntegrationsPage() {
         const sourceData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
         const payload = sourceData.map(item => {
-            // We sturen de VOLLEDIGE data mee
             const fullPayload = { ...item };
-            
-            // We passen de mappings toe als extra velden (aliasing)
-            // zodat het doelsysteem ook de veldnamen krijgt die het verwacht
             Object.entries(integration.mapping).forEach(([fsKey, apiKey]) => {
                 const val = (item as any)[fsKey.trim()];
                 if (val !== undefined) {
                     fullPayload[apiKey.trim()] = val;
                 }
             });
-            
             return fullPayload;
-        }).filter(item => Object.keys(item).length > 1); // Filter out empty or id-only objects
+        }).filter(item => Object.keys(item).length > 1);
 
         if (payload.length === 0) {
             toast({ variant: 'destructive', title: "Geen data" });
@@ -275,7 +270,8 @@ export default function ApiIntegrationsPage() {
                     <AlertTriangle className="h-4 w-4 text-orange-600" />
                     <AlertTitle className="text-xs font-black uppercase text-orange-900">Privé Omgeving (Studio)</AlertTitle>
                     <AlertDescription className="text-[10px] font-bold text-orange-700 leading-relaxed uppercase">
-                        Let op: Je werkt momenteel in een afgeschermde ontwikkelomgeving. De onderstaande URL's zijn voor partners pas bereikbaar zodra de applicatie is gepubliceerd op een publiek domein (bijv. .web.app).
+                        Let op: Je werkt momenteel in een beveiligde ontwikkelomgeving. GeoBeheer cloud-servers kunnen deze URL NIET rechtstreeks bereiken door de Google-beveiliging. 
+                        Gebruik deze URL's alleen voor lokale tests. De "Failed to fetch" fout zal verdwijnen zodra de app is gepubliceerd op een publiek domein (bijv. .web.app).
                     </AlertDescription>
                 </Alert>
               )}

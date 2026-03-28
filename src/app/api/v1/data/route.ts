@@ -4,6 +4,7 @@ import admin from 'firebase-admin';
 /**
  * Universeel REST API Eindpunt voor BeheerHub.
  * Geoptimaliseerd voor GeoBeheer en andere externe partners.
+ * Inclusief volledige CORS ondersteuning om 'Failed to fetch' te voorkomen.
  */
 
 if (!admin.apps.length) {
@@ -17,20 +18,43 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 /**
+ * Helper om CORS-headers toe te voegen aan de respons.
+ */
+function corsResponse(data: any, status: number = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY, Authorization',
+    },
+  });
+}
+
+/**
+ * OPTIONS methode voor CORS preflight verzoeken.
+ */
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY, Authorization',
+    },
+  });
+}
+
+/**
  * Helper om de API Key te valideren tegen de database.
- * Controleert zowel X-API-KEY als Authorization headers.
  */
 async function validateAuth(request: Request): Promise<{ authorized: boolean; error?: string }> {
   const xApiKey = request.headers.get('x-api-key');
   const authHeader = request.headers.get('authorization');
   
-  // Verzamel alle mogelijke sleutels uit de headers
   const candidateKeys: string[] = [];
   
-  if (xApiKey) {
-    candidateKeys.push(xApiKey.trim());
-  }
-  
+  if (xApiKey) candidateKeys.push(xApiKey.trim());
   if (authHeader) {
     const trimmedAuth = authHeader.trim();
     if (trimmedAuth.toLowerCase().startsWith('bearer ')) {
@@ -47,25 +71,22 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
   try {
     const settingsSnap = await db.collection('settings').doc('api_settings').get();
     if (!settingsSnap.exists) {
-      return { authorized: false, error: 'API instellingen niet gevonden in het systeem.' };
+      return { authorized: false, error: 'API instellingen niet gevonden.' };
     }
 
     const validKey = settingsSnap.data()?.publicKey;
     if (!validKey) {
-      return { authorized: false, error: 'Er is geen actieve publieke API sleutel geconfigureerd.' };
+      return { authorized: false, error: 'Geen actieve API sleutel geconfigureerd.' };
     }
 
-    // Controleer of één van de opgegeven sleutels exact overeenkomt met de sleutel in de DB
     const isMatch = candidateKeys.some(key => key === String(validKey).trim());
-
     if (!isMatch) {
       return { authorized: false, error: 'De opgegeven API Key is ongeldig of verlopen.' };
     }
 
     return { authorized: true };
   } catch (err: any) {
-    console.error('[API AUTH ERROR]:', err);
-    return { authorized: false, error: 'Interne fout bij validatie van de sleutel.' };
+    return { authorized: false, error: 'Interne fout bij validatie.' };
   }
 }
 
@@ -74,18 +95,18 @@ export async function GET(request: Request) {
   const type = searchParams.get('type');
 
   if (!type) {
-    return NextResponse.json({ 
+    return corsResponse({ 
       error: 'Onvolledig verzoek', 
       message: 'Geef een "type" parameter op (bijv. type=meldingen).' 
-    }, { status: 400 });
+    }, 400);
   }
 
   const auth = await validateAuth(request);
   if (!auth.authorized) {
-    return NextResponse.json({ 
+    return corsResponse({ 
       error: 'Niet geautoriseerd', 
       message: auth.error 
-    }, { status: 401 });
+    }, 401);
   }
 
   try {
@@ -99,17 +120,16 @@ export async function GET(request: Request) {
 
     const targetCollection = allowedCollections[type];
     if (!targetCollection) {
-      return NextResponse.json({ error: 'Verboden', message: 'Dataset niet gevonden of niet toegankelijk via de API.' }, { status: 403 });
+      return corsResponse({ error: 'Verboden', message: 'Dataset niet toegankelijk via de API.' }, 403);
     }
 
-    // Haal data op met Admin SDK
     const snapshot = await db.collection(targetCollection).limit(1000).get();
     const data = snapshot.docs.map(d => ({
       id: d.id,
       ...d.data(),
     }));
 
-    return NextResponse.json({
+    return corsResponse({
       success: true,
       source: `BeheerHub ${type}`,
       count: data.length,
@@ -118,8 +138,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error(`[API GET ERROR] ${type}:`, error);
-    return NextResponse.json({ error: 'Server fout', message: error.message }, { status: 500 });
+    return corsResponse({ error: 'Server fout', message: error.message }, 500);
   }
 }
 
@@ -128,18 +147,18 @@ export async function POST(request: Request) {
   const type = searchParams.get('type');
 
   if (type !== 'meldingen') {
-    return NextResponse.json({ 
+    return corsResponse({ 
       error: 'Niet toegestaan', 
       message: 'Alleen POST op "meldingen" is momenteel ondersteund.' 
-    }, { status: 400 });
+    }, 400);
   }
 
   const auth = await validateAuth(request);
   if (!auth.authorized) {
-    return NextResponse.json({ 
+    return corsResponse({ 
       error: 'Niet geautoriseerd', 
       message: auth.error 
-    }, { status: 401 });
+    }, 401);
   }
 
   try {
@@ -160,9 +179,8 @@ export async function POST(request: Request) {
     }
     await batch.commit();
 
-    return NextResponse.json({ success: true, message: `${items.length} records succesvol opgeslagen.` });
+    return corsResponse({ success: true, message: `${items.length} records succesvol opgeslagen.` });
   } catch (error: any) {
-    console.error('[API POST ERROR]:', error);
-    return NextResponse.json({ error: 'Server fout', message: error.message }, { status: 500 });
+    return corsResponse({ error: 'Server fout', message: error.message }, 500);
   }
 }
