@@ -247,65 +247,67 @@ export default function ApiIntegrationsPage() {
             </Card>
           </div>
         ) : (
-          <div className="max-w-5xl mx-auto space-y-6">
-            <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
-              <CardHeader className="bg-slate-900 text-white p-8">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
-                  <div>
-                    <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (REST Pull)</CardTitle>
-                    <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Laat externe systemen live data uit BeheerHub ophalen.</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-8 space-y-10">
-                <div className="p-6 bg-slate-50 border-2 border-slate-100 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Key className="h-3.5 w-3.5 text-primary" /> Authorisatie & Headers</h3>
-                    <Button onClick={handleGenerateKey} className="h-10 px-6 text-[10px] font-black uppercase shadow-xl shadow-primary/20 rounded-none bg-primary text-white">GENEREER SLEUTEL</Button>
-                  </div>
-                  {apiSettings?.publicKey && (
-                    <div className="space-y-3">
-                      <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Secret API Key (X-API-KEY)</Label>
-                      <div className="flex">
-                        <Input value={apiSettings.publicKey} readOnly className="h-12 font-mono text-sm bg-white border-2 border-slate-200 rounded-none font-bold" />
-                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-none border-2 border-l-0" onClick={() => { navigator.clipboard.writeText(apiSettings.publicKey); toast({ title: "Gekopieerd" }); }}><Copy className="h-5 w-5" /></Button>
-                      </div>
+          <ScrollArea className="h-full">
+            <div className="max-w-5xl mx-auto space-y-6 pb-10">
+              <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
+                <CardHeader className="bg-slate-900 text-white p-8">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
+                    <div>
+                      <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (REST Pull)</CardTitle>
+                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Laat externe systemen live data uit BeheerHub ophalen.</CardDescription>
                     </div>
-                  )}
-                </div>
-
-                <div className="space-y-6">
-                  <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Beschikbare Datasets (GET)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {['meldingen', 'objects', 'projects', 'voertuigen'].map(type => (
-                      <div key={type} className="p-5 bg-white border-2 border-slate-100 rounded-none hover:border-primary/20 transition-all group">
-                        <div className="flex justify-between items-center mb-4">
-                          <span className="text-sm font-black uppercase tracking-tight">{type}</span>
-                          <Download className="h-4 w-4 text-slate-200 group-hover:text-primary" />
-                        </div>
-                        <div className="flex gap-0">
-                          <Input value={`${baseUrl}?type=${type}`} readOnly className="h-9 font-mono text-[9px] bg-slate-50 border-none rounded-none text-blue-600 font-bold" />
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none bg-slate-100" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${type}`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 space-y-10">
+                  <div className="p-6 bg-slate-50 border-2 border-slate-100 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Key className="h-3.5 w-3.5 text-primary" /> Authorisatie & Headers</h3>
+                      <Button onClick={handleGenerateKey} className="h-10 px-6 text-[10px] font-black uppercase shadow-xl shadow-primary/20 rounded-none bg-primary text-white">GENEREER SLEUTEL</Button>
+                    </div>
+                    {apiSettings?.publicKey && (
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Secret API Key (X-API-KEY)</Label>
+                        <div className="flex">
+                          <Input value={apiSettings.publicKey} readOnly className="h-12 font-mono text-sm bg-white border-2 border-slate-200 rounded-none font-bold" />
+                          <Button variant="outline" size="icon" className="h-12 w-12 rounded-none border-2 border-l-0" onClick={() => { navigator.clipboard.writeText(apiSettings.publicKey); toast({ title: "Gekopieerd" }); }}><Copy className="h-5 w-5" /></Button>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Test Request (cURL)</h3>
-                  <div className="bg-slate-900 p-6 rounded-none relative border-l-4 border-primary shadow-inner">
-                    <pre className="text-[11px] font-mono text-blue-400 font-bold leading-relaxed">
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Beschikbare Datasets (GET)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {['meldingen', 'objects', 'projects', 'voertuigen'].map(type => (
+                        <div key={type} className="p-5 bg-white border-2 border-slate-100 rounded-none hover:border-primary/20 transition-all group">
+                          <div className="flex justify-between items-center mb-4">
+                            <span className="text-sm font-black uppercase tracking-tight">{type}</span>
+                            <Download className="h-4 w-4 text-slate-200 group-hover:text-primary" />
+                          </div>
+                          <div className="flex gap-0">
+                            <Input value={`${baseUrl}?type=${type}`} readOnly className="h-9 font-mono text-[9px] bg-slate-50 border-none rounded-none text-blue-600 font-bold" />
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none bg-slate-100" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${type}`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Test Request (cURL)</h3>
+                    <div className="bg-slate-900 p-6 rounded-none relative border-l-4 border-primary shadow-inner">
+                      <pre className="text-[11px] font-mono text-blue-400 font-bold leading-relaxed whitespace-pre-wrap break-all">
 {`curl -X GET "${baseUrl}?type=meldingen" \\
   -H "x-api-key: ${apiSettings?.publicKey || 'JOUW_SLEUTEL'}" \\
   -H "Content-Type: application/json"`}
-                    </pre>
+                      </pre>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          </ScrollArea>
         )}
       </div>
 
