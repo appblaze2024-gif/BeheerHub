@@ -1,4 +1,5 @@
-'use server';
+
+'use client';
 
 /**
  * Server Action om webhooks te verzenden.
@@ -10,6 +11,9 @@ export async function triggerWebhookSync(endpoint: string, method: string, heade
         if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
             throw new Error('Ongeldige URL: Moet beginnen met http:// of https://');
         }
+
+        // Diagnostic log voor server-side monitoring
+        console.log(`[Webhook Dispatch] Calling ${method} on ${endpoint}`);
 
         const response = await fetch(endpoint, {
             method,
@@ -40,12 +44,14 @@ export async function triggerWebhookSync(endpoint: string, method: string, heade
             message = 'Het domein van de URL kon niet worden gevonden (DNS fout).';
         } else if (err.message?.includes('ECONNREFUSED')) {
             message = 'De externe server weigert de verbinding op deze poort.';
+        } else if (err.message?.includes('fetch failed')) {
+            message = 'De aanroep is mislukt. Mogelijk blokkeert de externe firewall onze server.';
         }
 
         return {
             success: false,
             status: 0,
-            responseText: `Netwerkfout: ${message} (${err.message || 'fetch failed'})`
+            responseText: `Netwerkfout: ${message} (${err.message || 'connection failed'})`
         };
     }
 }

@@ -34,13 +34,13 @@ import {
   Activity,
   ArrowUpRight,
   Download,
-  Share2
+  Share2,
+  AlertTriangle
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import type { ApiIntegration } from '@/lib/types';
@@ -49,6 +49,7 @@ import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { LoadingScreen } from '@/components/loading-screen';
 import { triggerWebhookSync } from './actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function ApiIntegrationsPage() {
   const firestore = useFirestore();
@@ -109,7 +110,7 @@ export default function ApiIntegrationsPage() {
     
     try {
         const sourceCol = collection(firestore, integration.sourceModule);
-        const q = query(sourceCol, limit(100)); // Beperk batch voor test
+        const q = query(sourceCol, limit(100));
         const snapshot = await getDocs(q);
         const sourceData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -126,7 +127,6 @@ export default function ApiIntegrationsPage() {
                 }
             });
             
-            // Check of er wel data in het object zit
             if (Object.keys(mappedItem).length === 0) return null;
             return mappedItem;
         }).filter(item => item !== null);
@@ -171,6 +171,7 @@ export default function ApiIntegrationsPage() {
   };
 
   const fullBaseUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/v1/data` : '';
+  const isLocalStudio = fullBaseUrl.includes('firebase-studio');
 
   const shareableEndpoints = [
     { type: 'meldingen', label: 'Alle Meldingen', desc: 'Live feed van alle openstaande meldingen.' },
@@ -193,7 +194,7 @@ export default function ApiIntegrationsPage() {
                     activeTab === 'rest' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
                 )}
             >
-                Uitgaand (Webhooks)
+                Uitgaand (REST)
             </button>
             <button 
                 onClick={() => setActiveTab('inbound')}
@@ -208,8 +209,18 @@ export default function ApiIntegrationsPage() {
       </PageHeader>
 
       <div className="flex-1 p-4 md:p-6 min-h-0 overflow-hidden">
-        <Tabs value={activeTab} className="h-full">
-            <TabsContent value="rest" className="h-full m-0 animate-in fade-in slide-in-from-left-2 duration-300">
+        {isLocalStudio && activeTab === 'inbound' && (
+            <Alert variant="destructive" className="mb-6 rounded-none border-2 animate-in slide-in-from-top-4 duration-500">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle className="text-xs font-black uppercase tracking-tight">Privé Ontwikkel-omgeving</AlertTitle>
+                <AlertDescription className="text-xs font-medium">
+                    U werkt momenteel in Firebase Studio. De URL's hieronder zijn <strong>privé</strong> en kunnen niet door externe systemen (zoals GeoBeheer) worden aangeroepen. Deel deze pas nadat de app is gepubliceerd op een publiek domein.
+                </AlertDescription>
+            </Alert>
+        )}
+
+        <div className="h-full min-h-0 overflow-hidden">
+            {activeTab === 'rest' ? (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden">
                     <Card className="lg:col-span-4 flex flex-col rounded-none border-none shadow-xl bg-white overflow-hidden">
                         <CardHeader className="p-4 border-b bg-slate-50/50 space-y-4">
@@ -372,9 +383,7 @@ export default function ApiIntegrationsPage() {
                         )}
                     </Card>
                 </div>
-            </TabsContent>
-
-            <TabsContent value="inbound" className="h-full m-0 animate-in fade-in slide-in-from-right-2 duration-300">
+            ) : (
                 <ScrollArea className="h-full">
                     <div className="max-w-5xl mx-auto space-y-10 pb-20">
                         <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
@@ -510,8 +519,8 @@ export default function ApiIntegrationsPage() {
                         </Card>
                     </div>
                 </ScrollArea>
-            </TabsContent>
-        </Tabs>
+            )}
+        </div>
       </div>
 
       <ApiIntegrationDialog 
