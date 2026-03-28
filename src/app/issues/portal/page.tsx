@@ -1,9 +1,23 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, orderBy } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail, Info, CheckCircle2, XCircle, MessageSquare, LayoutGrid, Tag, Users } from 'lucide-react';
+import { 
+  Search, 
+  ListFilter, 
+  ArrowLeft, 
+  MoreHorizontal, 
+  Mail, 
+  Info, 
+  CheckCircle2, 
+  XCircle, 
+  MessageSquare, 
+  LayoutGrid, 
+  Tag, 
+  Users,
+  Trash2
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
@@ -23,7 +37,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { ForwardExternalDialog } from '@/components/forward-external-dialog';
 import { AcceptAssignDialog } from '@/components/accept-assign-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -31,10 +57,12 @@ import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { useProfile } from '@/firebase/profile-provider';
 
 export default function MeldingenportaalPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { profile } = useProfile();
   const router = useRouter();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -49,6 +77,8 @@ export default function MeldingenportaalPage() {
   // Selection state
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [selectedMeldingenForAssign, setSelectedMeldingenForAssign] = React.useState<Melding[]>([]);
+
+  const isSuperAdmin = profile?.role === 'Super admin';
 
   const portalQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -143,6 +173,16 @@ export default function MeldingenportaalPage() {
   const handleOpenForward = (melding: Melding) => {
     setSelectedMelding(melding);
     setIsForwardDialogOpen(true);
+  };
+
+  const handleDeleteMelding = async (melding: Melding) => {
+    if (!firestore || !isSuperAdmin) return;
+    try {
+        await deleteDocumentNonBlocking(doc(firestore, 'meldingen', melding.id));
+        toast({ title: "Melding verwijderd", description: "De melding is permanent gewist." });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij verwijderen" });
+    }
   };
 
   return (
@@ -265,6 +305,35 @@ export default function MeldingenportaalPage() {
                                                     <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenAccept(melding); }} className="font-bold rounded-none h-11 cursor-pointer">Accepteren</DropdownMenuItem>
                                                     <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenForward(melding); }} className="font-bold rounded-none h-11 cursor-pointer"><Mail className="mr-2 h-4 w-4 text-primary" />Extern doorzetten</DropdownMenuItem>
                                                     <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleStatusChange(melding, 'Geweigerd'); }} className="font-bold rounded-none h-11 text-red-600 cursor-pointer"><XCircle className="mr-2 h-4 w-4" />Weigeren</DropdownMenuItem>
+                                                    {isSuperAdmin && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="font-bold rounded-none h-11 text-red-600 cursor-pointer">
+                                                                        <Trash2 className="mr-2 h-4 w-4" /> Verwijderen uit database
+                                                                    </DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent className="rounded-none border-none shadow-2xl">
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle className="font-black uppercase">Melding definitief verwijderen?</AlertDialogTitle>
+                                                                        <AlertDialogDescription className="font-bold text-slate-500">
+                                                                            Deze actie verwijdert melding {melding.intakenummer} permanent uit de database. Dit kan niet ongedaan worden gemaakt.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter className="p-0 gap-2">
+                                                                        <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+                                                                        <AlertDialogAction 
+                                                                            onClick={() => handleDeleteMelding(melding)} 
+                                                                            className="bg-red-600 hover:bg-red-700 rounded-none font-black uppercase"
+                                                                        >
+                                                                            Definitief Verwijderen
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>

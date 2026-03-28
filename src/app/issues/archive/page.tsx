@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useUser, updateDocumentNonBlocking, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { 
   Search, 
@@ -23,7 +23,8 @@ import {
   FileSpreadsheet,
   Check,
   ImageIcon,
-  Maximize2
+  Maximize2,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,17 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -116,6 +128,8 @@ export default function ArchiveIssuesPage() {
     field: 'afhandeling_datum', 
     order: 'desc' 
   });
+
+  const isSuperAdmin = profile?.role === 'Super admin';
 
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
@@ -303,6 +317,16 @@ export default function ArchiveIssuesPage() {
     }));
   };
 
+  const handleDeleteMelding = async (melding: Melding) => {
+    if (!firestore || !isSuperAdmin) return;
+    try {
+        await deleteDocumentNonBlocking(doc(firestore, 'meldingen', melding.id));
+        toast({ title: "Melding verwijderd", description: "De melding is permanent gewist uit de database." });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij verwijderen" });
+    }
+  };
+
   const formatDisplayName = (nameOrEmail?: string) => {
     if (!nameOrEmail) return '-';
     const normalized = nameOrEmail.toLowerCase();
@@ -484,23 +508,45 @@ export default function ArchiveIssuesPage() {
                         return (
                             <Card 
                                 key={melding.id} 
-                                onClick={() => router.push(`/issues/new?id=${melding.id}`)}
                                 className="overflow-hidden border-none shadow-lg active:scale-[0.98] transition-transform rounded-none"
                             >
                                 <CardContent className="p-0">
                                     <div className="p-4 bg-slate-50 border-b flex justify-between items-start">
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-3" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
                                             <span className="text-xs font-black text-slate-300">{index + 1}</span>
                                             <div className="space-y-0.5">
                                                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Intakenummer</p>
                                                 <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{melding.intakenummer}</p>
                                             </div>
                                         </div>
-                                        <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-tighter h-5 px-2 bg-slate-200 text-slate-600 border-none rounded-none">
-                                            {melding.status}
-                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            {isSuperAdmin && (
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-none shrink-0">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent className="rounded-none">
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle className="font-black uppercase">Permanent verwijderen?</AlertDialogTitle>
+                                                            <AlertDialogDescription className="font-bold">
+                                                                Weet u zeker dat u melding {melding.intakenummer} definitief wilt verwijderen uit de database?
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel className="rounded-none">Annuleren</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteMelding(melding)} className="bg-red-600 rounded-none font-black uppercase">Verwijderen</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            )}
+                                            <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-tighter h-5 px-2 bg-slate-200 text-slate-600 border-none rounded-none">
+                                                {melding.status}
+                                            </Badge>
+                                        </div>
                                     </div>
-                                    <div className="p-4 space-y-3">
+                                    <div className="p-4 space-y-3" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
                                         <div className="flex items-start gap-3">
                                             <div className="bg-primary/10 p-2 rounded-none shrink-0">
                                                 <MapPin className="h-4 w-4 text-primary" />
@@ -615,25 +661,26 @@ export default function ArchiveIssuesPage() {
                                         <SortIcon field="afgehandeld_door" />
                                     </div>
                                 </TableHead>
-                                <TableHead onClick={() => handleSort('afhandeling_bijzonderheden')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 cursor-pointer hover:bg-slate-200 transition-colors">
+                                <TableHead onClick={() => handleSort('afhandeling_bijzonderheden')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
                                     <div className="flex items-center justify-between gap-1">
                                         Opmerkingen
                                         <SortIcon field="afhandeling_bijzonderheden" />
                                     </div>
                                 </TableHead>
+                                {isSuperAdmin && <TableHead className="w-[50px] bg-slate-100" />}
                             </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredMeldingen.map((melding, index) => {
                                     const allPhotos = [...(melding.fotos || []), ...(melding.afhandeling_fotos || [])];
                                     return (
-                                        <TableRow key={melding.id} onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer h-12 hover:bg-slate-50 transition-colors border-b border-slate-100">
-                                            <TableCell className="font-bold py-2 px-4 border-r border-slate-100 text-slate-400 text-[10px] w-[50px]">{index + 1}</TableCell>
-                                            <TableCell className="font-black py-2 px-4 border-r border-slate-100">{melding.intakenummer || '-'}</TableCell>
+                                        <TableRow key={melding.id} className="group h-12 hover:bg-slate-50 transition-colors border-b border-slate-100">
+                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer font-bold py-2 px-4 border-r border-slate-100 text-slate-400 text-[10px] w-[50px]">{index + 1}</TableCell>
+                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer font-black py-2 px-4 border-r border-slate-100">{melding.intakenummer || '-'}</TableCell>
                                             <TableCell className="py-2 px-4 border-r border-slate-100 w-[80px]">
                                                 <div className="flex items-center gap-1">
                                                     {allPhotos.slice(0, 2).map((p, i) => (
-                                                        <div key={i} className="relative h-8 w-8 border border-slate-100 overflow-hidden" onClick={(e) => { e.stopPropagation(); setPreviewImage(p.url); }}>
+                                                        <div key={i} className="relative h-8 w-8 border border-slate-100 overflow-hidden cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImage(p.url); }}>
                                                             <Image src={p.url} alt="media" fill className="object-cover" />
                                                         </div>
                                                     ))}
@@ -645,27 +692,27 @@ export default function ArchiveIssuesPage() {
                                                     {allPhotos.length === 0 && <ImageIcon className="h-4 w-4 text-slate-200" />}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-bold text-slate-900">{[melding.straatnaam, melding.huisnummer, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
-                                            <TableCell className="py-2 px-4 border-r border-slate-100">
+                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-bold text-slate-900">{[melding.straatnaam, melding.huisnummer, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
+                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer py-2 px-4 border-r border-slate-100">
                                                 <div className="flex flex-col">
                                                     <span className="text-[11px] font-bold text-slate-600">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</span>
                                                     <span className="text-[9px] font-bold text-slate-400">{melding.tijdstip || '--:--'}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="py-2 px-4 border-r border-slate-100">
+                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer py-2 px-4 border-r border-slate-100">
                                                 <div className="flex flex-col">
                                                     <span className="text-[11px] font-black text-primary">{melding.afhandeling_datum ? format(new Date(melding.afhandeling_datum), 'dd-MM-yy') : '-'}</span>
                                                     <span className="text-[9px] font-bold text-slate-400">{melding.afhandeling_tijdstip || '--:--'}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="py-2 px-4 border-r border-slate-100">
+                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer py-2 px-4 border-r border-slate-100">
                                                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
                                                     <Clock className="h-3 w-3 text-slate-400" />
                                                     {formatDuration(melding.gewerkteMinuten)}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className='truncate py-2 px-4 border-r border-slate-100 text-xs font-black text-slate-900'>{formatDisplayName(melding.afgehandeld_door || melding.behandelaar)}</TableCell>
-                                            <TableCell className="py-2 px-4 max-w-xs">
+                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className='cursor-pointer truncate py-2 px-4 border-r border-slate-100 text-xs font-black text-slate-900'>{formatDisplayName(melding.afgehandeld_door || melding.behandelaar)}</TableCell>
+                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer py-2 px-4 border-r border-slate-100 max-w-xs">
                                                 <div className="flex items-start gap-2">
                                                     {melding.afhandeling_bijzonderheden ? (
                                                         <>
@@ -679,6 +726,29 @@ export default function ArchiveIssuesPage() {
                                                     )}
                                                 </div>
                                             </TableCell>
+                                            {isSuperAdmin && (
+                                                <TableCell className="py-2 px-4">
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-300 hover:text-red-600 rounded-none">
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent className="rounded-none">
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle className="font-black uppercase">Definitief verwijderen?</AlertDialogTitle>
+                                                                <AlertDialogDescription className="font-bold">
+                                                                    Melding {melding.intakenummer} wordt permanent verwijderd. Dit kan niet ongedaan worden gemaakt.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel className="rounded-none">Annuleren</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeleteMelding(melding)} className="bg-red-600 rounded-none font-black uppercase">Permanent Verwijderen</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     );
                                 })}
