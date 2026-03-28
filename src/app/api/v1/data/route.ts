@@ -1,13 +1,12 @@
-
 import { NextResponse } from 'next/server';
-import { getFirestore, collection, getDocs, doc, getDoc, query, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, query, limit, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * Universeel API Eindpunt voor BeheerHub.
- * GET: Data ophalen (meldingen, objecten, etc.)
- * POST: Data ontvangen (nieuwe meldingen inschieten via webhook)
+ * Universeel REST API Eindpunt voor BeheerHub.
+ * GET: Externe systemen halen data UIT BeheerHub (Pull)
+ * POST: Externe systemen schieten data IN BeheerHub (Push/Webhook)
  */
 
 async function getDb() {
@@ -22,59 +21,85 @@ async function getDb() {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const colName = searchParams.get('type');
+  const type = searchParams.get('type');
   const apiKey = request.headers.get('x-api-key');
 
-  if (!colName || !apiKey) {
+  if (!type || !apiKey) {
     return NextResponse.json({ 
       error: 'Onvolledig verzoek', 
-      message: 'Geef een "type" parameter op in de URL en een "x-api-key" in de header.' 
+      message: 'Geef een "type" parameter op (bijv. ?type=meldingen) en een "x-api-key" in de header.' 
     }, { status: 400 });
   }
 
   const db = await getDb();
 
   try {
+    // Valideer API Key
     const settingsRef = doc(db, 'settings', 'api_settings');
     const settingsSnap = await getDoc(settingsRef);
     
     if (!settingsSnap.exists() || settingsSnap.data().publicKey !== apiKey) {
-      return NextResponse.json({ error: 'Niet geautoriseerd', message: 'Ongeldige API Key.' }, { status: 401 });
+      return NextResponse.json({ error: 'Niet geautoriseerd', message: 'De opgegeven API Key is ongeldig.' }, { status: 401 });
     }
 
-    const allowedCollections = ['meldingen', 'objects', 'users', 'projects', 'voertuigen', 'machines'];
-    if (!allowedCollections.includes(colName)) {
-      return NextResponse.json({ error: 'Verboden', message: 'Deze data is niet publiekelijk toegankelijk.' }, { status: 403 });
+    // Definieer toegestane collecties
+    const allowedCollections: Record<string, string> = {
+      'meldingen': 'meldingen',
+      'objects': 'objects',
+      'users': 'users',
+      'projects': 'projects',
+      'voertuigen': 'voertuigen',
+      'machines': 'machines'
+    };
+
+    const targetCollection = allowedCollections[type];
+    if (!targetCollection) {
+      return NextResponse.json({ 
+        error: 'Verboden', 
+        message: `Toegang tot type "${type}" is niet toegestaan of deze bron bestaat niet.` 
+      }, { status: 403 });
     }
 
-    const colRef = collection(db, colName);
-    const q = query(colRef, limit(500));
+    const colRef = collection(db, targetCollection);
+    
+    // Voor meldingen sorteren we standaard op meest recent
+    let q;
+    if (type === 'meldingen') {
+        q = query(colRef, orderBy('createdAt', 'desc'), limit(500));
+    } else {
+        q = query(colRef, limit(500));
+    }
+
     const snapshot = await getDocs(q);
     
     const data = snapshot.docs.map(d => ({
       id: d.id,
-      ...d.data()
+      ...d.data(),
+      // Verwijder gevoelige metadata indien nodig
+      _path: undefined,
+      _firestore: undefined
     }));
 
     return NextResponse.json({
       success: true,
+      source: `BeheerHub ${type}`,
       count: data.length,
       timestamp: new Date().toISOString(),
       data: data
     });
 
   } catch (error: any) {
-    console.error("API Error:", error);
+    console.error("REST GET Error:", error);
     return NextResponse.json({ error: 'Server fout', message: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
-  const colName = searchParams.get('type');
+  const type = searchParams.get('type');
   const apiKey = request.headers.get('x-api-key');
 
-  if (!colName || !apiKey) {
+  if (!type || !apiKey) {
     return NextResponse.json({ error: 'Onvolledig verzoek' }, { status: 400 });
   }
 
@@ -88,32 +113,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 });
     }
 
-    // Alleen meldingen toevoegen via POST toestaan voor nu
-    if (colName !== 'meldingen') {
-      return NextResponse.json({ error: 'Verboden', message: 'POST is alleen toegestaan voor meldingen.' }, { status: 403 });
+    // Voor inkomende webhooks staat momenteel alleen 'meldingen' open
+    if (type !== 'meldingen') {
+      return NextResponse.json({ error: 'Verboden', message: 'Inkomende data (POST) is momenteel alleen toegestaan voor meldingen.' }, { status: 403 });
     }
 
     const body = await request.json();
-    
-    // Basis validatie voor een melding
-    if (!body.intakenummer || !body.subcategorie) {
-        return NextResponse.json({ error: 'Ongeldige data', message: 'Velden "intakenummer" en "subcategorie" zijn verplicht.' }, { status: 400 });
+    const items = Array.isArray(body) ? body : [body];
+
+    const results = [];
+    for (const item of items) {
+        const newDoc = {
+            ...item,
+            status: item.status || 'Nieuw',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            source: 'REST_API_INBOUND'
+        };
+        const docRef = await addDoc(collection(db, 'meldingen'), newDoc);
+        results.push(docRef.id);
     }
-
-    const newDoc = {
-        ...body,
-        status: body.status || 'Nieuw',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        source: 'API_INCOMING'
-    };
-
-    const docRef = await addDoc(collection(db, 'meldingen'), newDoc);
 
     return NextResponse.json({
       success: true,
-      id: docRef.id,
-      message: 'Data succesvol ontvangen en opgeslagen.'
+      processed: results.length,
+      ids: results,
+      message: 'Data succesvol ontvangen en opgeslagen in BeheerHub.'
     });
 
   } catch (error: any) {

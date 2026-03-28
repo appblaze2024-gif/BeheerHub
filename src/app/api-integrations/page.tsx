@@ -31,7 +31,9 @@ import {
   ShieldCheck,
   Cpu,
   Activity,
-  ArrowUpRight
+  ArrowUpRight,
+  Download,
+  Share2
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, orderBy, getDocs, limit } from 'firebase/firestore';
@@ -155,14 +157,21 @@ export default function ApiIntegrationsPage() {
   };
 
   const fullBaseUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/v1/data` : '';
-  const webhookExampleUrl = `${fullBaseUrl}?type=meldingen`;
+
+  const shareableEndpoints = [
+    { type: 'meldingen', label: 'Alle Meldingen', desc: 'Live feed van alle openstaande meldingen.' },
+    { type: 'objects', label: 'GIS Objecten', desc: 'Locatiedata van prullenbakken en containers.' },
+    { type: 'projects', label: 'Projecten', desc: 'Overzicht van actieve beheerprojecten.' },
+    { type: 'voertuigen', label: 'Wagenpark', desc: 'Status en details van alle voertuigen.' },
+    { type: 'machines', label: 'Machines', desc: 'Status en details van alle machines.' },
+  ];
 
   if (isLoading || isLoadingSettings) return <LoadingScreen message="API Dashboard laden..." />;
 
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
       <PageHeader title="REST API Koppelingen" description="Beheer datastromen tussen BeheerHub en externe partners.">
-        <div className="bg-slate-100 p-1 rounded-none border-2 border-slate-200 shadow-inner flex h-11 w-72 shrink-0">
+        <div className="bg-slate-100 p-1 rounded-none border-2 border-slate-200 shadow-inner flex h-11 w-[400px] shrink-0">
             <button 
                 onClick={() => setActiveTab('rest')}
                 className={cn(
@@ -170,7 +179,7 @@ export default function ApiIntegrationsPage() {
                     activeTab === 'rest' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
                 )}
             >
-                REST Integraties
+                Uitgaand (Webhooks)
             </button>
             <button 
                 onClick={() => setActiveTab('inbound')}
@@ -179,7 +188,7 @@ export default function ApiIntegrationsPage() {
                     activeTab === 'inbound' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
                 )}
             >
-                Inbound API
+                Inbound (Data Share)
             </button>
         </div>
       </PageHeader>
@@ -353,27 +362,26 @@ export default function ApiIntegrationsPage() {
 
             <TabsContent value="inbound" className="h-full m-0 animate-in fade-in slide-in-from-right-2 duration-300">
                 <ScrollArea className="h-full">
-                    <div className="max-w-4xl mx-auto space-y-10 pb-20">
+                    <div className="max-w-5xl mx-auto space-y-10 pb-20">
                         <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
                             <CardHeader className="bg-slate-900 text-white p-8 shrink-0">
                                 <div className="flex items-center gap-4">
                                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20">
-                                        <ShieldCheck className="h-6 w-6 text-white" />
+                                        <Share2 className="h-6 w-6 text-white" />
                                     </div>
                                     <div>
-                                        <CardTitle className="text-xl font-black uppercase tracking-tight">Incoming Webhook (Receiver)</CardTitle>
-                                        <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Ontvang data vanuit externe sensoren of platformen.</CardDescription>
+                                        <CardTitle className="text-xl font-black uppercase tracking-tight">Inbound Data Sharing (REST Pull)</CardTitle>
+                                        <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Stel BeheerHub data beschikbaar voor externe platformen.</CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent className="p-8 space-y-10">
+                            <CardContent className="p-8 space-y-12">
                                 <div className="bg-blue-50 border-2 border-blue-100 p-6 rounded-none flex items-start gap-4 shadow-inner">
                                     <div className="bg-white p-2 rounded-none shadow-sm"><Info className="h-5 w-5 text-primary shrink-0" /></div>
                                     <div className="space-y-2">
-                                        <p className="text-sm font-black uppercase text-slate-900">Inkomende Data Flow</p>
+                                        <p className="text-sm font-black uppercase text-slate-900">Data Sharing Workflow</p>
                                         <p className="text-xs font-medium text-slate-600 leading-relaxed italic">
-                                            Hiermee kunnen externe partners (zoals aannemers of sensorennetwerken) gegevens direct in de BeheerHub database schieten. 
-                                            Je geeft de partner de onderstaande URL en de geheime sleutel.
+                                            Gebruik deze eindpunten om data UIT BeheerHub te halen. Partners kunnen deze URL's gebruiken om hun eigen systemen (zoals GIS-dashboards of Excel) live te voeden met data van dit platform.
                                         </p>
                                     </div>
                                 </div>
@@ -381,7 +389,7 @@ export default function ApiIntegrationsPage() {
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                                         <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                            <Key className="h-3.5 w-3.5 text-primary" /> Beveiliging & Autorisatie
+                                            <Key className="h-3.5 w-3.5 text-primary" /> API Beveiliging
                                         </h3>
                                         <Button 
                                             onClick={handleGenerateKey} 
@@ -392,84 +400,95 @@ export default function ApiIntegrationsPage() {
                                     </div>
 
                                     {apiSettings?.publicKey ? (
-                                        <div className="grid gap-8">
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Secret API Key</Label>
-                                                <div className="flex gap-0 shadow-xl">
-                                                    <Input 
-                                                        value={apiSettings.publicKey} 
-                                                        readOnly 
-                                                        className="h-14 font-mono text-sm bg-slate-50 border-2 border-slate-200 rounded-none font-bold focus:ring-0"
-                                                    />
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="icon" 
-                                                        className="h-14 w-14 rounded-none border-2 border-l-0 border-slate-200 bg-white hover:bg-slate-50 text-primary transition-colors" 
-                                                        onClick={() => { navigator.clipboard.writeText(apiSettings.publicKey); toast({ title: "Key gekopieerd" }); }}
-                                                    >
-                                                        <Copy className="h-5 w-5" />
-                                                    </Button>
-                                                </div>
-                                                <p className="text-[9px] font-black text-red-500 uppercase tracking-widest ml-1 animate-pulse">Delen via header: x-api-key</p>
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Uw Secret API Key (Deel deze met partners)</Label>
+                                            <div className="flex gap-0 shadow-xl">
+                                                <Input 
+                                                    value={apiSettings.publicKey} 
+                                                    readOnly 
+                                                    className="h-14 font-mono text-sm bg-slate-50 border-2 border-slate-200 rounded-none font-bold focus:ring-0"
+                                                />
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="icon" 
+                                                    className="h-14 w-14 rounded-none border-2 border-l-0 border-slate-200 bg-white hover:bg-slate-50 text-primary transition-colors" 
+                                                    onClick={() => { navigator.clipboard.writeText(apiSettings.publicKey); toast({ title: "Key gekopieerd" }); }}
+                                                >
+                                                    <Copy className="h-5 w-5" />
+                                                </Button>
                                             </div>
-
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Receiver Endpoint (Inbound)</Label>
-                                                <div className="flex gap-0 shadow-xl">
-                                                    <Input 
-                                                        value={webhookExampleUrl} 
-                                                        readOnly 
-                                                        className="h-14 font-mono text-xs bg-slate-50 border-2 border-slate-200 rounded-none font-bold text-primary focus:ring-0"
-                                                    />
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="icon" 
-                                                        className="h-14 w-14 rounded-none border-2 border-l-0 border-slate-200 bg-white hover:bg-slate-50 text-primary transition-colors" 
-                                                        onClick={() => { navigator.clipboard.writeText(webhookExampleUrl); toast({ title: "URL Gekopieerd" }); }}
-                                                    >
-                                                        <Copy className="h-5 w-5" />
-                                                    </Button>
-                                                </div>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic ml-1">Parameter ?type= bepaalt de doelcollectie.</p>
-                                            </div>
+                                            <p className="text-[9px] font-black text-red-500 uppercase tracking-widest ml-1 animate-pulse">Deze sleutel is vereist in de 'x-api-key' header voor elk verzoek.</p>
                                         </div>
                                     ) : (
                                         <div className="py-16 text-center border-2 border-dashed border-slate-200 bg-slate-50/50 rounded-none">
                                             <div className="bg-white p-6 rounded-none inline-flex items-center justify-center mb-6 shadow-md border border-slate-100">
                                                 <Key className="h-10 w-10 text-slate-200" />
                                             </div>
-                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-6">Geen actieve sleutel gevonden.</p>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-6">Geen actieve API sleutel gevonden.</p>
                                             <Button onClick={handleGenerateKey} className="font-black uppercase tracking-widest h-12 px-10 shadow-xl shadow-primary/20 rounded-none bg-primary text-white">
-                                                Activeer Inkomende API
+                                                Activeer REST Sharing
                                             </Button>
                                         </div>
                                     )}
                                 </div>
 
                                 {apiSettings?.publicKey && (
-                                    <div className="space-y-6 pt-4">
+                                    <div className="space-y-8">
                                         <div className="flex items-center gap-3 border-b-2 border-slate-900 pb-3">
-                                            <Terminal className="h-5 w-5 text-primary" />
-                                            <h3 className="text-sm font-black uppercase tracking-tight">Test Integration (cURL)</h3>
+                                            <Database className="h-5 w-5 text-primary" />
+                                            <h3 className="text-sm font-black uppercase tracking-tight">Beschikbare Data Eindpunten (GET)</h3>
                                         </div>
-                                        <div className="bg-slate-900 p-8 rounded-none relative group shadow-2xl border border-white/5 border-l-4 border-primary">
-                                            <pre className="text-[11px] font-mono text-blue-400 whitespace-pre-wrap leading-relaxed font-bold">
-{`curl -X POST "${webhookExampleUrl}" \\
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {shareableEndpoints.map(endpoint => (
+                                                <Card key={endpoint.type} className="rounded-none border-2 border-slate-100 shadow-sm hover:border-primary/30 transition-all bg-white overflow-hidden group">
+                                                    <CardContent className="p-5 space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-sm font-black uppercase tracking-tight text-slate-900">{endpoint.label}</p>
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase">{endpoint.desc}</p>
+                                                            </div>
+                                                            <div className="bg-slate-50 p-2 rounded-none"><Download className="h-4 w-4 text-primary" /></div>
+                                                        </div>
+                                                        <div className="relative group/url">
+                                                            <Input 
+                                                                value={`${fullBaseUrl}?type=${endpoint.type}`} 
+                                                                readOnly 
+                                                                className="h-9 font-mono text-[9px] bg-slate-50 border-none rounded-none font-bold text-blue-600 focus:ring-0 pr-10"
+                                                            />
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="absolute right-0 top-0 h-9 w-9 text-slate-300 hover:text-primary rounded-none"
+                                                                onClick={() => { navigator.clipboard.writeText(`${fullBaseUrl}?type=${endpoint.type}`); toast({ title: "URL Gekopieerd" }); }}
+                                                            >
+                                                                <Copy className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+
+                                        <div className="space-y-6 pt-4">
+                                            <div className="flex items-center gap-3 border-b-2 border-slate-900 pb-3">
+                                                <Terminal className="h-5 w-5 text-primary" />
+                                                <h3 className="text-sm font-black uppercase tracking-tight">Test Verzoek (cURL)</h3>
+                                            </div>
+                                            <div className="bg-slate-900 p-8 rounded-none relative group shadow-2xl border border-white/5 border-l-4 border-primary">
+                                                <pre className="text-[11px] font-mono text-blue-400 whitespace-pre-wrap leading-relaxed font-bold">
+{`curl -X GET "${fullBaseUrl}?type=meldingen" \\
   -H "x-api-key: ${apiSettings.publicKey}" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "intakenummer": "EXT-9999",
-    "subcategorie": "Extern Bericht",
-    "extra_informatie": "Verzonden via REST API Integration"
-  }'`}
-                                            </pre>
-                                            <Button 
-                                                variant="ghost" 
-                                                className="absolute top-4 right-4 h-10 px-4 font-black uppercase text-[10px] text-white/40 hover:text-white hover:bg-white/10 rounded-none border border-white/10 transition-all" 
-                                                onClick={() => { navigator.clipboard.writeText(`curl -X POST "${webhookExampleUrl}" -H "x-api-key: ${apiSettings.publicKey}" -H "Content-Type: application/json" -d '{"intakenummer": "EXT-9999", "subcategorie": "Extern Bericht"}'`); toast({ title: "Script gekopieerd" }); }}
-                                            >
-                                                <Copy className="h-3.5 w-3.5 mr-2" /> Copy Script
-                                            </Button>
+  -H "Content-Type: application/json"`}
+                                                </pre>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    className="absolute top-4 right-4 h-10 px-4 font-black uppercase text-[10px] text-white/40 hover:text-white hover:bg-white/10 rounded-none border border-white/10 transition-all" 
+                                                    onClick={() => { navigator.clipboard.writeText(`curl -X GET "${fullBaseUrl}?type=meldingen" -H "x-api-key: ${apiSettings.publicKey}"`); toast({ title: "Script gekopieerd" }); }}
+                                                >
+                                                    <Copy className="h-3.5 w-3.5 mr-2" /> Copy Script
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
