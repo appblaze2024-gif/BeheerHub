@@ -1,28 +1,31 @@
 import { NextResponse } from 'next/server';
-import { getFirestore, collection, getDocs, doc, getDoc, query, limit, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
-import { initializeApp, getApps } from 'firebase/app';
-import { firebaseConfig } from '@/firebase/config';
+import admin from 'firebase-admin';
 
 /**
  * Universeel REST API Eindpunt voor BeheerHub.
- * GET: Externe systemen halen data UIT BeheerHub (Pull)
- * POST: Externe systemen schieten data IN BeheerHub (Push/Webhook)
+ * Maakt gebruik van de Firebase Admin SDK om beveiligingsregels te omzeilen
+ * en validatie via API-sleutel mogelijk te maken voor externe partners.
  */
 
-async function getDb() {
-  let app;
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApps()[0];
+// Initialiseer de Admin SDK één keer per server instantie
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp();
+  } catch (error) {
+    console.error('Fout bij initialiseren Firebase Admin:', error);
   }
-  return getFirestore(app);
 }
+
+const db = admin.firestore();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type');
-  const apiKey = request.headers.get('x-api-key');
+  
+  // Zoek de API-sleutel in de X-API-KEY header of de Authorization header
+  const authHeader = request.headers.get('authorization');
+  const apiKey = request.headers.get('x-api-key') || 
+                 (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader);
 
   if (!type || !apiKey) {
     return NextResponse.json({ 
@@ -31,15 +34,16 @@ export async function GET(request: Request) {
     }, { status: 400 });
   }
 
-  const db = await getDb();
-
   try {
-    // Valideer API Key
-    const settingsRef = doc(db, 'settings', 'api_settings');
-    const settingsSnap = await getDoc(settingsRef);
+    // Valideer API Key via de Admin SDK (hiermee omzeilen we de firestore.rules restricties)
+    const settingsSnap = await db.collection('settings').doc('api_settings').get();
+    const settingsData = settingsSnap.data();
     
-    if (!settingsSnap.exists() || settingsSnap.data().publicKey !== apiKey) {
-      return NextResponse.json({ error: 'Niet geautoriseerd', message: 'De opgegeven API Key is ongeldig.' }, { status: 401 });
+    if (!settingsSnap.exists || settingsData?.publicKey !== apiKey) {
+      return NextResponse.json({ 
+        error: 'Niet geautoriseerd', 
+        message: 'De opgegeven API Key is ongeldig of niet geconfigureerd.' 
+      }, { status: 401 });
     }
 
     // Definieer toegestane collecties
@@ -60,22 +64,20 @@ export async function GET(request: Request) {
       }, { status: 403 });
     }
 
-    const colRef = collection(db, targetCollection);
+    // Haal data op
+    let queryRef: any = db.collection(targetCollection);
     
-    // Voor meldingen sorteren we standaard op meest recent
-    let q;
+    // Sorteer indien van toepassing
     if (type === 'meldingen') {
-        q = query(colRef, orderBy('createdAt', 'desc'), limit(500));
-    } else {
-        q = query(colRef, limit(500));
+        queryRef = queryRef.orderBy('createdAt', 'desc');
     }
 
-    const snapshot = await getDocs(q);
+    const snapshot = await queryRef.limit(500).get();
     
-    const data = snapshot.docs.map(d => ({
+    const data = snapshot.docs.map((d: any) => ({
       id: d.id,
       ...d.data(),
-      // Verwijder gevoelige metadata indien nodig
+      // Verwijder eventuele interne timestamps die niet JSON-compatible zijn
       _path: undefined,
       _firestore: undefined
     }));
@@ -90,26 +92,30 @@ export async function GET(request: Request) {
 
   } catch (error: any) {
     console.error("REST GET Error:", error);
-    return NextResponse.json({ error: 'Server fout', message: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Server fout', 
+      message: error.message || 'Interne fout bij het ophalen van data.' 
+    }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type');
-  const apiKey = request.headers.get('x-api-key');
+  
+  const authHeader = request.headers.get('authorization');
+  const apiKey = request.headers.get('x-api-key') || 
+                 (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader);
 
   if (!type || !apiKey) {
     return NextResponse.json({ error: 'Onvolledig verzoek' }, { status: 400 });
   }
 
-  const db = await getDb();
-
   try {
-    const settingsRef = doc(db, 'settings', 'api_settings');
-    const settingsSnap = await getDoc(settingsRef);
+    const settingsSnap = await db.collection('settings').doc('api_settings').get();
+    const settingsData = settingsSnap.data();
     
-    if (!settingsSnap.exists() || settingsSnap.data().publicKey !== apiKey) {
+    if (!settingsSnap.exists || settingsData?.publicKey !== apiKey) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 });
     }
 
@@ -122,15 +128,17 @@ export async function POST(request: Request) {
     const items = Array.isArray(body) ? body : [body];
 
     const results = [];
+    const colRef = db.collection('meldingen');
+
     for (const item of items) {
         const newDoc = {
             ...item,
             status: item.status || 'Nieuw',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             source: 'REST_API_INBOUND'
         };
-        const docRef = await addDoc(collection(db, 'meldingen'), newDoc);
+        const docRef = await colRef.add(newDoc);
         results.push(docRef.id);
     }
 
@@ -142,6 +150,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
+    console.error("REST POST Error:", error);
     return NextResponse.json({ error: 'Server fout', message: error.message }, { status: 500 });
   }
 }
