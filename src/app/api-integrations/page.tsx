@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -104,11 +105,11 @@ export default function ApiIntegrationsPage() {
   const handleRunSync = async (integration: ApiIntegration) => {
     if (!firestore) return;
     setIsProcessing(true);
-    toast({ title: "REST Request gestart", description: `Data uit ${integration.sourceModule} wordt klaargezet.` });
+    toast({ title: "REST Request gestart", description: `Data uit ${integration.sourceModule} wordt verzonden.` });
     
     try {
         const sourceCol = collection(firestore, integration.sourceModule);
-        const q = query(sourceCol, limit(500));
+        const q = query(sourceCol, limit(100)); // Beperk batch voor test
         const snapshot = await getDocs(q);
         const sourceData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -124,8 +125,17 @@ export default function ApiIntegrationsPage() {
                     mappedItem[cleanApiKey] = (item as any)[realKey];
                 }
             });
+            
+            // Check of er wel data in het object zit
+            if (Object.keys(mappedItem).length === 0) return null;
             return mappedItem;
-        });
+        }).filter(item => item !== null);
+
+        if (payload.length === 0) {
+            toast({ variant: 'destructive', title: "Geen data", description: "Geen items gevonden die voldoen aan de veld-mapping." });
+            setIsProcessing(false);
+            return;
+        }
 
         const result = await triggerWebhookSync(
             integration.endpoint,
@@ -144,9 +154,13 @@ export default function ApiIntegrationsPage() {
         });
 
         if (result.success) {
-            toast({ title: "Synchronisatie geslaagd", description: `${payload.length} items verwerkt door externe API.` });
+            toast({ title: "Synchronisatie geslaagd", description: `${payload.length} items verwerkt.` });
         } else {
-            toast({ variant: 'destructive', title: "API Fout", description: "Controleer de respons van de externe server." });
+            toast({ 
+                variant: 'destructive', 
+                title: `API Fout (${result.status})`, 
+                description: "De externe server gaf een foutmelding terug." 
+            });
         }
     } catch (err: any) {
         console.error("Sync error:", err);
