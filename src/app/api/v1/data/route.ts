@@ -50,6 +50,7 @@ export async function OPTIONS() {
 
 /**
  * Helper om de API Key te valideren tegen de database.
+ * Controleert zowel X-API-KEY als Authorization headers.
  */
 async function validateAuth(request: Request): Promise<{ authorized: boolean; error?: string }> {
   const xApiKey = request.headers.get('x-api-key')?.trim();
@@ -77,7 +78,8 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
       return { authorized: false, error: 'API Hub is nog niet geconfigureerd in BeheerHub.' };
     }
 
-    const isMatch = candidateKeys.some(key => key === validKey);
+    // Vergelijk zonder witruimte om 401 te voorkomen bij kopieerfouten
+    const isMatch = candidateKeys.some(key => key.trim() === validKey);
     if (!isMatch) {
       return { authorized: false, error: 'De opgegeven API Key is ongeldig of verlopen.' };
     }
@@ -90,6 +92,7 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
 
 /**
  * GET - Data ophalen (Lezen)
+ * Ondersteunt nu optionele filters zoals status.
  */
 export async function GET(request: Request) {
   try {
@@ -99,6 +102,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
     const id = searchParams.get('id');
+    const statusFilter = searchParams.get('status');
 
     if (!type) {
       return corsResponse({ error: 'Onvolledig verzoek', message: 'Geef een "type" parameter op.' }, 400);
@@ -115,19 +119,29 @@ export async function GET(request: Request) {
     const targetCollection = allowedCollections[type];
     if (!targetCollection) return corsResponse({ error: 'Verboden', message: 'Dataset niet toegankelijk.' }, 403);
 
+    // Specifiek document ophalen
     if (id) {
       const docSnap = await db.collection(targetCollection).doc(id).get();
       if (!docSnap.exists) return corsResponse({ error: 'Niet gevonden', message: 'Record niet gevonden.' }, 404);
       return corsResponse({ success: true, data: { id: docSnap.id, ...docSnap.data() } });
     }
 
-    const snapshot = await db.collection(targetCollection).limit(1000).get();
+    // Collectie ophalen met optionele filters
+    let queryRef: admin.firestore.Query = db.collection(targetCollection);
+    
+    if (statusFilter) {
+      queryRef = queryRef.where('status', '==', statusFilter);
+    }
+
+    const snapshot = await queryRef.limit(1000).get();
     const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
     return corsResponse({
       success: true,
       count: data.length,
+      total_in_collection: (await db.collection(targetCollection).count().get()).data().count,
       timestamp: new Date().toISOString(),
+      filters_applied: statusFilter ? { status: statusFilter } : 'none',
       data: data
     });
   } catch (error: any) {
@@ -136,7 +150,7 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST - Nieuwe data aanmaken
+ * POST - Nieuwe data aanmaken (Volledige record)
  */
 export async function POST(request: Request) {
   try {

@@ -329,6 +329,13 @@ export default function ApiIntegrationsPage() {
                     <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Ontwikkelaar Documentatie</h3>
                     
                     <div className="space-y-6">
+                        <div className="bg-blue-50 p-4 border-l-4 border-blue-500">
+                            <p className="text-[10px] font-bold text-blue-700 uppercase">
+                                TIP: De interface toont meldingen gefilterd op status. De API toont standaard alle meldingen. 
+                                Gebruik <code className="bg-blue-100 px-1">&status=Afgerond</code> om de API-lijst te filteren op een specifieke status.
+                            </p>
+                        </div>
+
                         <div className="space-y-2">
                             <p className="text-[10px] font-black uppercase text-slate-400">Uitlezen (GET)</p>
                             <pre className="p-4 bg-slate-900 text-blue-400 text-[10px] font-mono rounded-none overflow-x-auto">
