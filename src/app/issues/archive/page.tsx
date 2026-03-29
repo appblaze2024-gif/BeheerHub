@@ -25,7 +25,8 @@ import {
   ImageIcon,
   Maximize2,
   Trash2,
-  Loader2
+  Loader2,
+  Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -131,7 +132,9 @@ export default function ArchiveIssuesPage() {
   // State for deletion
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = React.useState(false);
+  const [isDuplicatesDialogOpen, setIsDuplicatesDialogOpen] = React.useState(false);
   const [meldingToDelete, setMeldingToDelete] = React.useState<Melding | null>(null);
+  const [duplicatesToDelete, setDuplicatesToDelete] = React.useState<string[]>([]);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
   const [sortConfig, setSortConfig] = React.useState<{ field: string; order: 'asc' | 'desc' }>({ 
@@ -337,6 +340,81 @@ export default function ArchiveIssuesPage() {
     toast({ title: "Export voltooid", description: "Het Excel bestand is gedownload." });
   };
 
+  const handleIdentifyDuplicates = () => {
+    if (!archivedMeldingen) return;
+
+    const groups: Record<string, Melding[]> = {};
+    
+    archivedMeldingen.forEach(m => {
+        // Criteria: intakenummer, straat, huisnr, postcode, containernr
+        const key = [
+            m.intakenummer,
+            m.straatnaam,
+            m.huisnummer,
+            m.postcode,
+            m.containernummer
+        ].map(v => (v || '').toLowerCase().trim()).join('|');
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(m);
+    });
+
+    const idsToDelete: string[] = [];
+    Object.values(groups).forEach(group => {
+        if (group.length > 1) {
+            // Keep the first one, delete others
+            // Sort by creation date to keep the oldest one if possible
+            group.sort((a, b) => {
+                const timeA = a.createdAt?.seconds || 0;
+                const timeB = b.createdAt?.seconds || 0;
+                return timeA - timeB;
+            });
+            
+            // Collect IDs of everything after the first element
+            const extras = group.slice(1).map(m => m.id);
+            idsToDelete.push(...extras);
+        }
+    });
+
+    if (idsToDelete.length === 0) {
+        toast({ title: "Geen dubbelen", description: "Er zijn geen identieke meldingen gevonden in het archief." });
+        return;
+    }
+
+    setDuplicatesToDelete(idsToDelete);
+    setIsDuplicatesDialogOpen(true);
+  };
+
+  const handleConfirmCleanDuplicates = async () => {
+    if (!firestore || duplicatesToDelete.length === 0 || !isSuperAdmin) return;
+    
+    setIsDeleting(true);
+    try {
+        const batchSize = 500;
+        const total = duplicatesToDelete.length;
+        
+        for (let i = 0; i < total; i += batchSize) {
+            const batch = writeBatch(firestore);
+            const chunk = duplicatesToDelete.slice(i, i + batchSize);
+            chunk.forEach(id => {
+                batch.delete(doc(firestore, 'meldingen', id));
+            });
+            await batch.commit();
+        }
+
+        toast({ 
+            title: "Archief opgeschoond", 
+            description: `${total} dubbele meldingen zijn succesvol verwijderd.` 
+        });
+        setDuplicatesToDelete([]);
+        setIsDuplicatesDialogOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij opschonen" });
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
   const handleSort = (field: string) => {
     setSortConfig(prev => ({
       field,
@@ -415,126 +493,135 @@ export default function ArchiveIssuesPage() {
                 />
             </div>
             
-            <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 font-bold rounded-none border-slate-200 shadow-sm">
-                    <Filter className="mr-2 h-4 w-4" />
-                    Filter {Object.values(filters).filter(v => v !== '' && v !== 'alle' && v !== 'all').length > 0 && (
-                      <Badge className="ml-1 h-4 px-1 rounded-none bg-primary text-white text-[8px]">
-                        {Object.values(filters).filter(v => v !== '' && v !== 'alle' && v !== 'all').length}
-                      </Badge>
-                    )}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-xl rounded-none border-none shadow-2xl p-0 overflow-hidden">
-                <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary p-2 rounded-none">
-                      <ListFilter className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-1">
+                {isSuperAdmin && (
+                    <Button variant="outline" size="sm" onClick={handleIdentifyDuplicates} className="h-9 font-bold rounded-none border-slate-200 shadow-sm text-orange-600 hover:bg-orange-50">
+                        <Copy className="mr-2 h-4 w-4" />
+                        Dubbelen opruimen
+                    </Button>
+                )}
+                
+                <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 font-bold rounded-none border-slate-200 shadow-sm">
+                        <Filter className="mr-2 h-4 w-4" />
+                        Filter {Object.values(filters).filter(v => v !== '' && v !== 'alle' && v !== 'all').length > 0 && (
+                        <Badge className="ml-1 h-4 px-1 rounded-none bg-primary text-white text-[8px]">
+                            {Object.values(filters).filter(v => v !== '' && v !== 'alle' && v !== 'all').length}
+                        </Badge>
+                        )}
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-xl rounded-none border-none shadow-2xl p-0 overflow-hidden">
+                    <DialogHeader className="p-6 bg-slate-900 text-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-primary p-2 rounded-none">
+                        <ListFilter className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tight">Geavanceerd Filter</DialogTitle>
+                        <DialogDescription className="text-slate-400 font-bold uppercase text-[10px]">Filter het archief op datum, categorie of behandelaar.</DialogDescription>
+                        </div>
                     </div>
-                    <div>
-                      <DialogTitle className="text-xl font-black uppercase tracking-tight">Geavanceerd Filter</DialogTitle>
-                      <DialogDescription className="text-slate-400 font-bold uppercase text-[10px]">Filter het archief op datum, categorie of behandelaar.</DialogDescription>
+                    </DialogHeader>
+
+                    <ScrollArea className="max-h-[60vh]">
+                    <div className="p-6 space-y-8">
+                        <div className="space-y-3">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Snelkeuze Periode</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('today')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Vandaag</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('week')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Deze Week</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('month')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Deze Maand</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('year')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Dit Jaar</Button>
+                        </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Vanaf Datum</Label>
+                            <Input type="date" value={filters.startDate} onChange={e => setFilters(prev => ({...prev, startDate: e.target.value}))} className="h-11 font-bold rounded-none border-slate-200" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Tot Datum</Label>
+                            <Input type="date" value={filters.endDate} onChange={e => setFilters(prev => ({...prev, endDate: e.target.value}))} className="h-11 font-bold rounded-none border-slate-200" />
+                        </div>
+                        </div>
+
+                        <Separator className="bg-slate-100" />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Hoofdcategorie</Label>
+                            <Select value={filters.hoofdcategorie} onValueChange={v => setFilters(prev => ({...prev, hoofdcategorie: v, subcategorie: 'all'}))}>
+                            <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-none">
+                                <SelectItem value="alle">-- Alle categorieën --</SelectItem>
+                                {hoofdcategorieen.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Subcategorie</Label>
+                            <Select value={filters.subcategorie} onValueChange={v => setFilters(prev => ({...prev, subcategorie: v}))} disabled={filters.hoofdcategorie === 'alle'}>
+                            <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-none">
+                                <SelectItem value="all">-- Alle subcategorieën --</SelectItem>
+                                {dbOptions?.subcategorieen?.[filters.hoofdcategorie]?.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                        </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Behandelaar</Label>
+                            <Select value={filters.behandelaar} onValueChange={v => setFilters(prev => ({...prev, behandelaar: v}))}>
+                            <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-none">
+                                <SelectItem value="alle">-- Alle behandelaars --</SelectItem>
+                                {users?.map(u => (
+                                <SelectItem key={u.id} value={u.displayName || u.email!}>
+                                    {u.displayName || u.email}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Status</Label>
+                            <Select value={filters.status} onValueChange={v => setFilters(prev => ({...prev, status: v}))}>
+                            <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-none">
+                                <SelectItem value="alle">-- Alle archief statussen --</SelectItem>
+                                {closedStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                        </div>
+                        </div>
                     </div>
-                  </div>
-                </DialogHeader>
+                    </ScrollArea>
 
-                <ScrollArea className="max-h-[60vh]">
-                  <div className="p-6 space-y-8">
-                    <div className="space-y-3">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Snelkeuze Periode</Label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('today')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Vandaag</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('week')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Deze Week</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('month')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Deze Maand</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleQuickDateFilter('year')} className="h-9 font-bold text-[11px] rounded-none border-slate-200">Dit Jaar</Button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Vanaf Datum</Label>
-                        <Input type="date" value={filters.startDate} onChange={e => setFilters(prev => ({...prev, startDate: e.target.value}))} className="h-11 font-bold rounded-none border-slate-200" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Tot Datum</Label>
-                        <Input type="date" value={filters.endDate} onChange={e => setFilters(prev => ({...prev, endDate: e.target.value}))} className="h-11 font-bold rounded-none border-slate-200" />
-                      </div>
-                    </div>
-
-                    <Separator className="bg-slate-100" />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Hoofdcategorie</Label>
-                        <Select value={filters.hoofdcategorie} onValueChange={v => setFilters(prev => ({...prev, hoofdcategorie: v, subcategorie: 'all'}))}>
-                          <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-none">
-                            <SelectItem value="alle">-- Alle categorieën --</SelectItem>
-                            {hoofdcategorieen.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Subcategorie</Label>
-                        <Select value={filters.subcategorie} onValueChange={v => setFilters(prev => ({...prev, subcategorie: v}))} disabled={filters.hoofdcategorie === 'alle'}>
-                          <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-none">
-                            <SelectItem value="all">-- Alle subcategorieën --</SelectItem>
-                            {dbOptions?.subcategorieen?.[filters.hoofdcategorie]?.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Behandelaar</Label>
-                        <Select value={filters.behandelaar} onValueChange={v => setFilters(prev => ({...prev, behandelaar: v}))}>
-                          <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-none">
-                            <SelectItem value="alle">-- Alle behandelaars --</SelectItem>
-                            {users?.map(u => (
-                              <SelectItem key={u.id} value={u.displayName || u.email!}>
-                                {u.displayName || u.email}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Status</Label>
-                        <Select value={filters.status} onValueChange={v => setFilters(prev => ({...prev, status: v}))}>
-                          <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-none">
-                            <SelectItem value="alle">-- Alle archief statussen --</SelectItem>
-                            {closedStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </ScrollArea>
-
-                <DialogFooter className="p-6 border-t bg-slate-50 shrink-0 flex flex-col sm:flex-row gap-3">
-                  <Button variant="ghost" onClick={() => setFilters(INITIAL_FILTERS)} className="font-bold flex-1 rounded-none h-12">Filters Wissen</Button>
-                  <Button variant="outline" onClick={handleExport} className="font-black uppercase tracking-tight flex-1 rounded-none h-12 shadow-sm gap-2">
-                    <FileSpreadsheet className="h-4 w-4" /> Export Excel
-                  </Button>
-                  <Button onClick={() => setIsFilterOpen(false)} className="font-black uppercase tracking-tight flex-1 rounded-none h-12 shadow-xl shadow-primary/20 gap-2">
-                    <Check className="h-4 w-4" /> Toepassen
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                    <DialogFooter className="p-6 border-t bg-slate-50 shrink-0 flex flex-col sm:flex-row gap-3">
+                    <Button variant="ghost" onClick={() => setFilters(INITIAL_FILTERS)} className="font-bold flex-1 rounded-none h-12">Filters Wissen</Button>
+                    <Button variant="outline" onClick={handleExport} className="font-black uppercase tracking-tight flex-1 rounded-none h-12 shadow-sm gap-2">
+                        <FileSpreadsheet className="h-4 w-4" /> Export Excel
+                    </Button>
+                    <Button onClick={() => setIsFilterOpen(false)} className="font-black uppercase tracking-tight flex-1 rounded-none h-12 shadow-xl shadow-primary/20 gap-2">
+                        <Check className="h-4 w-4" /> Toepassen
+                    </Button>
+                    </DialogFooter>
+                </DialogContent>
+                </Dialog>
+            </div>
         </div>
       </header>
 
@@ -921,6 +1008,41 @@ export default function ArchiveIssuesPage() {
             >
               {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Selectie Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation Dialog for Duplicates Deletion */}
+      <AlertDialog open={isDuplicatesDialogOpen} onOpenChange={setIsDuplicatesDialogOpen}>
+        <AlertDialogContent className="rounded-none border-none shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black uppercase tracking-tight text-orange-600">
+                Dubbele meldingen verwijderen?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-bold text-slate-500">
+              Er zijn <strong>{duplicatesToDelete.length} dubbele meldingen</strong> gevonden in het archief. 
+              <br/><br/>
+              Het systeem heeft meldingen vergeleken op:
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>Intakenummer</li>
+                <li>Straat & Huisnummer</li>
+                <li>Postcode</li>
+                <li>Containernummer</li>
+              </ul>
+              <br/>
+              Per groep identieke meldingen wordt de oudste melding behouden. De rest wordt permanent verwijderd.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmCleanDuplicates} 
+              disabled={isDeleting}
+              className="bg-orange-600 hover:bg-orange-700 rounded-none font-black uppercase px-8"
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Dubbelen nu wissen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
