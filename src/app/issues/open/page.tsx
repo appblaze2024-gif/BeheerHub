@@ -1,9 +1,27 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, Info, User, Pencil, LayoutGrid, Calendar, MapPin, Tag, Check, X, Users } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, writeBatch, doc } from 'firebase/firestore';
+import { 
+  Search, 
+  ListFilter, 
+  ArrowLeft, 
+  Info, 
+  User, 
+  Pencil, 
+  LayoutGrid, 
+  Calendar, 
+  MapPin, 
+  Tag, 
+  Check, 
+  X, 
+  Users,
+  Trash2,
+  Copy,
+  AlertTriangle,
+  Loader2
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +44,17 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { AcceptAssignDialog } from '@/components/accept-assign-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const openStatuses = [
   "Intern doorgezet",
@@ -40,15 +69,21 @@ export default function OpenIssuesPage() {
   const { user } = useUser();
   const router = useRouter();
   const { profile } = useProfile();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
+  
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
   
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = React.useState(false);
+  const [isDuplicatesDialogOpen, setIsDuplicatesDialogOpen] = React.useState(false);
   const [selectedMeldingenForAssign, setSelectedMeldingenForAssign] = React.useState<Melding[]>([]);
+  const [duplicatesToDelete, setDuplicatesToDelete] = React.useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
-  const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
+  const isSuperAdmin = profile?.role === 'Super admin';
+  const isPrivileged = isSuperAdmin || profile?.role === 'toezichthouder';
 
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -133,6 +168,70 @@ export default function OpenIssuesPage() {
     setAssignDialogOpen(true);
   };
 
+  const handleIdentifyDuplicates = () => {
+    if (!openMeldingen) return;
+
+    const groups: Record<string, Melding[]> = {};
+    
+    openMeldingen.forEach(m => {
+        const key = [
+            m.intakenummer,
+            m.straatnaam,
+            m.huisnummer,
+            m.postcode,
+            m.containernummer
+        ].map(v => (v || '').toLowerCase().trim()).join('|');
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(m);
+    });
+
+    const idsToDelete: string[] = [];
+    Object.values(groups).forEach(group => {
+        if (group.length > 1) {
+            group.sort((a, b) => {
+                const timeA = a.createdAt?.seconds || 0;
+                const timeB = b.createdAt?.seconds || 0;
+                return timeA - timeB;
+            });
+            const extras = group.slice(1).map(m => m.id);
+            idsToDelete.push(...extras);
+        }
+    });
+
+    if (idsToDelete.length === 0) {
+        toast({ title: "Geen dubbelen", description: "Er zijn geen identieke openstaande werkbonnen gevonden." });
+        return;
+    }
+
+    setDuplicatesToDelete(idsToDelete);
+    setIsDuplicatesDialogOpen(true);
+  };
+
+  const handleConfirmCleanDuplicates = async () => {
+    if (!firestore || duplicatesToDelete.length === 0 || !isSuperAdmin) return;
+    
+    setIsDeleting(true);
+    try {
+        const batch = writeBatch(firestore);
+        duplicatesToDelete.forEach(id => {
+            batch.delete(doc(firestore, 'meldingen', id));
+        });
+        await batch.commit();
+
+        toast({ 
+            title: "Lijst opgeschoond", 
+            description: `${duplicatesToDelete.length} dubbele werkbonnen zijn verwijderd.` 
+        });
+        setDuplicatesToDelete([]);
+        setIsDuplicatesDialogOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij opschonen" });
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-6.1rem)] overflow-hidden bg-background">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
@@ -140,19 +239,25 @@ export default function OpenIssuesPage() {
             <Button variant="outline" size="icon" onClick={() => router.back()} className="shrink-0 rounded-full h-9 w-9">
                 <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-xl font-black uppercase tracking-tight">Openstaande Meldingen</h1>
+            <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">Openstaande Meldingen</h1>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+            {isSuperAdmin && (
+                <Button variant="outline" size="sm" onClick={handleIdentifyDuplicates} className="h-9 font-bold rounded-none border-slate-200 shadow-sm text-orange-600 hover:bg-orange-50">
+                    <Copy className="mr-2 h-4 w-4" />
+                    Dubbelen opruimen
+                </Button>
+            )}
             <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                     placeholder="Zoek meldingen..."
-                    className="pl-9 h-9 border-slate-200"
+                    className="pl-9 h-9 border-slate-200 rounded-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <Button variant="outline" size="sm" className="h-9">
+            <Button variant="outline" size="sm" className="h-9 rounded-none">
                 <ListFilter className="mr-2 h-4 w-4" />
                 Filter
             </Button>
@@ -176,7 +281,7 @@ export default function OpenIssuesPage() {
                         <Card 
                             key={melding.id} 
                             className={cn(
-                              "overflow-hidden border-none shadow-lg active:scale-[0.98] transition-all relative",
+                              "overflow-hidden border-none shadow-lg active:scale-[0.98] transition-all relative rounded-none",
                               selectedIds.has(melding.id) && "ring-2 ring-primary"
                             )}
                             onClick={() => selectedIds.size > 0 ? handleToggleSelect(melding.id) : router.push(`/issues/new?id=${melding.id}`)}
@@ -199,7 +304,7 @@ export default function OpenIssuesPage() {
                                     </div>
                                     <Badge
                                         className={cn(
-                                            "text-[9px] font-black uppercase tracking-tighter h-5 px-2 text-white border-none",
+                                            "text-[9px] font-black uppercase tracking-tighter h-5 px-2 text-white border-none rounded-none",
                                             statusColorMap[melding.status] || 'bg-slate-400'
                                         )}
                                     >
@@ -208,7 +313,7 @@ export default function OpenIssuesPage() {
                                 </div>
                                 <div className="p-4 space-y-3">
                                     <div className="flex items-start gap-3">
-                                        <div className="bg-primary/10 p-2 rounded-lg shrink-0">
+                                        <div className="bg-primary/10 p-2 rounded-none shrink-0">
                                             <MapPin className="h-4 w-4 text-primary" />
                                         </div>
                                         <div className="min-w-0">
@@ -222,7 +327,7 @@ export default function OpenIssuesPage() {
                                     </div>
                                     
                                     <div className="flex items-center gap-3">
-                                        <div className="bg-blue-50 p-2 rounded-lg shrink-0">
+                                        <div className="bg-blue-50 p-2 rounded-none shrink-0">
                                             <Tag className="h-4 w-4 text-blue-600" />
                                         </div>
                                         <div className="min-w-0">
@@ -240,7 +345,7 @@ export default function OpenIssuesPage() {
                                         </div>
                                         <button 
                                             className={cn(
-                                                "flex items-center gap-2 px-2.5 py-1 rounded-full border-2 transition-all",
+                                                "flex items-center gap-2 px-2.5 py-1 rounded-none border-2 transition-all",
                                                 isPrivileged ? "border-primary/20 bg-primary/5 hover:bg-primary/10" : "border-slate-100 bg-slate-50"
                                             )}
                                             onClick={(e) => handleOpenAssign(e, melding)}
@@ -259,7 +364,7 @@ export default function OpenIssuesPage() {
                 </div>
 
                 {/* Desktop View: Table */}
-                <div className="hidden md:block border rounded-xl overflow-hidden shadow-sm bg-white">
+                <div className="hidden md:block border rounded-none overflow-hidden shadow-sm bg-white">
                     <div className="overflow-x-auto">
                         <Table className="border-collapse w-full">
                             <TableHeader className="sticky top-0 bg-slate-100 z-10">
@@ -334,7 +439,7 @@ export default function OpenIssuesPage() {
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <div className="flex items-center gap-2">
-                                                    <User className="h-3.5 w-3.5 text-slate-400" />
+                                                    <UserIcon className="h-3.5 w-3.5 text-slate-400" />
                                                     <span className="text-[11px] font-black text-slate-700 truncate max-w-[120px]">
                                                         {melding.behandelaar || '-'}
                                                     </span>
@@ -345,7 +450,7 @@ export default function OpenIssuesPage() {
                                         <TableCell className="py-2 px-4">
                                             <Badge
                                                 className={cn(
-                                                    "text-[9px] font-black uppercase tracking-tighter h-5 px-2 text-white border-none",
+                                                    "text-[9px] font-black uppercase tracking-tighter h-5 px-2 text-white border-none rounded-none",
                                                     statusColorMap[displayStatus] || 'bg-slate-400'
                                                 )}
                                             >
@@ -408,6 +513,43 @@ export default function OpenIssuesPage() {
           setSelectedMeldingenForAssign([]);
         }} 
       />
+
+      {/* Confirmation Dialog for Duplicates Deletion */}
+      <AlertDialog open={isDuplicatesDialogOpen} onOpenChange={setIsDuplicatesDialogOpen}>
+        <AlertDialogContent className="rounded-none border-none shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black uppercase tracking-tight text-orange-600">
+                Dubbele werkbonnen verwijderen?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="font-bold text-slate-500">
+                Er zijn <strong>{duplicatesToDelete.length} dubbele werkbonnen</strong> gevonden in de lijst. 
+                <br/><br/>
+                Het systeem heeft meldingen vergeleken op:
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  <li>Intakenummer</li>
+                  <li>Straat & Huisnummer</li>
+                  <li>Postcode</li>
+                  <li>Containernummer</li>
+                </ul>
+                <br/>
+                Per groep identieke meldingen wordt de oudste melding behouden. De rest wordt permanent verwijderd.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmCleanDuplicates} 
+              disabled={isDeleting}
+              className="bg-orange-600 hover:bg-orange-700 rounded-none font-black uppercase px-8"
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Dubbelen nu wissen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, orderBy } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy, writeBatch } from 'firebase/firestore';
 import { 
   Search, 
   ListFilter, 
@@ -16,7 +16,10 @@ import {
   LayoutGrid, 
   Tag, 
   Users,
-  Trash2
+  Trash2,
+  Copy,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,8 +75,11 @@ export default function MeldingenportaalPage() {
   const [isForwardDialogOpen, setIsForwardDialogOpen] = React.useState(false);
   const [isAcceptDialogOpen, setIsAcceptDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isDuplicatesDialogOpen, setIsDuplicatesDialogOpen] = React.useState(false);
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
   const [meldingToDelete, setMeldingToDelete] = React.useState<Melding | null>(null);
+  const [duplicatesToDelete, setDuplicatesToDelete] = React.useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   
   // Selection state
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
@@ -191,6 +197,70 @@ export default function MeldingenportaalPage() {
     }
   };
 
+  const handleIdentifyDuplicates = () => {
+    if (!newMeldingen) return;
+
+    const groups: Record<string, Melding[]> = {};
+    
+    newMeldingen.forEach(m => {
+        const key = [
+            m.intakenummer,
+            m.straatnaam,
+            m.huisnummer,
+            m.postcode,
+            m.containernummer
+        ].map(v => (v || '').toLowerCase().trim()).join('|');
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(m);
+    });
+
+    const idsToDelete: string[] = [];
+    Object.values(groups).forEach(group => {
+        if (group.length > 1) {
+            group.sort((a, b) => {
+                const timeA = a.createdAt?.seconds || 0;
+                const timeB = b.createdAt?.seconds || 0;
+                return timeA - timeB;
+            });
+            const extras = group.slice(1).map(m => m.id);
+            idsToDelete.push(...extras);
+        }
+    });
+
+    if (idsToDelete.length === 0) {
+        toast({ title: "Geen dubbelen", description: "Er zijn geen identieke meldingen gevonden in het portaal." });
+        return;
+    }
+
+    setDuplicatesToDelete(idsToDelete);
+    setIsDuplicatesDialogOpen(true);
+  };
+
+  const handleConfirmCleanDuplicates = async () => {
+    if (!firestore || duplicatesToDelete.length === 0 || !isSuperAdmin) return;
+    
+    setIsDeleting(true);
+    try {
+        const batch = writeBatch(firestore);
+        duplicatesToDelete.forEach(id => {
+            batch.delete(doc(firestore, 'meldingen', id));
+        });
+        await batch.commit();
+
+        toast({ 
+            title: "Portaal opgeschoond", 
+            description: `${duplicatesToDelete.length} dubbele meldingen zijn verwijderd.` 
+        });
+        setDuplicatesToDelete([]);
+        setIsDuplicatesDialogOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij opschonen" });
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] overflow-hidden bg-background">
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
@@ -201,6 +271,12 @@ export default function MeldingenportaalPage() {
             <h1 className="text-lg md:text-xl font-black uppercase tracking-tight text-slate-900">Portaal</h1>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+            {isSuperAdmin && (
+                <Button variant="outline" size="sm" onClick={handleIdentifyDuplicates} className="h-9 font-bold rounded-none border-slate-200 shadow-sm text-orange-600 hover:bg-orange-50">
+                    <Copy className="mr-2 h-4 w-4" />
+                    Dubbelen opruimen
+                </Button>
+            )}
             <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Zoek..." className="pl-9 h-9 border-slate-200 rounded-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -377,6 +453,43 @@ export default function MeldingenportaalPage() {
               className="bg-red-600 hover:bg-red-700 rounded-none font-black uppercase px-8"
             >
               Definitief Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation Dialog for Duplicates Deletion */}
+      <AlertDialog open={isDuplicatesDialogOpen} onOpenChange={setIsDuplicatesDialogOpen}>
+        <AlertDialogContent className="rounded-none border-none shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black uppercase tracking-tight text-orange-600">
+                Dubbele meldingen verwijderen?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="font-bold text-slate-500">
+                Er zijn <strong>{duplicatesToDelete.length} dubbele meldingen</strong> gevonden in het portaal. 
+                <br/><br/>
+                Het systeem heeft meldingen vergeleken op:
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  <li>Intakenummer</li>
+                  <li>Straat & Huisnummer</li>
+                  <li>Postcode</li>
+                  <li>Containernummer</li>
+                </ul>
+                <br/>
+                Per groep identieke meldingen wordt de oudste melding behouden. De rest wordt permanent verwijderd.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmCleanDuplicates} 
+              disabled={isDeleting}
+              className="bg-orange-600 hover:bg-orange-700 rounded-none font-black uppercase px-8"
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Dubbelen nu wissen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
