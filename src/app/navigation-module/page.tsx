@@ -505,8 +505,8 @@ export default function StartNavigationPage() {
   const { selectedProjectId } = useProject();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
-  const isSuperUser = profile?.role === 'Super admin';
-  const isPrivileged = isSuperUser || profile?.role === 'toezichthouder';
+  const isSuperAdmin = profile?.role === 'Super admin';
+  const isPrivileged = isSuperAdmin || profile?.role === 'toezichthouder';
   
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = useState<'setup' | 'navigating'>('setup');
@@ -724,9 +724,9 @@ export default function StartNavigationPage() {
     if (type === 'meldingen') {
         rawActiveMeldingen?.forEach(m => { poolMap.set(m.id, m); });
         let result = Array.from(poolMap.values());
-        const isSuperAdmin = profile?.role === 'Super admin';
+        const isSuperAdminCheck = profile?.role === 'Super admin';
         const viewingSelf = managedUserId === user?.uid;
-        if (!(isSuperAdmin && viewingSelf)) {
+        if (!(isSuperAdminCheck && viewingSelf)) {
             const targetUser = users?.find(u => u.id === managedUserId);
             const targetUserName = targetUser?.displayName || targetUser?.email || 'Onbekend';
             result = result.filter(m => m.behandelaar === targetUserName);
@@ -820,11 +820,11 @@ export default function StartNavigationPage() {
   };
 
   const handleIdentifyDuplicates = () => {
-    if (!filteredMeldingen) return;
+    if (!rawActiveMeldingen) return;
 
     const groups: Record<string, Melding[]> = {};
     
-    filteredMeldingen.forEach(m => {
+    rawActiveMeldingen.forEach(m => {
         const key = [
             m.intakenummer,
             m.straatnaam,
@@ -860,7 +860,7 @@ export default function StartNavigationPage() {
   };
 
   const handleConfirmCleanDuplicates = async () => {
-    if (!firestore || duplicatesToDelete.length === 0 || !isSuperUser) return;
+    if (!firestore || duplicatesToDelete.length === 0 || !isSuperAdmin) return;
     
     setIsDeleting(true);
     try {
@@ -949,7 +949,7 @@ export default function StartNavigationPage() {
                     <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none truncate">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                    {isSuperUser && isMeldingenType && (
+                    {isSuperAdmin && isMeldingenType && (
                         <Button 
                             variant="outline" 
                             size="icon" 
@@ -1054,7 +1054,7 @@ export default function StartNavigationPage() {
                                                         <h3 className={cn("font-black text-sm uppercase tracking-tight truncate", isCompleted ? "text-green-800" : "text-slate-900")}>{m.intakenummer}</h3>
                                                         {m.status === 'Nieuw' && <Badge className="text-[8px] font-black uppercase bg-red-600 text-white h-4 px-1 rounded-none shadow-sm shrink-0">NEW</Badge>}
                                                     </div>
-                                                    <p className={cn("text-[11px] font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-500")}>{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
+                                                    <p className={cn("text-[11px] font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-50")}>{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
                                                 </div>
                                                 <div className="flex gap-1 shrink-0 items-center">
                                                     {!isCompleted && <Button variant="outline" size="icon" className="h-9 w-9 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100" onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}><Navigation className="h-5 w-5" /></Button>}
