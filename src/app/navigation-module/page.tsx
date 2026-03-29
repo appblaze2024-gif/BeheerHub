@@ -15,7 +15,7 @@ import {
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc, query, where, limit, writeBatch } from 'firebase/firestore';
+import { collection, doc, query, where, limit, writeBatch, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -87,7 +87,9 @@ import {
   LayoutGrid,
   CircleHelp,
   AlertCircle,
-  Plus
+  Plus,
+  Copy,
+  AlertTriangle
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -503,7 +505,8 @@ export default function StartNavigationPage() {
   const { selectedProjectId } = useProject();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
-  const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
+  const isSuperUser = profile?.role === 'Super admin';
+  const isPrivileged = isSuperUser || profile?.role === 'toezichthouder';
   
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [navigationState, setNavigationState] = useState<'setup' | 'navigating'>('setup');
@@ -522,6 +525,11 @@ export default function StartNavigationPage() {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+
+  // Duplicates logic state
+  const [isDuplicatesDialogOpen, setIsDuplicatesDialogOpen] = useState(false);
+  const [duplicatesToDelete, setDuplicatesToDelete] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -811,6 +819,70 @@ export default function StartNavigationPage() {
     );
   };
 
+  const handleIdentifyDuplicates = () => {
+    if (!filteredMeldingen) return;
+
+    const groups: Record<string, Melding[]> = {};
+    
+    filteredMeldingen.forEach(m => {
+        const key = [
+            m.intakenummer,
+            m.straatnaam,
+            m.huisnummer,
+            m.postcode,
+            m.containernummer
+        ].map(v => (v || '').toLowerCase().trim()).join('|');
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(m);
+    });
+
+    const idsToDelete: string[] = [];
+    Object.values(groups).forEach(group => {
+        if (group.length > 1) {
+            group.sort((a, b) => {
+                const timeA = a.createdAt?.seconds || 0;
+                const timeB = b.createdAt?.seconds || 0;
+                return timeA - timeB;
+            });
+            const extras = group.slice(1).map(m => m.id);
+            idsToDelete.push(...extras);
+        }
+    });
+
+    if (idsToDelete.length === 0) {
+        toast({ title: "Geen dubbelen", description: "Er zijn geen identieke werkbonnen gevonden in deze lijst." });
+        return;
+    }
+
+    setDuplicatesToDelete(idsToDelete);
+    setIsDuplicatesDialogOpen(true);
+  };
+
+  const handleConfirmCleanDuplicates = async () => {
+    if (!firestore || duplicatesToDelete.length === 0 || !isSuperUser) return;
+    
+    setIsDeleting(true);
+    try {
+        const batch = writeBatch(firestore);
+        duplicatesToDelete.forEach(id => {
+            batch.delete(doc(firestore, 'meldingen', id));
+        });
+        await batch.commit();
+
+        toast({ 
+            title: "Lijst opgeschoond", 
+            description: `${duplicatesToDelete.length} dubbele meldingen zijn verwijderd.` 
+        });
+        setDuplicatesToDelete([]);
+        setIsDuplicatesDialogOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij opschonen" });
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
   const handleCreateFolder = async () => {
     if (!firestore || !managedUserId || !newFolderName.trim()) return;
     try {
@@ -877,6 +949,17 @@ export default function StartNavigationPage() {
                     <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 leading-none truncate">{isMeldingenType ? 'Meldingen' : 'Navigatie'}</h2>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                    {isSuperUser && isMeldingenType && (
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-10 w-10 rounded-none border-slate-200 text-orange-600 hover:bg-orange-50"
+                            onClick={handleIdentifyDuplicates}
+                            title="Dubbele werkbonnen opruimen"
+                        >
+                            <Copy className="h-5 w-5" />
+                        </Button>
+                    )}
                     <Popover>
                         <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 rounded-none hover:bg-slate-100"><Settings className="h-5 w-5 text-slate-600" /></Button></PopoverTrigger>
                         <PopoverContent side="bottom" align="end" className="w-80 p-6 rounded-none shadow-2xl bg-white border-none">
@@ -1011,6 +1094,41 @@ export default function StartNavigationPage() {
         {activeWerkbonId && (
             <IntegratedWerkbonOverlay meldingId={activeWerkbonId} onClose={() => setActiveWerkbonId(null)} onCompleted={(id) => { setCompletedObjects(prev => [...prev, id]); setActiveWerkbonId(null); handleRecalculateRoute(); }} />
         )}
+
+        {/* Duplicates Cleanup Alert */}
+        <AlertDialog open={isDuplicatesDialogOpen} onOpenChange={setIsDuplicatesDialogOpen}>
+            <AlertDialogContent className="rounded-none border-none shadow-2xl">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="font-black uppercase tracking-tight text-orange-600">Dubbele werkbonnen verwijderen?</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                        <div className="font-bold text-slate-500">
+                            Er zijn <strong>{duplicatesToDelete.length} dubbele werkbonnen</strong> gevonden in de huidige lijst. 
+                            <br/><br/>
+                            Het systeem heeft meldingen vergeleken op:
+                            <ul className="list-disc pl-5 mt-2 space-y-1">
+                                <li>Intakenummer</li>
+                                <li>Straat & Huisnummer</li>
+                                <li>Postcode</li>
+                                <li>Containernummer</li>
+                            </ul>
+                            <br/>
+                            Per groep identieke meldingen wordt de oudste melding behouden. De rest wordt permanent verwijderd.
+                        </div>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-2">
+                    <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+                    <AlertDialogAction 
+                        onClick={handleConfirmCleanDuplicates} 
+                        disabled={isDeleting}
+                        className="bg-orange-600 hover:bg-orange-700 rounded-none font-black uppercase px-8"
+                    >
+                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Dubbelen nu wissen
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
