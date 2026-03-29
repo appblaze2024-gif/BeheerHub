@@ -8,7 +8,7 @@ import {
   ListFilter, 
   ArrowLeft, 
   Info, 
-  User, 
+  User as UserIcon, 
   Pencil, 
   LayoutGrid, 
   Calendar, 
@@ -350,7 +350,7 @@ export default function OpenIssuesPage() {
                                             )}
                                             onClick={(e) => handleOpenAssign(e, melding)}
                                         >
-                                            <User className="h-3 w-3 text-primary" />
+                                            <UserIcon className="h-3 w-3 text-primary" />
                                             <span className="text-[10px] font-black text-primary uppercase truncate max-w-[100px]">
                                                 {melding.behandelaar || 'Niet toegewezen'}
                                             </span>
