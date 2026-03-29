@@ -33,7 +33,8 @@ import {
   Share2,
   ShieldCheck,
   Webhook,
-  AlertTriangle
+  AlertTriangle,
+  List
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, orderBy, getDocs, limit } from 'firebase/firestore';
@@ -322,6 +323,30 @@ export default function ApiIntegrationsPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
+                        <List className="h-4 w-4" /> Meldingen Deep Links
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                        {[
+                            { label: 'Portaal (Nieuw)', status: 'Nieuw' },
+                            { label: 'Openstaand (Actief)', status: 'Intern doorgezet,In behandeling,Gepland op korte termijn,Gepland op langere termijn,Extern doorgezet' },
+                            { label: 'Archief (Historie)', status: 'Afgerond,Niet in beheer,Geweigerd,Dubbel gemeld' }
+                        ].map(view => (
+                            <div key={view.label} className="p-5 bg-white border-2 border-slate-100 rounded-none hover:border-primary/20 transition-all group shadow-sm">
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className="text-sm font-black uppercase tracking-tight">{view.label}</span>
+                                    <Badge className="bg-primary text-white text-[8px] font-black rounded-none uppercase">FILTERED GET</Badge>
+                                </div>
+                                <div className="flex gap-0">
+                                    <Input value={`${baseUrl}?type=meldingen&status=${encodeURIComponent(view.status)}`} readOnly className="h-9 font-mono text-[9px] bg-slate-50 border-none rounded-none text-blue-600 font-bold" />
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none bg-slate-100" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=meldingen&status=${view.status}`); toast({ title: "Deep Link Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                   </div>
 

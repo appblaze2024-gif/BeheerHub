@@ -92,7 +92,7 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
 
 /**
  * GET - Data ophalen (Lezen)
- * Ondersteunt nu optionele filters zoals status.
+ * Ondersteunt nu optionele filters zoals status (enkel of lijst).
  */
 export async function GET(request: Request) {
   try {
@@ -130,7 +130,15 @@ export async function GET(request: Request) {
     let queryRef: admin.firestore.Query = db.collection(targetCollection);
     
     if (statusFilter) {
-      queryRef = queryRef.where('status', '==', statusFilter);
+      // Ondersteun komma-gescheiden statussen voor "IN" queries (tot max 30)
+      if (statusFilter.includes(',')) {
+        const statuses = statusFilter.split(',').map(s => s.trim()).filter(Boolean);
+        if (statuses.length > 0) {
+          queryRef = queryRef.where('status', 'in', statuses.slice(0, 30));
+        }
+      } else {
+        queryRef = queryRef.where('status', '==', statusFilter);
+      }
     }
 
     const snapshot = await queryRef.limit(1000).get();
@@ -202,7 +210,7 @@ export async function PATCH(request: Request) {
     
     await docRef.update({
       ...body,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      updatedAt: admin.firestore.Timestamp.now()
     });
 
     return corsResponse({ success: true, message: 'Record succesvol bijgewerkt.' });
