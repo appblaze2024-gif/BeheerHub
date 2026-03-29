@@ -826,7 +826,7 @@ export default function ArchiveIssuesPage() {
                                         <TableRow 
                                             key={melding.id} 
                                             className={cn(
-                                                "group h-12 hover:bg-slate-50 transition-colors border-b border-slate-100",
+                                                "group h-12 hover:bg-slate-50/50 transition-colors border-b border-slate-100",
                                                 isSelected && "bg-blue-50/50"
                                             )}
                                         >
@@ -1020,18 +1020,20 @@ export default function ArchiveIssuesPage() {
             <AlertDialogTitle className="font-black uppercase tracking-tight text-orange-600">
                 Dubbele meldingen verwijderen?
             </AlertDialogTitle>
-            <AlertDialogDescription className="font-bold text-slate-500">
-              Er zijn <strong>{duplicatesToDelete.length} dubbele meldingen</strong> gevonden in het archief. 
-              <br/><br/>
-              Het systeem heeft meldingen vergeleken op:
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Intakenummer</li>
-                <li>Straat & Huisnummer</li>
-                <li>Postcode</li>
-                <li>Containernummer</li>
-              </ul>
-              <br/>
-              Per groep identieke meldingen wordt de oudste melding behouden. De rest wordt permanent verwijderd.
+            <AlertDialogDescription asChild>
+              <div className="font-bold text-slate-500">
+                Er zijn <strong>{duplicatesToDelete.length} dubbele meldingen</strong> gevonden in het archief. 
+                <br/><br/>
+                Het systeem heeft meldingen vergeleken op:
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  <li>Intakenummer</li>
+                  <li>Straat & Huisnummer</li>
+                  <li>Postcode</li>
+                  <li>Containernummer</li>
+                </ul>
+                <br/>
+                Per groep identieke meldingen wordt de oudste melding behouden. De rest wordt permanent verwijderd.
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
