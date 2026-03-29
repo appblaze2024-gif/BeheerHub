@@ -92,7 +92,7 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
 
 /**
  * GET - Data ophalen (Lezen)
- * Ondersteunt nu optionele filters zoals status (enkel of lijst).
+ * Ondersteunt nu dynamische filters op alle velden.
  */
 export async function GET(request: Request) {
   try {
@@ -102,7 +102,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
     const id = searchParams.get('id');
-    const statusFilter = searchParams.get('status');
 
     if (!type) {
       return corsResponse({ error: 'Onvolledig verzoek', message: 'Geef een "type" parameter op.' }, 400);
@@ -113,7 +112,8 @@ export async function GET(request: Request) {
       'objects': 'objects',
       'projects': 'projects',
       'voertuigen': 'voertuigen',
-      'machines': 'machines'
+      'machines': 'machines',
+      'users': 'users'
     };
 
     const targetCollection = allowedCollections[type];
@@ -126,20 +126,29 @@ export async function GET(request: Request) {
       return corsResponse({ success: true, data: { id: docSnap.id, ...docSnap.data() } });
     }
 
-    // Collectie ophalen met optionele filters
+    // Collectie ophalen met dynamische filters uit alle overige URL parameters
     let queryRef: admin.firestore.Query = db.collection(targetCollection);
-    
-    if (statusFilter) {
-      // Ondersteun komma-gescheiden statussen voor "IN" queries (tot max 30)
-      if (statusFilter.includes(',')) {
-        const statuses = statusFilter.split(',').map(s => s.trim()).filter(Boolean);
-        if (statuses.length > 0) {
-          queryRef = queryRef.where('status', 'in', statuses.slice(0, 30));
+    const appliedFilters: Record<string, string> = {};
+
+    searchParams.forEach((value, key) => {
+      // Sla metadata parameters over
+      if (['type', 'id'].includes(key)) return;
+      
+      appliedFilters[key] = value;
+
+      if (value.includes(',')) {
+        // Ondersteun komma-gescheiden statussen voor "IN" queries (tot max 30)
+        const values = value.split(',').map(s => s.trim()).filter(Boolean);
+        if (values.length > 0) {
+          queryRef = queryRef.where(key, 'in', values.slice(0, 30));
         }
       } else {
-        queryRef = queryRef.where('status', '==', statusFilter);
+        // Simpele gelijk-aan vergelijking
+        if (value.toLowerCase() === 'true') queryRef = queryRef.where(key, '==', true);
+        else if (value.toLowerCase() === 'false') queryRef = queryRef.where(key, '==', false);
+        else queryRef = queryRef.where(key, '==', value);
       }
-    }
+    });
 
     const snapshot = await queryRef.limit(1000).get();
     const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -149,7 +158,7 @@ export async function GET(request: Request) {
       count: data.length,
       total_in_collection: (await db.collection(targetCollection).count().get()).data().count,
       timestamp: new Date().toISOString(),
-      filters_applied: statusFilter ? { status: statusFilter } : 'none',
+      filters_applied: Object.keys(appliedFilters).length > 0 ? appliedFilters : 'none',
       data: data
     });
   } catch (error: any) {

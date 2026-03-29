@@ -7,36 +7,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
-  Link2, 
   Plus, 
-  Trash2, 
   Loader2, 
-  Settings2, 
   Play, 
-  CheckCircle2, 
-  Code, 
-  ArrowRight,
+  ChevronRight, 
+  Key, 
+  Copy, 
+  Share2, 
+  AlertTriangle,
+  List,
   Database,
   Globe,
-  Search,
-  ChevronRight,
-  Zap,
-  Info,
-  Key,
-  Copy,
-  RefreshCw,
-  Terminal,
-  Cpu,
-  Activity,
+  Truck,
+  Users,
+  MapPin,
+  Folder,
   ArrowUpRight,
-  Download,
-  Share2,
-  ShieldCheck,
-  Webhook,
-  AlertTriangle,
-  List
+  Zap,
+  Info
 } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { 
+  useFirestore, 
+  useCollection, 
+  useMemoFirebase, 
+  updateDocumentNonBlocking, 
+  useDoc, 
+  setDocumentNonBlocking 
+} from '@/firebase';
 import { collection, doc, query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -49,6 +46,12 @@ import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { LoadingScreen } from '@/components/loading-screen';
 import { triggerWebhookSync } from './actions';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function ApiIntegrationsPage() {
   const firestore = useFirestore();
@@ -137,6 +140,68 @@ export default function ApiIntegrationsPage() {
   const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/v1/data` : '';
 
   if (isLoading || isLoadingSettings) return <LoadingScreen message="REST HUB laden..." />;
+
+  const apiModules = [
+    { 
+        id: 'meldingen', 
+        label: 'Meldingen', 
+        icon: List, 
+        color: 'text-primary',
+        views: [
+            { label: 'Portaal (Nieuw)', params: 'status=Nieuw' },
+            { label: 'Openstaand (Actief)', params: 'status=Intern doorgezet,In behandeling,Gepland op korte termijn,Gepland op langere termijn,Extern doorgezet' },
+            { label: 'Archief (Historie)', params: 'status=Afgerond,Niet in beheer,Geweigerd,Dubbel gemeld' }
+        ]
+    },
+    { 
+        id: 'objects', 
+        label: 'Objecten', 
+        icon: MapPin, 
+        color: 'text-green-600',
+        views: [
+            { label: 'Alleen Prullenbakken', params: 'locatieType=prullenbak' },
+            { label: 'Alleen Containers', params: 'locatieType=container' },
+            { label: 'Alleen Actief', params: 'isActief=true' }
+        ]
+    },
+    { 
+        id: 'voertuigen', 
+        label: 'Wagenpark (Voertuigen)', 
+        icon: Truck, 
+        color: 'text-blue-600',
+        views: [
+            { label: 'Operationeel', params: 'status=Actief' },
+            { label: 'In Onderhoud', params: 'status=In onderhoud' }
+        ]
+    },
+    { 
+        id: 'machines', 
+        label: 'Machinepark', 
+        icon: Zap, 
+        color: 'text-orange-600',
+        views: [
+            { label: 'Operationeel', params: 'status=Actief' },
+            { label: 'In Onderhoud', params: 'status=In onderhoud' }
+        ]
+    },
+    { 
+        id: 'users', 
+        label: 'Personeel', 
+        icon: Users, 
+        color: 'text-purple-600',
+        views: [
+            { label: 'Toezichthouders', params: 'role=toezichthouder' },
+            { label: 'Super admins', params: 'role=Super admin' }
+        ]
+    },
+    { 
+        id: 'projects', 
+        label: 'Projecten', 
+        icon: Folder, 
+        color: 'text-slate-600',
+        views: []
+    }
+  ];
 
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
@@ -305,49 +370,51 @@ export default function ApiIntegrationsPage() {
                   </div>
 
                   <div className="space-y-6">
-                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Endpoints & Datasets</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {['meldingen', 'objects', 'projects', 'voertuigen', 'machines'].map(type => (
-                        <div key={type} className="p-5 bg-white border-2 border-slate-100 rounded-none hover:border-primary/20 transition-all group">
-                          <div className="flex justify-between items-center mb-4">
-                            <span className="text-sm font-black uppercase tracking-tight">{type}</span>
-                            <div className="flex gap-1">
-                                <Badge className="bg-blue-100 text-blue-700 text-[8px] font-black rounded-none">GET</Badge>
-                                <Badge className="bg-green-100 text-green-700 text-[8px] font-black rounded-none">POST</Badge>
-                                <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black rounded-none">PATCH</Badge>
-                            </div>
-                          </div>
-                          <div className="flex gap-0">
-                            <Input value={`${baseUrl}?type=${type}`} readOnly className="h-9 font-mono text-[9px] bg-slate-50 border-none rounded-none text-blue-600 font-bold" />
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none bg-slate-100" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${type}`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
                     <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
-                        <List className="h-4 w-4" /> Meldingen Deep Links
+                        <Database className="h-4 w-4 text-primary" /> Beschikbare Datasets & Deep Links
                     </h3>
-                    <div className="grid grid-cols-1 gap-4">
-                        {[
-                            { label: 'Portaal (Nieuw)', status: 'Nieuw' },
-                            { label: 'Openstaand (Actief)', status: 'Intern doorgezet,In behandeling,Gepland op korte termijn,Gepland op langere termijn,Extern doorgezet' },
-                            { label: 'Archief (Historie)', status: 'Afgerond,Niet in beheer,Geweigerd,Dubbel gemeld' }
-                        ].map(view => (
-                            <div key={view.label} className="p-5 bg-white border-2 border-slate-100 rounded-none hover:border-primary/20 transition-all group shadow-sm">
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-sm font-black uppercase tracking-tight">{view.label}</span>
-                                    <Badge className="bg-primary text-white text-[8px] font-black rounded-none uppercase">FILTERED GET</Badge>
-                                </div>
-                                <div className="flex gap-0">
-                                    <Input value={`${baseUrl}?type=meldingen&status=${encodeURIComponent(view.status)}`} readOnly className="h-9 font-mono text-[9px] bg-slate-50 border-none rounded-none text-blue-600 font-bold" />
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none bg-slate-100" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=meldingen&status=${view.status}`); toast({ title: "Deep Link Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
-                                </div>
-                            </div>
+                    
+                    <Accordion type="single" collapsible className="w-full space-y-2">
+                        {apiModules.map(mod => (
+                            <AccordionItem key={mod.id} value={mod.id} className="border-2 border-slate-100 rounded-none overflow-hidden bg-white px-0 group">
+                                <AccordionTrigger className="hover:no-underline px-6 py-4 bg-slate-50/50 group-data-[state=open]:bg-primary group-data-[state=open]:text-white transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <mod.icon className={cn("h-5 w-5", mod.color, "group-data-[state=open]:text-white")} />
+                                        <span className="text-sm font-black uppercase tracking-tight">{mod.label}</span>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="p-6 space-y-6 bg-white border-t-2 border-slate-50">
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">Basis Eindpunt (Alle records)</p>
+                                        <div className="flex gap-0">
+                                            <Input value={`${baseUrl}?type=${mod.id}`} readOnly className="h-10 font-mono text-xs bg-slate-50 border-none rounded-none text-blue-600 font-bold" />
+                                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none bg-slate-100 border-l border-slate-200" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-4 w-4" /></Button>
+                                        </div>
+                                    </div>
+
+                                    {mod.views.length > 0 && (
+                                        <div className="space-y-3">
+                                            <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">Voor-gefilterde Snelkoppelingen (Views)</p>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {mod.views.map(view => (
+                                                    <div key={view.label} className="p-4 bg-slate-50 border-2 border-slate-100 rounded-none group/link hover:border-primary/20 transition-all flex flex-col gap-3">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-[11px] font-black uppercase text-slate-700">{view.label}</span>
+                                                            <Badge className="bg-primary/10 text-primary text-[8px] font-black border-none rounded-none">PRESET</Badge>
+                                                        </div>
+                                                        <div className="flex gap-0">
+                                                            <Input value={`${baseUrl}?type=${mod.id}&${view.params}`} readOnly className="h-8 font-mono text-[9px] bg-white border-none rounded-none text-slate-500 font-bold" />
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none bg-white border-l" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}&${view.params}`); toast({ title: "Deep Link Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </AccordionContent>
+                            </AccordionItem>
                         ))}
-                    </div>
+                    </Accordion>
                   </div>
 
                   <div className="space-y-4">
@@ -356,8 +423,8 @@ export default function ApiIntegrationsPage() {
                     <div className="space-y-6">
                         <div className="bg-blue-50 p-4 border-l-4 border-blue-500">
                             <p className="text-[10px] font-bold text-blue-700 uppercase">
-                                TIP: De interface toont meldingen gefilterd op status. De API toont standaard alle meldingen. 
-                                Gebruik <code className="bg-blue-100 px-1">&status=Afgerond</code> om de API-lijst te filteren op een specifieke status.
+                                TIP: De API is nu volledig dynamisch. Je kunt op elk veld filteren door het toe te voegen als query parameter. 
+                                Bijvoorbeeld: <code className="bg-blue-100 px-1">&wijk=Noord</code> of <code className="bg-blue-100 px-1">&isActief=true</code>.
                             </p>
                         </div>
 
