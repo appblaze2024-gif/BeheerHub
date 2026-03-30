@@ -1054,7 +1054,7 @@ export default function StartNavigationPage() {
                                                         <h3 className={cn("font-black text-sm uppercase tracking-tight truncate", isCompleted ? "text-green-800" : "text-slate-900")}>{m.intakenummer}</h3>
                                                         {m.status === 'Nieuw' && <Badge className="text-[8px] font-black uppercase bg-red-600 text-white h-4 px-1 rounded-none shadow-sm shrink-0">NEW</Badge>}
                                                     </div>
-                                                    <p className={cn("text-[11px] font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-50")}>{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
+                                                    <p className={cn("text-[11px] font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-500")}>{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
                                                 </div>
                                                 <div className="flex gap-1 shrink-0 items-center">
                                                     {!isCompleted && <Button variant="outline" size="icon" className="h-9 w-9 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100" onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}><Navigation className="h-5 w-5" /></Button>}
@@ -1102,7 +1102,7 @@ export default function StartNavigationPage() {
                     <AlertDialogTitle className="font-black uppercase tracking-tight text-orange-600">Dubbele werkbonnen verwijderen?</AlertDialogTitle>
                     <AlertDialogDescription asChild>
                         <div className="font-bold text-slate-500">
-                            Er zijn <strong>{duplicatesToDelete.length} dubbele werkbonnen</strong> gevonden in de huidige lijst. 
+                            Er zijn <strong>{duplicatesToDelete.length} dubbele werkbonnen</strong> gevonden in the huidige lijst. 
                             <br/><br/>
                             Het systeem heeft meldingen vergeleken op:
                             <ul className="list-disc pl-5 mt-2 space-y-1">
