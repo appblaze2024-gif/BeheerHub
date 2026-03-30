@@ -15,7 +15,6 @@ import {
   Copy, 
   Share2, 
   AlertTriangle,
-  List,
   Database,
   Globe,
   Truck,
@@ -24,7 +23,8 @@ import {
   Folder,
   ArrowUpRight,
   Zap,
-  ArrowRight
+  ArrowRight,
+  List
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -89,36 +89,14 @@ export default function ApiIntegrationsPage() {
   const handleRunSync = async (integration: ApiIntegration) => {
     if (!firestore) return;
     setIsProcessing(true);
-    toast({ title: "REST Request gestart" });
+    toast({ title: "GET Request gestart" });
     
     try {
-        const sourceCol = collection(firestore, integration.sourceModule);
-        const q = query(sourceCol, limit(100));
-        const snapshot = await getDocs(q);
-        const sourceData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        const payload = sourceData.map(item => {
-            const fullPayload = { ...item };
-            Object.entries(integration.mapping).forEach(([fsKey, apiKey]) => {
-                const val = (item as any)[fsKey.trim()];
-                if (val !== undefined) {
-                    fullPayload[apiKey.trim()] = val;
-                }
-            });
-            return fullPayload;
-        }).filter(item => Object.keys(item).length > 1);
-
-        if (payload.length === 0) {
-            toast({ variant: 'destructive', title: "Geen data" });
-            setIsProcessing(false);
-            return;
-        }
-
         const result = await triggerWebhookSync(
             integration.endpoint,
-            integration.method,
+            'GET',
             integration.headers.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
-            payload
+            {}
         );
 
         await updateDocumentNonBlocking(doc(firestore, 'api_integrations', integration.id), {
@@ -128,7 +106,7 @@ export default function ApiIntegrationsPage() {
         });
 
         if (result.success) toast({ title: "Synchronisatie geslaagd" });
-        else toast({ variant: 'destructive', title: "Fout bij verzenden" });
+        else toast({ variant: 'destructive', title: "Fout bij opvragen" });
     } catch (err: any) {
         toast({ variant: 'destructive', title: "Kritieke fout", description: err.message });
     } finally {
@@ -205,7 +183,7 @@ export default function ApiIntegrationsPage() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
-      <PageHeader title="REST API HUB" description="Beheer datastromen en externe systeemkoppelingen.">
+      <PageHeader title="REST API HUB" description="Beheer uitsluitend lees-gebaseerde datastromen (GET).">
         <div className="bg-slate-100 p-1 rounded-none border-2 border-slate-200 shadow-inner flex h-11 w-[400px]">
             <button 
                 onClick={() => setActiveTab('outbound')}
@@ -214,7 +192,7 @@ export default function ApiIntegrationsPage() {
                     activeTab === 'outbound' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:bg-white/50"
                 )}
             >
-                DATA DISPATCHER (PUSH)
+                EXTERNAL POLL (OUT)
             </button>
             <button 
                 onClick={() => setActiveTab('inbound')}
@@ -251,7 +229,7 @@ export default function ApiIntegrationsPage() {
                     >
                       <div className="min-w-0">
                         <p className="font-black uppercase text-sm tracking-tight truncate">{i.name}</p>
-                        <Badge variant="outline" className={cn("text-[8px] h-4 mt-1 border-none", selectedId === i.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400")}>{i.method} {i.sourceModule}</Badge>
+                        <Badge variant="outline" className={cn("text-[8px] h-4 mt-1 border-none", selectedId === i.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400")}>GET {i.sourceModule}</Badge>
                       </div>
                       <ChevronRight className={cn("h-4 w-4", selectedId === i.id ? "text-white" : "text-slate-200")} />
                     </div>
@@ -274,7 +252,7 @@ export default function ApiIntegrationsPage() {
                     <div className="flex gap-2">
                       <Button variant="outline" onClick={() => setIsDialogOpen(true)} className="font-black uppercase text-[10px] h-10 border-slate-200">Bewerken</Button>
                       <Button onClick={() => handleRunSync(selectedIntegration)} disabled={isProcessing} className="h-10 px-6 font-black uppercase text-[10px] shadow-xl shadow-primary/20">
-                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />} SYNC NU
+                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />} POLL NU
                       </Button>
                     </div>
                   </header>
@@ -286,7 +264,7 @@ export default function ApiIntegrationsPage() {
                           <Badge className={cn("rounded-none text-[10px] uppercase font-black border-none", selectedIntegration.lastStatus === 'success' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>{selectedIntegration.lastStatus || 'GEEN DATA'}</Badge>
                         </div>
                         <div className="p-4 bg-slate-50 border-2 border-slate-100">
-                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Laatste sync</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Laatste poll</p>
                           <p className="text-xs font-black">{selectedIntegration.lastRun ? format(new Date(selectedIntegration.lastRun), 'dd MMM HH:mm', { locale: nl }) : '-'}</p>
                         </div>
                         <div className="p-4 bg-slate-50 border-2 border-slate-100">
@@ -295,23 +273,23 @@ export default function ApiIntegrationsPage() {
                         </div>
                       </div>
                       <div className="space-y-4">
-                        <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2">Veld Mapping & Aliasing</h3>
+                        <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2">Veld Mapping (Incoming)</h3>
                         <div className="bg-blue-50 p-4 border-l-4 border-blue-500 mb-4">
-                            <p className="text-[10px] font-bold text-blue-700 uppercase">INFO: De volledige dataset wordt meegestuurd. De onderstaande mapping wordt gebruikt om specifieke velden herkenbaar te maken voor het ontvangende systeem.</p>
+                            <p className="text-[10px] font-bold text-blue-700 uppercase">INFO: Omdat dit een GET-verzoek is, worden de onderstaande mappings gebruikt om velden uit de externe API-respons toe te wijzen aan BeheerHub-velden.</p>
                         </div>
                         <div className="grid gap-2">
                           {Object.entries(selectedIntegration.mapping).map(([fs, api]) => (
                             <div key={fs} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-tighter">
-                              <span>SOURCE: <b className="text-slate-900">{fs}</b></span>
+                              <span>EXTERN: <b className="text-slate-900">{api}</b></span>
                               <ArrowRight className="h-4 w-4 text-slate-300" />
-                              <span>ALIAS: <b className="text-primary">{api}</b></span>
+                              <span>BEHEERHUB: <b className="text-primary">{fs}</b></span>
                             </div>
                           ))}
                         </div>
                       </div>
                       {selectedIntegration.lastResponse && (
                         <div className="space-y-2">
-                            <h3 className="text-[10px] font-black uppercase text-slate-400">Laatste Respons</h3>
+                            <h3 className="text-[10px] font-black uppercase text-slate-400">Laatste Respons (Preview)</h3>
                             <pre className="p-4 bg-slate-900 text-blue-400 text-[10px] font-mono rounded-none overflow-x-auto">
                                 {selectedIntegration.lastResponse}
                             </pre>
@@ -336,8 +314,7 @@ export default function ApiIntegrationsPage() {
                     <AlertTriangle className="h-4 w-4 text-orange-600" />
                     <AlertTitle className="text-xs font-black uppercase text-orange-900">Privé Omgeving (Studio)</AlertTitle>
                     <AlertDescription className="text-[10px] font-bold text-orange-700 leading-relaxed uppercase">
-                        Let op: Je werkt momenteel in een beveiligde ontwikkelomgeving. GeoBeheer cloud-servers kunnen deze URL NIET rechtstreeks bereiken door de Google-beveiliging. 
-                        Gebruik deze URL's alleen voor lokale tests. De "Failed to fetch" fout zal verdwijnen zodra de app is gepubliceerd op een publiek domein (bijv. .web.app).
+                        Let op: De "Failed to fetch" fout is tijdelijk. GeoBeheer cloud-servers kunnen deze workstation-URL niet bereiken. Zodra je de app publiceert naar een publiek domein, werkt dit direct.
                     </AlertDescription>
                 </Alert>
               )}
@@ -348,19 +325,19 @@ export default function ApiIntegrationsPage() {
                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
                     <div>
                       <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (Read-Only)</CardTitle>
-                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Laat externe systemen live data uit BeheerHub ophalen voor analyse of kaartweergave.</CardDescription>
+                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Laat externe systemen live data uit BeheerHub ophalen (GET).</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8 space-y-10">
                   <div className="p-6 bg-slate-50 border-2 border-slate-100 space-y-6">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Key className="h-3.5 w-3.5 text-primary" /> Authorisatie & Headers</h3>
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Key className="h-3.5 w-3.5 text-primary" /> Authorisatie (X-API-KEY)</h3>
                       <Button onClick={handleGenerateKey} className="h-10 px-6 text-[10px] font-black uppercase shadow-xl shadow-primary/20 rounded-none bg-primary text-white">GENEREER SLEUTEL</Button>
                     </div>
                     {apiSettings?.publicKey && (
                       <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Secret API Key (X-API-KEY)</Label>
+                        <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Secret API Key</Label>
                         <div className="flex">
                           <Input value={apiSettings.publicKey} readOnly className="h-12 font-mono text-sm bg-white border-2 border-slate-200 rounded-none font-bold" />
                           <Button variant="outline" size="icon" className="h-12 w-12 rounded-none border-2 border-l-0" onClick={() => { navigator.clipboard.writeText(apiSettings.publicKey); toast({ title: "Gekopieerd" }); }}><Copy className="h-5 w-5" /></Button>
@@ -371,7 +348,7 @@ export default function ApiIntegrationsPage() {
 
                   <div className="space-y-6">
                     <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
-                        <Database className="h-4 w-4 text-primary" /> Beschikbare Datasets & Deep Links
+                        <Database className="h-4 w-4 text-primary" /> Beschikbare Datasets (GET)
                     </h3>
                     
                     <Accordion type="single" collapsible className="w-full space-y-2">
@@ -385,7 +362,7 @@ export default function ApiIntegrationsPage() {
                                 </AccordionTrigger>
                                 <AccordionContent className="p-6 space-y-6 bg-white border-t-2 border-slate-50">
                                     <div className="space-y-2">
-                                        <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">Basis Eindpunt (Alle records)</p>
+                                        <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">Basis Eindpunt</p>
                                         <div className="flex gap-0">
                                             <Input value={`${baseUrl}?type=${mod.id}`} readOnly className="h-10 font-mono text-xs bg-slate-50 border-none rounded-none text-blue-600 font-bold" />
                                             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none bg-slate-100 border-l border-slate-200" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-4 w-4" /></Button>
@@ -394,17 +371,17 @@ export default function ApiIntegrationsPage() {
 
                                     {mod.views.length > 0 && (
                                         <div className="space-y-3">
-                                            <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">Voor-gefilterde Snelkoppelingen (Views)</p>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">Deep Links (Gefilterd)</p>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 {mod.views.map(view => (
                                                     <div key={view.label} className="p-4 bg-slate-50 border-2 border-slate-100 rounded-none group/link hover:border-primary/20 transition-all flex flex-col gap-3">
                                                         <div className="flex justify-between items-center">
                                                             <span className="text-[11px] font-black uppercase text-slate-700">{view.label}</span>
-                                                            <Badge className="bg-primary/10 text-primary text-[8px] font-black border-none rounded-none">PRESET</Badge>
+                                                            <Badge className="bg-primary/10 text-primary text-[8px] font-black border-none rounded-none">READ ONLY</Badge>
                                                         </div>
                                                         <div className="flex gap-0">
                                                             <Input value={`${baseUrl}?type=${mod.id}&${view.params}`} readOnly className="h-8 font-mono text-[9px] bg-white border-none rounded-none text-slate-500 font-bold" />
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none bg-white border-l" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}&${view.params}`); toast({ title: "Deep Link Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none bg-white border-l" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}&${view.params}`); toast({ title: "Link Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -415,27 +392,6 @@ export default function ApiIntegrationsPage() {
                             </AccordionItem>
                         ))}
                     </Accordion>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3">Ontwikkelaar Documentatie</h3>
-                    
-                    <div className="space-y-6">
-                        <div className="bg-blue-50 p-4 border-l-4 border-blue-500">
-                            <p className="text-[10px] font-bold text-blue-700 uppercase">
-                                TIP: De API is read-only voor maximale beveiliging. Je kunt op elk veld filteren door het toe te voegen als query parameter. 
-                                Bijvoorbeeld: <code className="bg-blue-100 px-1">&wijk=Noord</code> of <code className="bg-blue-100 px-1">&isActief=true</code>.
-                            </p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black uppercase text-slate-400">Uitlezen (GET)</p>
-                            <pre className="p-4 bg-slate-900 text-blue-400 text-[10px] font-mono rounded-none overflow-x-auto">
-{`curl -X GET "${baseUrl}?type=meldingen" \\
-  -H "x-api-key: ${apiSettings?.publicKey || 'JOUW_SLEUTEL'}"`}
-                            </pre>
-                        </div>
-                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -14,21 +14,20 @@ import {
   DialogClose
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { Loader2, Link2, Plus, Trash2, Globe, Key, Database, X, Info, Settings } from 'lucide-react';
+import { Loader2, Globe, Key, Database, X, Info, Settings, Plus, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import type { ApiIntegration } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const integrationSchema = z.object({
   name: z.string().min(1, 'Naam is verplicht'),
   endpoint: z.string().url('Voer een geldige URL in'),
-  method: z.enum(['POST', 'PUT', 'GET']),
+  method: z.literal('GET'),
   sourceModule: z.enum(['meldingen', 'users', 'objects', 'projects', 'voertuigen', 'machines']),
   headers: z.array(z.object({
     key: z.string(),
@@ -69,7 +68,7 @@ export function ApiIntegrationDialog({
     defaultValues: {
       name: '',
       endpoint: '',
-      method: 'POST',
+      method: 'GET',
       sourceModule: 'meldingen',
       headers: [],
       mapping: [],
@@ -95,7 +94,7 @@ export function ApiIntegrationDialog({
         form.reset({
           name: integration.name,
           endpoint: integration.endpoint,
-          method: integration.method,
+          method: 'GET',
           sourceModule: integration.sourceModule,
           headers: integration.headers || [],
           mapping: Object.entries(integration.mapping).map(([fsKey, apiKey]) => ({ fsKey, apiKey })),
@@ -105,7 +104,7 @@ export function ApiIntegrationDialog({
         form.reset({
           name: '',
           endpoint: '',
-          method: 'POST',
+          method: 'GET',
           sourceModule: 'meldingen',
           headers: [{ key: 'X-API-KEY', value: '' }],
           mapping: [],
@@ -128,7 +127,7 @@ export function ApiIntegrationDialog({
       const data = {
         name: values.name,
         endpoint: values.endpoint,
-        method: values.method,
+        method: 'GET',
         sourceModule: values.sourceModule,
         headers: values.headers,
         mapping: mappingObj,
@@ -164,7 +163,7 @@ export function ApiIntegrationDialog({
               <DialogTitle className="text-xl font-black uppercase tracking-tight text-white leading-none mb-1">
                 {integration ? 'REST Service Configureren' : 'Nieuwe REST Service'}
               </DialogTitle>
-              <DialogDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Definieer het endpoint en de payload structuur.</DialogDescription>
+              <DialogDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Definieer het endpoint voor data-uitlezing (Read-Only).</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -188,7 +187,7 @@ export function ApiIntegrationDialog({
                   )} />
                   <FormField control={form.control} name="sourceModule" render={({ field }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-[10px] font-black uppercase text-slate-500 ml-1">Payload Source (BeheerHub)</FormLabel>
+                      <FormLabel className="text-[10px] font-black uppercase text-slate-500 ml-1">Doel Dataset (Polling)</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger className="h-11 font-black uppercase text-[10px] rounded-none border-2 border-slate-200 bg-white shadow-sm"><SelectValue placeholder="Selecteer bron" /></SelectTrigger></FormControl>
                         <SelectContent className="rounded-none shadow-2xl">
@@ -209,14 +208,9 @@ export function ApiIntegrationDialog({
                     <FormField control={form.control} name="method" render={({ field }) => (
                       <FormItem className="space-y-1.5">
                         <FormLabel className="text-[10px] font-black uppercase text-slate-500 ml-1">Method</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger className="h-11 font-black rounded-none border-2 border-slate-200 bg-white shadow-sm"><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent className="rounded-none">
-                            <SelectItem value="POST" className="text-xs font-black">POST</SelectItem>
-                            <SelectItem value="PUT" className="text-xs font-black">PUT</SelectItem>
-                            <SelectItem value="GET" className="text-xs font-black">GET</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <Input value="GET" readOnly className="h-11 font-black bg-slate-50 border-2 border-slate-200 rounded-none text-center text-xs" />
+                        </FormControl>
                       </FormItem>
                     )} />
                   </div>
@@ -257,7 +251,7 @@ export function ApiIntegrationDialog({
               <div className="space-y-6">
                 <div className="flex justify-between items-center border-b-2 border-slate-100 pb-2">
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                    <Database className="h-3.5 w-3.5 text-primary" /> JSON Body Mapping
+                    <Database className="h-3.5 w-3.5 text-primary" /> Response Fields
                   </h3>
                   <Button type="button" variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase rounded-none border-slate-200 hover:bg-slate-50" onClick={() => appendMapping({ fsKey: '', apiKey: '' })}>
                     <Plus className="h-3 w-3 mr-1" /> Add Field
@@ -268,7 +262,7 @@ export function ApiIntegrationDialog({
                     <div className="flex items-start gap-4">
                         <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                         <p className="text-[10px] font-bold uppercase tracking-tight leading-relaxed">
-                            Koppel een bronsleutel uit BeheerHub (links) aan de gewenste JSON sleutelnaam van de externe partner (rechts).
+                            Omdat de API nu alleen GET ondersteunt, worden deze mappings gebruikt om specifieke velden uit de externe respons te identificeren (polling).
                         </p>
                     </div>
                 </div>
@@ -278,15 +272,15 @@ export function ApiIntegrationDialog({
                     <div key={field.id} className="grid grid-cols-[1fr_auto_1fr_44px] gap-4 items-center p-2.5 bg-slate-50/50 border-2 border-slate-100 rounded-none">
                       <div className="flex-1">
                         <Select onValueChange={(val) => form.setValue(`mapping.${index}.fsKey`, val)} value={form.watch(`mapping.${index}.fsKey`)}>
-                            <FormControl><SelectTrigger className="h-11 text-xs font-black uppercase rounded-none border-2 border-slate-200 bg-white"><SelectValue placeholder="Source Field..." /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger className="h-11 text-xs font-black uppercase rounded-none border-2 border-slate-200 bg-white"><SelectValue placeholder="BeheerHub Veld..." /></SelectTrigger></FormControl>
                             <SelectContent className="rounded-none shadow-2xl">
                                 {FS_FIELDS[sourceModule]?.map(f => <SelectItem key={f} value={f} className="text-xs font-bold">{f}</SelectItem>)}
                             </SelectContent>
                         </Select>
                       </div>
-                      <div className="text-primary font-black text-xl leading-none">&rarr;</div>
+                      <div className="text-primary font-black text-xl leading-none">&larr;</div>
                       <div className="flex-1">
-                        <Input {...form.register(`mapping.${index}.apiKey`)} placeholder="Target JSON Key..." className="h-11 text-xs font-black uppercase rounded-none border-2 border-slate-200 bg-white shadow-sm" />
+                        <Input {...form.register(`mapping.${index}.apiKey`)} placeholder="External Key Name..." className="h-11 text-xs font-black uppercase rounded-none border-2 border-slate-200 bg-white shadow-sm" />
                       </div>
                       <Button type="button" variant="ghost" size="icon" className="h-11 w-11 text-slate-300 hover:text-red-600 rounded-none shrink-0" onClick={() => removeMapping(index)}>
                         <Trash2 className="h-4 w-4" />
