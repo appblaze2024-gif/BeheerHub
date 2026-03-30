@@ -3,7 +3,7 @@ import admin from 'firebase-admin';
 
 /**
  * Universeel REST API Eindpunt voor BeheerHub.
- * Ondersteunt volledige CRUD (Create, Read, Update, Delete).
+ * BEPERKT TOT READ-ONLY (GET).
  * Geoptimaliseerd voor GeoBeheer en andere externe partners.
  */
 
@@ -27,7 +27,7 @@ function corsResponse(data: any, status: number = 200) {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY, Authorization',
       'Access-Control-Max-Age': '86400',
     },
@@ -42,7 +42,7 @@ export async function OPTIONS() {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY, Authorization',
     },
   });
@@ -50,7 +50,6 @@ export async function OPTIONS() {
 
 /**
  * Helper om de API Key te valideren tegen de database.
- * Controleert zowel X-API-KEY als Authorization headers.
  */
 async function validateAuth(request: Request): Promise<{ authorized: boolean; error?: string }> {
   const xApiKey = request.headers.get('x-api-key')?.trim();
@@ -78,7 +77,6 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
       return { authorized: false, error: 'API Hub is nog niet geconfigureerd in BeheerHub.' };
     }
 
-    // Vergelijk zonder witruimte om 401 te voorkomen bij kopieerfouten
     const isMatch = candidateKeys.some(key => key.trim() === validKey);
     if (!isMatch) {
       return { authorized: false, error: 'De opgegeven API Key is ongeldig of verlopen.' };
@@ -92,7 +90,7 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
 
 /**
  * GET - Data ophalen (Lezen)
- * Ondersteunt nu dynamische filters op alle velden.
+ * Ondersteunt dynamische filters op alle velden.
  */
 export async function GET(request: Request) {
   try {
@@ -126,24 +124,21 @@ export async function GET(request: Request) {
       return corsResponse({ success: true, data: { id: docSnap.id, ...docSnap.data() } });
     }
 
-    // Collectie ophalen met dynamische filters uit alle overige URL parameters
+    // Collectie ophalen met dynamische filters
     let queryRef: admin.firestore.Query = db.collection(targetCollection);
     const appliedFilters: Record<string, string> = {};
 
     searchParams.forEach((value, key) => {
-      // Sla metadata parameters over
       if (['type', 'id'].includes(key)) return;
       
       appliedFilters[key] = value;
 
       if (value.includes(',')) {
-        // Ondersteun komma-gescheiden statussen voor "IN" queries (tot max 30)
         const values = value.split(',').map(s => s.trim()).filter(Boolean);
         if (values.length > 0) {
           queryRef = queryRef.where(key, 'in', values.slice(0, 30));
         }
       } else {
-        // Simpele gelijk-aan vergelijking
         if (value.toLowerCase() === 'true') queryRef = queryRef.where(key, '==', true);
         else if (value.toLowerCase() === 'false') queryRef = queryRef.where(key, '==', false);
         else queryRef = queryRef.where(key, '==', value);
@@ -161,91 +156,6 @@ export async function GET(request: Request) {
       filters_applied: Object.keys(appliedFilters).length > 0 ? appliedFilters : 'none',
       data: data
     });
-  } catch (error: any) {
-    return corsResponse({ error: 'Server fout', message: error.message }, 500);
-  }
-}
-
-/**
- * POST - Nieuwe data aanmaken (Volledige record)
- */
-export async function POST(request: Request) {
-  try {
-    const auth = await validateAuth(request);
-    if (!auth.authorized) return corsResponse({ error: 'Niet geautoriseerd', message: auth.error }, 401);
-
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'meldingen';
-    const body = await request.json();
-    const items = Array.isArray(body) ? body : [body];
-    const colRef = db.collection(type);
-
-    const batch = db.batch();
-    for (const item of items) {
-        const newDocRef = colRef.doc();
-        batch.set(newDocRef, {
-            ...item,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            source: 'REST_API_IMPORT'
-        });
-    }
-    await batch.commit();
-
-    return corsResponse({ success: true, message: `${items.length} records succesvol aangemaakt.` });
-  } catch (error: any) {
-    return corsResponse({ error: 'Server fout', message: error.message }, 500);
-  }
-}
-
-/**
- * PATCH - Data bijwerken (Update)
- */
-export async function PATCH(request: Request) {
-  try {
-    const auth = await validateAuth(request);
-    if (!auth.authorized) return corsResponse({ error: 'Niet geautoriseerd', message: auth.error }, 401);
-
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const id = searchParams.get('id');
-    
-    if (!type || !id) {
-      return corsResponse({ error: 'Onvolledig verzoek', message: 'Geef "type" en "id" op.' }, 400);
-    }
-
-    const body = await request.json();
-    const docRef = db.collection(type).doc(id);
-    
-    await docRef.update({
-      ...body,
-      updatedAt: admin.firestore.Timestamp.now()
-    });
-
-    return corsResponse({ success: true, message: 'Record succesvol bijgewerkt.' });
-  } catch (error: any) {
-    return corsResponse({ error: 'Server fout', message: error.message }, 500);
-  }
-}
-
-/**
- * DELETE - Data verwijderen
- */
-export async function DELETE(request: Request) {
-  try {
-    const auth = await validateAuth(request);
-    if (!auth.authorized) return corsResponse({ error: 'Niet geautoriseerd', message: auth.error }, 401);
-
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const id = searchParams.get('id');
-
-    if (!type || !id) {
-      return corsResponse({ error: 'Onvolledig verzoek', message: 'Geef "type" en "id" op.' }, 400);
-    }
-
-    await db.collection(type).doc(id).delete();
-    return corsResponse({ success: true, message: 'Record succesvol verwijderd.' });
   } catch (error: any) {
     return corsResponse({ error: 'Server fout', message: error.message }, 500);
   }

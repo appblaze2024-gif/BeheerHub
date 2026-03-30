@@ -24,7 +24,7 @@ import {
   Folder,
   ArrowUpRight,
   Zap,
-  Info
+  ArrowRight
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -347,8 +347,8 @@ export default function ApiIntegrationsPage() {
                   <div className="flex items-center gap-4">
                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
                     <div>
-                      <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (Full CRUD)</CardTitle>
-                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Laat externe systemen live data uit BeheerHub ophalen én bijwerken.</CardDescription>
+                      <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (Read-Only)</CardTitle>
+                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Laat externe systemen live data uit BeheerHub ophalen voor analyse of kaartweergave.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -423,7 +423,7 @@ export default function ApiIntegrationsPage() {
                     <div className="space-y-6">
                         <div className="bg-blue-50 p-4 border-l-4 border-blue-500">
                             <p className="text-[10px] font-bold text-blue-700 uppercase">
-                                TIP: De API is nu volledig dynamisch. Je kunt op elk veld filteren door het toe te voegen als query parameter. 
+                                TIP: De API is read-only voor maximale beveiliging. Je kunt op elk veld filteren door het toe te voegen als query parameter. 
                                 Bijvoorbeeld: <code className="bg-blue-100 px-1">&wijk=Noord</code> of <code className="bg-blue-100 px-1">&isActief=true</code>.
                             </p>
                         </div>
@@ -433,16 +433,6 @@ export default function ApiIntegrationsPage() {
                             <pre className="p-4 bg-slate-900 text-blue-400 text-[10px] font-mono rounded-none overflow-x-auto">
 {`curl -X GET "${baseUrl}?type=meldingen" \\
   -H "x-api-key: ${apiSettings?.publicKey || 'JOUW_SLEUTEL'}"`}
-                            </pre>
-                        </div>
-
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black uppercase text-slate-400">Bijwerken (PATCH)</p>
-                            <pre className="p-4 bg-slate-900 text-purple-400 text-[10px] font-mono rounded-none overflow-x-auto">
-{`curl -X PATCH "${baseUrl}?type=meldingen&id=RECORD_ID" \\
-  -H "x-api-key: ${apiSettings?.publicKey || 'JOUW_SLEUTEL'}" \\
-  -H "Content-Type: application/json" \\
-  -d '{"status": "In behandeling", "notities": "Bijgewerkt via API"}'`}
                             </pre>
                         </div>
                     </div>
