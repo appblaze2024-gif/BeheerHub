@@ -309,7 +309,7 @@ export default function ApiIntegrationsPage() {
           </div>
         ) : (
           <ScrollArea className="h-full">
-            <div className="max-w-5xl mx-auto space-y-6 pb-20">
+            <div className="w-full space-y-6 pb-20">
               <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
                 <CardHeader className="bg-slate-900 text-white p-8">
                   <div className="flex items-center gap-4">
