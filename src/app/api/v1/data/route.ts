@@ -145,9 +145,21 @@ export async function POST(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
+    const direct = searchParams.get('direct') === 'true';
+
     if (!type) return corsResponse({ error: 'Bad Request', message: 'Geef "type" op.' }, 400);
 
     const body = await request.json();
+    
+    // Specifieke logica voor meldingen om Portaal vs Direct te ondersteunen
+    if (type === 'meldingen') {
+      if (!direct) {
+        body.status = 'Nieuw'; // Dwing portaal status af
+      } else if (!body.status || body.status === 'Nieuw') {
+        body.status = 'In behandeling'; // Direct geaccepteerd
+      }
+    }
+
     const docRef = await db.collection(type).add({
       ...body,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -155,7 +167,11 @@ export async function POST(request: Request) {
       source: 'REST_API'
     });
 
-    return corsResponse({ success: true, id: docRef.id, message: 'Record aangemaakt.' }, 201);
+    return corsResponse({ 
+      success: true, 
+      id: docRef.id, 
+      message: type === 'meldingen' && !direct ? 'Melding geplaatst in portaal.' : 'Record direct aangemaakt.' 
+    }, 201);
   } catch (error: any) {
     return corsResponse({ error: 'Server Error', message: error.message }, 500);
   }

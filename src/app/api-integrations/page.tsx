@@ -127,7 +127,8 @@ export default function ApiIntegrationsPage() {
         methods: [
             { method: 'GET', label: 'Lijst ophalen', path: '?type=meldingen', desc: 'Haal alle actieve meldingen op.' },
             { method: 'GET', label: 'Item ophalen', path: '?type=meldingen&id={id}', desc: 'Haal één specifieke melding op.' },
-            { method: 'POST', label: 'Nieuwe melding', path: '?type=meldingen', desc: 'Maak een nieuwe melding aan.' },
+            { method: 'POST', label: 'Nieuwe melding (Portaal)', path: '?type=meldingen', desc: 'Melding komt eerst in het portaal om te accepteren (Status: Nieuw).' },
+            { method: 'POST', label: 'Nieuwe melding (Direct)', path: '?type=meldingen&direct=true', desc: 'Melding wordt direct een werkbon (Status: In behandeling).' },
             { method: 'PATCH', label: 'Melding bijwerken', path: '?type=meldingen&id={id}', desc: 'Wijzig velden van een melding.' },
             { method: 'DELETE', label: 'Verwijderen', path: '?type=meldingen&id={id}', desc: 'Wis een melding definitief.' }
         ],
@@ -239,9 +240,9 @@ export default function ApiIntegrationsPage() {
         </div>
       </PageHeader>
 
-      <div className="flex-1 p-6 overflow-hidden">
+      <div className="flex-1 p-0 overflow-hidden">
         {activeTab === 'outbound' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full p-6">
             <Card className="lg:col-span-4 rounded-none border-none shadow-xl bg-white flex flex-col overflow-hidden">
               <CardHeader className="p-4 border-b bg-slate-50/50 flex flex-row items-center justify-between">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Services</h3>
@@ -338,8 +339,8 @@ export default function ApiIntegrationsPage() {
           </div>
         ) : (
           <ScrollArea className="h-full">
-            <div className="w-full space-y-6 pb-20">
-              <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
+            <div className="w-full space-y-0 pb-20">
+              <Card className="rounded-none border-none shadow-none bg-white overflow-hidden">
                 <CardHeader className="bg-slate-900 text-white p-8">
                   <div className="flex items-center gap-4">
                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
