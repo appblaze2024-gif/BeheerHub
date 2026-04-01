@@ -105,6 +105,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { 
   Select, 
   SelectContent, 
@@ -1896,7 +1897,7 @@ export default function NewIssuePage() {
                             <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => ( <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl></FormItem>)} /></FormRow>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl></FormItem>)} /></FormRow>
+                            <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => ( <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" /></FormControl></FormItem>)} /></FormRow>
                             <FormRow label={<span className="flex items-center gap-1"><LayoutGrid className="h-3 w-3" /> Werkgebied</span>}>
                               <FormField control={form.control} name="werkgebied" render={({ field }) => (
                                 <FormItem>
@@ -2047,4 +2048,3 @@ export default function NewIssuePage() {
     </div>
   );
 }
-
