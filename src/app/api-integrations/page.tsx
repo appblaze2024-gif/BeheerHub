@@ -24,7 +24,11 @@ import {
   ArrowUpRight,
   Zap,
   ArrowRight,
-  List
+  List,
+  Edit2,
+  Trash2,
+  PlusCircle,
+  FileText
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -34,7 +38,7 @@ import {
   useDoc, 
   setDocumentNonBlocking 
 } from '@/firebase';
-import { collection, doc, query, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, doc, query, orderBy } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -125,6 +129,13 @@ export default function ApiIntegrationsPage() {
         label: 'Meldingen', 
         icon: List, 
         color: 'text-primary',
+        methods: [
+            { method: 'GET', label: 'Lijst ophalen', path: '?type=meldingen', desc: 'Haal alle actieve meldingen op.' },
+            { method: 'GET', label: 'Item ophalen', path: '?type=meldingen&id={id}', desc: 'Haal één specifieke melding op.' },
+            { method: 'POST', label: 'Nieuwe melding', path: '?type=meldingen', desc: 'Maak een nieuwe melding aan.' },
+            { method: 'PATCH', label: 'Melding bijwerken', path: '?type=meldingen&id={id}', desc: 'Wijzig velden van een melding.' },
+            { method: 'DELETE', label: 'Verwijderen', path: '?type=meldingen&id={id}', desc: 'Wis een melding definitief.' }
+        ],
         views: [
             { label: 'Portaal (Nieuw)', params: 'status=Nieuw' },
             { label: 'Openstaand (Actief)', params: 'status=Intern doorgezet,In behandeling,Gepland op korte termijn,Gepland op langere termijn,Extern doorgezet' },
@@ -136,30 +147,27 @@ export default function ApiIntegrationsPage() {
         label: 'Objecten', 
         icon: MapPin, 
         color: 'text-green-600',
+        methods: [
+            { method: 'GET', label: 'Lijst ophalen', path: '?type=objects', desc: 'Haal objecten/assets op.' },
+            { method: 'POST', label: 'Nieuw object', path: '?type=objects', desc: 'Registreer een nieuwe unit.' },
+            { method: 'PATCH', label: 'Object bijwerken', path: '?type=objects&id={id}', desc: 'Wijzig objectgegevens.' }
+        ],
         views: [
             { label: 'Alleen Prullenbakken', params: 'locatieType=prullenbak' },
-            { label: 'Alleen Containers', params: 'locatieType=container' },
-            { label: 'Alleen Actief', params: 'isActief=true' }
+            { label: 'Alleen Containers', params: 'locatieType=container' }
         ]
     },
     { 
         id: 'voertuigen', 
-        label: 'Wagenpark (Voertuigen)', 
+        label: 'Wagenpark', 
         icon: Truck, 
         color: 'text-blue-600',
+        methods: [
+            { method: 'GET', label: 'Lijst ophalen', path: '?type=voertuigen', desc: 'Alle voertuigen uitlezen.' },
+            { method: 'PATCH', label: 'Status wijzigen', path: '?type=voertuigen&id={id}', desc: 'Bv. status op "In onderhoud" zetten.' }
+        ],
         views: [
-            { label: 'Operationeel', params: 'status=Actief' },
-            { label: 'In Onderhoud', params: 'status=In onderhoud' }
-        ]
-    },
-    { 
-        id: 'machines', 
-        label: 'Machinepark', 
-        icon: Zap, 
-        color: 'text-orange-600',
-        views: [
-            { label: 'Operationeel', params: 'status=Actief' },
-            { label: 'In Onderhoud', params: 'status=In onderhoud' }
+            { label: 'Operationeel', params: 'status=Actief' }
         ]
     },
     { 
@@ -167,23 +175,18 @@ export default function ApiIntegrationsPage() {
         label: 'Personeel', 
         icon: Users, 
         color: 'text-purple-600',
+        methods: [
+            { method: 'GET', label: 'Gebruikerslijst', path: '?type=users', desc: 'Lijst van actieve collega\'s.' }
+        ],
         views: [
-            { label: 'Toezichthouders', params: 'role=toezichthouder' },
-            { label: 'Super admins', params: 'role=Super admin' }
+            { label: 'Toezichthouders', params: 'role=toezichthouder' }
         ]
-    },
-    { 
-        id: 'projects', 
-        label: 'Projecten', 
-        icon: Folder, 
-        color: 'text-slate-600',
-        views: []
     }
   ];
 
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
-      <PageHeader title="REST API HUB" description="Beheer uitsluitend lees-gebaseerde datastromen (GET).">
+      <PageHeader title="REST API HUB" description="Beheer volledige CRUD integraties voor externe software partners.">
         <div className="bg-slate-100 p-1 rounded-none border-2 border-slate-200 shadow-inner flex h-11 w-[400px]">
             <button 
                 onClick={() => setActiveTab('outbound')}
@@ -201,7 +204,7 @@ export default function ApiIntegrationsPage() {
                     activeTab === 'inbound' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:bg-white/50"
                 )}
             >
-                DATA PROVIDER (PULL)
+                DATA PROVIDER (REST)
             </button>
         </div>
       </PageHeader>
@@ -274,9 +277,6 @@ export default function ApiIntegrationsPage() {
                       </div>
                       <div className="space-y-4">
                         <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2">Veld Mapping (Incoming)</h3>
-                        <div className="bg-blue-50 p-4 border-l-4 border-blue-500 mb-4">
-                            <p className="text-[10px] font-bold text-blue-700 uppercase">INFO: Omdat dit een GET-verzoek is, worden de onderstaande mappings gebruikt om velden uit de externe API-respons toe te wijzen aan BeheerHub-velden.</p>
-                        </div>
                         <div className="grid gap-2">
                           {Object.entries(selectedIntegration.mapping).map(([fs, api]) => (
                             <div key={fs} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-tighter">
@@ -309,23 +309,13 @@ export default function ApiIntegrationsPage() {
         ) : (
           <ScrollArea className="h-full">
             <div className="max-w-5xl mx-auto space-y-6 pb-20">
-              {isLocalEnv && (
-                <Alert className="rounded-none border-2 border-orange-200 bg-orange-50/50">
-                    <AlertTriangle className="h-4 w-4 text-orange-600" />
-                    <AlertTitle className="text-xs font-black uppercase text-orange-900">Privé Omgeving (Studio)</AlertTitle>
-                    <AlertDescription className="text-[10px] font-bold text-orange-700 leading-relaxed uppercase">
-                        Let op: De "Failed to fetch" fout is tijdelijk. GeoBeheer cloud-servers kunnen deze workstation-URL niet bereiken. Zodra je de app publiceert naar een publiek domein, werkt dit direct.
-                    </AlertDescription>
-                </Alert>
-              )}
-
               <Card className="rounded-none border-none shadow-xl bg-white overflow-hidden">
                 <CardHeader className="bg-slate-900 text-white p-8">
                   <div className="flex items-center gap-4">
                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
                     <div>
-                      <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (Read-Only)</CardTitle>
-                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Laat externe systemen live data uit BeheerHub ophalen (GET).</CardDescription>
+                      <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (CRUD)</CardTitle>
+                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Koppel externe systemen aan de BeheerHub database.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -348,40 +338,59 @@ export default function ApiIntegrationsPage() {
 
                   <div className="space-y-6">
                     <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
-                        <Database className="h-4 w-4 text-primary" /> Beschikbare Datasets (GET)
+                        <Database className="h-4 w-4 text-primary" /> Beschikbare Endpoints per Dataset
                     </h3>
                     
-                    <Accordion type="single" collapsible className="w-full space-y-2">
+                    <Accordion type="single" collapsible className="w-full space-y-4">
                         {apiModules.map(mod => (
-                            <AccordionItem key={mod.id} value={mod.id} className="border-2 border-slate-100 rounded-none overflow-hidden bg-white px-0 group">
-                                <AccordionTrigger className="hover:no-underline px-6 py-4 bg-slate-50/50 group-data-[state=open]:bg-primary group-data-[state=open]:text-white transition-all">
+                            <AccordionItem key={mod.id} value={mod.id} className="border-2 border-slate-100 rounded-none overflow-hidden bg-white px-0 group shadow-sm">
+                                <AccordionTrigger className="hover:no-underline px-6 py-5 bg-slate-50/50 group-data-[state=open]:bg-primary group-data-[state=open]:text-white transition-all">
                                     <div className="flex items-center gap-4">
-                                        <mod.icon className={cn("h-5 w-5", mod.color, "group-data-[state=open]:text-white")} />
-                                        <span className="text-sm font-black uppercase tracking-tight">{mod.label}</span>
+                                        <mod.icon className={cn("h-6 w-6", mod.color, "group-data-[state=open]:text-white")} />
+                                        <span className="text-lg font-black uppercase tracking-tight">{mod.label}</span>
                                     </div>
                                 </AccordionTrigger>
-                                <AccordionContent className="p-6 space-y-6 bg-white border-t-2 border-slate-50">
-                                    <div className="space-y-2">
-                                        <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">Basis Eindpunt</p>
-                                        <div className="flex gap-0">
-                                            <Input value={`${baseUrl}?type=${mod.id}`} readOnly className="h-10 font-mono text-xs bg-slate-50 border-none rounded-none text-blue-600 font-bold" />
-                                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none bg-slate-100 border-l border-slate-200" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-4 w-4" /></Button>
-                                        </div>
+                                <AccordionContent className="p-0 bg-white border-t-2 border-slate-50">
+                                    <div className="divide-y divide-slate-100">
+                                        {mod.methods.map((m, idx) => (
+                                            <div key={idx} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <Badge className={cn(
+                                                            "rounded-none font-black text-[10px] px-3 h-6 border-none",
+                                                            m.method === 'GET' ? "bg-blue-500 text-white" :
+                                                            m.method === 'POST' ? "bg-green-600 text-white" :
+                                                            m.method === 'PATCH' ? "bg-orange-500 text-white" :
+                                                            "bg-red-600 text-white"
+                                                        )}>{m.method}</Badge>
+                                                        <span className="text-xs font-black uppercase tracking-tight text-slate-900">{m.label}</span>
+                                                    </div>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase italic">{m.desc}</p>
+                                                </div>
+                                                <div className="flex gap-0 group/url">
+                                                    <div className="bg-slate-900 px-3 flex items-center justify-center shrink-0 border-r border-white/10">
+                                                        <Globe className="h-3.5 w-3.5 text-slate-500" />
+                                                    </div>
+                                                    <Input value={`${baseUrl}${m.path}`} readOnly className="h-10 font-mono text-[11px] bg-slate-900 border-none rounded-none text-blue-400 font-bold flex-1" />
+                                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none bg-slate-800 text-white hover:bg-primary border-l border-white/5" onClick={() => { navigator.clipboard.writeText(`${baseUrl}${m.path}`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-4 w-4" /></Button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
 
                                     {mod.views.length > 0 && (
-                                        <div className="space-y-3">
-                                            <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">Deep Links (Gefilterd)</p>
+                                        <div className="p-6 bg-slate-50 border-t-2 border-slate-100 space-y-4">
+                                            <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 tracking-widest"><Sparkles className="h-3 w-3 text-primary" /> Deep Links (Gefilterde GET)</p>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 {mod.views.map(view => (
-                                                    <div key={view.label} className="p-4 bg-slate-50 border-2 border-slate-100 rounded-none group/link hover:border-primary/20 transition-all flex flex-col gap-3">
+                                                    <div key={view.label} className="p-4 bg-white border-2 border-slate-200 rounded-none group/link hover:border-primary/40 transition-all flex flex-col gap-3 shadow-sm">
                                                         <div className="flex justify-between items-center">
                                                             <span className="text-[11px] font-black uppercase text-slate-700">{view.label}</span>
-                                                            <Badge className="bg-primary/10 text-primary text-[8px] font-black border-none rounded-none">READ ONLY</Badge>
+                                                            <Badge className="bg-blue-50 text-blue-600 text-[8px] font-black border-none rounded-none">READ ONLY</Badge>
                                                         </div>
                                                         <div className="flex gap-0">
-                                                            <Input value={`${baseUrl}?type=${mod.id}&${view.params}`} readOnly className="h-8 font-mono text-[9px] bg-white border-none rounded-none text-slate-500 font-bold" />
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none bg-white border-l" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}&${view.params}`); toast({ title: "Link Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
+                                                            <Input value={`${baseUrl}?type=${mod.id}&${view.params}`} readOnly className="h-8 font-mono text-[9px] bg-slate-50 border-none rounded-none text-slate-500 font-bold" />
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none bg-slate-100 border-l" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}&${view.params}`); toast({ title: "Link Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
                                                         </div>
                                                     </div>
                                                 ))}
