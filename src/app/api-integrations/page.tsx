@@ -505,15 +505,29 @@ export default function ApiIntegrationsPage() {
                                     <h5 className="text-[10px] font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
                                         <Check className="h-3 w-3 text-green-600" /> Voorbeeld Payload (JSON Body)
                                     </h5>
-                                    <pre className="p-4 bg-slate-50 text-slate-500 font-mono text-[10px] rounded-none border border-slate-200">
+                                    <pre className="p-4 bg-slate-50 text-slate-500 font-mono text-[10px] rounded-none border border-slate-200 overflow-x-auto">
 {`{
   "intakenummer": "WK-2024-001",
-  "straatnaam": "Hoofdstraat",
-  "huisnummer": "12",
+  "extern_meldingsnummer": "EXT-9988",
+  "containernummer": "B-12345",
+  "soort_melder": "Inwoner",
+  "hoofdcategorie": "Afval",
+  "subcategorie": "Zwerfafval",
+  "behandelende_afdeling": "Wijkbeheer",
+  "behandelaar": "Jan Jansen",
+  "aangenomen_door": "API Systeem",
+  "status": "Nieuw",
+  "voorvaldatum": "2024-03-20",
+  "voorvaltijd": "14:30",
+  "straatnaam": "Leembruggenstraat",
+  "huisnummer": "32",
+  "postcode": "2181 AK",
   "plaats": "Hillegom",
-  "extra_informatie": "Beschadiging lantaarnpaal",
-  "hoofdcategorie": "Weg en straatmeubilair",
-  "subcategorie": "Kapotte bank/paal/hek"
+  "wijk": "Centrum",
+  "melder": "Dhr. de Vries",
+  "telefoon_melder": "0612345678",
+  "email_melder": "melder@example.com",
+  "extra_informatie": "Er ligt veel zwerfafval rondom de bak."
 }`}
                                     </pre>
                                 </div>
