@@ -25,7 +25,9 @@ import {
   Wrench,
   Sparkles,
   Database,
-  FileText
+  FileCode,
+  Zap,
+  Check
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -89,14 +91,14 @@ export default function ApiIntegrationsPage() {
   const handleRunSync = async (integration: ApiIntegration) => {
     if (!firestore) return;
     setIsProcessing(true);
-    toast({ title: "GET Request gestart" });
+    toast({ title: `${integration.method} Request gestart` });
     
     try {
         const result = await triggerWebhookSync(
             integration.endpoint,
-            'GET',
+            integration.method || 'GET',
             integration.headers.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
-            {}
+            integration.method === 'POST' ? { test: true, timestamp: new Date().toISOString() } : {}
         );
 
         await updateDocumentNonBlocking(doc(firestore, 'api_integrations', integration.id), {
@@ -106,7 +108,7 @@ export default function ApiIntegrationsPage() {
         });
 
         if (result.success) toast({ title: "Synchronisatie geslaagd" });
-        else toast({ variant: 'destructive', title: "Fout bij opvragen" });
+        else toast({ variant: 'destructive', title: "Fout bij uitvoering" });
     } catch (err: any) {
         toast({ variant: 'destructive', title: "Kritieke fout", description: err.message });
     } finally {
@@ -117,6 +119,11 @@ export default function ApiIntegrationsPage() {
   const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/v1/data` : '';
 
   if (isLoading || isLoadingSettings) return <LoadingScreen message="REST HUB laden..." />;
+
+  const webhookHeadersJson = JSON.stringify({
+    "X-API-KEY": apiSettings?.publicKey || "GENEREER_SLEUTEL_EERST",
+    "Content-Type": "application/json"
+  }, null, 4);
 
   const apiModules = [
     { 
@@ -226,7 +233,7 @@ export default function ApiIntegrationsPage() {
                     activeTab === 'outbound' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:bg-white/50"
                 )}
             >
-                EXTERNAL POLL (OUT)
+                OUTBOUND (POLL/PUSH)
             </button>
             <button 
                 onClick={() => setActiveTab('inbound')}
@@ -245,7 +252,7 @@ export default function ApiIntegrationsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full p-6">
             <Card className="lg:col-span-4 rounded-none border-none shadow-xl bg-white flex flex-col overflow-hidden">
               <CardHeader className="p-4 border-b bg-slate-50/50 flex flex-row items-center justify-between">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Services</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gekoppelde Services</h3>
                 <Button size="sm" variant="outline" onClick={() => { setSelectedId(null); setIsDialogOpen(true); }} className="h-8 text-[9px] font-black uppercase border-primary/30 text-primary">
                   <Plus className="mr-1.5 h-3.5 w-3.5" /> Nieuw
                 </Button>
@@ -263,7 +270,7 @@ export default function ApiIntegrationsPage() {
                     >
                       <div className="min-w-0">
                         <p className="font-black uppercase text-sm tracking-tight truncate">{i.name}</p>
-                        <Badge variant="outline" className={cn("text-[8px] h-4 mt-1 border-none", selectedId === i.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400")}>GET {i.sourceModule}</Badge>
+                        <Badge variant="outline" className={cn("text-[8px] h-4 mt-1 border-none font-black", selectedId === i.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400")}>{i.method} {i.sourceModule}</Badge>
                       </div>
                       <ChevronRight className={cn("h-4 w-4", selectedId === i.id ? "text-white" : "text-slate-200")} />
                     </div>
@@ -286,7 +293,7 @@ export default function ApiIntegrationsPage() {
                     <div className="flex gap-2">
                       <Button variant="outline" onClick={() => setIsDialogOpen(true)} className="font-black uppercase text-[10px] h-10 border-slate-200">Bewerken</Button>
                       <Button onClick={() => handleRunSync(selectedIntegration)} disabled={isProcessing} className="h-10 px-6 font-black uppercase text-[10px] shadow-xl shadow-primary/20">
-                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />} POLL NU
+                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />} TEST RUN
                       </Button>
                     </div>
                   </header>
@@ -294,34 +301,51 @@ export default function ApiIntegrationsPage() {
                     <div className="space-y-10">
                       <div className="grid grid-cols-3 gap-4">
                         <div className="p-4 bg-slate-50 border-2 border-slate-100">
-                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Status</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Laatste Status</p>
                           <Badge className={cn("rounded-none text-[10px] uppercase font-black border-none", selectedIntegration.lastStatus === 'success' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>{selectedIntegration.lastStatus || 'GEEN DATA'}</Badge>
                         </div>
                         <div className="p-4 bg-slate-50 border-2 border-slate-100">
-                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Laatste poll</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Laatste Uitvoering</p>
                           <p className="text-xs font-black">{selectedIntegration.lastRun ? format(new Date(selectedIntegration.lastRun), 'dd MMM HH:mm', { locale: nl }) : '-'}</p>
                         </div>
                         <div className="p-4 bg-slate-50 border-2 border-slate-100">
-                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Source</p>
-                          <p className="text-xs font-black uppercase">{selectedIntegration.sourceModule}</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Configuratie</p>
+                          <p className="text-xs font-black uppercase">{selectedIntegration.method} {selectedIntegration.sourceModule}</p>
                         </div>
                       </div>
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2">Veld Mapping (Incoming)</h3>
-                        <div className="grid gap-2">
-                          {Object.entries(selectedIntegration.mapping).map(([fs, api]) => (
-                            <div key={fs} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-tighter">
-                              <span>EXTERN: <b className="text-slate-900">{api}</b></span>
-                              <ArrowRight className="h-4 w-4 text-slate-300" />
-                              <span>BEHEERHUB: <b className="text-primary">{fs}</b></span>
+                      
+                      {selectedIntegration.method === 'GET' && (
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2 flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Polling Mapping (Incoming)</h3>
+                            <div className="grid gap-2">
+                            {Object.entries(selectedIntegration.mapping).map(([fs, api]) => (
+                                <div key={fs} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-tighter">
+                                <span>EXTERN: <b className="text-slate-900">{api}</b></span>
+                                <ArrowRight className="h-4 w-4 text-slate-300" />
+                                <span>BEHEERHUB: <b className="text-primary">{fs}</b></span>
+                                </div>
+                            ))}
                             </div>
-                          ))}
                         </div>
-                      </div>
+                      )}
+
+                      {selectedIntegration.method === 'POST' && (
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2 flex items-center gap-2"><Zap className="h-4 w-4 text-orange-500" /> Automated Dispatch (Push)</h3>
+                            <Alert className="bg-orange-50 border-orange-200 text-orange-800 rounded-none">
+                                <Info className="h-4 w-4" />
+                                <AlertTitle className="text-xs font-black uppercase">Real-time Webhook</AlertTitle>
+                                <AlertDescription className="text-[10px] font-bold">
+                                    BeheerHub zal bij elke nieuwe <b>{selectedIntegration.sourceModule}</b> automatisch een POST-request sturen naar dit endpoint met de volledige dataset als JSON body.
+                                </AlertDescription>
+                            </Alert>
+                        </div>
+                      )}
+
                       {selectedIntegration.lastResponse && (
                         <div className="space-y-2">
                             <h3 className="text-[10px] font-black uppercase text-slate-400">Laatste Respons (Preview)</h3>
-                            <pre className="p-4 bg-slate-900 text-blue-400 text-[10px] font-mono rounded-none overflow-x-auto">
+                            <pre className="p-4 bg-slate-900 text-blue-400 text-[10px] font-mono rounded-none overflow-x-auto border-[6px] border-slate-800">
                                 {selectedIntegration.lastResponse}
                             </pre>
                         </div>
@@ -332,7 +356,7 @@ export default function ApiIntegrationsPage() {
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-300">
                   <ArrowUpRight className="h-16 w-16 opacity-10 mb-4" />
-                  <p className="text-xs font-black uppercase tracking-widest">Selecteer een service</p>
+                  <p className="text-xs font-black uppercase tracking-widest">Selecteer een service aan de linkerzijde</p>
                 </div>
               )}
             </Card>
@@ -367,71 +391,132 @@ export default function ApiIntegrationsPage() {
                     )}
                   </div>
 
-                  <div className="space-y-6">
-                    <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
-                        <Database className="h-4 w-4 text-primary" /> Beschikbare Endpoints per Dataset
-                    </h3>
-                    
-                    <Accordion type="single" collapsible className="w-full space-y-4">
-                        {apiModules.map(mod => (
-                            <AccordionItem key={mod.id} value={mod.id} className="border-2 border-slate-100 rounded-none overflow-hidden bg-white px-0 group shadow-sm">
-                                <AccordionTrigger className="hover:no-underline px-6 py-5 bg-slate-50/50 group-data-[state=open]:bg-primary group-data-[state=open]:text-white transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <mod.icon className={cn("h-6 w-6", mod.color, "group-data-[state=open]:text-white")} />
-                                        <span className="text-lg font-black uppercase tracking-tight">{mod.label}</span>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="p-0 bg-white border-t-2 border-slate-50">
-                                    <div className="divide-y divide-slate-100">
-                                        {mod.methods.map((m, idx) => (
-                                            <div key={idx} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <Badge className={cn(
-                                                            "rounded-none font-black text-[10px] px-3 h-6 border-none",
-                                                            m.method === 'GET' ? "bg-blue-500 text-white" :
-                                                            m.method === 'POST' ? "bg-green-600 text-white" :
-                                                            m.method === 'PATCH' ? "bg-orange-500 text-white" :
-                                                            "bg-red-600 text-white"
-                                                        )}>{m.method}</Badge>
-                                                        <span className="text-xs font-black uppercase tracking-tight text-slate-900">{m.label}</span>
-                                                    </div>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase italic">{m.desc}</p>
-                                                </div>
-                                                <div className="flex gap-0 group/url">
-                                                    <div className="bg-slate-900 px-3 flex items-center justify-center shrink-0 border-r border-white/10">
-                                                        <Globe className="h-3.5 w-3.5 text-slate-500" />
-                                                    </div>
-                                                    <Input value={`${baseUrl}${m.path}`} readOnly className="h-10 font-mono text-[11px] bg-slate-900 border-none rounded-none text-blue-400 font-bold flex-1" />
-                                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none bg-slate-800 text-white hover:bg-primary border-l border-white/5" onClick={() => { navigator.clipboard.writeText(`${baseUrl}${m.path}`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-4 w-4" /></Button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {mod.views.length > 0 && (
-                                        <div className="p-6 bg-slate-50 border-t-2 border-slate-100 space-y-4">
-                                            <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 tracking-widest"><Sparkles className="h-3 w-3 text-primary" /> Deep Links (Gefilterde GET)</p>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                {mod.views.map(view => (
-                                                    <div key={view.label} className="p-4 bg-white border-2 border-slate-200 rounded-none group/link hover:border-primary/40 transition-all flex flex-col gap-3 shadow-sm">
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-[11px] font-black uppercase text-slate-700">{view.label}</span>
-                                                            <Badge className="bg-blue-50 text-blue-600 text-[8px] font-black border-none rounded-none">READ ONLY</Badge>
-                                                        </div>
-                                                        <div className="flex gap-0">
-                                                            <Input value={`${baseUrl}?type=${mod.id}&${view.params}`} readOnly className="h-8 font-mono text-[9px] bg-slate-50 border-none rounded-none text-slate-500 font-bold" />
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none bg-slate-100 border-l" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}&${view.params}`); toast({ title: "Link Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                        <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
+                            <Database className="h-4 w-4 text-primary" /> Beschikbare Endpoints per Dataset
+                        </h3>
+                        
+                        <Accordion type="single" collapsible className="w-full space-y-4">
+                            {apiModules.map(mod => (
+                                <AccordionItem key={mod.id} value={mod.id} className="border-2 border-slate-100 rounded-none overflow-hidden bg-white px-0 group shadow-sm">
+                                    <AccordionTrigger className="hover:no-underline px-6 py-5 bg-slate-50/50 group-data-[state=open]:bg-primary group-data-[state=open]:text-white transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <mod.icon className={cn("h-6 w-6", mod.color, "group-data-[state=open]:text-white")} />
+                                            <span className="text-lg font-black uppercase tracking-tight">{mod.label}</span>
                                         </div>
-                                    )}
-                                </AccordionContent>
-                            </AccordionItem>
-                        ))}
-                    </Accordion>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="p-0 bg-white border-t-2 border-slate-50">
+                                        <div className="divide-y divide-slate-100">
+                                            {mod.methods.map((m, idx) => (
+                                                <div key={idx} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <Badge className={cn(
+                                                                "rounded-none font-black text-[10px] px-3 h-6 border-none",
+                                                                m.method === 'GET' ? "bg-blue-500 text-white" :
+                                                                m.method === 'POST' ? "bg-green-600 text-white" :
+                                                                m.method === 'PATCH' ? "bg-orange-500 text-white" :
+                                                                "bg-red-600 text-white"
+                                                            )}>{m.method}</Badge>
+                                                            <span className="text-xs font-black uppercase tracking-tight text-slate-900">{m.label}</span>
+                                                        </div>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase italic">{m.desc}</p>
+                                                    </div>
+                                                    <div className="flex gap-0 group/url">
+                                                        <div className="bg-slate-900 px-3 flex items-center justify-center shrink-0 border-r border-white/10">
+                                                            <Globe className="h-3.5 w-3.5 text-slate-500" />
+                                                        </div>
+                                                        <Input value={`${baseUrl}${m.path}`} readOnly className="h-10 font-mono text-[11px] bg-slate-900 border-none rounded-none text-blue-400 font-bold flex-1" />
+                                                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none bg-slate-800 text-white hover:bg-primary border-l border-white/5" onClick={() => { navigator.clipboard.writeText(`${baseUrl}${m.path}`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-4 w-4" /></Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {mod.views.length > 0 && (
+                                            <div className="p-6 bg-slate-50 border-t-2 border-slate-100 space-y-4">
+                                                <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 tracking-widest"><Sparkles className="h-3 w-3 text-primary" /> Deep Links (Gefilterde GET)</p>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {mod.views.map(view => (
+                                                        <div key={view.label} className="p-4 bg-white border-2 border-slate-200 rounded-none group/link hover:border-primary/40 transition-all flex flex-col gap-3 shadow-sm">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-[11px] font-black uppercase text-slate-700">{view.label}</span>
+                                                                <Badge className="bg-blue-50 text-blue-600 text-[8px] font-black border-none rounded-none">READ ONLY</Badge>
+                                                            </div>
+                                                            <div className="flex gap-0">
+                                                                <Input value={`${baseUrl}?type=${mod.id}&${view.params}`} readOnly className="h-8 font-mono text-[9px] bg-slate-50 border-none rounded-none text-slate-500 font-bold" />
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none bg-slate-100 border-l" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=${mod.id}&${view.params}`); toast({ title: "Link Gekopieerd" }); }}><Copy className="h-3.5 w-3.5" /></Button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </AccordionContent>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
+                    </div>
+
+                    <div className="space-y-6">
+                        <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-orange-500 pb-3 flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-orange-500" /> External Webhook Configurator
+                        </h3>
+                        
+                        <Card className="rounded-none border-2 border-orange-100 bg-orange-50/30 overflow-hidden shadow-xl">
+                            <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">API POST CONFIGURATIE</h4>
+                                <FileCode className="h-4 w-4 text-orange-500" />
+                            </div>
+                            <CardContent className="p-6 space-y-8">
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] font-black uppercase text-slate-400">POST URL (ENDPOINT)</Label>
+                                    <div className="flex">
+                                        <Input value={`${baseUrl}?type=meldingen`} readOnly className="h-12 font-bold bg-white border-2 border-slate-200 rounded-none shadow-inner" />
+                                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-none border-2 border-l-0" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=meldingen`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-4 w-4" /></Button>
+                                    </div>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Gebruik deze URL voor systemen die nieuwe meldingen inschieten.</p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] font-black uppercase text-slate-400">HEADERS (JSON)</Label>
+                                    <div className="relative group">
+                                        <pre className="p-6 bg-slate-900 text-blue-400 font-mono text-[11px] rounded-none border-[6px] border-slate-800 shadow-2xl leading-relaxed">
+                                            {webhookHeadersJson}
+                                        </pre>
+                                        <Button 
+                                            size="sm" 
+                                            className="absolute top-4 right-4 h-8 px-4 font-black uppercase text-[10px] rounded-none bg-primary text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => { navigator.clipboard.writeText(webhookHeadersJson); toast({ title: "JSON Gekopieerd" }); }}
+                                        >
+                                            <Copy className="h-3.5 w-3.5 mr-2" /> Kopieer JSON
+                                        </Button>
+                                    </div>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Kopieer dit volledige blok naar de 'Headers' sectie van uw externe systeem.</p>
+                                </div>
+
+                                <Separator className="bg-slate-200" />
+
+                                <div className="space-y-4">
+                                    <h5 className="text-[10px] font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
+                                        <Check className="h-3 w-3 text-green-600" /> Voorbeeld Payload (JSON Body)
+                                    </h5>
+                                    <pre className="p-4 bg-slate-50 text-slate-500 font-mono text-[10px] rounded-none border border-slate-200">
+{`{
+  "intakenummer": "WK-2024-001",
+  "straatnaam": "Hoofdstraat",
+  "huisnummer": "12",
+  "plaats": "Hillegom",
+  "extra_informatie": "Beschadiging lantaarnpaal",
+  "hoofdcategorie": "Weg en straatmeubilair",
+  "subcategorie": "Kapotte bank/paal/hek"
+}`}
+                                    </pre>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -444,3 +529,4 @@ export default function ApiIntegrationsPage() {
     </div>
   );
 }
+

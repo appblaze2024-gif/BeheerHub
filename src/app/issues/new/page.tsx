@@ -60,25 +60,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { triggerWebhookSync } from '@/app/api-integrations/actions';
 
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue,
-  SelectGroup,
-  SelectLabel
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Form, 
   FormControl, 
@@ -115,13 +103,22 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue,
+} from '@/components/ui/select';
 
 import * as turf from '@turf/turf';
 
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Melding, Object as MapObject, UploadedFile, Project } from '@/lib/types';
+import type { Melding, Object as MapObject, UploadedFile, Project, ApiIntegration } from '@/lib/types';
 
 // AI Flows
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
@@ -998,6 +995,9 @@ export default function NewIssuePage() {
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projects } = useCollection<Project>(projectsQuery);
 
+  const integrationsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'api_integrations'), where('sourceModule', '==', 'meldingen'), where('method', '==', 'POST'), where('active', '==', true)) : null, [firestore]);
+  const { data: pushIntegrations } = useCollection<ApiIntegration>(integrationsQuery);
+
   const meldingRef = useMemoFirebase(() => {
     if (!firestore || !meldingId) return null;
     return doc(firestore, 'meldingen', meldingId);
@@ -1317,7 +1317,7 @@ export default function NewIssuePage() {
     }
   };
 
-  const onSubmit = (data: NewMeldingFormValues) => {
+  const onSubmit = async (data: NewMeldingFormValues) => {
     if (!firestore || isSubmitting || isReadOnly) return;
     setIsSubmitting(true);
     
@@ -1337,42 +1337,57 @@ export default function NewIssuePage() {
     // Clean up undefined values for Firestore
     Object.keys(mData).forEach(key => mData[key] === undefined && delete mData[key]);
 
-    if (meldingId) {
-      updateDocumentNonBlocking(doc(firestore, 'meldingen', meldingId), mData);
-      toast({ title: "Melding bijgewerkt" });
-      router.push('/issues/portal');
-    } else {
-      mData.createdAt = serverTimestamp();
-      addDocumentNonBlocking(collection(firestore, 'meldingen'), mData).then(() => {
-        toast({ title: "Melding opgeslagen", description: `Melding ${data.intakenummer} is aangemaakt.` });
-        startProcessing(1000);
-        
-        // RESET FORM FOR CONTINUOUS ENTRY
-        form.reset({
-            intakenummer: format(new Date(), 'yyyyMMdd') + '',
-            status: 'Nieuw',
-            meldingsdatum: new Date(),
-            meldingsuur: format(new Date(), 'HH:mm'),
-            aangenomen_door: profile?.displayName || profile?.email || '',
-            voorvaldatum: new Date(),
-            voorvaltijd: format(new Date(), 'HH:mm'),
-            hoofdcategorie: '',
-            subcategorie: '',
-            straatnaam: '',
-            huisnummer: '',
-            postcode: '',
-            plaats: '',
-            extra_informatie: '',
-        });
-        setIdSuffix('');
-        setUploadedFiles([]);
-        setUploadedPhotos([]);
-        setAfhandelingFotos([]);
-        setLocation(null);
+    try {
+        if (meldingId) {
+            await updateDocumentNonBlocking(doc(firestore, 'meldingen', meldingId), mData);
+            toast({ title: "Melding bijgewerkt" });
+            router.push('/issues/portal');
+        } else {
+            mData.createdAt = serverTimestamp();
+            const newDoc = await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
+            
+            // Trigger push integrations
+            if (pushIntegrations && pushIntegrations.length > 0) {
+                pushIntegrations.forEach(async (integration) => {
+                    await triggerWebhookSync(
+                        integration.endpoint,
+                        'POST',
+                        integration.headers.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+                        { ...mData, id: newDoc.id }
+                    ).catch(e => console.error("Push integration failed:", e));
+                });
+            }
+
+            toast({ title: "Melding opgeslagen", description: `Melding ${data.intakenummer} is aangemaakt.` });
+            startProcessing(1000);
+            
+            // RESET FORM FOR CONTINUOUS ENTRY
+            form.reset({
+                intakenummer: format(new Date(), 'yyyyMMdd') + '',
+                status: 'Nieuw',
+                meldingsdatum: new Date(),
+                meldingsuur: format(new Date(), 'HH:mm'),
+                aangenomen_door: profile?.displayName || profile?.email || '',
+                voorvaldatum: new Date(),
+                voorvaltijd: format(new Date(), 'HH:mm'),
+                hoofdcategorie: '',
+                subcategorie: '',
+                straatnaam: '',
+                huisnummer: '',
+                postcode: '',
+                plaats: '',
+                extra_informatie: '',
+            });
+            setIdSuffix('');
+            setUploadedFiles([]);
+            setUploadedPhotos([]);
+            setAfhandelingFotos([]);
+            setLocation(null);
+        }
+    } catch (e) {
+        console.error("Save error:", e);
+    } finally {
         setIsSubmitting(false);
-      }).catch(() => {
-        setIsSubmitting(false);
-      });
     }
   };
 
@@ -2032,3 +2047,4 @@ export default function NewIssuePage() {
     </div>
   );
 }
+
