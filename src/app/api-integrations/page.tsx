@@ -27,7 +27,8 @@ import {
   Database,
   FileCode,
   Zap,
-  Check
+  Check,
+  Info
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -48,6 +49,8 @@ import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { LoadingScreen } from '@/components/loading-screen';
 import { triggerWebhookSync } from './actions';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Accordion,
   AccordionContent,
@@ -529,4 +532,3 @@ export default function ApiIntegrationsPage() {
     </div>
   );
 }
-
