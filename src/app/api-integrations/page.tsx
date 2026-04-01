@@ -28,7 +28,8 @@ import {
   Edit2,
   Trash2,
   PlusCircle,
-  FileText
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import { 
   useFirestore, 
