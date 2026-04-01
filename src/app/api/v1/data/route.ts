@@ -4,7 +4,7 @@ import admin from 'firebase-admin';
 /**
  * Universeel REST API Eindpunt voor BeheerHub.
  * Ondersteunt volledige CRUD (GET, POST, PATCH, DELETE).
- * Geautoriseerd via X-API-KEY.
+ * Geautoriseerd via X-API-KEY of Bearer token.
  */
 
 if (!admin.apps.length) {
@@ -48,7 +48,7 @@ export async function OPTIONS() {
 }
 
 /**
- * Helper om de API Key te valideren.
+ * Helper om de API Key te valideren tegen de database-instellingen.
  */
 async function validateAuth(request: Request): Promise<{ authorized: boolean; error?: string }> {
   const xApiKey = request.headers.get('x-api-key')?.trim();
@@ -65,26 +65,26 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
   }
 
   if (candidateKeys.length === 0) {
-    return { authorized: false, error: 'Geen API Key gevonden.' };
+    return { authorized: false, error: 'Geen API Key gevonden in headers (X-API-KEY of Authorization).' };
   }
 
   try {
     const settingsSnap = await db.collection('settings').doc('api_settings').get();
     const validKey = settingsSnap.data()?.publicKey?.trim();
 
-    if (!validKey) return { authorized: false, error: 'API Hub niet geconfigureerd.' };
+    if (!validKey) return { authorized: false, error: 'API Hub niet geconfigureerd in BeheerHub.' };
 
     const isMatch = candidateKeys.some(key => key.trim() === validKey);
     if (!isMatch) return { authorized: false, error: 'Ongeldige API Key.' };
 
     return { authorized: true };
   } catch (err: any) {
-    return { authorized: false, error: 'Auth validatie fout.' };
+    return { authorized: false, error: 'Auth validatie fout op de server.' };
   }
 }
 
 /**
- * GET - Data ophalen
+ * GET - Data ophalen (Lijsten, specifieke records of systeeminstellingen)
  */
 export async function GET(request: Request) {
   try {
@@ -95,7 +95,7 @@ export async function GET(request: Request) {
     const type = searchParams.get('type');
     const id = searchParams.get('id');
 
-    if (!type) return corsResponse({ error: 'Bad Request', message: 'Geef "type" op.' }, 400);
+    if (!type) return corsResponse({ error: 'Bad Request', message: 'Geef een dataset "type" op (bijv. meldingen, objects, settings).' }, 400);
 
     const allowedCollections: Record<string, string> = {
       'meldingen': 'meldingen',
@@ -103,19 +103,27 @@ export async function GET(request: Request) {
       'projects': 'projects',
       'voertuigen': 'voertuigen',
       'machines': 'machines',
-      'users': 'users'
+      'users': 'users',
+      'settings': 'settings'
     };
 
     const targetCollection = allowedCollections[type];
-    if (!targetCollection) return corsResponse({ error: 'Forbidden', message: 'Dataset niet toegankelijk.' }, 403);
+    if (!targetCollection) return corsResponse({ error: 'Forbidden', message: `Dataset "${type}" is niet toegankelijk via de API.` }, 403);
 
     if (id) {
       const docSnap = await db.collection(targetCollection).doc(id).get();
-      if (!docSnap.exists) return corsResponse({ error: 'Not Found' }, 404);
+      if (!docSnap.exists) return corsResponse({ error: 'Not Found', message: `Record met ID ${id} niet gevonden in ${type}.` }, 404);
       return corsResponse({ success: true, data: { id: docSnap.id, ...docSnap.data() } });
     }
 
+    // Voor settings dwingen we een ID af (bijv. issue_options)
+    if (type === 'settings') {
+        return corsResponse({ error: 'Bad Request', message: 'Voor systeeminstellingen moet een specifieke "id" worden opgegeven.' }, 400);
+    }
+
     let queryRef: admin.firestore.Query = db.collection(targetCollection);
+    
+    // Voeg filters toe op basis van query parameters
     searchParams.forEach((value, key) => {
       if (['type', 'id'].includes(key)) return;
       if (value.includes(',')) {
@@ -156,7 +164,7 @@ export async function POST(request: Request) {
       if (!direct) {
         body.status = 'Nieuw'; // Dwing portaal status af
       } else if (!body.status || body.status === 'Nieuw') {
-        body.status = 'In behandeling'; // Direct geaccepteerd
+        body.status = 'In behandeling'; // Direct geaccepteerd als werkbon
       }
     }
 

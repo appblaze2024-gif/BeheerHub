@@ -28,7 +28,8 @@ import {
   FileCode,
   Zap,
   Check,
-  Info
+  Info,
+  Settings
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -147,6 +148,17 @@ export default function ApiIntegrationsPage() {
             { label: 'Openstaand (Actief)', params: 'status=Intern doorgezet,In behandeling,Gepland op korte termijn,Gepland op langere termijn,Extern doorgezet' },
             { label: 'Archief (Historie)', params: 'status=Afgerond,Niet in beheer,Geweigerd,Dubbel gemeld' }
         ]
+    },
+    { 
+        id: 'settings', 
+        label: 'Systeem Configuratie', 
+        icon: Settings, 
+        color: 'text-orange-500',
+        methods: [
+            { method: 'GET', label: 'Meldingsopties Uitlezen', path: '?type=settings&id=issue_options', desc: 'Haal actuele Hoofdtypes, Subtypes en Statussen op die in de dropdowns worden getoond.' },
+            { method: 'PATCH', label: 'Configuratie Bijwerken', path: '?type=settings&id=issue_options', desc: 'Update de beschikbare opties voor het meldingensysteem (Gereserveerd voor IT-admin).' }
+        ],
+        views: []
     },
     { 
         id: 'objects', 
