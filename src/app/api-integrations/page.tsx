@@ -14,22 +14,18 @@ import {
   Key, 
   Copy, 
   Share2, 
-  AlertTriangle,
+  Globe, 
+  Truck, 
+  Users, 
+  MapPin, 
+  Folder, 
+  ArrowUpRight, 
+  ArrowRight, 
+  List, 
+  Wrench,
+  Sparkles,
   Database,
-  Globe,
-  Truck,
-  Users,
-  MapPin,
-  Folder,
-  ArrowUpRight,
-  Zap,
-  ArrowRight,
-  List,
-  Edit2,
-  Trash2,
-  PlusCircle,
-  FileText,
-  Sparkles
+  FileText
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -44,7 +40,6 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import type { ApiIntegration } from '@/lib/types';
 import { ApiIntegrationDialog } from '@/components/api-integration-dialog';
 import { format } from 'date-fns';
@@ -119,7 +114,6 @@ export default function ApiIntegrationsPage() {
     }
   };
 
-  const isLocalEnv = typeof window !== 'undefined' && window.location.hostname.includes('cloudworkstations.dev');
   const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/v1/data` : '';
 
   if (isLoading || isLoadingSettings) return <LoadingScreen message="REST HUB laden..." />;
@@ -151,7 +145,8 @@ export default function ApiIntegrationsPage() {
         methods: [
             { method: 'GET', label: 'Lijst ophalen', path: '?type=objects', desc: 'Haal objecten/assets op.' },
             { method: 'POST', label: 'Nieuw object', path: '?type=objects', desc: 'Registreer een nieuwe unit.' },
-            { method: 'PATCH', label: 'Object bijwerken', path: '?type=objects&id={id}', desc: 'Wijzig objectgegevens.' }
+            { method: 'PATCH', label: 'Object bijwerken', path: '?type=objects&id={id}', desc: 'Wijzig objectgegevens.' },
+            { method: 'DELETE', label: 'Object verwijderen', path: '?type=objects&id={id}', desc: 'Verwijder een asset.' }
         ],
         views: [
             { label: 'Alleen Prullenbakken', params: 'locatieType=prullenbak' },
@@ -165,7 +160,25 @@ export default function ApiIntegrationsPage() {
         color: 'text-blue-600',
         methods: [
             { method: 'GET', label: 'Lijst ophalen', path: '?type=voertuigen', desc: 'Alle voertuigen uitlezen.' },
-            { method: 'PATCH', label: 'Status wijzigen', path: '?type=voertuigen&id={id}', desc: 'Bv. status op "In onderhoud" zetten.' }
+            { method: 'POST', label: 'Nieuw voertuig', path: '?type=voertuigen', desc: 'Voeg een voertuig toe.' },
+            { method: 'PATCH', label: 'Status wijzigen', path: '?type=voertuigen&id={id}', desc: 'Bv. status op "In onderhoud" zetten.' },
+            { method: 'DELETE', label: 'Verwijderen', path: '?type=voertuigen&id={id}', desc: 'Wis een voertuig.' }
+        ],
+        views: [
+            { label: 'Operationeel', params: 'status=Actief' },
+            { label: 'In Onderhoud', params: 'status=In onderhoud' }
+        ]
+    },
+    { 
+        id: 'machines', 
+        label: 'Machines', 
+        icon: Wrench, 
+        color: 'text-orange-600',
+        methods: [
+            { method: 'GET', label: 'Lijst ophalen', path: '?type=machines', desc: 'Alle machines uitlezen.' },
+            { method: 'POST', label: 'Nieuwe machine', path: '?type=machines', desc: 'Voeg een machine toe.' },
+            { method: 'PATCH', label: 'Bijwerken', path: '?type=machines&id={id}', desc: 'Wijzig machinegegevens.' },
+            { method: 'DELETE', label: 'Verwijderen', path: '?type=machines&id={id}', desc: 'Wis een machine.' }
         ],
         views: [
             { label: 'Operationeel', params: 'status=Actief' }
@@ -177,10 +190,26 @@ export default function ApiIntegrationsPage() {
         icon: Users, 
         color: 'text-purple-600',
         methods: [
-            { method: 'GET', label: 'Gebruikerslijst', path: '?type=users', desc: 'Lijst van actieve collega\'s.' }
+            { method: 'GET', label: 'Gebruikerslijst', path: '?type=users', desc: 'Lijst van actieve collega\'s.' },
+            { method: 'PATCH', label: 'Profiel bijwerken', path: '?type=users&id={id}', desc: 'Wijzig rollen of gegevens.' }
         ],
         views: [
-            { label: 'Toezichthouders', params: 'role=toezichthouder' }
+            { label: 'Toezichthouders', params: 'role=toezichthouder' },
+            { label: 'Medewerkers', params: 'role=medewerkers' }
+        ]
+    },
+    { 
+        id: 'projects', 
+        label: 'Projecten', 
+        icon: Folder, 
+        color: 'text-slate-600',
+        methods: [
+            { method: 'GET', label: 'Projectenlijst', path: '?type=projects', desc: 'Haal alle projecten op.' },
+            { method: 'POST', label: 'Nieuw project', path: '?type=projects', desc: 'Maak een nieuw project aan.' },
+            { method: 'PATCH', label: 'Project bijwerken', path: '?type=projects&id={id}', desc: 'Wijzig projectgegevens.' }
+        ],
+        views: [
+            { label: 'Lopende projecten', params: 'status=Actief' }
         ]
     }
   ];
