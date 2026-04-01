@@ -341,12 +341,12 @@ export default function ApiIntegrationsPage() {
           <ScrollArea className="h-full">
             <div className="w-full space-y-0 pb-20">
               <Card className="rounded-none border-none shadow-none bg-white overflow-hidden">
-                <CardHeader className="bg-slate-900 text-white p-8">
+                <CardHeader className="bg-slate-50 border-b p-8 text-slate-900">
                   <div className="flex items-center gap-4">
                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
                     <div>
                       <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (CRUD)</CardTitle>
-                      <CardDescription className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Koppel externe systemen aan de BeheerHub database.</CardDescription>
+                      <CardDescription className="text-slate-500 font-bold uppercase text-[9px] tracking-widest">Koppel externe systemen aan de BeheerHub database.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
