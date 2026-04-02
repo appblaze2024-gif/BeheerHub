@@ -118,9 +118,25 @@ export async function GET(request: Request) {
     }
 
     let queryRef: admin.firestore.Query = db.collection(targetCollection);
+    
+    // Dynamische filtering op basis van URL parameters
     searchParams.forEach((value, key) => {
       if (['type', 'id', 'key'].includes(key)) return;
-      queryRef = queryRef.where(key, '==', value.toLowerCase() === 'true' ? true : value.toLowerCase() === 'false' ? false : value);
+      
+      // Ondersteuning voor comma-separated waarden (IN operator)
+      const values = value.split(',').map(v => v.trim()).filter(Boolean);
+      
+      if (values.length > 1) {
+          // Gebruik IN operator voor meerdere waarden (zoals bij openstaande statussen)
+          queryRef = queryRef.where(key, 'in', values.map(v => 
+              v.toLowerCase() === 'true' ? true : v.toLowerCase() === 'false' ? false : v
+          ));
+      } else if (values.length === 1) {
+          // Standaard '==' operator voor enkele waarde
+          const singleVal = values[0];
+          const typedVal = singleVal.toLowerCase() === 'true' ? true : singleVal.toLowerCase() === 'false' ? false : singleVal;
+          queryRef = queryRef.where(key, '==', typedVal);
+      }
     });
 
     const snapshot = await queryRef.limit(1000).get();
