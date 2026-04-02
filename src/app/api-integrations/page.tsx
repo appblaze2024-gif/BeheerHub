@@ -380,7 +380,7 @@ export default function ApiIntegrationsPage() {
           <ScrollArea className="h-full">
             <div className="w-full space-y-0 pb-20">
               <Card className="rounded-none border-none shadow-none bg-white overflow-hidden">
-                <CardHeader className="bg-slate-50 border-b p-8 text-slate-900">
+                <CardHeader className="bg-white border-b p-8 text-slate-900">
                   <div className="flex items-center gap-4">
                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
                     <div>
@@ -517,6 +517,7 @@ export default function ApiIntegrationsPage() {
                                     <h5 className="text-[10px] font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
                                         <Check className="h-3 w-3 text-green-600" /> Voorbeeld Payload (JSON Body)
                                     </h5>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Deze velden worden 1:1 overgenomen in de BeheerHub database.</p>
                                     <pre className="p-4 bg-slate-50 text-slate-500 font-mono text-[10px] rounded-none border border-slate-200 overflow-x-auto">
 {`{
   "intakenummer": "WK-2024-001",
@@ -531,14 +532,18 @@ export default function ApiIntegrationsPage() {
   "status": "Nieuw",
   "voorvaldatum": "2024-03-20",
   "voorvaltijd": "14:30",
+  "meldingsdatum": "2024-03-20",
+  "meldingsuur": "14:30",
   "straatnaam": "Leembruggenstraat",
   "huisnummer": "32",
   "postcode": "2181 AK",
   "plaats": "Hillegom",
   "wijk": "Centrum",
+  "werkgebied": "Wijk 1",
   "melder": "Dhr. de Vries",
   "telefoon_melder": "0612345678",
   "email_melder": "melder@example.com",
+  "burgerservicenummer": "123456789",
   "extra_informatie": "Er ligt veel zwerfafval rondom de bak."
 }`}
                                     </pre>
