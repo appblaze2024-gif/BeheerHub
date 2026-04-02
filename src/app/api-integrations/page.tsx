@@ -527,7 +527,7 @@ export default function ApiIntegrationsPage() {
   "subcategorie": "Zwerfafval",
   "behandelende_afdeling": "Wijkbeheer",
   "behandelaar": "Jan Jansen",
-  "aangenomen_door": "API Systeem",
+  "aangenomen_door": "Django Stoutenburg",
   "status": "Nieuw",
   "voorvaldatum": "2024-03-20",
   "voorvaltijd": "14:30",

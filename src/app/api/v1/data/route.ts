@@ -166,6 +166,25 @@ export async function POST(request: Request) {
       } else if (!body.status || body.status === 'Nieuw') {
         body.status = 'In behandeling'; // Direct geaccepteerd als werkbon
       }
+
+      // Verrijking op basis van containernummer (lookup in de database)
+      if (body.containernummer && (!body.latitude || !body.longitude)) {
+          const q = await db.collection('objects')
+            .where('idNummer', '==', String(body.containernummer).toUpperCase())
+            .limit(1)
+            .get();
+          
+          if (!q.empty) {
+              const obj = q.docs[0].data();
+              if (!body.latitude) body.latitude = obj.latitude || 0;
+              if (!body.longitude) body.longitude = obj.longitude || 0;
+              if (!body.straatnaam) body.straatnaam = obj.straatnaam || '';
+              if (!body.huisnummer) body.huisnummer = obj.huisnummer || '';
+              if (!body.plaats) body.plaats = obj.plaats || '';
+              if (!body.postcode) body.postcode = obj.postcode || '';
+              if (!body.werkgebied) body.werkgebied = obj.wijk || (obj.locatieWerkgebieden?.[0] || '');
+          }
+      }
     }
 
     const docRef = await db.collection(type).add({
