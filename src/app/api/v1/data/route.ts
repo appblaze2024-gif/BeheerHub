@@ -18,6 +18,19 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 /**
+ * Definitie van toegestane collecties en hun permissies.
+ */
+const ALLOWED_COLLECTIONS: Record<string, { collection: string; allowWrite: boolean }> = {
+  'meldingen': { collection: 'meldingen', allowWrite: true },
+  'objects': { collection: 'objects', allowWrite: true },
+  'projects': { collection: 'projects', allowWrite: true },
+  'voertuigen': { collection: 'voertuigen', allowWrite: true },
+  'machines': { collection: 'machines', allowWrite: true },
+  'users': { collection: 'users', allowWrite: true },
+  'settings': { collection: 'settings', allowWrite: true }
+};
+
+/**
  * Helper om CORS-headers toe te voegen aan de respons.
  */
 function corsResponse(data: any, status: number = 200) {
@@ -98,18 +111,10 @@ export async function GET(request: Request) {
 
     if (!type) return corsResponse({ error: 'Bad Request', message: 'Geef een dataset "type" op.' }, 400);
 
-    const allowedCollections: Record<string, string> = {
-      'meldingen': 'meldingen',
-      'objects': 'objects',
-      'projects': 'projects',
-      'voertuigen': 'voertuigen',
-      'machines': 'machines',
-      'users': 'users',
-      'settings': 'settings'
-    };
+    const config = ALLOWED_COLLECTIONS[type];
+    if (!config) return corsResponse({ error: 'Forbidden', message: `Dataset "${type}" is niet toegankelijk via de API.` }, 403);
 
-    const targetCollection = allowedCollections[type];
-    if (!targetCollection) return corsResponse({ error: 'Forbidden', message: `Dataset "${type}" is niet toegankelijk.` }, 403);
+    const targetCollection = config.collection;
 
     if (id) {
       const docSnap = await db.collection(targetCollection).doc(id).get();
@@ -127,7 +132,7 @@ export async function GET(request: Request) {
       const values = value.split(',').map(v => v.trim()).filter(Boolean);
       
       if (values.length > 1) {
-          // Gebruik IN operator voor meerdere waarden (zoals bij openstaande statussen)
+          // Gebruik IN operator voor meerdere waarden
           queryRef = queryRef.where(key, 'in', values.map(v => 
               v.toLowerCase() === 'true' ? true : v.toLowerCase() === 'false' ? false : v
           ));
@@ -149,7 +154,7 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST - Nieuw record aanmaken (1:1 mapping ondersteuning)
+ * POST - Nieuw record aanmaken
  */
 export async function POST(request: Request) {
   try {
@@ -162,10 +167,16 @@ export async function POST(request: Request) {
 
     if (!type) return corsResponse({ error: 'Bad Request', message: 'Geef "type" op.' }, 400);
 
+    const config = ALLOWED_COLLECTIONS[type];
+    if (!config || !config.allowWrite) {
+        return corsResponse({ error: 'Forbidden', message: `Schrijven naar dataset "${type}" is niet toegestaan via de API.` }, 403);
+    }
+
     const body = await request.json();
+    const targetCollection = config.collection;
     
     // Verrijking voor meldingen
-    if (type === 'meldingen') {
+    if (targetCollection === 'meldingen') {
       // Status logica
       if (!direct) {
         body.status = 'Nieuw'; 
@@ -193,7 +204,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const docRef = await db.collection(type).add({
+    const docRef = await db.collection(targetCollection).add({
       ...body,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -224,8 +235,13 @@ export async function PATCH(request: Request) {
 
     if (!type || !id) return corsResponse({ error: 'Bad Request' }, 400);
 
+    const config = ALLOWED_COLLECTIONS[type];
+    if (!config || !config.allowWrite) {
+        return corsResponse({ error: 'Forbidden', message: `Bewerken van dataset "${type}" is niet toegestaan via de API.` }, 403);
+    }
+
     const body = await request.json();
-    await db.collection(type).doc(id).update({
+    await db.collection(config.collection).doc(id).update({
       ...body,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     });
@@ -250,7 +266,12 @@ export async function DELETE(request: Request) {
 
     if (!type || !id) return corsResponse({ error: 'Bad Request' }, 400);
 
-    await db.collection(type).doc(id).delete();
+    const config = ALLOWED_COLLECTIONS[type];
+    if (!config || !config.allowWrite) {
+        return corsResponse({ error: 'Forbidden', message: `Verwijderen uit dataset "${type}" is niet toegestaan via de API.` }, 403);
+    }
+
+    await db.collection(config.collection).doc(id).delete();
     return corsResponse({ success: true, message: 'Record verwijderd.' });
   } catch (error: any) {
     return corsResponse({ error: 'Server Error', message: error.message }, 500);
