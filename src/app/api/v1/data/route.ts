@@ -51,7 +51,8 @@ export async function OPTIONS() {
  * Helper om de API Key te valideren tegen de database-instellingen.
  */
 async function validateAuth(request: Request): Promise<{ authorized: boolean; error?: string }> {
-  const xApiKey = request.headers.get('x-api-key')?.trim();
+  const { searchParams } = new URL(request.url);
+  const xApiKey = request.headers.get('x-api-key')?.trim() || searchParams.get('key')?.trim();
   const authHeader = request.headers.get('authorization')?.trim();
   
   const candidateKeys: string[] = [];
@@ -65,7 +66,7 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
   }
 
   if (candidateKeys.length === 0) {
-    return { authorized: false, error: 'Geen API Key gevonden in headers (X-API-KEY of Authorization).' };
+    return { authorized: false, error: 'Geen API Key gevonden (X-API-KEY header of ?key= parameter).' };
   }
 
   try {
@@ -84,7 +85,7 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
 }
 
 /**
- * GET - Data ophalen (Lijsten, specifieke records of systeeminstellingen)
+ * GET - Data ophalen
  */
 export async function GET(request: Request) {
   try {
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
     const type = searchParams.get('type');
     const id = searchParams.get('id');
 
-    if (!type) return corsResponse({ error: 'Bad Request', message: 'Geef een dataset "type" op (bijv. meldingen, objects, settings).' }, 400);
+    if (!type) return corsResponse({ error: 'Bad Request', message: 'Geef een dataset "type" op.' }, 400);
 
     const allowedCollections: Record<string, string> = {
       'meldingen': 'meldingen',
@@ -108,30 +109,18 @@ export async function GET(request: Request) {
     };
 
     const targetCollection = allowedCollections[type];
-    if (!targetCollection) return corsResponse({ error: 'Forbidden', message: `Dataset "${type}" is niet toegankelijk via de API.` }, 403);
+    if (!targetCollection) return corsResponse({ error: 'Forbidden', message: `Dataset "${type}" is niet toegankelijk.` }, 403);
 
     if (id) {
       const docSnap = await db.collection(targetCollection).doc(id).get();
-      if (!docSnap.exists) return corsResponse({ error: 'Not Found', message: `Record met ID ${id} niet gevonden in ${type}.` }, 404);
+      if (!docSnap.exists) return corsResponse({ error: 'Not Found' }, 404);
       return corsResponse({ success: true, data: { id: docSnap.id, ...docSnap.data() } });
     }
 
-    // Voor settings dwingen we een ID af (bijv. issue_options)
-    if (type === 'settings') {
-        return corsResponse({ error: 'Bad Request', message: 'Voor systeeminstellingen moet een specifieke "id" worden opgegeven.' }, 400);
-    }
-
     let queryRef: admin.firestore.Query = db.collection(targetCollection);
-    
-    // Voeg filters toe op basis van query parameters
     searchParams.forEach((value, key) => {
-      if (['type', 'id'].includes(key)) return;
-      if (value.includes(',')) {
-        queryRef = queryRef.where(key, 'in', value.split(',').map(s => s.trim()).slice(0, 30));
-      } else {
-        const val = value.toLowerCase() === 'true' ? true : value.toLowerCase() === 'false' ? false : value;
-        queryRef = queryRef.where(key, '==', val);
-      }
+      if (['type', 'id', 'key'].includes(key)) return;
+      queryRef = queryRef.where(key, '==', value.toLowerCase() === 'true' ? true : value.toLowerCase() === 'false' ? false : value);
     });
 
     const snapshot = await queryRef.limit(1000).get();
@@ -144,12 +133,12 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST - Nieuw record aanmaken
+ * POST - Nieuw record aanmaken (1:1 mapping ondersteuning)
  */
 export async function POST(request: Request) {
   try {
     const auth = await validateAuth(request);
-    if (!auth.authorized) return corsResponse({ error: 'Unauthorized' }, 401);
+    if (!auth.authorized) return corsResponse({ error: 'Unauthorized', message: auth.error }, 401);
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
@@ -159,15 +148,16 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     
-    // Specifieke logica voor meldingen om Portaal vs Direct te ondersteunen
+    // Verrijking voor meldingen
     if (type === 'meldingen') {
+      // Status logica
       if (!direct) {
-        body.status = 'Nieuw'; // Dwing portaal status af
+        body.status = 'Nieuw'; 
       } else if (!body.status || body.status === 'Nieuw') {
-        body.status = 'In behandeling'; // Direct geaccepteerd als werkbon
+        body.status = 'In behandeling';
       }
 
-      // Verrijking op basis van containernummer (lookup in de database)
+      // 1:1 Verrijking op basis van containernummer indien coords ontbreken
       if (body.containernummer && (!body.latitude || !body.longitude)) {
           const q = await db.collection('objects')
             .where('idNummer', '==', String(body.containernummer).toUpperCase())
@@ -191,13 +181,13 @@ export async function POST(request: Request) {
       ...body,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      source: 'REST_API'
+      source: 'REST_API_EXTERNAL'
     });
 
     return corsResponse({ 
       success: true, 
       id: docRef.id, 
-      message: type === 'meldingen' && !direct ? 'Melding geplaatst in portaal.' : 'Record direct aangemaakt.' 
+      message: 'Record succesvol aangemaakt via REST API.' 
     }, 201);
   } catch (error: any) {
     return corsResponse({ error: 'Server Error', message: error.message }, 500);
@@ -216,7 +206,7 @@ export async function PATCH(request: Request) {
     const type = searchParams.get('type');
     const id = searchParams.get('id');
 
-    if (!type || !id) return corsResponse({ error: 'Bad Request', message: 'Geef "type" en "id" op.' }, 400);
+    if (!type || !id) return corsResponse({ error: 'Bad Request' }, 400);
 
     const body = await request.json();
     await db.collection(type).doc(id).update({
@@ -242,7 +232,7 @@ export async function DELETE(request: Request) {
     const type = searchParams.get('type');
     const id = searchParams.get('id');
 
-    if (!type || !id) return corsResponse({ error: 'Bad Request', message: 'Geef "type" en "id" op.' }, 400);
+    if (!type || !id) return corsResponse({ error: 'Bad Request' }, 400);
 
     await db.collection(type).doc(id).delete();
     return corsResponse({ success: true, message: 'Record verwijderd.' });
