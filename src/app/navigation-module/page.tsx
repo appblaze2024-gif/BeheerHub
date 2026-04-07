@@ -113,7 +113,7 @@ import {
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, RouteAssignment, UserFolder, UserProfile } from '@/lib/types';
+import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, UserFolder, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
@@ -127,6 +127,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Textarea } from '@/components/ui/textarea';
 import { useProject } from '@/context/project-context';
 import { Checkbox } from '@/components/ui/checkbox';
+import { translateText } from '@/ai/flows/translate-text-flow';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -533,7 +534,7 @@ export default function StartNavigationPage() {
 
   // Duplicates logic state
   const [isDuplicatesDialogOpen, setIsDuplicatesDialogOpen] = useState(false);
-  const [duplicatesToDelete, setDuplicatesToDelete] = setDuplicatesToDelete || useState<string[]>([]);
+  const [duplicatesToDelete, setDuplicatesToDelete] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Pagination State
@@ -593,7 +594,7 @@ export default function StartNavigationPage() {
     );
   }, [firestore, user, selectedProjectId, todayStr]);
 
-  const { data: assignments } = useCollection<RouteAssignment>(assignmentsQuery);
+  const { data: assignments } = useCollection<any>(assignmentsQuery);
 
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
@@ -643,11 +644,15 @@ export default function StartNavigationPage() {
     return new Set(userFolders.flatMap(f => f.taskIds || []));
   }, [userFolders]);
 
-  const allCount = filteredMeldingen?.length || 0;
+  const allCount = useMemo(() => {
+    if (type === 'meldingen') return rawActiveMeldingen?.length || 0;
+    return 0;
+  }, [type, rawActiveMeldingen]);
 
   const getFolderCount = useCallback((folder: UserFolder) => {
-    return (folder.taskIds || []).filter(id => filteredMeldingen.some(m => m.id === id)).length;
-  }, [filteredMeldingen]);
+    const baseList = type === 'meldingen' ? (rawActiveMeldingen || []) : [];
+    return (folder.taskIds || []).filter(id => baseList.some(m => m.id === id)).length;
+  }, [type, rawActiveMeldingen]);
 
   const sequenceMissions = useCallback((missions: any[]) => {
     if (missions.length === 0) return [];
@@ -858,6 +863,113 @@ export default function StartNavigationPage() {
         }
         return next;
     });
+  };
+
+  const handleIdentifyDuplicates = () => {
+    const visibleMeldingen = isMeldingenType ? rawActiveMeldingen : [];
+    if (!visibleMeldingen) return;
+
+    const groups: Record<string, Melding[]> = {};
+    
+    visibleMeldingen.forEach(m => {
+        const key = [
+            m.intakenummer,
+            m.straatnaam,
+            m.huisnummer,
+            m.postcode,
+            m.containernummer
+        ].map(v => (v || '').toLowerCase().trim()).join('|');
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(m);
+    });
+
+    const idsToDelete: string[] = [];
+    Object.values(groups).forEach(group => {
+        if (group.length > 1) {
+            group.sort((a, b) => {
+                const timeA = (a as any).createdAt?.seconds || 0;
+                const timeB = (b as any).createdAt?.seconds || 0;
+                return timeA - timeB;
+            });
+            const extras = group.slice(1).map(m => m.id);
+            idsToDelete.push(...extras);
+        }
+    });
+
+    if (idsToDelete.length === 0) {
+        toast({ title: "Geen dubbelen", description: "Er zijn geen identieke openstaande werkbonnen gevonden." });
+        return;
+    }
+
+    setDuplicatesToDelete(idsToDelete);
+    setIsDuplicatesDialogOpen(true);
+  };
+
+  const handleConfirmCleanDuplicates = async () => {
+    if (!firestore || duplicatesToDelete.length === 0 || !isSuperAdmin) return;
+    
+    setIsDeleting(true);
+    try {
+        const batch = writeBatch(firestore);
+        duplicatesToDelete.forEach(id => {
+            batch.delete(doc(firestore, 'meldingen', id));
+        });
+        await batch.commit();
+
+        toast({ 
+            title: "Lijst opgeschoond", 
+            description: `${duplicatesToDelete.length} dubbele werkbonnen zijn verwijderd.` 
+        });
+        setDuplicatesToDelete([]);
+        setIsDuplicatesDialogOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij opschonen" });
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
+  const isCustomHtml = (str: string) => {
+    if (!str) return false;
+    const s = str.trim().toLowerCase();
+    return s.includes('<svg') || s.includes('<img') || s.includes('<a') || s.includes('<div') || (s.startsWith('<') && s.includes('>'));
+  };
+
+  const renderCategoryIcon = (category: string, subcategory?: string) => {
+    let iconVal = null;
+    if (category && subcategory) iconVal = subtypeIcons[`${category}:${subcategory}`];
+    if (!iconVal) iconVal = categoryIcons[category];
+
+    if (!iconVal) return <CircleHelp className="h-8 w-8 text-slate-300" />;
+    
+    if (isCustomHtml(iconVal)) {
+        return (
+            <div 
+                className="h-full w-full flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_a]:flex [&_a]:items-center [&_a]:justify-center [&_a]:h-full [&_a]:w-full" 
+                dangerouslySetInnerHTML={{ __html: iconVal }} 
+            />
+        );
+    }
+    
+    if (iconVal.startsWith('http')) {
+        return (
+            <div className="h-full w-full relative flex items-center justify-center rounded-none overflow-hidden">
+                <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
+            </div>
+        );
+    }
+
+    if (iconVal.startsWith('lucide:')) {
+        const parts = iconVal.split(':');
+        const name = parts[1];
+        const color = parts[2];
+        const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
+        return <IconComp className="h-8 w-8" style={{ color: color || '#007AFF' }} />;
+    }
+
+    const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
+    return <IconComp className="h-8 w-8 text-slate-400" />;
   };
 
   const activeFolder = userFolders?.find(f => f.id === selectedFolderId);
