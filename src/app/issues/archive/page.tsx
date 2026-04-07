@@ -306,13 +306,12 @@ export default function ArchiveIssuesPage() {
     if (filteredMeldingen.length === 0) return;
 
     const exportData = filteredMeldingen.map(m => {
-      // Gebruik een newline als separator voor betere leesbaarheid in Excel cellen
-      const photoUrls = [
+      const allPhotos = [
         ...(m.fotos || []).map(f => f.url),
         ...(m.afhandeling_fotos || []).map(f => f.url)
-      ].join('\n');
+      ];
 
-      return {
+      const row: any = {
         'Intakenummer': m.intakenummer,
         'Extern Nummer': m.extern_meldingsnummer || '',
         'Datum Melding': m.datum,
@@ -329,24 +328,36 @@ export default function ArchiveIssuesPage() {
         'Tijd Afhandeling': m.afhandeling_tijdstip || '',
         'Minuten gewerkt': m.gewerkteMinuten || 0,
         'Bijzonderheden': m.afhandeling_bijzonderheden || '',
-        'Foto URLs': photoUrls
       };
+
+      // Voeg elke foto toe aan een eigen kolom
+      allPhotos.forEach((url, index) => {
+        row[`Foto ${index + 1}`] = url;
+      });
+
+      return row;
     });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Archief Meldingen");
     
-    // Stel kolombreedte in voor de URL kolom zodat deze leesbaar is
+    // Stel kolombreedte in
     const wscols = [
         {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 20}, {wch: 25}, 
         {wch: 30}, {wch: 10}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 20},
-        {wch: 15}, {wch: 10}, {wch: 10}, {wch: 40}, {wch: 50}
+        {wch: 15}, {wch: 10}, {wch: 10}, {wch: 40}
     ];
+    
+    // Voeg breedte toe voor foto kolommen (maximaal 10 voor de veiligheid)
+    for (let i = 0; i < 10; i++) {
+        wscols.push({wch: 50});
+    }
+    
     worksheet['!cols'] = wscols;
 
     XLSX.writeFile(workbook, `BeheerHub_Export_Archief_${format(new Date(), 'yyyy-MM-dd_HHmm')}.xlsx`);
-    toast({ title: "Export voltooid", description: "Het Excel bestand is gedownload." });
+    toast({ title: "Export voltooid", description: "Het Excel bestand is gedownload met gescheiden foto-kolommen." });
   };
 
   const handleIdentifyDuplicates = () => {

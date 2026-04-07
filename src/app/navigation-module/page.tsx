@@ -823,9 +823,9 @@ export default function StartNavigationPage() {
         const targetFolder = userFolders.find(f => f.id === folderId);
         if (targetFolder) {
             const existingIds = targetFolder.taskIds || [];
-            const newIds = Array.from(new Set([...existingIds, ...taskIds]));
+            const nIds = Array.from(new Set([...existingIds, ...taskIds]));
             const folderRef = doc(firestore, 'users', managedUserId, 'folders', folderId);
-            batch.update(folderRef, { taskIds: newIds });
+            batch.update(folderRef, { taskIds: nIds });
         }
     }
 
