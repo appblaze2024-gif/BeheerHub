@@ -1075,18 +1075,20 @@ export default function StartNavigationPage() {
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-3">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={handleSelectAllInView}
-                                className="h-10 font-black uppercase text-[10px] rounded-none border-2 border-slate-200"
-                            >
-                                {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(m.id)) 
-                                    ? 'Deselecteer Alles' 
-                                    : 'Selecteer Alles'}
-                            </Button>
-                        </div>
+                        {isPrivileged && (
+                            <div className="flex items-center gap-3">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={handleSelectAllInView}
+                                    className="h-10 font-black uppercase text-[10px] rounded-none border-2 border-slate-200"
+                                >
+                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(m.id)) 
+                                        ? 'Deselecteer Alles' 
+                                        : 'Selecteer Alles'}
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -1108,20 +1110,22 @@ export default function StartNavigationPage() {
                                             isSelected && "ring-2 ring-primary z-10 shadow-lg"
                                         )}>
                                             <div className="flex items-center gap-3 px-3 h-full min-w-0" onClick={() => {
-                                                if (selectedMissionIds.size > 0) {
+                                                if (isPrivileged && selectedMissionIds.size > 0) {
                                                     handleToggleSelectMission(m.id);
                                                 } else {
                                                     setActiveWerkbonId(m.id);
                                                 }
                                             }}>
-                                                <div className="flex items-center justify-center shrink-0 w-6">
-                                                    <Checkbox 
-                                                        checked={isSelected}
-                                                        onCheckedChange={() => handleToggleSelectMission(m.id)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="h-5 w-5 rounded-none"
-                                                    />
-                                                </div>
+                                                {isPrivileged && (
+                                                    <div className="flex items-center justify-center shrink-0 w-6">
+                                                        <Checkbox 
+                                                            checked={isSelected}
+                                                            onCheckedChange={() => handleToggleSelectMission(m.id)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="h-5 w-5 rounded-none"
+                                                        />
+                                                    </div>
+                                                )}
                                                 <div className="text-[10px] font-black text-slate-300 shrink-0 w-5 text-center">{missionNumber}</div>
                                                 <div className="h-10 w-10 flex items-center justify-center shrink-0">{renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}</div>
                                                 <div className="flex-1 min-w-0">
@@ -1133,10 +1137,12 @@ export default function StartNavigationPage() {
                                                 </div>
                                                 <div className="flex gap-1 shrink-0 items-center">
                                                     {!isCompleted && <Button variant="outline" size="icon" className="h-9 w-9 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100" onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}><Navigation className="h-5 w-5" /></Button>}
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-slate-300 hover:text-slate-600" onClick={e => e.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-56 rounded-none border-none shadow-2xl p-2"><DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-1">Verplaatsen naar...</DropdownMenuLabel><DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, null); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Inbox className="mr-2 h-4 w-4" /> Inbox (Vrij)</DropdownMenuItem>{userFolders?.map(f => (<DropdownMenuItem key={f.id} onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, f.id); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Folder className="mr-2 h-4 w-4" /> {f.name}</DropdownMenuItem>))}</DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                    {isPrivileged && (
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-slate-300 hover:text-slate-600" onClick={e => e.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-56 rounded-none border-none shadow-2xl p-2"><DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-1">Verplaatsen naar...</DropdownMenuLabel><DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, null); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Inbox className="mr-2 h-4 w-4" /> Inbox (Vrij)</DropdownMenuItem>{userFolders?.map(f => (<DropdownMenuItem key={f.id} onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, f.id); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Folder className="mr-2 h-4 w-4" /> {f.name}</DropdownMenuItem>))}</DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    )}
                                                 </div>
                                             </div>
                                         </Card>
@@ -1167,7 +1173,7 @@ export default function StartNavigationPage() {
         </div>
 
         {/* Bulk Action Bar */}
-        {selectedMissionIds.size > 0 && (
+        {selectedMissionIds.size > 0 && isPrivileged && (
             <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-300">
                 <div className="bg-slate-900 text-white rounded-none px-6 py-3 shadow-2xl flex items-center gap-6 border-2 border-slate-800">
                     <div className="flex items-center gap-3 border-r border-white/20 pr-6">
@@ -1234,11 +1240,11 @@ export default function StartNavigationPage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="gap-2">
-                    <AlertDialogCancel className="rounded-none font-bold">Annuleren</AlertDialogCancel>
+                    <AlertDialogCancel className="rounded-none font-black uppercase h-12 border-2 text-xs">Annuleren</AlertDialogCancel>
                     <AlertDialogAction 
                         onClick={handleConfirmCleanDuplicates} 
                         disabled={isDeleting}
-                        className="bg-orange-600 hover:bg-orange-700 rounded-none font-black uppercase px-8"
+                        className="bg-orange-600 hover:bg-orange-700 rounded-none font-black uppercase h-12 px-8 text-xs"
                     >
                         {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Dubbelen nu wissen
