@@ -26,7 +26,8 @@ import {
   Maximize2,
   Trash2,
   Loader2,
-  Copy
+  Copy,
+  LayoutGrid
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,6 +102,7 @@ interface ArchiveFilters {
   subcategorie: string;
   behandelaar: string;
   status: string;
+  containernummer: string;
 }
 
 const INITIAL_FILTERS: ArchiveFilters = {
@@ -110,6 +112,7 @@ const INITIAL_FILTERS: ArchiveFilters = {
   subcategorie: 'all',
   behandelaar: 'alle',
   status: 'alle',
+  containernummer: '',
 };
 
 export default function ArchiveIssuesPage() {
@@ -193,7 +196,8 @@ export default function ArchiveIssuesPage() {
           m.intakenummer?.toLowerCase().includes(q) ||
           m.straatnaam?.toLowerCase().includes(q) ||
           m.plaats?.toLowerCase().includes(q) ||
-          m.extra_informatie?.toLowerCase().includes(q)
+          m.extra_informatie?.toLowerCase().includes(q) ||
+          m.containernummer?.toLowerCase().includes(q)
         );
     }
 
@@ -229,6 +233,12 @@ export default function ArchiveIssuesPage() {
     // 5. Status Filter
     if (filters.status !== 'alle') {
       result = result.filter(m => m.status === filters.status);
+    }
+
+    // 6. Container Filter
+    if (filters.containernummer) {
+        const q = filters.containernummer.toLowerCase();
+        result = result.filter(m => m.containernummer?.toLowerCase().includes(q));
     }
 
     // Sorting
@@ -305,15 +315,13 @@ export default function ArchiveIssuesPage() {
   const handleExport = () => {
     if (filteredMeldingen.length === 0) return;
 
-    // We build rows manually to use the HYPERLINK formula
     const headers = [
-        'Intakenummer', 'Extern Nummer', 'Datum Melding', 'Tijd Melding', 
+        'Intakenummer', 'Extern Nummer', 'Containernummer', 'Datum Melding', 'Tijd Melding', 
         'Hoofdcategorie', 'Subcategorie', 'Adres', 'Postcode', 'Plaats', 
         'Melder', 'Status', 'Afgehandeld door', 'Datum Afhandeling', 
         'Tijd Afhandeling', 'Minuten gewerkt', 'Bijzonderheden'
     ];
 
-    // Find max number of photos to determine header columns
     let maxPhotos = 0;
     filteredMeldingen.forEach(m => {
         const count = (m.fotos?.length || 0) + (m.afhandeling_fotos?.length || 0);
@@ -333,6 +341,7 @@ export default function ArchiveIssuesPage() {
         const baseData = [
             m.intakenummer,
             m.extern_meldingsnummer || '',
+            m.containernummer || '',
             m.datum,
             m.tijdstip,
             m.hoofdcategorie,
@@ -349,7 +358,6 @@ export default function ArchiveIssuesPage() {
             m.afhandeling_bijzonderheden || ''
         ];
 
-        // Add photo formulas
         const photoFormulas = allPhotos.map(url => ({
             f: `HYPERLINK("${url}", "Bekijk Foto")`
         }));
@@ -361,7 +369,6 @@ export default function ArchiveIssuesPage() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Archief Meldingen");
     
-    // Auto-width
     const wscols = headers.map(() => ({ wch: 20 }));
     worksheet['!cols'] = wscols;
 
@@ -375,7 +382,6 @@ export default function ArchiveIssuesPage() {
     const groups: Record<string, Melding[]> = {};
     
     archivedMeldingen.forEach(m => {
-        // Criteria: intakenummer, straat, huisnr, postcode, containernr
         const key = [
             m.intakenummer,
             m.straatnaam,
@@ -391,15 +397,11 @@ export default function ArchiveIssuesPage() {
     const idsToDelete: string[] = [];
     Object.values(groups).forEach(group => {
         if (group.length > 1) {
-            // Keep the first one, delete others
-            // Sort by creation date to keep the oldest one if possible
             group.sort((a, b) => {
                 const timeA = a.createdAt?.seconds || 0;
                 const timeB = b.createdAt?.seconds || 0;
                 return timeA - timeB;
             });
-            
-            // Collect IDs of everything after the first element
             const extras = group.slice(1).map(m => m.id);
             idsToDelete.push(...extras);
         }
@@ -455,7 +457,7 @@ export default function ArchiveIssuesPage() {
     if (!firestore || !isSuperAdmin) return;
     try {
         await deleteDocumentNonBlocking(doc(firestore, 'meldingen', melding.id));
-        toast({ title: "Melding verwijderd", description: "De melding is permanent gewist uit de database." });
+        toast({ title: "Melding verwijderd", description: "De melding is permanent gewist." });
     } catch (e) {
         toast({ variant: 'destructive', title: "Fout bij verwijderen" });
     }
@@ -515,7 +517,7 @@ export default function ArchiveIssuesPage() {
             <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                    placeholder="Zoek op ID of adres..."
+                    placeholder="Zoek op ID, adres of bak..."
                     className="pl-9 h-9 border-slate-200 rounded-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -549,7 +551,7 @@ export default function ArchiveIssuesPage() {
                         </div>
                         <div>
                         <DialogTitle className="text-xl font-black uppercase tracking-tight">Geavanceerd Filter</DialogTitle>
-                        <DialogDescription className="text-slate-400 font-bold uppercase text-[10px]">Filter het archief op datum, categorie of behandelaar.</DialogDescription>
+                        <DialogDescription className="text-slate-400 font-bold uppercase text-[10px]">Filter het archief op datum, categorie, bak of behandelaar.</DialogDescription>
                         </div>
                     </div>
                     </DialogHeader>
@@ -608,6 +610,29 @@ export default function ArchiveIssuesPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Containernummer</Label>
+                            <Input 
+                                placeholder="Bv. CP-123..." 
+                                value={filters.containernummer} 
+                                onChange={e => setFilters(prev => ({...prev, containernummer: e.target.value}))} 
+                                className="h-11 font-bold rounded-none border-slate-200 uppercase" 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Status</Label>
+                            <Select value={filters.status} onValueChange={v => setFilters(prev => ({...prev, status: v}))}>
+                            <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-none">
+                                <SelectItem value="alle">-- Alle archief statussen --</SelectItem>
+                                {closedStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                        </div>
+                        </div>
+
+                        <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Behandelaar</Label>
                             <Select value={filters.behandelaar} onValueChange={v => setFilters(prev => ({...prev, behandelaar: v}))}>
                             <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
@@ -622,19 +647,6 @@ export default function ArchiveIssuesPage() {
                                 ))}
                             </SelectContent>
                             </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Status</Label>
-                            <Select value={filters.status} onValueChange={v => setFilters(prev => ({...prev, status: v}))}>
-                            <SelectTrigger className="h-11 font-bold rounded-none border-slate-200">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-none">
-                                <SelectItem value="alle">-- Alle archief statussen --</SelectItem>
-                                {closedStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                            </SelectContent>
-                            </Select>
-                        </div>
                         </div>
                     </div>
                     </ScrollArea>
@@ -742,6 +754,15 @@ export default function ArchiveIssuesPage() {
                                             </div>
                                         </div>
 
+                                        {melding.containernummer && (
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-slate-100 p-2 rounded-none shrink-0">
+                                                    <Package className="h-4 w-4 text-slate-600" />
+                                                </div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Unit: {melding.containernummer}</p>
+                                            </div>
+                                        )}
+
                                         {allPhotos.length > 0 && (
                                             <div className="pt-2">
                                                 <ScrollArea className="w-full whitespace-nowrap rounded-none border-none">
@@ -808,6 +829,12 @@ export default function ArchiveIssuesPage() {
                                     </div>
                                 </TableHead>
                                 <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Media</TableHead>
+                                <TableHead onClick={() => handleSort('containernummer')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between gap-1">
+                                        Baknr.
+                                        <SortIcon field="containernummer" />
+                                    </div>
+                                </TableHead>
                                 <TableHead onClick={() => handleSort('straatnaam')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
                                     <div className="flex items-center justify-between gap-1">
                                         Adres
@@ -882,6 +909,7 @@ export default function ArchiveIssuesPage() {
                                                     {allPhotos.length === 0 && <ImageIcon className="h-4 w-4 text-slate-200" />}
                                                 </div>
                                             </TableCell>
+                                            <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer font-black py-2 px-4 border-r border-slate-100 text-primary text-[10px] uppercase tracking-widest">{melding.containernummer || '-'}</TableCell>
                                             <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-bold text-slate-900">{[melding.straatnaam, melding.huisnummer, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
                                             <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer py-2 px-4 border-r border-slate-100">
                                                 <div className="flex flex-col">
