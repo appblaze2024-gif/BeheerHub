@@ -1217,7 +1217,7 @@ export default function StartNavigationPage() {
                     <AlertDialogTitle className="font-black uppercase tracking-tight text-orange-600">Dubbele werkbonnen verwijderen?</AlertDialogTitle>
                     <AlertDialogDescription asChild>
                         <div className="font-bold text-slate-500">
-                            Er zijn <strong>{duplicatesToDelete.length} dubbele werkbonnen</strong> gevonden in de huidige lijst. 
+                            Er zijn <strong>{duplicatesToDelete.length} dubbele werkbonnen</strong> gevonden in the huidige lijst. 
                             <br/><br/>
                             Het systeem heeft meldingen vergeleken op:
                             <ul className="list-disc pl-5 mt-2 space-y-1">

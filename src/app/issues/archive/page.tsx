@@ -27,7 +27,8 @@ import {
   Trash2,
   Loader2,
   Copy,
-  LayoutGrid
+  LayoutGrid,
+  Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
