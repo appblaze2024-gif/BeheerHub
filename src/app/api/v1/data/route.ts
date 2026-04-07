@@ -3,7 +3,7 @@ import admin from 'firebase-admin';
 
 /**
  * Universeel REST API Eindpunt voor BeheerHub.
- * Ondersteunt volledige CRUD (GET, POST, PATCH, DELETE).
+ * STRIKT READ-ONLY: Ondersteunt uitsluitend GET voor data-extractie.
  * Geautoriseerd via X-API-KEY of Bearer token.
  */
 
@@ -18,16 +18,16 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 /**
- * Definitie van toegestane collecties en hun permissies.
+ * Definitie van toegestane collecties voor extractie.
  */
-const ALLOWED_COLLECTIONS: Record<string, { collection: string; allowWrite: boolean }> = {
-  'meldingen': { collection: 'meldingen', allowWrite: true },
-  'objects': { collection: 'objects', allowWrite: true },
-  'projects': { collection: 'projects', allowWrite: true },
-  'voertuigen': { collection: 'voertuigen', allowWrite: true },
-  'machines': { collection: 'machines', allowWrite: true },
-  'users': { collection: 'users', allowWrite: true },
-  'settings': { collection: 'settings', allowWrite: true }
+const ALLOWED_COLLECTIONS: Record<string, { collection: string }> = {
+  'meldingen': { collection: 'meldingen' },
+  'objects': { collection: 'objects' },
+  'projects': { collection: 'projects' },
+  'voertuigen': { collection: 'voertuigen' },
+  'machines': { collection: 'machines' },
+  'users': { collection: 'users' },
+  'settings': { collection: 'settings' }
 };
 
 /**
@@ -39,7 +39,7 @@ function corsResponse(data: any, status: number = 200) {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY, Authorization',
       'Access-Control-Max-Age': '86400',
     },
@@ -54,7 +54,7 @@ export async function OPTIONS() {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY, Authorization',
     },
   });
@@ -98,7 +98,7 @@ async function validateAuth(request: Request): Promise<{ authorized: boolean; er
 }
 
 /**
- * GET - Data ophalen
+ * GET - Data ophalen (Read Only)
  */
 export async function GET(request: Request) {
   try {
@@ -128,16 +128,13 @@ export async function GET(request: Request) {
     searchParams.forEach((value, key) => {
       if (['type', 'id', 'key'].includes(key)) return;
       
-      // Ondersteuning voor comma-separated waarden (IN operator)
       const values = value.split(',').map(v => v.trim()).filter(Boolean);
       
       if (values.length > 1) {
-          // Gebruik IN operator voor meerdere waarden
           queryRef = queryRef.where(key, 'in', values.map(v => 
               v.toLowerCase() === 'true' ? true : v.toLowerCase() === 'false' ? false : v
           ));
       } else if (values.length === 1) {
-          // Standaard '==' operator voor enkele waarde
           const singleVal = values[0];
           const typedVal = singleVal.toLowerCase() === 'true' ? true : singleVal.toLowerCase() === 'false' ? false : singleVal;
           queryRef = queryRef.where(key, '==', typedVal);
@@ -148,131 +145,6 @@ export async function GET(request: Request) {
     const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
     return corsResponse({ success: true, count: data.length, data });
-  } catch (error: any) {
-    return corsResponse({ error: 'Server Error', message: error.message }, 500);
-  }
-}
-
-/**
- * POST - Nieuw record aanmaken
- */
-export async function POST(request: Request) {
-  try {
-    const auth = await validateAuth(request);
-    if (!auth.authorized) return corsResponse({ error: 'Unauthorized', message: auth.error }, 401);
-
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const direct = searchParams.get('direct') === 'true';
-
-    if (!type) return corsResponse({ error: 'Bad Request', message: 'Geef "type" op.' }, 400);
-
-    const config = ALLOWED_COLLECTIONS[type];
-    if (!config || !config.allowWrite) {
-        return corsResponse({ error: 'Forbidden', message: `Schrijven naar dataset "${type}" is niet toegestaan via de API.` }, 403);
-    }
-
-    const body = await request.json();
-    const targetCollection = config.collection;
-    
-    // Verrijking voor meldingen
-    if (targetCollection === 'meldingen') {
-      // Status logica
-      if (!direct) {
-        body.status = 'Nieuw'; 
-      } else if (!body.status || body.status === 'Nieuw') {
-        body.status = 'In behandeling';
-      }
-
-      // 1:1 Verrijking op basis van containernummer indien coords ontbreken
-      if (body.containernummer && (!body.latitude || !body.longitude)) {
-          const q = await db.collection('objects')
-            .where('idNummer', '==', String(body.containernummer).toUpperCase())
-            .limit(1)
-            .get();
-          
-          if (!q.empty) {
-              const obj = q.docs[0].data();
-              if (!body.latitude) body.latitude = obj.latitude || 0;
-              if (!body.longitude) body.longitude = obj.longitude || 0;
-              if (!body.straatnaam) body.straatnaam = obj.straatnaam || '';
-              if (!body.huisnummer) body.huisnummer = obj.huisnummer || '';
-              if (!body.plaats) body.plaats = obj.plaats || '';
-              if (!body.postcode) body.postcode = obj.postcode || '';
-              if (!body.werkgebied) body.werkgebied = obj.wijk || (obj.locatieWerkgebieden?.[0] || '');
-          }
-      }
-    }
-
-    const docRef = await db.collection(targetCollection).add({
-      ...body,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      source: 'REST_API_EXTERNAL'
-    });
-
-    return corsResponse({ 
-      success: true, 
-      id: docRef.id, 
-      message: 'Record succesvol aangemaakt via REST API.' 
-    }, 201);
-  } catch (error: any) {
-    return corsResponse({ error: 'Server Error', message: error.message }, 500);
-  }
-}
-
-/**
- * PATCH - Bestaand record bijwerken
- */
-export async function PATCH(request: Request) {
-  try {
-    const auth = await validateAuth(request);
-    if (!auth.authorized) return corsResponse({ error: 'Unauthorized' }, 401);
-
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const id = searchParams.get('id');
-
-    if (!type || !id) return corsResponse({ error: 'Bad Request' }, 400);
-
-    const config = ALLOWED_COLLECTIONS[type];
-    if (!config || !config.allowWrite) {
-        return corsResponse({ error: 'Forbidden', message: `Bewerken van dataset "${type}" is niet toegestaan via de API.` }, 403);
-    }
-
-    const body = await request.json();
-    await db.collection(config.collection).doc(id).update({
-      ...body,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    });
-
-    return corsResponse({ success: true, message: 'Record bijgewerkt.' });
-  } catch (error: any) {
-    return corsResponse({ error: 'Server Error', message: error.message }, 500);
-  }
-}
-
-/**
- * DELETE - Record verwijderen
- */
-export async function DELETE(request: Request) {
-  try {
-    const auth = await validateAuth(request);
-    if (!auth.authorized) return corsResponse({ error: 'Unauthorized' }, 401);
-
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const id = searchParams.get('id');
-
-    if (!type || !id) return corsResponse({ error: 'Bad Request' }, 400);
-
-    const config = ALLOWED_COLLECTIONS[type];
-    if (!config || !config.allowWrite) {
-        return corsResponse({ error: 'Forbidden', message: `Verwijderen uit dataset "${type}" is niet toegestaan via de API.` }, 403);
-    }
-
-    await db.collection(config.collection).doc(id).delete();
-    return corsResponse({ success: true, message: 'Record verwijderd.' });
   } catch (error: any) {
     return corsResponse({ error: 'Server Error', message: error.message }, 500);
   }

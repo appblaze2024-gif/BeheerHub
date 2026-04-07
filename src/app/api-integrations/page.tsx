@@ -25,10 +25,7 @@ import {
   Wrench,
   Sparkles,
   Database,
-  FileCode,
   Zap,
-  Check,
-  Info,
   Settings
 } from 'lucide-react';
 import { 
@@ -51,7 +48,6 @@ import { nl } from 'date-fns/locale';
 import { LoadingScreen } from '@/components/loading-screen';
 import { triggerWebhookSync } from './actions';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Accordion,
   AccordionContent,
@@ -124,11 +120,6 @@ export default function ApiIntegrationsPage() {
 
   if (isLoading || isLoadingSettings) return <LoadingScreen message="REST HUB laden..." />;
 
-  const webhookHeadersJson = JSON.stringify({
-    "X-API-KEY": apiSettings?.publicKey || "GENEREER_SLEUTEL_EERST",
-    "Content-Type": "application/json"
-  }, null, 4);
-
   const apiModules = [
     { 
         id: 'meldingen', 
@@ -137,11 +128,7 @@ export default function ApiIntegrationsPage() {
         color: 'text-primary',
         methods: [
             { method: 'GET', label: 'Lijst ophalen', path: '?type=meldingen', desc: 'Haal alle actieve meldingen op.' },
-            { method: 'GET', label: 'Item ophalen', path: '?type=meldingen&id={id}', desc: 'Haal één specifieke melding op.' },
-            { method: 'POST', label: 'Nieuwe melding (Portaal)', path: '?type=meldingen', desc: 'Melding komt eerst in het portaal om te accepteren (Status: Nieuw).' },
-            { method: 'POST', label: 'Nieuwe melding (Direct)', path: '?type=meldingen&direct=true', desc: 'Melding wordt direct een werkbon (Status: In behandeling).' },
-            { method: 'PATCH', label: 'Melding bijwerken', path: '?type=meldingen&id={id}', desc: 'Wijzig velden van een melding.' },
-            { method: 'DELETE', label: 'Verwijderen', path: '?type=meldingen&id={id}', desc: 'Wis een melding definitief.' }
+            { method: 'GET', label: 'Item ophalen', path: '?type=meldingen&id={id}', desc: 'Haal één specifieke melding op.' }
         ],
         views: [
             { label: 'Portaal (Nieuw)', params: 'status=Nieuw' },
@@ -155,8 +142,7 @@ export default function ApiIntegrationsPage() {
         icon: Settings, 
         color: 'text-orange-500',
         methods: [
-            { method: 'GET', label: 'Meldingsopties Uitlezen', path: '?type=settings&id=issue_options', desc: 'Haal actuele Hoofdtypes, Subtypes en Statussen op die in de dropdowns worden getoond.' },
-            { method: 'PATCH', label: 'Configuratie Bijwerken', path: '?type=settings&id=issue_options', desc: 'Update de beschikbare opties voor het meldingensysteem (Gereserveerd voor IT-admin).' }
+            { method: 'GET', label: 'Meldingsopties Uitlezen', path: '?type=settings&id=issue_options', desc: 'Haal actuele Hoofdtypes, Subtypes en Statussen op die in de dropdowns worden getoond.' }
         ],
         views: []
     },
@@ -166,10 +152,7 @@ export default function ApiIntegrationsPage() {
         icon: MapPin, 
         color: 'text-green-600',
         methods: [
-            { method: 'GET', label: 'Lijst ophalen', path: '?type=objects', desc: 'Haal objecten/assets op.' },
-            { method: 'POST', label: 'Nieuw object', path: '?type=objects', desc: 'Registreer een nieuwe unit.' },
-            { method: 'PATCH', label: 'Object bijwerken', path: '?type=objects&id={id}', desc: 'Wijzig objectgegevens.' },
-            { method: 'DELETE', label: 'Object verwijderen', path: '?type=objects&id={id}', desc: 'Verwijder een asset.' }
+            { method: 'GET', label: 'Lijst ophalen', path: '?type=objects', desc: 'Haal objecten/assets op.' }
         ],
         views: [
             { label: 'Alleen Prullenbakken', params: 'locatieType=prullenbak' },
@@ -182,10 +165,7 @@ export default function ApiIntegrationsPage() {
         icon: Truck, 
         color: 'text-blue-600',
         methods: [
-            { method: 'GET', label: 'Lijst ophalen', path: '?type=voertuigen', desc: 'Alle voertuigen uitlezen.' },
-            { method: 'POST', label: 'Nieuw voertuig', path: '?type=voertuigen', desc: 'Voeg een voertuig toe.' },
-            { method: 'PATCH', label: 'Status wijzigen', path: '?type=voertuigen&id={id}', desc: 'Bv. status op "In onderhoud" zetten.' },
-            { method: 'DELETE', label: 'Verwijderen', path: '?type=voertuigen&id={id}', desc: 'Wis een voertuig.' }
+            { method: 'GET', label: 'Lijst ophalen', path: '?type=voertuigen', desc: 'Alle voertuigen uitlezen.' }
         ],
         views: [
             { label: 'Operationeel', params: 'status=Actief' },
@@ -198,10 +178,7 @@ export default function ApiIntegrationsPage() {
         icon: Wrench, 
         color: 'text-orange-600',
         methods: [
-            { method: 'GET', label: 'Lijst ophalen', path: '?type=machines', desc: 'Alle machines uitlezen.' },
-            { method: 'POST', label: 'Nieuwe machine', path: '?type=machines', desc: 'Voeg een machine toe.' },
-            { method: 'PATCH', label: 'Bijwerken', path: '?type=machines&id={id}', desc: 'Wijzig machinegegevens.' },
-            { method: 'DELETE', label: 'Verwijderen', path: '?type=machines&id={id}', desc: 'Wis een machine.' }
+            { method: 'GET', label: 'Lijst ophalen', path: '?type=machines', desc: 'Alle machines uitlezen.' }
         ],
         views: [
             { label: 'Operationeel', params: 'status=Actief' }
@@ -213,8 +190,7 @@ export default function ApiIntegrationsPage() {
         icon: Users, 
         color: 'text-purple-600',
         methods: [
-            { method: 'GET', label: 'Gebruikerslijst', path: '?type=users', desc: 'Lijst van actieve collega\'s.' },
-            { method: 'PATCH', label: 'Profiel bijwerken', path: '?type=users&id={id}', desc: 'Wijzig rollen of gegevens.' }
+            { method: 'GET', label: 'Gebruikerslijst', path: '?type=users', desc: 'Lijst van actieve collega\'s.' }
         ],
         views: [
             { label: 'Toezichthouders', params: 'role=toezichthouder' },
@@ -227,9 +203,7 @@ export default function ApiIntegrationsPage() {
         icon: Folder, 
         color: 'text-slate-600',
         methods: [
-            { method: 'GET', label: 'Projectenlijst', path: '?type=projects', desc: 'Haal alle projecten op.' },
-            { method: 'POST', label: 'Nieuw project', path: '?type=projects', desc: 'Maak een nieuw project aan.' },
-            { method: 'PATCH', label: 'Project bijwerken', path: '?type=projects&id={id}', desc: 'Wijzig projectgegevens.' }
+            { method: 'GET', label: 'Projectenlijst', path: '?type=projects', desc: 'Haal alle projecten op.' }
         ],
         views: [
             { label: 'Lopende projecten', params: 'status=Actief' }
@@ -239,7 +213,7 @@ export default function ApiIntegrationsPage() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
-      <PageHeader title="REST API HUB" description="Beheer volledige CRUD integraties voor externe software partners.">
+      <PageHeader title="REST API HUB" description="Beheer Read-Only integraties voor externe software partners.">
         <div className="bg-slate-100 p-1 rounded-none border-2 border-slate-200 shadow-inner flex h-11 w-[400px]">
             <button 
                 onClick={() => setActiveTab('outbound')}
@@ -257,7 +231,7 @@ export default function ApiIntegrationsPage() {
                     activeTab === 'inbound' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:bg-white/50"
                 )}
             >
-                DATA PROVIDER (REST)
+                DATA PROVIDER (GET)
             </button>
         </div>
       </PageHeader>
@@ -347,13 +321,11 @@ export default function ApiIntegrationsPage() {
                       {selectedIntegration.method === 'POST' && (
                         <div className="space-y-4">
                             <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2 flex items-center gap-2"><Zap className="h-4 w-4 text-orange-500" /> Automated Dispatch (Push)</h3>
-                            <Alert className="bg-orange-50 border-orange-200 text-orange-800 rounded-none">
-                                <Info className="h-4 w-4" />
-                                <AlertTitle className="text-xs font-black uppercase">Real-time Webhook</AlertTitle>
-                                <AlertDescription className="text-[10px] font-bold">
+                            <div className="bg-orange-50 p-4 border-2 border-orange-100 text-orange-800 rounded-none">
+                                <p className="text-[10px] font-bold">
                                     BeheerHub zal bij elke nieuwe <b>{selectedIntegration.sourceModule}</b> automatisch een POST-request sturen naar dit endpoint met de volledige dataset als JSON body.
-                                </AlertDescription>
-                            </Alert>
+                                </p>
+                            </div>
                         </div>
                       )}
 
@@ -384,8 +356,8 @@ export default function ApiIntegrationsPage() {
                   <div className="flex items-center gap-4">
                     <div className="bg-primary p-3 rounded-none shadow-lg shadow-primary/20"><Share2 className="h-6 w-6 text-white" /></div>
                     <div>
-                      <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (CRUD)</CardTitle>
-                      <CardDescription className="text-slate-500 font-bold uppercase text-[9px] tracking-widest">Koppel externe systemen aan de BeheerHub database.</CardDescription>
+                      <CardTitle className="text-xl font-black uppercase tracking-tight">Data Provider Hub (Read-Only)</CardTitle>
+                      <CardDescription className="text-slate-500 font-bold uppercase text-[9px] tracking-widest">Extraheer BeheerHub data naar externe systemen. Schrijf-acties zijn uitgeschakeld.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -406,10 +378,10 @@ export default function ApiIntegrationsPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 gap-8">
                     <div className="space-y-6">
                         <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
-                            <Database className="h-4 w-4 text-primary" /> Beschikbare Endpoints per Dataset
+                            <Database className="h-4 w-4 text-primary" /> Beschikbare Endpoints (GET Only)
                         </h3>
                         
                         <Accordion type="single" collapsible className="w-full space-y-4">
@@ -427,13 +399,7 @@ export default function ApiIntegrationsPage() {
                                                 <div key={idx} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
-                                                            <Badge className={cn(
-                                                                "rounded-none font-black text-[10px] px-3 h-6 border-none",
-                                                                m.method === 'GET' ? "bg-blue-500 text-white" :
-                                                                m.method === 'POST' ? "bg-green-600 text-white" :
-                                                                m.method === 'PATCH' ? "bg-orange-500 text-white" :
-                                                                "bg-red-600 text-white"
-                                                            )}>{m.method}</Badge>
+                                                            <Badge className="rounded-none font-black text-[10px] px-3 h-6 border-none bg-blue-500 text-white">{m.method}</Badge>
                                                             <span className="text-xs font-black uppercase tracking-tight text-slate-900">{m.label}</span>
                                                         </div>
                                                         <p className="text-[10px] font-bold text-slate-400 uppercase italic">{m.desc}</p>
@@ -451,7 +417,7 @@ export default function ApiIntegrationsPage() {
 
                                         {mod.views.length > 0 && (
                                             <div className="p-6 bg-slate-50 border-t-2 border-slate-100 space-y-4">
-                                                <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 tracking-widest"><Sparkles className="h-3 w-3 text-primary" /> Deep Links (Gefilterde GET)</p>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 tracking-widest"><Sparkles className="h-3 w-3 text-primary" /> Deep Links (Gefilterde Extractie)</p>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                     {mod.views.map(view => (
                                                         <div key={view.label} className="p-4 bg-white border-2 border-slate-200 rounded-none group/link hover:border-primary/40 transition-all flex flex-col gap-3 shadow-sm">
@@ -472,84 +438,6 @@ export default function ApiIntegrationsPage() {
                                 </AccordionItem>
                             ))}
                         </Accordion>
-                    </div>
-
-                    <div className="space-y-6">
-                        <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-orange-500 pb-3 flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-orange-500" /> External Webhook Configurator
-                        </h3>
-                        
-                        <Card className="rounded-none border-2 border-orange-100 bg-orange-50/30 overflow-hidden shadow-xl">
-                            <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">API POST CONFIGURATIE</h4>
-                                <FileCode className="h-4 w-4 text-orange-500" />
-                            </div>
-                            <CardContent className="p-6 space-y-8">
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase text-slate-400">POST URL (ENDPOINT)</Label>
-                                    <div className="flex">
-                                        <Input value={`${baseUrl}?type=meldingen`} readOnly className="h-12 font-bold bg-white border-2 border-slate-200 rounded-none shadow-inner" />
-                                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-none border-2 border-l-0" onClick={() => { navigator.clipboard.writeText(`${baseUrl}?type=meldingen`); toast({ title: "URL Gekopieerd" }); }}><Copy className="h-4 w-4" /></Button>
-                                    </div>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Gebruik deze URL voor systemen die nieuwe meldingen inschieten.</p>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase text-slate-400">HEADERS (JSON)</Label>
-                                    <div className="relative group">
-                                        <pre className="p-6 bg-slate-900 text-blue-400 font-mono text-[11px] rounded-none border-[6px] border-slate-800 shadow-2xl leading-relaxed">
-                                            {webhookHeadersJson}
-                                        </pre>
-                                        <Button 
-                                            size="sm" 
-                                            className="absolute top-4 right-4 h-8 px-4 font-black uppercase text-[10px] rounded-none bg-primary text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onClick={() => { navigator.clipboard.writeText(webhookHeadersJson); toast({ title: "JSON Gekopieerd" }); }}
-                                        >
-                                            <Copy className="h-3.5 w-3.5 mr-2" /> Kopieer JSON
-                                        </Button>
-                                    </div>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Kopieer dit volledige blok naar de 'Headers' sectie van uw externe systeem.</p>
-                                </div>
-
-                                <Separator className="bg-slate-200" />
-
-                                <div className="space-y-4">
-                                    <h5 className="text-[10px] font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
-                                        <Check className="h-3 w-3 text-green-600" /> Voorbeeld Payload (JSON Body)
-                                    </h5>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase italic">Deze velden worden 1:1 overgenomen in de BeheerHub database.</p>
-                                    <pre className="p-4 bg-slate-50 text-slate-500 font-mono text-[10px] rounded-none border border-slate-200 overflow-x-auto">
-{`{
-  "intakenummer": "WK-2024-001",
-  "extern_meldingsnummer": "EXT-9988",
-  "containernummer": "B-12345",
-  "soort_melder": "Inwoner",
-  "hoofdcategorie": "Afval",
-  "subcategorie": "Zwerfafval",
-  "behandelende_afdeling": "Wijkbeheer",
-  "behandelaar": "Jan Jansen",
-  "aangenomen_door": "Django Stoutenburg",
-  "status": "Nieuw",
-  "voorvaldatum": "2024-03-20",
-  "voorvaltijd": "14:30",
-  "meldingsdatum": "2024-03-20",
-  "meldingsuur": "14:30",
-  "straatnaam": "Leembruggenstraat",
-  "huisnummer": "32",
-  "postcode": "2181 AK",
-  "plaats": "Hillegom",
-  "wijk": "Centrum",
-  "werkgebied": "Wijk 1",
-  "melder": "Dhr. de Vries",
-  "telefoon_melder": "0612345678",
-  "email_melder": "melder@example.com",
-  "burgerservicenummer": "123456789",
-  "extra_informatie": "Er ligt veel zwerfafval rondom de bak."
-}`}
-                                    </pre>
-                                </div>
-                            </CardContent>
-                        </Card>
                     </div>
                   </div>
                 </CardContent>
