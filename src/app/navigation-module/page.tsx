@@ -111,6 +111,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -196,7 +197,7 @@ function IntegratedWerkbonOverlay({
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     
-    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [previewImage, setPreviewImage] = setPreviewImage || useState<string | null>(null);
     
     const recognitionRef = useRef<any>(null);
 
@@ -1083,7 +1084,7 @@ export default function StartNavigationPage() {
                                     onClick={handleSelectAllInView}
                                     className="h-10 font-black uppercase text-[10px] rounded-none border-2 border-slate-200"
                                 >
-                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(m.id)) 
+                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(id)) 
                                         ? 'Deselecteer Alles' 
                                         : 'Selecteer Alles'}
                                 </Button>

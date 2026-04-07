@@ -26,7 +26,8 @@ import {
   Sparkles,
   Database,
   Zap,
-  Settings
+  Settings,
+  Code
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -118,6 +119,36 @@ export default function ApiIntegrationsPage() {
 
   const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/v1/data` : '';
 
+  const fullJsonExample = {
+    "intakenummer": "20240101-0001",
+    "extern_meldingsnummer": "EXT-123",
+    "containernummer": "CP-999",
+    "soort_melder": "Inwoner",
+    "hoofdcategorie": "Afval",
+    "subcategorie": "Zwerfvuil",
+    "behandelende_afdeling": "Reiniging",
+    "behandelaar": "Jan Jansen",
+    "aangenomen_door": "Extern Systeem",
+    "status": "Nieuw",
+    "voorvaldatum": "2024-01-01",
+    "voorvaltijd": "10:30",
+    "meldingsdatum": "2024-01-01",
+    "meldingsuur": "10:35",
+    "straatnaam": "Hoofdstraat",
+    "huisnummer": "10",
+    "postcode": "1234 AB",
+    "plaats": "Amsterdam",
+    "wijk": "Centrum",
+    "werkgebied": "Gebied 1",
+    "melder": "P. de Vries",
+    "telefoon_melder": "0612345678",
+    "email_melder": "p.devries@email.nl",
+    "burgerservicenummer": "123456789",
+    "extra_informatie": "Beschrijving van de melding...",
+    "latitude": 52.3702,
+    "longitude": 4.8952
+  };
+
   if (isLoading || isLoadingSettings) return <LoadingScreen message="REST HUB laden..." />;
 
   const apiModules = [
@@ -142,7 +173,7 @@ export default function ApiIntegrationsPage() {
         icon: Settings, 
         color: 'text-orange-500',
         methods: [
-            { method: 'GET', label: 'Meldingsopties Uitlezen', path: '?type=settings&id=issue_options', desc: 'Haal actuele Hoofdtypes, Subtypes en Statussen op die in de dropdowns worden getoond.' }
+            { method: 'GET', label: 'Meldingsopties Uitlezen', path: '?type=settings&id=issue_options', desc: 'Haal actuele Hoofdtypes, Subtypes en Statussen op.' }
         ],
         views: []
     },
@@ -173,18 +204,6 @@ export default function ApiIntegrationsPage() {
         ]
     },
     { 
-        id: 'machines', 
-        label: 'Machines', 
-        icon: Wrench, 
-        color: 'text-orange-600',
-        methods: [
-            { method: 'GET', label: 'Lijst ophalen', path: '?type=machines', desc: 'Alle machines uitlezen.' }
-        ],
-        views: [
-            { label: 'Operationeel', params: 'status=Actief' }
-        ]
-    },
-    { 
         id: 'users', 
         label: 'Personeel', 
         icon: Users, 
@@ -195,18 +214,6 @@ export default function ApiIntegrationsPage() {
         views: [
             { label: 'Toezichthouders', params: 'role=toezichthouder' },
             { label: 'Medewerkers', params: 'role=medewerkers' }
-        ]
-    },
-    { 
-        id: 'projects', 
-        label: 'Projecten', 
-        icon: Folder, 
-        color: 'text-slate-600',
-        methods: [
-            { method: 'GET', label: 'Projectenlijst', path: '?type=projects', desc: 'Haal alle projecten op.' }
-        ],
-        views: [
-            { label: 'Lopende projecten', params: 'status=Actief' }
         ]
     }
   ];
@@ -222,7 +229,7 @@ export default function ApiIntegrationsPage() {
                     activeTab === 'outbound' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:bg-white/50"
                 )}
             >
-                OUTBOUND (POLL/PUSH)
+                EXTERNAL POLL/PUSH
             </button>
             <button 
                 onClick={() => setActiveTab('inbound')}
@@ -231,7 +238,7 @@ export default function ApiIntegrationsPage() {
                     activeTab === 'inbound' ? "bg-primary text-white shadow-xl" : "text-slate-400 hover:bg-white/50"
                 )}
             >
-                DATA PROVIDER (GET)
+                DATA PROVIDER (REST)
             </button>
         </div>
       </PageHeader>
@@ -314,17 +321,6 @@ export default function ApiIntegrationsPage() {
                                 <span>BEHEERHUB: <b className="text-primary">{fs}</b></span>
                                 </div>
                             ))}
-                            </div>
-                        </div>
-                      )}
-
-                      {selectedIntegration.method === 'POST' && (
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-2 flex items-center gap-2"><Zap className="h-4 w-4 text-orange-500" /> Automated Dispatch (Push)</h3>
-                            <div className="bg-orange-50 p-4 border-2 border-orange-100 text-orange-800 rounded-none">
-                                <p className="text-[10px] font-bold">
-                                    BeheerHub zal bij elke nieuwe <b>{selectedIntegration.sourceModule}</b> automatisch een POST-request sturen naar dit endpoint met de volledige dataset als JSON body.
-                                </p>
                             </div>
                         </div>
                       )}
@@ -438,6 +434,32 @@ export default function ApiIntegrationsPage() {
                                 </AccordionItem>
                             ))}
                         </Accordion>
+                    </div>
+
+                    <div className="space-y-6">
+                        <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
+                            <Code className="h-4 w-4 text-primary" /> Data Schema Reference
+                        </h3>
+                        <Card className="rounded-none border-2 border-slate-100 bg-white overflow-hidden">
+                            <CardHeader className="p-6 bg-slate-50 border-b">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="text-base font-black uppercase tracking-tight">Melding Object (Full Schema)</CardTitle>
+                                        <CardDescription className="text-[10px] font-bold uppercase text-slate-400">Gebruik dit JSON-schema voor een 1:1 koppeling bij extractie.</CardDescription>
+                                    </div>
+                                    <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase border-slate-300" onClick={() => { navigator.clipboard.writeText(JSON.stringify(fullJsonExample, null, 2)); toast({ title: "Gekopieerd" }); }}>
+                                        <Copy className="h-3 w-3 mr-1.5" /> Kopieer JSON
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <div className="p-6 bg-slate-900 text-blue-400 font-mono text-[10px] leading-relaxed shadow-inner overflow-hidden border-[6px] border-slate-800">
+                                    <pre className="whitespace-pre-wrap font-bold">
+                                        {JSON.stringify(fullJsonExample, null, 2)}
+                                    </pre>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                   </div>
                 </CardContent>
