@@ -57,6 +57,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, 
@@ -526,7 +533,7 @@ export default function StartNavigationPage() {
 
   // Duplicates logic state
   const [isDuplicatesDialogOpen, setIsDuplicatesDialogOpen] = useState(false);
-  const [duplicatesToDelete, setDuplicatesToDelete] = useState<string[]>([]);
+  const [duplicatesToDelete, setDuplicatesToDelete] = setDuplicatesToDelete || useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Pagination State
@@ -636,50 +643,11 @@ export default function StartNavigationPage() {
     return new Set(userFolders.flatMap(f => f.taskIds || []));
   }, [userFolders]);
 
-  const isCustomHtml = (str: string) => {
-    if (!str) return false;
-    const trimmed = str.trim().toLowerCase();
-    return (trimmed.startsWith('<') && (trimmed.endsWith('>') || trimmed.includes('/>'))) || 
-           trimmed.includes('<svg') || 
-           trimmed.includes('<img') ||
-           trimmed.includes('<a');
-  };
+  const allCount = filteredMeldingen?.length || 0;
 
-  const renderCategoryIcon = (category: string, subcategory?: string) => {
-    let iconVal = null;
-    if (category && subcategory) iconVal = subtypeIcons[`${category}:${subcategory}`];
-    if (!iconVal) iconVal = categoryIcons[category];
-    
-    if (!iconVal) return <CircleHelp className="h-full w-full text-slate-300" />;
-    
-    if (isCustomHtml(iconVal)) {
-        return (
-            <div 
-                className="h-full w-full flex items-center justify-center text-primary [&_svg]:h-full [&_svg]:w-full [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_a]:h-full [&_a]:w-full [&_a]:flex [&_a]:items-center [&_a]:justify-center" 
-                dangerouslySetInnerHTML={{ __html: iconVal }} 
-            />
-        );
-    }
-    
-    if (iconVal.startsWith('http')) {
-        return (
-            <div className="h-full w-full relative flex items-center justify-center rounded-none overflow-hidden">
-                <img src={iconVal} alt="icon" className="h-full w-full object-contain" />
-            </div>
-        );
-    }
-
-    if (iconVal.startsWith('lucide:')) {
-        const parts = iconVal.split(':');
-        const name = parts[1];
-        const color = parts[2];
-        const IconComp = (Icons as any)[name || 'AlertCircle'] || Icons.AlertCircle;
-        return <IconComp className="h-full w-full" style={{ color: color || '#007AFF' }} />;
-    }
-
-    const IconComp = (Icons as any)[iconVal] || Icons.CircleHelp;
-    return <IconComp className="h-full w-full text-slate-400" />;
-  };
+  const getFolderCount = useCallback((folder: UserFolder) => {
+    return (folder.taskIds || []).filter(id => filteredMeldingen.some(m => m.id === id)).length;
+  }, [filteredMeldingen]);
 
   const sequenceMissions = useCallback((missions: any[]) => {
     if (missions.length === 0) return [];
@@ -756,16 +724,10 @@ export default function StartNavigationPage() {
     filteredMeldingen.filter(m => !missionsInAnyFolder.has(m.id)).length
   , [filteredMeldingen, missionsInAnyFolder]);
 
-  const allCount = filteredMeldingen.length;
-
-  const getFolderCount = useCallback((folder: UserFolder) => {
-    return (folder.taskIds || []).filter(id => filteredMeldingen.some(m => m.id === id)).length;
-  }, [filteredMeldingen]);
-
   const displayedMissions = useMemo(() => {
     let base = filteredMeldingen;
     if (selectedFolderId === null) base = filteredMeldingen.filter(m => !missionsInAnyFolder.has(m.id));
-    else if (selectedFolderId !== 'all') {
+    else if (selectedFolderId !== 'all' && selectedFolderId !== null) {
         const currentFolder = userFolders?.find(f => f.id === selectedFolderId);
         if (currentFolder) base = filteredMeldingen.filter(m => (currentFolder.taskIds || []).includes(m.id));
         else base = [];
@@ -816,70 +778,6 @@ export default function StartNavigationPage() {
         },
         { enableHighAccuracy: true }
     );
-  };
-
-  const handleIdentifyDuplicates = () => {
-    if (!rawActiveMeldingen) return;
-
-    const groups: Record<string, Melding[]> = {};
-    
-    rawActiveMeldingen.forEach(m => {
-        const key = [
-            m.intakenummer,
-            m.straatnaam,
-            m.huisnummer,
-            m.postcode,
-            m.containernummer
-        ].map(v => (v || '').toLowerCase().trim()).join('|');
-
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(m);
-    });
-
-    const idsToDelete: string[] = [];
-    Object.values(groups).forEach(group => {
-        if (group.length > 1) {
-            group.sort((a, b) => {
-                const timeA = a.createdAt?.seconds || 0;
-                const timeB = b.createdAt?.seconds || 0;
-                return timeA - timeB;
-            });
-            const extras = group.slice(1).map(m => m.id);
-            idsToDelete.push(...extras);
-        }
-    });
-
-    if (idsToDelete.length === 0) {
-        toast({ title: "Geen dubbelen", description: "Er zijn geen identieke werkbonnen gevonden in deze lijst." });
-        return;
-    }
-
-    setDuplicatesToDelete(idsToDelete);
-    setIsDuplicatesDialogOpen(true);
-  };
-
-  const handleConfirmCleanDuplicates = async () => {
-    if (!firestore || duplicatesToDelete.length === 0 || !isSuperAdmin) return;
-    
-    setIsDeleting(true);
-    try {
-        const batch = writeBatch(firestore);
-        duplicatesToDelete.forEach(id => {
-            batch.delete(doc(firestore, 'meldingen', id));
-        });
-        await batch.commit();
-
-        toast({ 
-            title: "Lijst opgeschoond", 
-            description: `${duplicatesToDelete.length} dubbele meldingen zijn verwijderd.` 
-        });
-        setDuplicatesToDelete([]);
-        setIsDuplicatesDialogOpen(false);
-    } catch (e) {
-        toast({ variant: 'destructive', title: "Fout bij opschonen" });
-    } finally {
-        setIsDeleting(false);
-    }
   };
 
   const handleCreateFolder = async () => {
@@ -960,17 +858,6 @@ export default function StartNavigationPage() {
         }
         return next;
     });
-  };
-
-  const handleDeleteFolder = async (id: string) => {
-    if (!firestore || !managedUserId) return;
-    try {
-        await deleteDocumentNonBlocking(doc(firestore, 'users', managedUserId, 'folders', id));
-        if (selectedFolderId === id) setSelectedFolderId(null);
-        toast({ title: "Map verwijderd" });
-    } catch (e) {
-        toast({ variant: 'destructive', title: "Fout bij verwijderen map" });
-    }
   };
 
   const activeFolder = userFolders?.find(f => f.id === selectedFolderId);
@@ -1219,7 +1106,7 @@ export default function StartNavigationPage() {
                     <AlertDialogTitle className="font-black uppercase tracking-tight text-orange-600">Dubbele werkbonnen verwijderen?</AlertDialogTitle>
                     <AlertDialogDescription asChild>
                         <div className="font-bold text-slate-500">
-                            Er zijn <strong>{duplicatesToDelete.length} dubbele werkbonnen</strong> gevonden in the huidige lijst. 
+                            Er zijn <strong>{duplicatesToDelete.length} dubbele werkbonnen</strong> gevonden in de huidige lijst. 
                             <br/><br/>
                             Het systeem heeft meldingen vergeleken op:
                             <ul className="list-disc pl-5 mt-2 space-y-1">
