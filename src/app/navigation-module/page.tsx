@@ -89,7 +89,8 @@ import {
   AlertCircle,
   Plus,
   Copy,
-  AlertTriangle
+  AlertTriangle,
+  Library
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -124,6 +125,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Textarea } from '@/components/ui/textarea';
 import { useProject } from '@/context/project-context';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
@@ -525,6 +527,9 @@ export default function StartNavigationPage() {
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 
+  // Bulk selection state
+  const [selectedMissionIds, setSelectedMissionIds] = useState<Set<string>>(new Set());
+
   // Duplicates logic state
   const [isDuplicatesDialogOpen, setIsDuplicatesDialogOpen] = useState(false);
   const [duplicatesToDelete, setDuplicatesToDelete] = useState<string[]>([]);
@@ -629,6 +634,7 @@ export default function StartNavigationPage() {
 
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedMissionIds(new Set());
   }, [searchQuery, selectedFolderId, managedUserId]);
 
   const missionsInAnyFolder = useMemo(() => {
@@ -899,27 +905,67 @@ export default function StartNavigationPage() {
   };
 
   const handleMoveToFolder = async (taskId: string, folderId: string | null) => {
+    await handleBulkMoveToFolder([taskId], folderId);
+  };
+
+  const handleBulkMoveToFolder = async (taskIds: string[], folderId: string | null) => {
     if (!firestore || !managedUserId || !userFolders) return;
     const batch = writeBatch(firestore);
+    
+    // Remove from all existing folders first
     userFolders.forEach(folder => {
-        if ((folder.taskIds || []).includes(taskId)) {
+        const updatedTaskIds = (folder.taskIds || []).filter(id => !taskIds.includes(id));
+        if (updatedTaskIds.length !== (folder.taskIds || []).length) {
             const folderRef = doc(firestore, 'users', managedUserId, 'folders', folder.id);
-            batch.update(folderRef, { taskIds: (folder.taskIds || []).filter(id => id !== taskId) });
+            batch.update(folderRef, { taskIds: updatedTaskIds });
         }
     });
+
+    // Add to target folder if specified
     if (folderId) {
         const targetFolder = userFolders.find(f => f.id === folderId);
         if (targetFolder) {
+            const existingIds = targetFolder.taskIds || [];
+            const newIds = Array.from(new Set([...existingIds, ...taskIds]));
             const folderRef = doc(firestore, 'users', managedUserId, 'folders', folderId);
-            batch.update(folderRef, { taskIds: [...(targetFolder.taskIds || []), taskId] });
+            batch.update(folderRef, { taskIds: newIds });
         }
     }
+
     try {
         await batch.commit();
-        toast({ title: folderId ? "Verplaatst naar map" : "Verwijderd uit mappen" });
+        toast({ 
+            title: folderId ? "Verplaatst naar map" : "Verwijderd uit mappen",
+            description: `${taskIds.length} items verwerkt.`
+        });
+        setSelectedMissionIds(new Set());
     } catch (e) {
         toast({ variant: 'destructive', title: "Fout bij verplaatsen" });
     }
+  };
+
+  const handleToggleSelectMission = (id: string) => {
+    setSelectedMissionIds(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+    });
+  };
+
+  const handleSelectAllInView = () => {
+    const allInViewIds = paginatedMissions.map(m => m.id);
+    const areAllSelected = allInViewIds.every(id => selectedMissionIds.has(id));
+    
+    setSelectedMissionIds(prev => {
+        const next = new Set(prev);
+        if (areAllSelected) {
+            allInViewIds.forEach(id => next.delete(id));
+        } else {
+            allInViewIds.forEach(id => next.add(id));
+        }
+        return next;
+    });
   };
 
   const handleDeleteFolder = async (id: string) => {
@@ -989,42 +1035,57 @@ export default function StartNavigationPage() {
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 relative overflow-hidden">
             {isMeldingenType && (
                 <div className="w-full bg-white border-b p-4 shrink-0">
-                    <div className="md:max-w-[30%] space-y-3">
-                        <div className="relative w-full">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input placeholder="ZOEKEN..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="w-full h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3 overflow-visible">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <div className="relative">
-                                                {selectedFolderId === null ? <Inbox className="h-4 w-4 text-primary shrink-0" /> : selectedFolderId === 'all' ? <LayoutGrid className="h-4 w-4 text-primary shrink-0" /> : <Folder className="h-4 w-4 text-primary shrink-0" />}
-                                                <Badge className="absolute -top-2 -right-2 h-4 min-w-[1rem] px-1 flex items-center justify-center text-[8px] font-black rounded-none border border-white z-10">{activeFolderCount}</Badge>
+                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                        <div className="md:max-w-[30%] w-full space-y-3">
+                            <div className="relative w-full">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input placeholder="ZOEKEN..." className="h-10 pl-9 text-xs font-black uppercase rounded-none bg-slate-50 border-none shadow-inner w-full" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="w-full h-10 font-black uppercase text-[10px] rounded-none border-none bg-slate-50 shadow-inner justify-between px-3 overflow-visible">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className="relative">
+                                                    {selectedFolderId === null ? <Inbox className="h-4 w-4 text-primary shrink-0" /> : selectedFolderId === 'all' ? <LayoutGrid className="h-4 w-4 text-primary shrink-0" /> : <Folder className="h-4 w-4 text-primary shrink-0" />}
+                                                    <Badge className="absolute -top-2 -right-2 h-4 min-w-[1rem] px-1 flex items-center justify-center text-[8px] font-black rounded-none border border-white z-10">{activeFolderCount}</Badge>
+                                                </div>
+                                                <span className="text-xs font-black truncate">{activeFolderLabel}</span>
                                             </div>
-                                            <span className="text-xs font-black truncate">{activeFolderLabel}</span>
-                                        </div>
-                                        <ChevronDown className="h-3.5 w-3.5 opacity-40 shrink-0 ml-2" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-80 rounded-none border-none shadow-2xl p-2">
-                                    <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4"><div className="flex items-center"><LayoutGrid className="h-5 w-5 mr-3 text-slate-400" /> ALLE MELDINGEN</div><Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{allCount}</Badge></DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4"><div className="flex items-center"><Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (VRIJ)</div><Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{inboxCount}</Badge></DropdownMenuItem>
-                                    {userFolders?.map(folder => (
-                                        <DropdownMenuItem key={folder.id} onClick={() => setSelectedFolderId(folder.id)} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4"><div className="flex items-center"><Folder className="h-5 w-5 mr-3 text-primary shrink-0" /> {folder.name.toUpperCase()}</div><Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{getFolderCount(folder)}</Badge></DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                            {isPrivileged && (
-                                <div className="flex items-center gap-2">
-                                    <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
-                                        <SelectTrigger className="flex-1 h-10 font-black border-none rounded-none bg-slate-50 px-3 text-xs shadow-inner uppercase min-w-0"><div className="flex items-center gap-2 truncate"><UserIcon className="h-3.5 w-3.5 text-primary shrink-0" /><SelectValue placeholder="COLLEGA..." /></div></SelectTrigger>
-                                        <SelectContent className="rounded-none shadow-2xl border-slate-100">{users?.map(u => (<SelectItem key={u.id} value={u.id} className="text-xs font-bold uppercase">{u.displayName || u.email}</SelectItem>))}</SelectContent>
-                                    </Select>
-                                    <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}><DialogTrigger asChild><Button variant="outline" className="h-10 w-10 p-0 rounded-none border-none bg-slate-100 shadow-inner text-primary shrink-0"><FolderPlus className="h-4 w-4" /></Button></DialogTrigger><DialogContent className="rounded-none border-none shadow-2xl p-6 max-w-xs"><DialogHeader><DialogTitle className="font-black uppercase tracking-tight text-base">Nieuwe Map</DialogTitle></DialogHeader><div className="py-4"><Input placeholder="NAAM..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-black uppercase rounded-none text-center text-sm shadow-sm border-2" /></div><DialogFooter className="gap-2"><DialogClose asChild><Button variant="ghost" className="font-black uppercase h-10 text-xs flex-1">Stop</Button></DialogClose><Button onClick={handleCreateFolder} className="h-10 px-6 font-black uppercase rounded-none bg-primary text-white shadow-xl flex-1 text-xs">Maken</Button></DialogFooter></DialogContent></Dialog>
-                                </div>
-                            )}
+                                            <ChevronDown className="h-3.5 w-3.5 opacity-40 shrink-0 ml-2" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-80 rounded-none border-none shadow-2xl p-2">
+                                        <DropdownMenuItem onClick={() => setSelectedFolderId('all')} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4"><div className="flex items-center"><LayoutGrid className="h-5 w-5 mr-3 text-slate-400" /> ALLE MELDINGEN</div><Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{allCount}</Badge></DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setSelectedFolderId(null)} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4"><div className="flex items-center"><Inbox className="h-5 w-5 mr-3 text-slate-400" /> INBOX (VRIJ)</div><Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{inboxCount}</Badge></DropdownMenuItem>
+                                        {userFolders?.map(folder => (
+                                            <DropdownMenuItem key={folder.id} onClick={() => setSelectedFolderId(folder.id)} className="font-black rounded-none h-12 cursor-pointer text-sm justify-between pr-4"><div className="flex items-center"><Folder className="h-5 w-5 mr-3 text-primary shrink-0" /> {folder.name.toUpperCase()}</div><Badge variant="secondary" className="h-5 rounded-none font-black text-[10px]">{getFolderCount(folder)}</Badge></DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                {isPrivileged && (
+                                    <div className="flex items-center gap-2">
+                                        <Select value={managedUserId || ''} onValueChange={setManagedUserId}>
+                                            <SelectTrigger className="flex-1 h-10 font-black border-none rounded-none bg-slate-50 px-3 text-xs shadow-inner uppercase min-w-0"><div className="flex items-center gap-2 truncate"><UserIcon className="h-3.5 w-3.5 text-primary shrink-0" /><SelectValue placeholder="COLLEGA..." /></div></SelectTrigger>
+                                            <SelectContent className="rounded-none shadow-2xl border-slate-100">{users?.map(u => (<SelectItem key={u.id} value={u.id} className="text-xs font-bold uppercase">{u.displayName || u.email}</SelectItem>))}</SelectContent>
+                                        </Select>
+                                        <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}><DialogTrigger asChild><Button variant="outline" className="h-10 w-10 p-0 rounded-none border-none bg-slate-100 shadow-inner text-primary shrink-0"><FolderPlus className="h-4 w-4" /></Button></DialogTrigger><DialogContent className="rounded-none border-none shadow-2xl p-6 max-w-xs"><DialogHeader><DialogTitle className="font-black uppercase tracking-tight text-base">Nieuwe Map</DialogTitle></DialogHeader><div className="py-4"><Input placeholder="NAAM..." value={newFolderName} onChange={e => setNewFolderName(e.target.value)} className="h-12 font-black uppercase rounded-none text-center text-sm shadow-sm border-2" /></div><DialogFooter className="gap-2"><DialogClose asChild><Button variant="ghost" className="font-black uppercase h-10 text-xs flex-1">Stop</Button></DialogClose><Button onClick={handleCreateFolder} className="h-10 px-6 font-black uppercase rounded-none bg-primary text-white shadow-xl flex-1 text-xs">Maken</Button></DialogFooter></DialogContent></Dialog>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleSelectAllInView}
+                                className="h-10 font-black uppercase text-[10px] rounded-none border-2 border-slate-200"
+                            >
+                                {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(m.id)) 
+                                    ? 'Deselecteer Alles' 
+                                    : 'Selecteer Alles'}
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -1034,18 +1095,33 @@ export default function StartNavigationPage() {
                 {isMeldingenType ? (
                     <div className="flex-1 flex flex-col min-h-0 h-full">
                         <ScrollArea className="flex-1">
-                            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 px-4 py-2 content-start">
+                            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 px-4 py-2 content-start pb-24">
                                 {paginatedMissions.map((m, index) => {
                                     const isCompleted = m.status === 'Afgerond';
+                                    const isSelected = selectedMissionIds.has(m.id);
                                     const missionNumber = (currentPage - 1) * itemsPerPage + index + 1;
                                     return (
                                         <Card key={m.id} 
-                                            onClick={() => setActiveWerkbonId(m.id)}
                                             className={cn(
-                                            "rounded-none border-none shadow-sm overflow-hidden active:scale-[0.99] transition-all cursor-pointer group h-14",
-                                            isCompleted ? "bg-green-50 opacity-80" : "bg-white"
+                                            "rounded-none border-none shadow-sm overflow-hidden active:scale-[0.99] transition-all cursor-pointer group h-14 relative",
+                                            isCompleted ? "bg-green-50 opacity-80" : "bg-white",
+                                            isSelected && "ring-2 ring-primary z-10 shadow-lg"
                                         )}>
-                                            <div className="flex items-center gap-3 px-3 h-full min-w-0">
+                                            <div className="flex items-center gap-3 px-3 h-full min-w-0" onClick={() => {
+                                                if (selectedMissionIds.size > 0) {
+                                                    handleToggleSelectMission(m.id);
+                                                } else {
+                                                    setActiveWerkbonId(m.id);
+                                                }
+                                            }}>
+                                                <div className="flex items-center justify-center shrink-0 w-6">
+                                                    <Checkbox 
+                                                        checked={isSelected}
+                                                        onCheckedChange={() => handleToggleSelectMission(m.id)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="h-5 w-5 rounded-none"
+                                                    />
+                                                </div>
                                                 <div className="text-[10px] font-black text-slate-300 shrink-0 w-5 text-center">{missionNumber}</div>
                                                 <div className="h-10 w-10 flex items-center justify-center shrink-0">{renderCategoryIcon(m.hoofdcategorie, m.subcategorie)}</div>
                                                 <div className="flex-1 min-w-0">
@@ -1053,7 +1129,7 @@ export default function StartNavigationPage() {
                                                         <h3 className={cn("font-black text-sm uppercase tracking-tight truncate", isCompleted ? "text-green-800" : "text-slate-900")}>{m.intakenummer}</h3>
                                                         {m.status === 'Nieuw' && <Badge className="text-[8px] font-black uppercase bg-red-600 text-white h-4 px-1 rounded-none shadow-sm shrink-0">NEW</Badge>}
                                                     </div>
-                                                    <p className={cn("text-[11px] font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-50")}>{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
+                                                    <p className={cn("text-[11px] font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-400")}>{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
                                                 </div>
                                                 <div className="flex gap-1 shrink-0 items-center">
                                                     {!isCompleted && <Button variant="outline" size="icon" className="h-9 w-9 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100" onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}><Navigation className="h-5 w-5" /></Button>}
@@ -1069,7 +1145,7 @@ export default function StartNavigationPage() {
                             </div>
                         </ScrollArea>
                         {totalPages > 1 && (
-                            <div className="flex items-center justify-center gap-4 py-4 bg-white border-t mt-auto shrink-0">
+                            <div className="flex items-center justify-center gap-4 py-4 bg-white border-t mt-auto shrink-0 pb-8">
                                 <Button variant="outline" className="rounded-none font-black uppercase h-9 px-4 border-slate-200" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft className="h-4 w-4 mr-2" /> Vorige</Button>
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pagina {currentPage} / {totalPages}</span>
                                 <Button variant="outline" className="rounded-none font-black uppercase h-9 px-4 border-slate-200" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Volgende <ChevronRight className="h-4 w-4 ml-2" /></Button>
@@ -1089,6 +1165,48 @@ export default function StartNavigationPage() {
                 <div className="fixed inset-0 z-[300] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300"><div className="bg-slate-900 p-8 rounded-none shadow-2xl flex flex-col items-center gap-4 text-white"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-xs font-black uppercase tracking-[0.3em]">HERBEREKENEN...</p></div></div>
             )}
         </div>
+
+        {/* Bulk Action Bar */}
+        {selectedMissionIds.size > 0 && (
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-300">
+                <div className="bg-slate-900 text-white rounded-none px-6 py-3 shadow-2xl flex items-center gap-6 border-2 border-slate-800">
+                    <div className="flex items-center gap-3 border-r border-white/20 pr-6">
+                        <div className="bg-primary h-8 w-8 rounded-none flex items-center justify-center font-black text-xs">
+                            {selectedMissionIds.size}
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Geselecteerd</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button className="h-10 px-6 font-black uppercase text-xs tracking-tight bg-primary hover:bg-primary/90 rounded-none shadow-lg gap-2">
+                                    <Library className="h-4 w-4" /> Verplaats naar map
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-64 rounded-none border-none shadow-2xl p-2">
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-1">Doelmap selecteren</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleBulkMoveToFolder(Array.from(selectedMissionIds), null)} className="font-bold text-xs h-11 rounded-none cursor-pointer">
+                                    <Icons.Inbox className="mr-2 h-4 w-4 text-slate-400" /> Inbox (Vrij)
+                                </DropdownMenuItem>
+                                {userFolders?.map(f => (
+                                    <DropdownMenuItem key={f.id} onClick={() => handleBulkMoveToFolder(Array.from(selectedMissionIds), f.id)} className="font-bold text-xs h-11 rounded-none cursor-pointer">
+                                        <Icons.Folder className="mr-2 h-4 w-4 text-primary" /> {f.name.toUpperCase()}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => setSelectedMissionIds(new Set())}
+                            className="h-10 text-white hover:bg-white/10 rounded-none font-bold text-xs"
+                        >
+                            Annuleren
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {activeWerkbonId && (
             <IntegratedWerkbonOverlay meldingId={activeWerkbonId} onClose={() => setActiveWerkbonId(null)} onCompleted={(id) => { setCompletedObjects(prev => [...prev, id]); setActiveWerkbonId(null); handleRecalculateRoute(); }} />
