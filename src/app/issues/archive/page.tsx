@@ -305,59 +305,68 @@ export default function ArchiveIssuesPage() {
   const handleExport = () => {
     if (filteredMeldingen.length === 0) return;
 
-    const exportData = filteredMeldingen.map(m => {
-      const allPhotos = [
-        ...(m.fotos || []).map(f => f.url),
-        ...(m.afhandeling_fotos || []).map(f => f.url)
-      ];
+    // We build rows manually to use the HYPERLINK formula
+    const headers = [
+        'Intakenummer', 'Extern Nummer', 'Datum Melding', 'Tijd Melding', 
+        'Hoofdcategorie', 'Subcategorie', 'Adres', 'Postcode', 'Plaats', 
+        'Melder', 'Status', 'Afgehandeld door', 'Datum Afhandeling', 
+        'Tijd Afhandeling', 'Minuten gewerkt', 'Bijzonderheden'
+    ];
 
-      const row: any = {
-        'Intakenummer': m.intakenummer,
-        'Extern Nummer': m.extern_meldingsnummer || '',
-        'Datum Melding': m.datum,
-        'Tijd Melding': m.tijdstip,
-        'Hoofdcategorie': m.hoofdcategorie,
-        'Subcategorie': m.subcategorie,
-        'Adres': `${m.straatnaam || ''} ${m.huisnummer || ''}`.trim(),
-        'Postcode': m.postcode || '',
-        'Plaats': m.plaats || '',
-        'Melder': m.melder || '',
-        'Status': m.status,
-        'Afgehandeld door': m.afgehandeld_door || m.behandelaar || '',
-        'Datum Afhandeling': m.afhandeling_datum || '',
-        'Tijd Afhandeling': m.afhandeling_tijdstip || '',
-        'Minuten gewerkt': m.gewerkteMinuten || 0,
-        'Bijzonderheden': m.afhandeling_bijzonderheden || '',
-      };
-
-      // Voeg elke foto toe aan een eigen kolom
-      allPhotos.forEach((url, index) => {
-        row[`Foto ${index + 1}`] = url;
-      });
-
-      return row;
+    // Find max number of photos to determine header columns
+    let maxPhotos = 0;
+    filteredMeldingen.forEach(m => {
+        const count = (m.fotos?.length || 0) + (m.afhandeling_fotos?.length || 0);
+        if (count > maxPhotos) maxPhotos = count;
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    for (let i = 1; i <= maxPhotos; i++) {
+        headers.push(`Foto ${i}`);
+    }
+
+    const rows = filteredMeldingen.map(m => {
+        const allPhotos = [
+            ...(m.fotos || []).map(f => f.url),
+            ...(m.afhandeling_fotos || []).map(f => f.url)
+        ];
+
+        const baseData = [
+            m.intakenummer,
+            m.extern_meldingsnummer || '',
+            m.datum,
+            m.tijdstip,
+            m.hoofdcategorie,
+            m.subcategorie,
+            `${m.straatnaam || ''} ${m.huisnummer || ''}`.trim(),
+            m.postcode || '',
+            m.plaats || '',
+            m.melder || '',
+            m.status,
+            m.afgehandeld_door || m.behandelaar || '',
+            m.afhandeling_datum || '',
+            m.afhandeling_tijdstip || '',
+            m.gewerkteMinuten || 0,
+            m.afhandeling_bijzonderheden || ''
+        ];
+
+        // Add photo formulas
+        const photoFormulas = allPhotos.map(url => ({
+            f: `HYPERLINK("${url}", "Bekijk Foto")`
+        }));
+
+        return [...baseData, ...photoFormulas];
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Archief Meldingen");
     
-    // Stel kolombreedte in
-    const wscols = [
-        {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 20}, {wch: 25}, 
-        {wch: 30}, {wch: 10}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 20},
-        {wch: 15}, {wch: 10}, {wch: 10}, {wch: 40}
-    ];
-    
-    // Voeg breedte toe voor foto kolommen (maximaal 10 voor de veiligheid)
-    for (let i = 0; i < 10; i++) {
-        wscols.push({wch: 50});
-    }
-    
+    // Auto-width
+    const wscols = headers.map(() => ({ wch: 20 }));
     worksheet['!cols'] = wscols;
 
     XLSX.writeFile(workbook, `BeheerHub_Export_Archief_${format(new Date(), 'yyyy-MM-dd_HHmm')}.xlsx`);
-    toast({ title: "Export voltooid", description: "Het Excel bestand is gedownload met gescheiden foto-kolommen." });
+    toast({ title: "Export voltooid", description: "Het Excel bestand is gedownload met compacte fotolinks." });
   };
 
   const handleIdentifyDuplicates = () => {
