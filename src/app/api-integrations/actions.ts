@@ -12,18 +12,14 @@ export async function triggerWebhookSync(endpoint: string, method: string, heade
             throw new Error('Ongeldige URL: Moet beginnen met http:// of https://');
         }
 
-        // Diagnostic log voor server-side monitoring
-        console.log(`[Webhook Dispatch] Calling ${method} on ${endpoint}`);
-
         const response = await fetch(endpoint, {
             method,
             headers: {
                 'Content-Type': 'application/json',
                 ...headers
             },
-            body: JSON.stringify(payload),
-            // Voeg een timeout toe om te voorkomen dat de actie te lang blijft hangen
-            signal: AbortSignal.timeout(15000) 
+            body: method === 'GET' ? undefined : JSON.stringify(payload),
+            signal: AbortSignal.timeout(30000) 
         });
 
         const status = response.status;
@@ -32,26 +28,45 @@ export async function triggerWebhookSync(endpoint: string, method: string, heade
         return {
             success: response.ok,
             status,
-            responseText: responseText.slice(0, 1000) || '(Geen respons van server)'
+            responseText: responseText.slice(0, 5000) || '(Geen respons van server)'
         };
     } catch (err: any) {
         console.error("Webhook Dispatch Error:", err);
-        
-        let message = 'De externe server is onbereikbaar.';
-        if (err.name === 'TimeoutError' || err.name === 'AbortError') {
-            message = 'De verbinding is verbroken (Timeout na 15s).';
-        } else if (err.message?.includes('ENOTFOUND')) {
-            message = 'Het domein van de URL kon niet worden gevonden (DNS fout).';
-        } else if (err.message?.includes('ECONNREFUSED')) {
-            message = 'De externe server weigert de verbinding op deze poort.';
-        } else if (err.message?.includes('fetch failed')) {
-            message = 'De aanroep is mislukt. Mogelijk blokkeert de externe firewall onze server.';
-        }
-
         return {
             success: false,
             status: 0,
-            responseText: `Netwerkfout: ${message} (${err.message || 'connection failed'})`
+            responseText: `Fout: ${err.message || 'Verbinding mislukt'}`
         };
+    }
+}
+
+/**
+ * Server Action om data van een externe bron (zoals een shared Excel URL) op te halen.
+ */
+export async function fetchExternalData(url: string, headers: Record<string, string>) {
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json, text/csv, text/plain',
+                ...headers
+            },
+            signal: AbortSignal.timeout(30000)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server reageerde met status ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        
+        if (contentType.includes('application/json')) {
+            return { success: true, data: await response.json() };
+        } else {
+            // Treat as text/csv if not JSON
+            return { success: true, text: await response.text() };
+        }
+    } catch (err: any) {
+        return { success: false, message: err.message };
     }
 }
