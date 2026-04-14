@@ -197,6 +197,7 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+    
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     
     const recognitionRef = useRef<any>(null);
@@ -1207,7 +1208,6 @@ export default function StartNavigationPage() {
             <IntegratedWerkbonOverlay meldingId={activeWerkbonId} onClose={() => setActiveWerkbonId(null)} onCompleted={(id) => { setCompletedObjects(prev => [...prev, id]); setActiveWerkbonId(null); handleRecalculateRoute(); }} />
         )}
 
-        {/* Duplicates Cleanup Alert */}
         <AlertDialog open={isDuplicatesDialogOpen} onOpenChange={setIsDuplicatesDialogOpen}>
             <AlertDialogContent className="rounded-none border-none shadow-2xl">
                 <AlertDialogHeader>
@@ -1228,7 +1228,7 @@ export default function StartNavigationPage() {
                         </div>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="gap-2">
+                <AlertDialogFooter>
                     <AlertDialogCancel className="rounded-none font-black uppercase h-12 border-2 text-xs">Annuleren</AlertDialogCancel>
                     <AlertDialogAction 
                         onClick={handleConfirmCleanDuplicates} 

@@ -31,7 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
-import { triggerWebhookSync } from '@/app/api-integrations/actions';
+import { triggerWebhookSync, fetchExternalData } from '@/app/api-integrations/actions';
 
 export default function ExcelSyncPage() {
   const firestore = useFirestore();
@@ -61,20 +61,29 @@ export default function ExcelSyncPage() {
     setIsLoadingGrid(true);
     
     try {
-        const result = await triggerWebhookSync(cloudUrl, 'GET', {}, null);
+        const result = await fetchExternalData(cloudUrl, {});
         if (result.success) {
-            let externalData;
-            try {
-                externalData = JSON.parse(result.responseText);
-            } catch (e) {
-                throw new Error("Bestand is geen geldig JSON-formaat. Gebruik een API of JSON-link.");
+            let items: any[] = [];
+            
+            if (result.data) {
+                items = Array.isArray(result.data) ? result.data : (result.data.data || [result.data]);
+            } else if (result.text) {
+                // Try to parse CSV if it's text
+                try {
+                    const workbook = XLSX.read(result.text, { type: 'string' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    items = XLSX.utils.sheet_to_json(sheet);
+                } catch (e) {
+                    throw new Error("Bestand kon niet worden geparsed als Excel/CSV. Controleer de link.");
+                }
             }
 
-            const items = Array.isArray(externalData) ? externalData : (externalData.data || [externalData]);
+            if (items.length === 0) throw new Error("Geen data gevonden in het bestand.");
+
             setGridData(items);
             toast({ title: "Data opgehaald", description: `${items.length} rijen geladen uit cloud-bron.` });
         } else {
-            throw new Error(result.responseText);
+            throw new Error(result.message || "Kon de URL niet bereiken.");
         }
     } catch (err: any) {
         toast({ variant: 'destructive', title: "Sync mislukt", description: err.message });
@@ -171,7 +180,7 @@ export default function ExcelSyncPage() {
                         <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Bron URL (Input)</Label>
                         <div className="flex gap-2">
                             <Input 
-                                placeholder="URL naar JSON/CSV bestand..." 
+                                placeholder="URL naar JSON/CSV of API endpoint..." 
                                 className="h-12 font-mono text-xs border-2 rounded-none bg-slate-50 focus:ring-primary/20"
                                 value={cloudUrl}
                                 onChange={e => setCloudUrl(e.target.value)}
@@ -191,11 +200,16 @@ export default function ExcelSyncPage() {
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-blue-50 border-2 border-blue-100 rounded-none mt-6">
-                    <Info className="h-4 w-4 text-primary shrink-0" />
-                    <p className="text-[10px] font-bold text-blue-700 leading-relaxed uppercase tracking-tight">
-                        Gebruik de Bron URL om data in het raster te laden. De Webhook URL wordt gebruikt om wijzigingen direct terug te sturen naar je cloud-applicatie.
-                    </p>
+                <div className="flex items-start gap-3 p-4 bg-blue-50 border-2 border-blue-100 rounded-none mt-6">
+                    <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-bold text-blue-700 leading-relaxed uppercase tracking-tight">
+                            Voor SharePoint/Excel Online links: Gebruik een Power Automate Flow of Zapier om de Excel-data te ontsluiten als een JSON-endpoint.
+                        </p>
+                        <p className="text-[9px] text-blue-600 font-medium leading-relaxed italic">
+                            Microsoft blokkeert directe toegang tot de Excel-viewer URL's via externe scripts om veiligheidsredenen (CORS).
+                        </p>
+                    </div>
                 </div>
             </CardContent>
         </Card>
