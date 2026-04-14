@@ -54,6 +54,7 @@ export const permissionConfig = [
             { id: 'export', label: 'Export' },
         ]
     },
+    { module: 'excelSync', label: 'Excel Sync Hub', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'edit', label: 'Bewerken' }, { id: 'use', label: 'Synchroniseren' }] },
     { module: 'gisData', label: 'GIS-data', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'edit', label: 'Bewerken' }] },
     { module: 'inventory', label: 'Voorraadbeheer', actions: [{ id: 'view', label: 'Bekijken' }] },
     { 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -50,7 +51,7 @@ import {
 } from "@/components/ui/accordion";
 import { ApiIntegrationDialog } from '@/components/api-integration-dialog';
 import { triggerWebhookSync } from './actions';
-import { formatDate } from 'date-fns';
+import { format as formatDate } from 'date-fns';
 import type { ApiIntegration } from '@/lib/types';
 
 export default function ApiIntegrationsPage() {

@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Layers,
   Link2,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { ElementType } from 'react';
 
@@ -24,7 +25,7 @@ export interface SubMenuItem {
     href: string;
     label: string;
     id: string;
-    module?: string; // Optioneel: als het sub-item naar een andere module verwijst (bv. Werkplanning)
+    module?: string; 
 }
 
 export interface MenuItem {
@@ -96,6 +97,12 @@ export const allMenuItems: MenuItem[] = [
         { href: '/objects?action=import', label: 'Import', id: 'import' },
         { href: '/objects?action=export', label: 'Export', id: 'export' },
       ]
+    },
+    { 
+      href: '/excel-sync', 
+      label: 'Excel Sync Hub', 
+      icon: FileSpreadsheet, 
+      module: 'excelSync' 
     },
     { 
       href: '/gis-data', 

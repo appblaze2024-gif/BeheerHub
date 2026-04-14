@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -913,7 +914,7 @@ export default function ArchiveIssuesPage() {
                                             <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer py-2 px-4 border-r border-slate-100">
                                                 <div className="flex flex-col">
                                                     <span className="text-[11px] font-black text-primary">{melding.afhandeling_datum ? format(new Date(melding.afhandeling_datum), 'dd-MM-yy') : '-'}</span>
-                                                    <span className="text-[9px] font-bold text-slate-400">{melding.afhandeling_tijdstip || '--:--'}</span>
+                                                    <span className="text-[9px] font-bold text-slate-400">{melding.tijdstip || '--:--'}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer py-2 px-4 border-r border-slate-100">
