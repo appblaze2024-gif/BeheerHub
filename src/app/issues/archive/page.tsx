@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch, limit } from 'firebase/firestore';
 import { 
   Search, 
   ListFilter, 

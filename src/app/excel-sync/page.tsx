@@ -20,15 +20,17 @@ import {
   ExternalLink,
   Table as TableIcon,
   Save,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Info
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, writeBatch, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '@/components/ui/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
+import { format as formatDate } from 'date-fns';
 import { triggerWebhookSync } from '@/app/api-integrations/actions';
 
 export default function ExcelSyncPage() {
