@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -131,10 +130,8 @@ export default function ArchiveIssuesPage() {
   const [filters, setFilters] = React.useState<ArchiveFilters>(INITIAL_FILTERS);
   const [previewImage, setPreviewImage] = React.useState<string | null>(null);
   
-  // Selection state
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   
-  // State for deletion
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = React.useState(false);
   const [isDuplicatesDialogOpen, setIsDuplicatesDialogOpen] = React.useState(false);
@@ -191,7 +188,6 @@ export default function ArchiveIssuesPage() {
     
     let result = [...archivedMeldingen];
 
-    // 1. Search Filter
     if (debouncedSearchTerm) {
         const q = debouncedSearchTerm.toLowerCase();
         result = result.filter(m => 
@@ -203,7 +199,6 @@ export default function ArchiveIssuesPage() {
         );
     }
 
-    // 2. Date Filters
     if (filters.startDate) {
       const start = new Date(filters.startDate).getTime();
       result = result.filter(m => {
@@ -219,7 +214,6 @@ export default function ArchiveIssuesPage() {
       });
     }
 
-    // 3. Category Filters
     if (filters.hoofdcategorie !== 'alle') {
       result = result.filter(m => m.hoofdcategorie === filters.hoofdcategorie);
     }
@@ -227,23 +221,19 @@ export default function ArchiveIssuesPage() {
       result = result.filter(m => m.subcategorie === filters.subcategorie);
     }
 
-    // 4. User Filter
     if (filters.behandelaar !== 'alle') {
       result = result.filter(m => m.behandelaar === filters.behandelaar || m.afgehandeld_door === filters.behandelaar);
     }
 
-    // 5. Status Filter
     if (filters.status !== 'alle') {
       result = result.filter(m => m.status === filters.status);
     }
 
-    // 6. Container Filter
     if (filters.containernummer) {
         const q = filters.containernummer.toLowerCase();
         result = result.filter(m => m.containernummer?.toLowerCase().includes(q));
     }
 
-    // Sorting
     result.sort((a, b) => {
         let valA: any = (a as any)[sortConfig.field];
         let valB: any = (b as any)[sortConfig.field];
@@ -361,7 +351,8 @@ export default function ArchiveIssuesPage() {
         ];
 
         const photoFormulas = allPhotos.map(url => ({
-            f: `HYPERLINK("${url}", "Bekijk Foto")`
+            f: `HYPERLINK("${url}", "Bekijk Foto")`,
+            v: "Bekijk Foto"
         }));
 
         return [...baseData, ...photoFormulas];
@@ -973,7 +964,6 @@ export default function ArchiveIssuesPage() {
         )}
       </div>
 
-      {/* Bulk Action Bar */}
       {selectedIds.size > 0 && isSuperAdmin && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-300">
           <div className="bg-slate-900 text-white rounded-none px-6 py-3 shadow-2xl flex items-center gap-6 border-2 border-slate-800">
@@ -1026,7 +1016,6 @@ export default function ArchiveIssuesPage() {
         </div>
       )}
 
-      {/* Confirmation Dialog for Single Deletion */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="rounded-none border-none shadow-2xl">
           <AlertDialogHeader>
@@ -1047,7 +1036,6 @@ export default function ArchiveIssuesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirmation Dialog for Bulk Deletion */}
       <AlertDialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
         <AlertDialogContent className="rounded-none border-none shadow-2xl">
           <AlertDialogHeader>
@@ -1072,7 +1060,6 @@ export default function ArchiveIssuesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirmation Dialog for Duplicates Deletion */}
       <AlertDialog open={isDuplicatesDialogOpen} onOpenChange={setIsDuplicatesDialogOpen}>
         <AlertDialogContent className="rounded-none border-none shadow-2xl">
           <AlertDialogHeader>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -67,6 +66,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, 
   Play, 
@@ -126,7 +126,6 @@ import Image from 'next/image';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Textarea } from '@/components/ui/textarea';
 import { useProject } from '@/context/project-context';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -809,7 +808,6 @@ export default function StartNavigationPage() {
     if (!firestore || !managedUserId || !userFolders) return;
     const batch = writeBatch(firestore);
     
-    // Remove from all existing folders first
     userFolders.forEach(folder => {
         const updatedTaskIds = (folder.taskIds || []).filter(id => !taskIds.includes(id));
         if (updatedTaskIds.length !== (folder.taskIds || []).length) {
@@ -818,7 +816,6 @@ export default function StartNavigationPage() {
         }
     });
 
-    // Add to target folder if specified
     if (folderId) {
         const targetFolder = userFolders.find(f => f.id === folderId);
         if (targetFolder) {

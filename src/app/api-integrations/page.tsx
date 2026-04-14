@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -24,7 +23,9 @@ import {
   Loader2,
   CheckCircle2,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Pencil
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -49,6 +50,7 @@ import {
 } from "@/components/ui/accordion";
 import { ApiIntegrationDialog } from '@/components/api-integration-dialog';
 import { triggerWebhookSync } from './actions';
+import { formatDate } from 'date-fns';
 import type { ApiIntegration } from '@/lib/types';
 
 export default function ApiIntegrationsPage() {
@@ -106,7 +108,6 @@ export default function ApiIntegrationsPage() {
                     if (item[apiKey] !== undefined) mappedData[fsKey] = item[apiKey];
                 });
 
-                // Identifying key logic: use mapped 'intakenummer', 'id', or original external ID
                 const docId = mappedData.intakenummer || mappedData.id || item.id || item.ID || null;
                 if (docId) {
                     const docRef = doc(targetCol, String(docId));
@@ -172,7 +173,6 @@ export default function ApiIntegrationsPage() {
             </CardHeader>
             <CardContent className="p-8 space-y-12">
               
-              {/* API KEY SECTION */}
               <div className="p-6 bg-slate-50 border-2 border-slate-100 space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Key className="h-3.5 w-3.5 text-primary" /> Authorisatie (X-API-KEY)</h3>
@@ -189,7 +189,6 @@ export default function ApiIntegrationsPage() {
                 )}
               </div>
 
-              {/* ACTIVE INTEGRATIONS SECTION */}
               <div className="space-y-6">
                 <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
                     <Database className="h-4 w-4 text-primary" /> Actieve Koppelingen (Sync)
@@ -199,10 +198,7 @@ export default function ApiIntegrationsPage() {
                     {integrations?.map(int => (
                         <div key={int.id} className="p-6 bg-white border-2 border-slate-100 rounded-none flex items-center justify-between hover:border-primary/20 transition-all shadow-sm">
                             <div className="flex items-center gap-6 flex-1 min-w-0">
-                                <div className={cn(
-                                    "h-12 w-12 rounded-none flex items-center justify-center shrink-0 shadow-inner",
-                                    int.method === 'GET' ? "bg-blue-50 text-blue-600" : "bg-orange-50 text-orange-600"
-                                )}>
+                                <div className="h-12 w-12 rounded-none flex items-center justify-center shrink-0 shadow-inner bg-blue-50 text-blue-600">
                                     <Globe className="h-6 w-6" />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -218,9 +214,7 @@ export default function ApiIntegrationsPage() {
                                             {int.lastStatus === 'success' ? (
                                                 <Badge className="bg-green-100 text-green-700 h-4 text-[8px] font-black uppercase border-none"><CheckCircle2 className="h-2.5 w-2.5 mr-1" /> OK</Badge>
                                             ) : (
-                                                <TooltipProvider>
-                                                    <Badge variant="destructive" className="h-4 text-[8px] font-black uppercase cursor-help"><AlertCircle className="h-2.5 w-2.5 mr-1" /> ERROR</Badge>
-                                                </TooltipProvider>
+                                                <Badge variant="destructive" className="h-4 text-[8px] font-black uppercase"><AlertCircle className="h-2.5 w-2.5 mr-1" /> ERROR</Badge>
                                             )}
                                         </div>
                                     )}
@@ -228,18 +222,16 @@ export default function ApiIntegrationsPage() {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                {int.method === 'GET' && (
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="h-10 px-4 font-black uppercase text-[10px] rounded-none border-slate-200 hover:bg-primary hover:text-white hover:border-primary transition-all"
-                                        onClick={() => handleRunSync(int)}
-                                        disabled={syncingId === int.id}
-                                    >
-                                        {syncingId === int.id ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <RefreshCw className="h-3.5 w-3.5 mr-2" />}
-                                        Sync Nu
-                                    </Button>
-                                )}
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-10 px-4 font-black uppercase text-[10px] rounded-none border-slate-200 hover:bg-primary hover:text-white hover:border-primary transition-all"
+                                    onClick={() => handleRunSync(int)}
+                                    disabled={syncingId === int.id}
+                                >
+                                    {syncingId === int.id ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <RefreshCw className="h-3.5 w-3.5 mr-2" />}
+                                    Sync Nu
+                                </Button>
                                 <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-primary rounded-none" onClick={() => { setSelectedIntegration(int); setIsDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 rounded-none" onClick={() => handleDeleteIntegration(int.id)}><Trash2 className="h-4 w-4" /></Button>
                             </div>
@@ -255,10 +247,9 @@ export default function ApiIntegrationsPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8">
-                {/* SYSTEM ENDPOINTS */}
                 <div className="space-y-6">
                     <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
-                        <Code className="h-4 w-4 text-primary" /> Systeem Endpoints (Data Provider)
+                        <Code className="h-4 w-4 text-primary" /> Systeem Endpoints (Read-Only GET)
                     </h3>
                     <Accordion type="single" collapsible className="w-full space-y-4">
                         {[
@@ -289,7 +280,6 @@ export default function ApiIntegrationsPage() {
                     </Accordion>
                 </div>
 
-                {/* DATA SCHEMA REFERENCE */}
                 <div className="space-y-6">
                     <h3 className="text-sm font-black uppercase tracking-tight border-b-2 border-slate-900 pb-3 flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-primary" /> Data Schema Reference

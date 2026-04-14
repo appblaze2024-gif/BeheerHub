@@ -124,7 +124,6 @@ export async function GET(request: Request) {
 
     let queryRef: admin.firestore.Query = db.collection(targetCollection);
     
-    // Dynamische filtering op basis van URL parameters
     searchParams.forEach((value, key) => {
       if (['type', 'id', 'key'].includes(key)) return;
       
@@ -149,3 +148,8 @@ export async function GET(request: Request) {
     return corsResponse({ error: 'Server Error', message: error.message }, 500);
   }
 }
+
+// Expliciete blokkering van andere methodes voor maximale veiligheid
+export async function POST() { return corsResponse({ error: 'Forbidden', message: 'API is strikt Read-Only (GET).' }, 403); }
+export async function PATCH() { return corsResponse({ error: 'Forbidden', message: 'API is strikt Read-Only (GET).' }, 403); }
+export async function DELETE() { return corsResponse({ error: 'Forbidden', message: 'API is strikt Read-Only (GET).' }, 403); }
