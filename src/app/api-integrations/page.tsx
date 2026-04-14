@@ -48,7 +48,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
+} from "@/accordion";
 import { ApiIntegrationDialog } from '@/components/api-integration-dialog';
 import { triggerWebhookSync } from './actions';
 import { format as formatDate } from 'date-fns';

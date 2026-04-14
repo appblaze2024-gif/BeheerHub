@@ -197,7 +197,6 @@ function IntegratedWerkbonOverlay({
     const [afhandelingFotos, setAfhandelingFotos] = useState<UploadedFile[]>([]);
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-    
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     
     const recognitionRef = useRef<any>(null);
