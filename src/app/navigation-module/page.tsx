@@ -861,47 +861,6 @@ export default function StartNavigationPage() {
     });
   };
 
-  const handleIdentifyDuplicates = () => {
-    const visibleMeldingen = isMeldingenType ? rawActiveMeldingen : [];
-    if (!visibleMeldingen) return;
-
-    const groups: Record<string, Melding[]> = {};
-    
-    visibleMeldingen.forEach(m => {
-        const key = [
-            m.intakenummer,
-            m.straatnaam,
-            m.huisnummer,
-            m.postcode,
-            m.containernummer
-        ].map(v => (v || '').toLowerCase().trim()).join('|');
-
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(m);
-    });
-
-    const idsToDelete: string[] = [];
-    Object.values(groups).forEach(group => {
-        if (group.length > 1) {
-            group.sort((a, b) => {
-                const timeA = (a as any).createdAt?.seconds || 0;
-                const timeB = (b as any).createdAt?.seconds || 0;
-                return timeA - timeB;
-            });
-            const extras = group.slice(1).map(m => m.id);
-            idsToDelete.push(...extras);
-        }
-    });
-
-    if (idsToDelete.length === 0) {
-        toast({ title: "Geen dubbelen", description: "Er zijn geen identieke openstaande werkbonnen gevonden." });
-        return;
-    }
-
-    setDuplicatesToDelete(idsToDelete);
-    setIsDuplicatesDialogOpen(true);
-  };
-
   const handleConfirmCleanDuplicates = async () => {
     if (!firestore || duplicatesToDelete.length === 0 || !isSuperAdmin) return;
     
@@ -1072,7 +1031,7 @@ export default function StartNavigationPage() {
                                     onClick={handleSelectAllInView}
                                     className="h-10 font-black uppercase text-[10px] rounded-none border-2 border-slate-200"
                                 >
-                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(id)) 
+                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(m.id)) 
                                         ? 'Deselecteer Alles' 
                                         : 'Selecteer Alles'}
                                 </Button>

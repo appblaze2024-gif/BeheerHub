@@ -41,7 +41,8 @@ import {
   Calendar as CalendarIcon,
   User as UserIcon,
   ShieldAlert,
-  Navigation
+  Navigation,
+  Package
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { 
@@ -982,9 +983,9 @@ export default function NewIssuePage() {
   const [isManageHoofdtypeOpen, setIsManageHoofdtypeOpen] = React.useState(false);
   const [isManageSubtypeOpen, setIsManageSubtypeOpen] = React.useState(false);
 
-  const isSuperUser = profile?.role === 'Super admin';
-  const canCreate = isSuperUser || !!profile?.permissions?.issues?.create;
-  const canEdit = isSuperUser || !!profile?.permissions?.issues?.edit;
+  const isSuperAdmin = profile?.role === 'Super admin';
+  const canCreate = isSuperAdmin || !!profile?.permissions?.issues?.create;
+  const canEdit = isSuperAdmin || !!profile?.permissions?.issues?.edit;
   
   // Permission guard for create vs edit
   const isAllowedToAccess = meldingId ? canEdit : canCreate;

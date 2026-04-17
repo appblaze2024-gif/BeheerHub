@@ -858,7 +858,7 @@ export default function ArchiveIssuesPage() {
                                         <SortIcon field="afgehandeld_door" />
                                     </div>
                                 </TableHead>
-                                <TableHead onClick={() => handleSort('afhandeling_bijzonderheden')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors">
+                                <TableHead onClick={() => handleSort('afhandeling_bijzonderheden')} className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 cursor-pointer hover:bg-slate-200 transition-colors">
                                     <div className="flex items-center justify-between gap-1">
                                         Opmerkingen
                                         <SortIcon field="afhandeling_bijzonderheden" />
