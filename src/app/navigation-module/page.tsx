@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -520,6 +519,7 @@ export default function StartNavigationPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [autoOpenEnabled, setAutoOpenEnabledState] = useState(true);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // User Folders & Impersonation state
   const [managedUserId, setManagedUserId] = useState<string | null>(null);
@@ -1072,7 +1072,7 @@ export default function StartNavigationPage() {
                                     onClick={handleSelectAllInView}
                                     className="h-10 font-black uppercase text-[10px] rounded-none border-2 border-slate-200"
                                 >
-                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(m.id)) 
+                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(id)) 
                                         ? 'Deselecteer Alles' 
                                         : 'Selecteer Alles'}
                                 </Button>

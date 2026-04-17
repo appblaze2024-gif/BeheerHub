@@ -39,7 +39,9 @@ import {
   History,
   AlertTriangle,
   Calendar as CalendarIcon,
-  User as UserIcon
+  User as UserIcon,
+  ShieldAlert,
+  Navigation
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { 
@@ -50,7 +52,8 @@ import {
   useMemoFirebase,
   updateDocumentNonBlocking,
   useCollection,
-  setDocumentNonBlocking
+  setDocumentNonBlocking,
+  useUser
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { useGlobalLoading } from '@/context/global-loading-context';
@@ -979,7 +982,12 @@ export default function NewIssuePage() {
   const [isManageHoofdtypeOpen, setIsManageHoofdtypeOpen] = React.useState(false);
   const [isManageSubtypeOpen, setIsManageSubtypeOpen] = React.useState(false);
 
-  const isSuperAdmin = profile?.role === 'Super admin';
+  const isSuperUser = profile?.role === 'Super admin';
+  const canCreate = isSuperUser || !!profile?.permissions?.issues?.create;
+  const canEdit = isSuperUser || !!profile?.permissions?.issues?.edit;
+  
+  // Permission guard for create vs edit
+  const isAllowedToAccess = meldingId ? canEdit : canCreate;
 
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
   const { data: dbOptions } = useDoc<any>(optionsRef);
@@ -1027,9 +1035,9 @@ export default function NewIssuePage() {
   });
 
   const isReadOnly = React.useMemo(() => {
-    if (!existingMelding) return false;
-    return ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld'].includes(existingMelding.status);
-  }, [existingMelding]);
+    if (!existingMelding) return !canCreate;
+    return ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld'].includes(existingMelding.status) || !canEdit;
+  }, [existingMelding, canCreate, canEdit]);
 
   const watchDate = form.watch('meldingsdatum');
   const idPrefix = React.useMemo(() => {
@@ -1493,9 +1501,26 @@ export default function NewIssuePage() {
     </div>
   );
 
+  if (!isAllowedToAccess) {
+    return (
+        <div className="flex h-screen flex-col items-center justify-center p-12 text-center bg-slate-50">
+            <div className="bg-white p-8 rounded-[2rem] shadow-2xl mb-8 animate-in zoom-in-95 duration-500 border-4 border-slate-100">
+                <ShieldAlert className="h-16 w-16 text-red-500" />
+            </div>
+            <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">Geen Toegang</h2>
+            <p className="text-sm text-slate-500 mt-2 font-medium max-w-xs leading-relaxed">
+                U heeft geen rechten om meldingen te {meldingId ? 'bewerken' : 'maken'}. Neem contact op met de beheerder.
+            </p>
+            <Button onClick={() => router.push('/')} className="mt-8 font-black uppercase tracking-widest h-12 px-10 rounded-xl shadow-xl shadow-primary/20">
+                <Navigation className="mr-2 h-4 w-4" /> Terug naar Home
+            </Button>
+        </div>
+    );
+  }
+
   return (
     <div className={cn("flex flex-col bg-slate-50", !isMobile ? "h-[calc(100vh-5rem)] overflow-hidden" : "min-h-screen")}>
-        <header className="h-14 bg-white/80 backdrop-blur-lg border-b flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm z-10 sticky top-0">
+        <header className="h-14 lg:h-16 bg-white/80 backdrop-blur-lg border-b flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-2">
                 {!isReadOnly && (
                     <>
