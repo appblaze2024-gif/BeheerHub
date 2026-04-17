@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1073,7 +1072,7 @@ export default function StartNavigationPage() {
                                     onClick={handleSelectAllInView}
                                     className="h-10 font-black uppercase text-[10px] rounded-none border-2 border-slate-200"
                                 >
-                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(id)) 
+                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(m.id)) 
                                         ? 'Deselecteer Alles' 
                                         : 'Selecteer Alles'}
                                 </Button>

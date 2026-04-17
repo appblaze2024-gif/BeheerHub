@@ -31,7 +31,59 @@ service cloud.firestore {
 
     // --- RULES ---
 
-    // Route assignments - Expliciet toegang toestaan voor alle ingelogde gebruikers voor reads
+    // API Integraties
+    match /api_integrations/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    // Jaarplanning
+    match /annual_planning/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+    match /annual_planning_sections/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+    match /annual_milestones/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+    match /annual_planning_configs/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    // Aannemers & Notulen
+    match /contractors/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+      
+      match /minutes/{minuteId} {
+        allow read, list: if isSignedIn();
+        allow write: if isPrivileged();
+      }
+      match /settings/{settingId} {
+        allow read, list: if isSignedIn();
+        allow write: if isPrivileged();
+      }
+    }
+
+    // IoT Sensoren
+    match /sensors/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    // Gedeelde kaarten
+    match /shared_maps/{mapId} {
+      allow read, get, list: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource.data.creatorId == request.auth.uid || isAdmin());
+    }
+
+    // Route assignments
     match /route_assignments/{assignmentId} {
       allow read, get, list: if isSignedIn();
       allow write: if isPrivileged();
@@ -57,10 +109,14 @@ service cloud.firestore {
         allow read, list, get, write: if isSignedIn() && (request.auth.uid == userId || isPrivileged());
       }
 
-      match /messages/{messageId} {
-        allow read, list: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == resource.data.fromUserId);
-        allow create: if isSignedIn() && request.resource.data.fromUserId == request.auth.uid;
-        allow update, delete: if isSignedIn() && request.auth.uid == userId;
+      match /gisFolders/{folderId} {
+        allow read, get, list: if true; 
+        allow write: if isOwner(userId) || isAdmin();
+      }
+
+      match /gisLayers/{layerId} {
+        allow read, get, list: if true; 
+        allow write: if isOwner(userId) || isAdmin();
       }
 
       match /messages/{messageId} {
@@ -77,11 +133,11 @@ service cloud.firestore {
 
     // Projecten
     match /projects/{projectId} {
-      allow read, list: if isSignedIn();
+      allow read, get, list: if isSignedIn();
       allow write: if isPrivileged();
 
       match /{allSubcollections=**} {
-        allow read, list: if isSignedIn();
+        allow read, get, list: if isSignedIn();
         allow write: if isPrivileged();
       }
     }
@@ -89,7 +145,8 @@ service cloud.firestore {
     // Meldingen
     match /meldingen/{meldingId} {
       allow read, list: if isSignedIn();
-      allow create, update: if isSignedIn();
+      allow create: if isSignedIn(); // Permission checked in UI
+      allow update: if isSignedIn(); // Permission checked in UI
       allow delete: if isPrivileged();
     }
 
