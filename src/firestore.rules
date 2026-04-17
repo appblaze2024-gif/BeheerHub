@@ -31,6 +31,51 @@ service cloud.firestore {
 
     // --- RULES ---
 
+    // API Integraties
+    match /api_integrations/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    // Jaarplanning
+    match /annual_planning/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+    match /annual_planning_sections/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+    match /annual_milestones/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+    match /annual_planning_configs/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    // Aannemers & Notulen
+    match /contractors/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+      
+      match /minutes/{minuteId} {
+        allow read, list: if isSignedIn();
+        allow write: if isPrivileged();
+      }
+      match /settings/{settingId} {
+        allow read, list: if isSignedIn();
+        allow write: if isPrivileged();
+      }
+    }
+
+    // IoT Sensoren
+    match /sensors/{id} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
     // Gedeelde kaarten - Publiek toegankelijk voor reads en eigenaarbeheer
     match /shared_maps/{mapId} {
       allow read, get, list: if true;
@@ -123,6 +168,12 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read, list: if isSignedIn();
       allow write: if isAdmin();
+    }
+
+    // Route assignments
+    match /route_assignments/{assignmentId} {
+      allow read, get, list: if isSignedIn();
+      allow write: if isPrivileged();
     }
 
     // Fallback voor admins

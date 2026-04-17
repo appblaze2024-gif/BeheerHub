@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -519,6 +520,7 @@ export default function StartNavigationPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [autoOpenEnabled, setAutoOpenEnabledState] = useState(true);
+  
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // User Folders & Impersonation state
@@ -859,6 +861,46 @@ export default function StartNavigationPage() {
         }
         return next;
     });
+  };
+
+  const handleIdentifyDuplicates = () => {
+    if (!rawActiveMeldingen) return;
+
+    const groups: Record<string, Melding[]> = {};
+    
+    rawActiveMeldingen.forEach(m => {
+        const key = [
+            m.intakenummer,
+            m.straatnaam,
+            m.huisnummer,
+            m.postcode,
+            m.containernummer
+        ].map(v => (v || '').toLowerCase().trim()).join('|');
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(m);
+    });
+
+    const idsToDelete: string[] = [];
+    Object.values(groups).forEach(group => {
+        if (group.length > 1) {
+            group.sort((a, b) => {
+                const timeA = a.createdAt?.seconds || 0;
+                const timeB = b.createdAt?.seconds || 0;
+                return timeA - timeB;
+            });
+            const extras = group.slice(1).map(m => m.id);
+            idsToDelete.push(...extras);
+        }
+    });
+
+    if (idsToDelete.length === 0) {
+        toast({ title: "Geen dubbelen", description: "Er zijn geen identieke openstaande werkbonnen gevonden." });
+        return;
+    }
+
+    setDuplicatesToDelete(idsToDelete);
+    setIsDuplicatesDialogOpen(true);
   };
 
   const handleConfirmCleanDuplicates = async () => {
