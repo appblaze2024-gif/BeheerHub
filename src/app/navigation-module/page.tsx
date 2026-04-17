@@ -1073,7 +1073,7 @@ export default function StartNavigationPage() {
                                     onClick={handleSelectAllInView}
                                     className="h-10 font-black uppercase text-[10px] rounded-none border-2 border-slate-200"
                                 >
-                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(m.id)) 
+                                    {paginatedMissions.length > 0 && paginatedMissions.every(m => selectedMissionIds.has(id)) 
                                         ? 'Deselecteer Alles' 
                                         : 'Selecteer Alles'}
                                 </Button>
@@ -1241,6 +1241,13 @@ export default function StartNavigationPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        {previewImage && (
+            <div className="fixed inset-0 z-[300] bg-black/95 flex flex-col animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
+                <div className="flex justify-end p-6 shrink-0"><Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-none h-12 w-12 border-2 border-white/20"><X className="h-8 w-8" /></Button></div>
+                <div className="flex-1 relative flex items-center justify-center overflow-hidden"><img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain" onClick={(e) => { e.stopPropagation(); }} /></div>
+            </div>
+        )}
     </div>
   );
 }
