@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, doc, writeBatch, limit } from 'firebase/firestore';
 import { 
   Search, 
@@ -506,7 +506,7 @@ export default function ArchiveIssuesPage() {
             </Button>
             <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">Meldingen Archief</h1>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:auto">
             <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
