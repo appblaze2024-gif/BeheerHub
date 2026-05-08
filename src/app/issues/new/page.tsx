@@ -983,9 +983,9 @@ export default function NewIssuePage() {
   const [isManageHoofdtypeOpen, setIsManageHoofdtypeOpen] = React.useState(false);
   const [isManageSubtypeOpen, setIsManageSubtypeOpen] = React.useState(false);
 
+  const canCreate = !!profile?.permissions?.issues?.create;
+  const canEdit = !!profile?.permissions?.issues?.edit;
   const isSuperAdmin = profile?.role === 'Super admin';
-  const canCreate = isSuperAdmin || !!profile?.permissions?.issues?.create;
-  const canEdit = isSuperAdmin || !!profile?.permissions?.issues?.edit;
   
   // Permission guard for create vs edit
   const isAllowedToAccess = meldingId ? canEdit : canCreate;

@@ -58,14 +58,20 @@ export function AcceptAssignDialog({ open, onOpenChange, meldingen = [], onSucce
   const filteredUsers = React.useMemo(() => {
     if (!users) return [];
     const q = searchTerm.toLowerCase();
+    
+    // Show current user in the list (often at the top)
     return users
-      .filter(u => u.id !== user?.uid)
       .filter(u => 
         (u.displayName || '').toLowerCase().includes(q) || 
         (u.email || '').toLowerCase().includes(q) ||
         (u.role || '').toLowerCase().includes(q)
       )
-      .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+      .sort((a, b) => {
+          // Sort current user to the top
+          if (a.id === user?.uid) return -1;
+          if (b.id === user?.uid) return 1;
+          return (a.displayName || '').localeCompare(b.displayName || '');
+      });
   }, [users, searchTerm, user?.uid]);
 
   const handleConfirm = async () => {
@@ -179,6 +185,7 @@ export function AcceptAssignDialog({ open, onOpenChange, meldingen = [], onSucce
                     <div className="min-w-0">
                       <p className="text-sm font-black uppercase tracking-tight text-slate-900 truncate">
                         {u.displayName || u.email}
+                        {u.id === user?.uid && <span className="ml-1.5 text-primary text-[10px] font-black tracking-widest">(IK)</span>}
                       </p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">
                         {u.role}
