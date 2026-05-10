@@ -15,7 +15,7 @@ import {
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc, query, where, limit, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, doc, query, where, limit, writeBatch, getDocs, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -110,13 +110,15 @@ import {
   Plus,
   Copy,
   AlertTriangle,
-  Library
+  Library,
+  File as FileIcon
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Object as MapObject, Melding, UploadedFile, MeldingTask, Hoeveelheid, Project as ProjectType, UserFolder, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
+// @ts-expect-error
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
@@ -298,6 +300,12 @@ function IntegratedWerkbonOverlay({
                                 <div className="flex items-center gap-2 text-[11px] font-bold text-slate-700">
                                     <Package className="h-4 w-4 text-slate-900" />
                                     <span className="uppercase tracking-tight font-black text-primary">Nr: {melding.containernummer}</span>
+                                </div>
+                            )}
+                            {melding.fractie && (
+                                <div className="flex items-center gap-2 text-[11px] font-bold text-slate-700">
+                                    <Tag className="h-4 w-4 text-slate-900" />
+                                    <span className="uppercase tracking-tight font-black">{melding.fractie}</span>
                                 </div>
                             )}
                         </div>
@@ -926,6 +934,26 @@ export default function StartNavigationPage() {
     }
   };
 
+  const handleDeleteWorkOrder = async (id: string) => {
+    if (!firestore || !isSuperAdmin) return;
+    if (!window.confirm('Weet u zeker dat u deze werkbon wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+    
+    try {
+      await deleteDoc(doc(firestore, 'meldingen', id));
+      toast({ title: 'Werkbon verwijderd' });
+      // Remove it from current selection if selected
+      if (selectedMissionIds.has(id)) {
+          setSelectedMissionIds(prev => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+          });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: 'Fout bij verwijderen' });
+    }
+  };
+
   const isCustomHtml = (str: string) => {
     if (!str) return false;
     const s = str.trim().toLowerCase();
@@ -1122,14 +1150,14 @@ export default function StartNavigationPage() {
                                                         <h3 className={cn("font-black text-sm uppercase tracking-tight truncate", isCompleted ? "text-green-800" : "text-slate-900")}>{m.intakenummer}</h3>
                                                         {m.status === 'Nieuw' && <Badge className="text-[8px] font-black uppercase bg-red-600 text-white h-4 px-1 rounded-none shadow-sm shrink-0">NEW</Badge>}
                                                     </div>
-                                                    <p className={cn("text-[11px] font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-400")}>{m.straatnaam} {m.huisnummer}, {m.plaats}</p>
+                                                    <p className={cn("text-[11px] font-bold truncate leading-tight uppercase", isCompleted ? "text-green-700/60" : "text-slate-400")}>{m.straatnaam} {m.huisnummer}, {m.plaats}{m.fractie ? ` | ${m.fractie}` : ''}</p>
                                                 </div>
                                                 <div className="flex gap-1 shrink-0 items-center">
                                                     {!isCompleted && <Button variant="outline" size="icon" className="h-9 w-9 rounded-none border border-slate-200 bg-blue-50 text-primary hover:bg-blue-100" onClick={(e) => { e.stopPropagation(); openInGoogleMaps(m.latitude, m.longitude); }}><Navigation className="h-5 w-5" /></Button>}
                                                     {isPrivileged && (
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-slate-300 hover:text-slate-600" onClick={e => e.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end" className="w-56 rounded-none border-none shadow-2xl p-2"><DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-1">Verplaatsen naar...</DropdownMenuLabel><DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, null); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Inbox className="mr-2 h-4 w-4" /> Inbox (Vrij)</DropdownMenuItem>{userFolders?.map(f => (<DropdownMenuItem key={f.id} onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, f.id); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Folder className="mr-2 h-4 w-4" /> {f.name}</DropdownMenuItem>))}</DropdownMenuContent>
+                                                            <DropdownMenuContent align="end" className="w-56 rounded-none border-none shadow-2xl p-2"><DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-1">Verplaatsen naar...</DropdownMenuLabel><DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, null); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Inbox className="mr-2 h-4 w-4" /> Inbox (Vrij)</DropdownMenuItem>{userFolders?.map(f => (<DropdownMenuItem key={f.id} onClick={(e) => { e.stopPropagation(); handleMoveToFolder(m.id, f.id); }} className="font-bold text-xs h-9 rounded-none cursor-pointer"><Icons.Folder className="mr-2 h-4 w-4" /> {f.name}</DropdownMenuItem>))}{isSuperAdmin && (<><DropdownMenuSeparator /><DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteWorkOrder(m.id); }} className="font-bold text-xs h-9 rounded-none cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"><Trash2 className="mr-2 h-4 w-4" /> Werkbon verwijderen</DropdownMenuItem></>)}</DropdownMenuContent>
                                                         </DropdownMenu>
                                                     )}
                                                 </div>

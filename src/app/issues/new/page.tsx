@@ -119,6 +119,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+// @ts-expect-error
 import * as turf from '@turf/turf';
 
 // Custom components
@@ -168,6 +169,7 @@ const newMeldingSchema = z.object({
   email_melder: z.string().optional().or(z.literal('')).nullable(),
   burgerservicenummer: z.string().optional().nullable(),
   extra_informatie: z.string().optional().nullable(),
+  fractie: z.string().optional().nullable(),
 });
 
 type NewMeldingFormValues = z.infer<typeof newMeldingSchema>;
@@ -1032,6 +1034,7 @@ export default function NewIssuePage() {
       huisnummer: '',
       postcode: '',
       plaats: '', 
+      fractie: '',
     },
   });
 
@@ -1268,6 +1271,7 @@ export default function NewIssuePage() {
     skipGeocodeRef.current = true;
 
     form.setValue('containernummer', obj.idNummer || obj.id);
+    form.setValue('fractie', obj.locatieSubType || '');
     
     let rawStreet = obj.straatnaam || '';
     let houseNumber = obj.huisnummer || '';
@@ -1364,7 +1368,7 @@ export default function NewIssuePage() {
                         integration.endpoint,
                         'POST',
                         integration.headers.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
-                        { ...mData, id: newDoc.id }
+                        { ...mData, id: (newDoc as any)?.id }
                     ).catch(e => console.error("Push integration failed:", e));
                 });
             }
@@ -1652,7 +1656,7 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
                                     <FormControl><SelectTrigger className="h-11 font-bold rounded-none"><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent className="rounded-none">{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{statuses.map((opt: string) => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1678,17 +1682,24 @@ export default function NewIssuePage() {
                                 </FormItem>
                               )} />
                             </FormRow>
-                            <FormRow label={<>Melder<span className="text-red-500">*</span></>}>
-                              <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
+                            <FormRow label="Fractie">
+                              <FormField control={form.control} name="fractie" render={({ field }) => (
                                 <FormItem>
-                                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
-                                    <SelectContent className="rounded-none">{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                                  </Select>
+                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold rounded-none" autoComplete="off" /></FormControl>
                                 </FormItem>
                               )} />
                             </FormRow>
                           </div>
+                          <FormRow label={<>Melder<span className="text-red-500">*</span></>}>
+                            <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
+                              <FormItem>
+                                <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
+                                  <FormControl><SelectTrigger className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                  <SelectContent className="rounded-none">{soortenMelder.map((opt: string) => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                </Select>
+                              </FormItem>
+                            )} />
+                          </FormRow>
                         </AccordionContent>
                       </AccordionItem>
 
@@ -1734,7 +1745,7 @@ export default function NewIssuePage() {
                                     <FormControl>
                                       <SelectTrigger className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent className="rounded-none">{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{hoofdcategorieen.map((o: string) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1746,7 +1757,7 @@ export default function NewIssuePage() {
                                     <FormControl>
                                       <SelectTrigger className={cn("h-11 font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent className="rounded-none">{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{subcategorieen.map((o: string) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1846,7 +1857,7 @@ export default function NewIssuePage() {
                                 <FormItem>
                                   <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
                                     <FormControl><SelectTrigger className="h-8 text-xs font-bold rounded-none"><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent className="rounded-none">{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{statuses.map((opt: string) => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1872,17 +1883,24 @@ export default function NewIssuePage() {
                                 </FormItem>
                               )} />
                             </FormRow>
-                            <FormRow label={<>Soort Melder<span className="text-red-500">*</span></>}>
-                              <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
+                            <FormRow label="Fractie">
+                              <FormField control={form.control} name="fractie" render={({ field }) => (
                                 <FormItem>
-                                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                                    <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
-                                    <SelectContent className="rounded-none">{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                                  </Select>
+                                  <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold rounded-none" autoComplete="off" /></FormControl>
                                 </FormItem>
                               )} />
                             </FormRow>
                           </div>
+                          <FormRow label={<>Soort Melder<span className="text-red-500">*</span></>}>
+                            <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
+                              <FormItem>
+                                <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
+                                  <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                  <SelectContent className="rounded-none">{soortenMelder.map((opt: string) => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                </Select>
+                              </FormItem>
+                            )} />
+                          </FormRow>
                         </CardContent>
                       </Card>
 
@@ -1951,7 +1969,7 @@ export default function NewIssuePage() {
                                     <FormControl>
                                       <SelectTrigger className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent className="rounded-none">{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{hoofdcategorieen.map((o: string) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />
@@ -1963,7 +1981,7 @@ export default function NewIssuePage() {
                                     <FormControl>
                                       <SelectTrigger className={cn("h-8 text-xs font-bold rounded-none", fieldState.error && "border-2 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger>
                                     </FormControl>
-                                    <SelectContent className="rounded-none">{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                    <SelectContent className="rounded-none">{subcategorieen.map((o: string) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </FormItem>
                               )} />

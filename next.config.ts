@@ -2,6 +2,8 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  devIndicators: false,
+  serverExternalPackages: ['@genkit-ai/google-genai', 'google-auth-library', 'genkit'],
   typescript: {
     ignoreBuildErrors: true,
   },

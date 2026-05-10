@@ -283,6 +283,10 @@ export interface Object {
   waarschuwing?: string;
   vulgraad?: number;
   locatieWerkgebieden?: string[];
+  fractie?: string;
+  postcode?: string;
+  plaats?: string;
+  wijk?: string;
 }
 
 export type MeldingTask = {
@@ -322,8 +326,10 @@ export type Melding = {
   datum: string; // Creation date yyyy-MM-dd
   tijdstip: string;
   melder: string;
+  soort_melder?: string;
   aangenomen_door?: string;
   afgehandeld_door?: string;
+  behandelaar?: string;
   afhandeling_datum?: string; // Completion date yyyy-MM-dd
   afhandeling_tijdstip?: string;
   straatnaam?: string;
@@ -340,6 +346,9 @@ export type Melding = {
   gewerkteMinuten?: number;
   workStartedAt?: string;
   afhandeling_bijzonderheden?: string;
+  fractie?: string;
+  createdAt?: any;
+  voorvaldatum?: string;
 };
 
 export interface Route {

@@ -2,12 +2,13 @@
 
 import * as React from 'react';
 import { useCollection, useFirestore, useFirebaseApp, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
-import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff, Check, AlertCircle, Sparkles } from 'lucide-react';
+import { collection, doc, query, where, deleteDoc } from 'firebase/firestore';
+import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff, Check, AlertCircle, Sparkles, MoreVertical } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+// @ts-expect-error - no definitions for this turf dist
 import * as turf from '@turf/turf';
 import type { Melding, UploadedFile, MeldingTask, Hoeveelheid, Object as MapObject, Project } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const meldingFormSchema = z.object({
   hoofdcategorie: z.string().min(1, 'Hoofdcategorie is verplicht'),
@@ -322,6 +329,23 @@ export default function IssuesPage() {
     }
   };
 
+  const handleDeleteWorkOrder = async () => {
+    if (!firestore || !selectedMelding?.id) return;
+    if (!confirm('Weet u zeker dat u deze werkbon wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+    
+    setIsSubmitting(true);
+    try {
+      await deleteDoc(doc(firestore, 'meldingen', selectedMelding.id));
+      toast({ title: 'Werkbon verwijderd' });
+      setSelectedMeldingId(null);
+      router.push('/navigation-module?type=meldingen');
+    } catch (error) {
+      toast({ variant: "destructive", title: 'Fout bij verwijderen' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleFileUpload = React.useCallback(async (files: FileList | File[], type: 'documents' | 'afhandeling_fotos') => {
     if (!files || !selectedMeldingId || !app) return;
     const storage = getStorage(app);
@@ -357,6 +381,21 @@ export default function IssuesPage() {
             </div>
             {selectedMelding && (
               <div className="flex items-center gap-2 lg:gap-3">
+                  {profile?.role === 'Super admin' && (
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-11 lg:w-11 rounded-lg lg:rounded-xl">
+                                  <MoreVertical className="h-4 w-4 lg:h-5 lg:w-5 text-slate-500" />
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                              <DropdownMenuItem className="text-red-600 font-bold focus:text-red-600 cursor-pointer p-3" onClick={handleDeleteWorkOrder}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Werkbon verwijderen
+                              </DropdownMenuItem>
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                  )}
                   {selectedMelding.workStartedAt ? (
                     <Button className="bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-tight h-9 lg:h-11 px-4 lg:px-8 rounded-lg lg:rounded-xl shadow-lg shadow-orange-600/20 text-xs lg:text-sm" onClick={handleAfronden} disabled={isSubmitting}>
                         {isSubmitting ? <Loader2 className="mr-2 h-3 w-3 lg:h-4 lg:w-4 animate-spin" /> : <Check className="mr-2 h-3 w-3 lg:h-4 lg:w-4" />}
@@ -423,6 +462,12 @@ export default function IssuesPage() {
                                             <div className="space-y-0.5">
                                                 <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Containernummer</p>
                                                 <p className="text-[10px] lg:text-xs font-bold text-slate-900">{selectedMelding.containernummer}</p>
+                                            </div>
+                                        )}
+                                        {selectedMelding.fractie && (
+                                            <div className="space-y-0.5">
+                                                <p className="text-[7px] lg:text-[8px] font-black uppercase text-slate-400 tracking-widest">Fractie</p>
+                                                <p className="text-[10px] lg:text-xs font-bold text-slate-900">{selectedMelding.fractie}</p>
                                             </div>
                                         )}
                                     </div>
