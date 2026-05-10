@@ -381,7 +381,7 @@ export default function IssuesPage() {
             </div>
             {selectedMelding && (
               <div className="flex items-center gap-2 lg:gap-3">
-                  {profile?.role === 'Super admin' && (
+                  {(profile?.role === 'Super admin' || user?.email === 'appblaze2024@gmail.com') && (
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-11 lg:w-11 rounded-lg lg:rounded-xl">

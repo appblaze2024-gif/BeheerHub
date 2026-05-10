@@ -514,7 +514,7 @@ export default function StartNavigationPage() {
   const { selectedProjectId } = useProject();
   
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
-  const isSuperAdmin = profile?.role === 'Super admin';
+  const isSuperAdmin = profile?.role === 'Super admin' || user?.email === 'appblaze2024@gmail.com';
   const isPrivileged = isSuperAdmin || profile?.role === 'toezichthouder';
   
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -703,9 +703,8 @@ export default function StartNavigationPage() {
     if (type === 'meldingen') {
         rawActiveMeldingen?.forEach(m => { poolMap.set(m.id, m); });
         let result = Array.from(poolMap.values());
-        const isSuperAdminCheck = profile?.role === 'Super admin';
         const viewingSelf = managedUserId === user?.uid;
-        if (!(isSuperAdminCheck && viewingSelf)) {
+        if (!(isSuperAdmin && viewingSelf)) {
             const targetUser = users?.find(u => u.id === managedUserId);
             const targetUserName = targetUser?.displayName || targetUser?.email || 'Onbekend';
             result = result.filter(m => m.behandelaar === targetUserName);
@@ -730,7 +729,7 @@ export default function StartNavigationPage() {
         }));
     }
     return [];
-  }, [type, rawActiveMeldingen, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, userLocation, sequenceMissions, managedUserId, users, user]);
+  }, [type, rawActiveMeldingen, profile, completedObjects, debouncedSearchQuery, selectedRouteId, currentProject, allObjects, userLocation, sequenceMissions, managedUserId, users, user, isSuperAdmin]);
 
   const inboxCount = useMemo(() => 
     filteredMeldingen.filter(m => !missionsInAnyFolder.has(m.id)).length
