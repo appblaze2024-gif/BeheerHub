@@ -169,6 +169,8 @@ export default function GISDataPage() {
   const [drawingColor, setDrawingColor] = useState('#3b82f6');
   const [drawingLineWidth, setDrawingLineWidth] = useState(3);
   const [drawingLineStyle, setDrawingLineStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
+  const [drawingLineOpacity, setDrawingLineOpacity] = useState(1);
+  
 
   const [activeMapStyle, setActiveMapStyle] = useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
 
@@ -221,46 +223,49 @@ export default function GISDataPage() {
 
     const updateDrawStyles = () => {
       const lineLayers = [
-        'gl-draw-line-active.cold',
-        'gl-draw-line-active.hot',
-        'gl-draw-line-inactive.cold',
-        'gl-draw-line-inactive.hot',
-        'gl-draw-polygon-stroke-active.cold',
-        'gl-draw-polygon-stroke-active.hot',
-        'gl-draw-polygon-stroke-inactive.cold',
-        'gl-draw-polygon-stroke-inactive.hot'
+        'gl-draw-lines.cold',
+        'gl-draw-lines.hot'
       ];
 
       const fillLayers = [
-        'gl-draw-polygon-fill-active.cold',
-        'gl-draw-polygon-fill-active.hot',
-        'gl-draw-polygon-fill-inactive.cold',
-        'gl-draw-polygon-fill-inactive.hot'
+        'gl-draw-polygon-fill.cold',
+        'gl-draw-polygon-fill.hot'
       ];
 
       const pointLayers = [
-        'gl-draw-point-active.cold',
-        'gl-draw-point-active.hot',
-        'gl-draw-point-inactive.cold',
-        'gl-draw-point-inactive.hot'
+        'gl-draw-point-outer.cold',
+        'gl-draw-point-outer.hot',
+        'gl-draw-point-inner.cold',
+        'gl-draw-point-inner.hot'
       ];
 
       lineLayers.forEach(layerId => {
         if (map.getLayer(layerId)) {
           map.setPaintProperty(layerId, 'line-color', drawingColor);
           map.setPaintProperty(layerId, 'line-width', drawingLineWidth);
+          map.setPaintProperty(layerId, 'line-opacity', drawingLineOpacity);
+          
+          if (drawingLineStyle === 'dashed') {
+            map.setPaintProperty(layerId, 'line-dasharray', [4, 4]);
+          } else if (drawingLineStyle === 'dotted') {
+            map.setPaintProperty(layerId, 'line-dasharray', [1, 2]);
+          } else {
+            map.setPaintProperty(layerId, 'line-dasharray', [1000, 0]);
+          }
         }
       });
 
       fillLayers.forEach(layerId => {
         if (map.getLayer(layerId)) {
           map.setPaintProperty(layerId, 'fill-color', drawingColor);
+          map.setPaintProperty(layerId, 'fill-opacity', drawingLineOpacity);
         }
       });
 
       pointLayers.forEach(layerId => {
         if (map.getLayer(layerId)) {
           map.setPaintProperty(layerId, 'circle-color', drawingColor);
+          map.setPaintProperty(layerId, 'circle-opacity', drawingLineOpacity);
         }
       });
     };
@@ -270,7 +275,13 @@ export default function GISDataPage() {
     } else {
       map.once('style.load', updateDrawStyles);
     }
-  }, [drawingColor, drawingLineWidth, isDrawingMode]);
+
+    map.on('draw.render', updateDrawStyles);
+    
+    return () => {
+      map.off('draw.render', updateDrawStyles);
+    };
+  }, [drawingColor, drawingLineWidth, isDrawingMode, drawingLineStyle, drawingLineOpacity]);
 
   // Real-time styling update for existing layer being edited
   useEffect(() => {
@@ -846,7 +857,7 @@ export default function GISDataPage() {
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
-                  <Folder className="h-4 w-4 text-primary shrink-0" />
+                  <Folder className={cn("h-4 w-4 shrink-0", level > 0 ? "text-amber-500" : "text-primary")} />
                   <span className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate">{folder.name}</span>
                 </div>
                 <div className="flex items-center opacity-0 group-hover:opacity-100" onClick={e => e.stopPropagation()}>
@@ -1022,6 +1033,10 @@ export default function GISDataPage() {
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black uppercase text-slate-400">Dikte ({drawingLineWidth}px)</Label>
                       <Slider value={[drawingLineWidth]} onValueChange={([v]) => setDrawingLineWidth(v)} min={1} max={10} step={1} className="py-2" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black uppercase text-slate-400">Transparantie ({Math.round((1 - drawingLineOpacity) * 100)}%)</Label>
+                      <Slider value={[drawingLineOpacity]} onValueChange={([v]) => setDrawingLineOpacity(v)} min={0.1} max={1} step={0.1} className="py-2" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black uppercase text-slate-400">Lijnstructuur</Label>
