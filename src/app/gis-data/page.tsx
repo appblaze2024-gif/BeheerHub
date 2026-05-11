@@ -205,7 +205,11 @@ export default function GISDataPage() {
     try {
       const response = await fetch(`/api/wijk/suggest?q=${encodeURIComponent(query)}`);
       const data = await response.json();
-      setWijkSuggestions(data.response.docs);
+      if (data && data.response && data.response.docs) {
+        setWijkSuggestions(data.response.docs);
+      } else {
+        setWijkSuggestions([]);
+      }
     } catch (error) {
       console.error('Error fetching wijk suggestions:', error);
     } finally {
@@ -220,14 +224,14 @@ export default function GISDataPage() {
       const code = id.split('-')[1];
       const response = await fetch(`/api/wijk/geom?code=${code}`);
       const data = await response.json();
-      if (data.features && data.features.length > 0) {
+      if (data && data.features && data.features.length > 0) {
         setSelectedWijkGeom(data.features[0]);
         const bounds = turf.bbox(data.features[0]);
         mapRef.current?.fitBounds([bounds[0], bounds[1], bounds[2], bounds[3]], { padding: 50 });
       } else {
         toast({
           title: "Fout",
-          description: "Geen geometrie gevonden voor deze wijk.",
+          description: data && data.error ? data.error : "Geen geometrie gevonden voor deze wijk.",
           variant: "destructive",
         });
       }
