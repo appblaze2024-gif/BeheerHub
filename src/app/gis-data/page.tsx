@@ -153,6 +153,9 @@ export default function GISDataPage() {
   const drawRef = useRef<MapboxDraw | null>(null);
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [wijkSuggestions, setWijkSuggestions] = useState<any[]>([]);
+  const [selectedWijkGeom, setSelectedWijkGeom] = useState<any>(null);
+  const [isSearchingWijk, setIsSearchingWijk] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -190,6 +193,51 @@ export default function GISDataPage() {
   const [shareLayerIds, setShareLayerIds] = useState<string[]>([]);
   const [shareUrl, setShareUrl] = useState('');
   const [isShareSuccessOpen, setIsShareSuccessOpen] = useState(false);
+
+  const fetchWijkSuggestions = async (query: string) => {
+    if (!query.trim()) {
+      setWijkSuggestions([]);
+      return;
+    }
+    setIsSearchingWijk(true);
+    try {
+      const response = await fetch(`https://api.pdok.nl/bzk/locatieserver/v3_1/suggest?q=${encodeURIComponent(query)}&fq=type:wijk`);
+      const data = await response.json();
+      setWijkSuggestions(data.response.docs);
+    } catch (error) {
+      console.error('Error fetching wijk suggestions:', error);
+    } finally {
+      setIsSearchingWijk(false);
+    }
+  };
+
+  const selectWijk = async (id: string) => {
+    setWijkSuggestions([]);
+    setSearchQuery('');
+    try {
+      const code = id.split('-')[1];
+      const response = await fetch(`https://api.pdok.nl/cbs/wijken-en-buurten-2024/ogc/v1/collections/Wijken/items?filter=wijkcode='${code}'`);
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        setSelectedWijkGeom(data.features[0]);
+        const bounds = turf.bbox(data.features[0]);
+        mapRef.current?.fitBounds([bounds[0], bounds[1], bounds[2], bounds[3]], { padding: 50 });
+      } else {
+        toast({
+          title: "Fout",
+          description: "Geen geometrie gevonden voor deze wijk.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching wijk geometry:', error);
+      toast({
+        title: "Fout",
+        description: "Er is een fout opgetreden bij het ophalen van de wijk.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const foldersQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -1141,22 +1189,54 @@ export default function GISDataPage() {
               </Source>
             );
           })}
+
+          {selectedWijkGeom && (
+            <Source id="selected-wijk" type="geojson" data={selectedWijkGeom}>
+              <Layer
+                id="selected-wijk-fill"
+                type="fill"
+                paint={{ 'fill-color': '#3b82f6', 'fill-opacity': 0.2 }}
+              />
+              <Layer
+                id="selected-wijk-line"
+                type="line"
+                paint={{ 'line-color': '#3b82f6', 'line-width': 2 }}
+              />
+            </Source>
+          )}
         </MapGL>
 
         <div className="absolute top-4 left-4 z-10 flex flex-col gap-3">
-          <div className="flex items-center bg-white shadow-2xl border border-slate-200 h-10 w-72 group focus-within:border-primary transition-all rounded-none">
+          <div className="flex items-center bg-white shadow-2xl border border-slate-200 h-10 w-72 group focus-within:border-primary transition-all rounded-none relative">
             <div className="px-3 border-r border-slate-100 h-full flex items-center">
               <ChevronDown className="h-3 w-3 text-slate-400" />
             </div>
             <Input 
-              placeholder="Adres of plaats zoeken" 
+              placeholder="Wijk zoeken..." 
               className="border-none bg-transparent h-full text-xs font-bold rounded-none shadow-none focus-visible:ring-0 placeholder:text-slate-400 uppercase tracking-tight"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                fetchWijkSuggestions(e.target.value);
+              }}
             />
             <button className="px-3 hover:text-primary transition-colors h-full border-l border-slate-50">
               <Search className="h-4 w-4 text-slate-400 group-focus-within:text-primary" />
             </button>
+
+            {wijkSuggestions.length > 0 && (
+              <div className="absolute top-10 left-0 z-20 bg-white shadow-2xl border border-slate-200 w-72 max-h-60 overflow-y-auto">
+                {wijkSuggestions.map(sug => (
+                  <div 
+                    key={sug.id} 
+                    className="px-3 py-2 hover:bg-slate-50 cursor-pointer text-xs font-bold border-b border-slate-100 text-slate-700"
+                    onClick={() => selectWijk(sug.id)}
+                  >
+                    {sug.weergavenaam}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col bg-white shadow-2xl border border-slate-200 w-10">
