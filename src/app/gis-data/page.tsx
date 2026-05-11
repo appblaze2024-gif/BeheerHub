@@ -84,8 +84,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/components/ui/use-toast';
 import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, writeBatch, query, where } from 'firebase/firestore';
+// @ts-ignore
 import * as shapefile from 'shapefile';
 import * as XLSX from 'xlsx';
+// @ts-ignore
 import * as turf from '@turf/turf';
 import {
   DropdownMenu,
@@ -459,7 +461,7 @@ export default function GISDataPage() {
 
   const startDrawMode = (mode: 'draw_point' | 'draw_line_string' | 'draw_polygon') => {
     if (!drawRef.current) return;
-    drawRef.current.changeMode(mode);
+    drawRef.current.changeMode(mode as any);
     setActiveDrawMode(mode);
   };
 
@@ -847,10 +849,12 @@ export default function GISDataPage() {
             setIsShareWizardOpen(false);
         } else {
             const docRef = await addDocumentNonBlocking(collection(firestore, 'shared_maps'), shareDoc);
-            const url = `${window.location.origin}/gis-data/shared/${docRef.id}`;
-            setShareUrl(url);
-            setIsShareWizardOpen(false);
-            setIsShareSuccessOpen(true);
+            if (docRef) {
+                const url = `${window.location.origin}/gis-data/shared/${(docRef as any).id}`;
+                setShareUrl(url);
+                setIsShareWizardOpen(false);
+                setIsShareSuccessOpen(true);
+            }
         }
     } catch (err) {
         console.error("Share error:", err);
