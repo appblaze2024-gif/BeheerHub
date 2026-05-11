@@ -203,7 +203,7 @@ export default function GISDataPage() {
     }
     setIsSearchingWijk(true);
     try {
-      const response = await fetch(`https://api.pdok.nl/bzk/locatieserver/v3_1/suggest?q=${encodeURIComponent(query)}&fq=type:wijk`);
+      const response = await fetch(`/api/wijk/suggest?q=${encodeURIComponent(query)}`);
       const data = await response.json();
       setWijkSuggestions(data.response.docs);
     } catch (error) {
@@ -218,7 +218,7 @@ export default function GISDataPage() {
     setSearchQuery('');
     try {
       const code = id.split('-')[1];
-      const response = await fetch(`https://api.pdok.nl/cbs/wijken-en-buurten-2024/ogc/v1/collections/Wijken/items?filter=wijkcode='${code}'`);
+      const response = await fetch(`/api/wijk/geom?code=${code}`);
       const data = await response.json();
       if (data.features && data.features.length > 0) {
         setSelectedWijkGeom(data.features[0]);
